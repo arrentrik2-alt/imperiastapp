@@ -224,6 +224,10 @@
     .sidebar.collapsed .logo-text, .sidebar.collapsed .link-text { display: none; }
     .main-content.collapsed { margin-left: 70px; }
     .logo h1 { white-space: normal; line-height: 1.2; }
+    .sidebar.collapsed .nav-links { padding: 0 10px; }
+    .sidebar.collapsed .nav-links a { justify-content: center; padding: 15px 10px; }
+    .sidebar.collapsed .nav-links a i { margin-right: 0; font-size: 1.3rem; }
+    #sidebar-toggle { position: absolute; right: 10px; top: 10px; z-index: 1001; }
     
     /* Modal */
     .modal {
@@ -420,7 +424,7 @@
 <body>
   <!-- Sidebar -->
   <aside class="sidebar">
-    <div class="logo" style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+    <div class="logo" style="display:flex; flex-direction:column; align-items:center; gap:8px; position:relative;">
       <button class="btn btn-outline" id="sidebar-toggle" title="Zwiń/Rozwiń" style="padding:6px 10px;"><i class="fas fa-bars"></i></button>
       <h1><span class="logo-text">Studio Tańca Imperia</span></h1>
     </div>
@@ -735,14 +739,19 @@
     const sidebar = document.querySelector('.sidebar');
     const mainContentEl = document.querySelector('.main-content');
     const sidebarToggle = document.getElementById('sidebar-toggle');
+    function collapseSidebar() {
+      if (!sidebar || !mainContentEl) return;
+      sidebar.classList.add('collapsed');
+      mainContentEl.classList.add('collapsed');
+    }
+    function expandSidebar() {
+      if (!sidebar || !mainContentEl) return;
+      sidebar.classList.remove('collapsed');
+      mainContentEl.classList.remove('collapsed');
+    }
     if (sidebarToggle && sidebar && mainContentEl) {
       sidebarToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-        if (sidebar.classList.contains('collapsed')) {
-          mainContentEl.classList.add('collapsed');
-        } else {
-          mainContentEl.classList.remove('collapsed');
-        }
+        if (sidebar.classList.contains('collapsed')) expandSidebar(); else collapseSidebar();
       });
     }
 
@@ -806,12 +815,14 @@
       groupsSection.style.display = 'none';
       groupDetailsSection.style.display = 'block';
       setActiveNav('groups');
+      collapseSidebar();
     }
     function showGroupsSection() {
       groupDetailsSection.style.display = 'none';
       groupsSection.style.display = 'block';
       participantsSection.style.display = 'none';
       setActiveNav('groups');
+      collapseSidebar();
       // reset
       addParticipantForm.style.display = 'none';
       participantFirstName.value = '';
@@ -829,6 +840,7 @@
           groupDetailsSection.style.display = 'none';
           groupsSection.style.display = 'block';
           setActiveNav('groups');
+          collapseSidebar();
           await loadGroups();
         } catch (err) {
           console.error('Błąd przełączania na Grupy:', err);
@@ -845,6 +857,7 @@
           groupDetailsSection.style.display = 'none';
           participantsSection.style.display = 'block';
           setActiveNav('participants');
+          collapseSidebar();
           await loadAllParticipants();
         } catch (err) {
           console.error('Błąd przełączania na Uczestnicy:', err);
