@@ -15,6 +15,7 @@
       --text-gray: #b0b0b0;
       --border-dark: #333;
       --success: #28a745;
+      --error: #dc3545;
     }
     
     * {
@@ -129,6 +130,12 @@
       cursor: pointer;
       font-weight: 500;
       transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+    }
+    
+    .btn i {
+      margin-right: 5px;
     }
     
     .btn-primary {
@@ -305,6 +312,37 @@
       gap: 10px;
     }
     
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-gray);
+    }
+    
+    .empty-state i {
+      font-size: 3rem;
+      color: var(--gold);
+      margin-bottom: 15px;
+    }
+    
+    .empty-state p {
+      margin-bottom: 20px;
+    }
+    
+    /* Loading spinner */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: var(--gold);
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
     /* Responsive */
     @media (max-width: 992px) {
       .sidebar {
@@ -417,6 +455,13 @@
 
       <div class="groups-grid" id="groups-list">
         <!-- Groups will be loaded here dynamically -->
+        <div class="empty-state" id="emptyState">
+          <i class="fas fa-users"></i>
+          <p>Brak grup do wyświetlenia</p>
+          <button class="btn btn-primary" id="add-first-group">
+            <i class="fas fa-plus"></i> Dodaj pierwszą grupę
+          </button>
+        </div>
       </div>
     </div>
   </main>
@@ -477,7 +522,9 @@
       
       <div class="form-actions">
         <button class="btn btn-outline" id="cancel-group-btn">Anuluj</button>
-        <button class="btn btn-primary" id="save-group-btn">Zapisz grupę</button>
+        <button class="btn btn-primary" id="save-group-btn">
+          <i class="fas fa-save"></i> Zapisz grupę
+        </button>
       </div>
     </div>
   </div>
@@ -517,9 +564,12 @@
     // Modal functionality
     const addGroupModal = document.getElementById('add-group-modal');
     const addGroupBtn = document.getElementById('add-group-btn');
+    const addFirstGroupBtn = document.getElementById('add-first-group');
     const closeModalBtn = document.getElementById('close-group-modal');
     const cancelGroupBtn = document.getElementById('cancel-group-btn');
     const saveGroupBtn = document.getElementById('save-group-btn');
+    const groupsList = document.getElementById('groups-list');
+    const emptyState = document.getElementById('emptyState');
     
     function openModal() {
       addGroupModal.classList.add('active');
@@ -527,9 +577,17 @@
     
     function closeModal() {
       addGroupModal.classList.remove('active');
+      // Clear form fields
+      document.getElementById('group-name').value = '';
+      document.getElementById('group-start').value = '';
+      document.getElementById('group-end').value = '';
+      document.getElementById('group-trainer').value = '';
+      document.getElementById('group-fee').value = '';
+      document.getElementById('group-multisport').value = '';
     }
     
     addGroupBtn.addEventListener('click', openModal);
+    addFirstGroupBtn.addEventListener('click', openModal);
     closeModalBtn.addEventListener('click', closeModal);
     cancelGroupBtn.addEventListener('click', closeModal);
     
@@ -543,97 +601,126 @@
       const fee = parseFloat(document.getElementById('group-fee').value);
       const multisport = parseFloat(document.getElementById('group-multisport').value);
       
-      const { data, error } = await supabase
-        .from('groups')
-        .insert([{ 
-          name, 
-          day, 
-          start_time: start, 
-          end_time: end, 
-          trainer, 
-          fee, 
-          multisport 
-        }]);
-        
-      if (error) {
-        alert('Błąd dodawania grupy: ' + error.message);
-      } else {
-        alert('Grupa dodana pomyślnie!');
-        closeModal();
-        loadGroups();
-        
-        // Clear form
-        document.getElementById('group-name').value = '';
-        document.getElementById('group-start').value = '';
-        document.getElementById('group-end').value = '';
-        document.getElementById('group-trainer').value = '';
-        document.getElementById('group-fee').value = '';
-        document.getElementById('group-multisport').value = '';
+      // Walidacja pól
+      if (!name || !day || !start || !end || !trainer || isNaN(fee) || isNaN(multisport)) {
+        alert('Proszę wypełnić wszystkie pola poprawnie');
+        return;
+      }
+      
+      // Zmień tekst przycisku na ładowanie
+      const originalText = saveGroupBtn.innerHTML;
+      saveGroupBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
+      saveGroupBtn.disabled = true;
+      
+      try {
+        const { data, error } = await supabase
+          .from('groups')
+          .insert([{ 
+            name, 
+            day, 
+            start_time: start, 
+            end_time: end, 
+            trainer, 
+            fee, 
+            multisport 
+          }])
+          .select(); // Dodaj .select() aby zwrócić utworzony rekord
+          
+        if (error) {
+          console.error('Błąd dodawania grupy:', error);
+          alert('Błąd dodawania grupy: ' + error.message);
+        } else {
+          console.log('Grupa dodana pomyślnie:', data);
+          alert('Grupa dodana pomyślnie!');
+          closeModal();
+          loadGroups();
+        }
+      } catch (err) {
+        console.error('Nieoczekiwany błąd:', err);
+        alert('Wystąpił nieoczekiwany błąd: ' + err.message);
+      } finally {
+        // Przywróć oryginalny tekst przycisku
+        saveGroupBtn.innerHTML = originalText;
+        saveGroupBtn.disabled = false;
       }
     });
     
-    // Load groups function
+    // Wczytanie wszystkich grup
     async function loadGroups() {
-      const { data, error } = await supabase
-        .from('groups')
-        .select('*')
-        .order('day', { ascending: true })
-        .order('start_time', { ascending: true });
-        
-      const groupsList = document.getElementById('groups-list');
+      // Pokaż stan ładowania
+      groupsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie grup...</p></div>';
       
-      if (error) {
-        groupsList.innerHTML = '<p>Błąd wczytywania grup</p>';
-        return;
+      try {
+        const { data, error } = await supabase
+          .from('groups')
+          .select('*')
+          .order('day', { ascending: true })
+          .order('start_time', { ascending: true });
+          
+        if (error) {
+          console.error('Błąd wczytywania grup:', error);
+          groupsList.innerHTML = '<div class="empty-state"><p>Błąd wczytywania grup: ' + error.message + '</p></div>';
+          return;
+        }
+        
+        if (!data || data.length === 0) {
+          // Pokaż stan pustej listy
+          emptyState.style.display = 'block';
+          groupsList.innerHTML = '';
+          groupsList.appendChild(emptyState);
+          return;
+        }
+        
+        // Ukryj stan pustej listy
+        emptyState.style.display = 'none';
+        
+        // Wyczyść listę i wyświetl grupy
+        groupsList.innerHTML = '';
+        
+        data.forEach(group => {
+          const groupCard = document.createElement('div');
+          groupCard.className = 'group-card';
+          
+          groupCard.innerHTML = `
+            <h4>${group.name}</h4>
+            <div class="group-detail">
+              <i class="fas fa-calendar-day"></i>
+              <span>${group.day}, ${group.start_time} - ${group.end_time}</span>
+            </div>
+            <div class="group-detail">
+              <i class="fas fa-user-tie"></i>
+              <span>${group.trainer}</span>
+            </div>
+            <div class="group-detail">
+              <i class="fas fa-money-bill-wave"></i>
+              <span>Opłata: ${group.fee} zł</span>
+            </div>
+            <div class="group-detail">
+              <i class="fas fa-credit-card"></i>
+              <span>Multisport: ${group.multisport} zł</span>
+            </div>
+            <div class="group-actions">
+              <button class="btn btn-outline edit-btn" data-id="${group.id}">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-outline delete-btn" data-id="${group.id}">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          `;
+          
+          groupsList.appendChild(groupCard);
+        });
+      } catch (err) {
+        console.error('Nieoczekiwany błąd:', err);
+        groupsList.innerHTML = '<div class="empty-state"><p>Wystąpił nieoczekiwany błąd: ' + err.message + '</p></div>';
       }
-      
-      if (data.length === 0) {
-        groupsList.innerHTML = '<p>Brak grup do wyświetlenia</p>';
-        return;
-      }
-      
-      groupsList.innerHTML = '';
-      
-      data.forEach(group => {
-        const groupCard = document.createElement('div');
-        groupCard.className = 'group-card';
-        
-        groupCard.innerHTML = `
-          <h4>${group.name}</h4>
-          <div class="group-detail">
-            <i class="fas fa-calendar-day"></i>
-            <span>${group.day}, ${group.start_time} - ${group.end_time}</span>
-          </div>
-          <div class="group-detail">
-            <i class="fas fa-user-tie"></i>
-            <span>${group.trainer}</span>
-          </div>
-          <div class="group-detail">
-            <i class="fas fa-money-bill-wave"></i>
-            <span>Opłata: ${group.fee} zł</span>
-          </div>
-          <div class="group-detail">
-            <i class="fas fa-credit-card"></i>
-            <span>Multisport: ${group.multisport} zł</span>
-          </div>
-          <div class="group-actions">
-            <button class="btn btn-outline edit-btn" data-id="${group.id}">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn btn-outline delete-btn" data-id="${group.id}">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        `;
-        
-        groupsList.appendChild(groupCard);
-      });
     }
     
-    // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
-      checkAdmin();
-      loadGroups();
+    // Inicjalizacja
+    document.addEventListener('DOMContentLoaded', async () => {
+      await checkAdmin();
+      await loadGroups();
     });
   </script>
 </body>
