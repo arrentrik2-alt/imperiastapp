@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Logowanie - GoldGym</title>
+  <title>Logowanie - Imperia Studio</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
@@ -36,7 +36,7 @@
     .login-container {
       background-color: var(--secondary-bg);
       width: 90%;
-      max-width: 400px;
+      max-width: 500px;
       padding: 30px;
       border-radius: 10px;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
@@ -135,6 +135,14 @@
       margin-top: 15px;
       font-size: 0.9rem;
     }
+    
+    .user-id {
+      word-break: break-all;
+      font-family: monospace;
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 5px;
+      border-radius: 3px;
+    }
   </style>
 </head>
 <body>
@@ -165,18 +173,16 @@
     
     <div class="debug-info" id="debugInfo" style="display: none;">
       <h3>Informacje diagnostyczne:</h3>
-      <p>Jeśli widzisz komunikat "Nie masz uprawnień administratora", oznacza to że:</p>
+      <p>Twoje ID użytkownika: <span class="user-id" id="userIdDisplay">-</span></p>
+      <p>Twoja rola: <span id="userRoleDisplay">-</span></p>
+      
+      <p style="margin-top: 15px;">Jeśli widzisz komunikat "Nie masz uprawnień administratora", wykonaj te kroki:</p>
       <ol>
-        <li>Twoje konto nie ma roli 'admin' w tabeli profiles</li>
-        <li>Twoje konto nie istnieje w tabeli profiles</li>
-        <li>Wystąpił błąd podczas odczytu uprawnień</li>
-      </ol>
-      <p>Rozwiązania:</p>
-      <ol>
-        <li>Sprawdź w Supabase czy Twoje konto ma role 'admin' w tabeli profiles</li>
-        <li>Jeśli nie masz rekordu w profiles, uruchom w SQL Editor:<br>
-          <code>INSERT INTO profiles (id, role) VALUES ('twoje_user_id', 'admin');</code>
+        <li>Otwórz <strong>SQL Editor</strong> w Supabase</li>
+        <li>Wykonaj to zapytanie (używając swojego user_id powyżej):
+          <pre>UPDATE profiles SET role = 'admin' WHERE id = 'twoje_user_id';</pre>
         </li>
+        <li>Spróbuj zalogować się ponownie</li>
       </ol>
     </div>
   </div>
@@ -197,6 +203,8 @@
       const password = document.getElementById('password').value;
       const errorMsg = document.getElementById('errorMsg');
       const errorText = document.getElementById('errorText');
+      const userIdDisplay = document.getElementById('userIdDisplay');
+      const userRoleDisplay = document.getElementById('userRoleDisplay');
       
       // Reset error message
       errorMsg.style.display = 'none';
@@ -220,13 +228,19 @@
           return;
         }
         
+        // Wyświetl ID użytkownika do debugowania
+        userIdDisplay.textContent = data.user.id;
+        
         // Sprawdź czy użytkownik ma uprawnienia administratora
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', data.user.id)
-          .maybeSingle();  // Używamy maybeSingle zamiast single dla lepszej obsługi błędów
+          .maybeSingle();
           
+        // Wyświetl rolę użytkownika do debugowania
+        userRoleDisplay.textContent = profile ? profile.role : 'brak rekordu';
+        
         if (profileError) {
           console.error('Błąd odczytu profilu:', profileError);
           errorText.textContent = 'Błąd odczytu uprawnień: ' + profileError.message;
@@ -238,6 +252,11 @@
         if (!profile || profile.role !== "admin") {
           errorText.textContent = 'Nie masz uprawnień administratora. Skontaktuj się z administratorem systemu.';
           errorMsg.style.display = 'block';
+          
+          // Pokaż panel debugowania
+          document.getElementById('debugInfo').style.display = 'block';
+          document.getElementById('debugToggle').textContent = 'Ukryj informacje diagnostyczne';
+          
           await supabase.auth.signOut();
           return;
         }
