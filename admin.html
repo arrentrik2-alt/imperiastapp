@@ -506,6 +506,14 @@
           <button class="btn btn-primary" id="save-participant-btn"><i class="fas fa-save"></i> Dodaj uczestnika</button>
         </div>
       </div>
+      <div class="content-box" id="participants-summary" style="margin-top:10px; padding:12px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+          <div style="color: var(--text-gray);">Uczestnicy: <span id="sum-count" style="color: var(--text-light); font-weight:600;">0</span></div>
+          <div style="color: var(--text-gray);">Zapłacili: <span id="sum-paid-count" style="color: var(--text-light); font-weight:600;">0</span> / <span id="sum-paid-amount" style="color: var(--text-light); font-weight:600;">0.00 zł</span></div>
+          <div style="color: var(--text-gray);">Niezapłacone: <span id="sum-unpaid-count" style="color: var(--text-light); font-weight:600;">0</span> / <span id="sum-unpaid-amount" style="color: var(--text-light); font-weight:600;">0.00 zł</span></div>
+          <div style="color: var(--text-gray);">Zysk: <span id="sum-profit" style="color: var(--text-light); font-weight:600;">0.00 zł</span></div>
+        </div>
+      </div>
       <div class="content-box" style="margin-top:15px;">
         <div class="content-header" style="margin-bottom:12px;">
           <h3 style="font-size:1.1rem;">Uczestnicy</h3>
@@ -638,6 +646,13 @@
     const participantLastName = document.getElementById('participant-last-name');
     const participantPhone = document.getElementById('participant-phone');
     const participantMultisport = document.getElementById('participant-multisport');
+    // Summary refs
+    const sumCountEl = document.getElementById('sum-count');
+    const sumPaidCountEl = document.getElementById('sum-paid-count');
+    const sumPaidAmountEl = document.getElementById('sum-paid-amount');
+    const sumUnpaidCountEl = document.getElementById('sum-unpaid-count');
+    const sumUnpaidAmountEl = document.getElementById('sum-unpaid-amount');
+    const sumProfitEl = document.getElementById('sum-profit');
 
     let selectedGroup = null;
     let selectedMonth = null; // 'YYYY-MM'
@@ -852,6 +867,16 @@
       loadParticipantsAndPayments();
     }
 
+    function updateParticipantsSummary({ totalCount, paidCount, unpaidCount, paidAmount, unpaidAmount, profit }) {
+      if (!sumCountEl) return;
+      sumCountEl.textContent = String(totalCount ?? 0);
+      sumPaidCountEl.textContent = String(paidCount ?? 0);
+      sumPaidAmountEl.textContent = `${(paidAmount ?? 0).toFixed(2)} zł`;
+      sumUnpaidCountEl.textContent = String(unpaidCount ?? 0);
+      sumUnpaidAmountEl.textContent = `${(unpaidAmount ?? 0).toFixed(2)} zł`;
+      sumProfitEl.textContent = `${(profit ?? 0).toFixed(2)} zł`;
+    }
+
     // Ładowanie uczestników + płatności dla wybranego miesiąca
     async function loadParticipantsAndPayments() {
       if (!selectedGroup || !selectedMonth) return;
@@ -892,14 +917,36 @@
 
         if (listToRender.length === 0) {
           participantsList.innerHTML = '<div class="empty-state"><p>Brak wyników dla wybranego filtra</p></div>';
+          // Summary zerowe
+          updateParticipantsSummary({
+            totalCount: participants.length,
+            paidCount: 0,
+            unpaidCount: 0,
+            paidAmount: 0,
+            unpaidAmount: 0,
+            profit: 0
+          });
           return;
         }
+
+        let paidCount = 0;
+        let unpaidCount = 0;
+        let paidAmount = 0;
+        let unpaidAmount = 0;
 
         listToRender.forEach((p, index) => {
           const pay = paymentByParticipant.get(p.id) || null;
           const baseAmount = p.multisport ? Number(selectedGroup.multisport || 0) : Number(selectedGroup.fee || 0);
           const amountToShow = pay && typeof pay.amount === 'number' ? pay.amount : baseAmount;
           const selectedMethod = pay && typeof pay.method === 'string' ? pay.method : '';
+
+          if (pay && pay.confirmed) {
+            paidCount += 1;
+            paidAmount += Number(pay.amount || 0);
+          } else {
+            unpaidCount += 1;
+            unpaidAmount += Number(baseAmount);
+          }
 
           const row = document.createElement('div');
           row.className = 'content-box';
@@ -908,16 +955,15 @@
           row.innerHTML = `
             <div style=\"display:flex; flex-wrap: wrap; gap: 12px; align-items: center;\">
               <div style=\"flex: 0 0 36px; min-width: 36px; text-align:center; color: var(--gold); font-weight: 600;\">${index + 1}</div>
-              <div style=\"flex: 1 1 180px; min-width: 160px;\">
+              <div style=\"flex: 1 1 150px; min-width: 140px;\"> 
                 <div style="font-weight:600;">${p.first_name || ''} ${p.last_name || ''}</div>
-                <div style="color: var(--text-gray); font-size: 0.9rem;">${p.phone || ''}</div>
-                <div style="color: var(--text-gray); font-size: 0.85rem;">${p.multisport ? 'Multisport: tak' : 'Multisport: nie'}</div>
+                <div style="color: var(--text-gray); font-size: 0.8rem; line-height: 1.2;">${p.phone || ''} · ${p.multisport ? 'Multisport' : 'Std'}</div>
               </div>
-              <div style="flex: 0 0 160px; min-width: 160px;">
+              <div style="flex: 0 0 130px; min-width: 120px;">
                 <label style="display:block; color: var(--text-gray); margin-bottom:5px;">Kwota (${selectedMonth})</label>
                 <input type="number" step="0.01" class="form-control payment-amount" value="${amountToShow}" />
               </div>
-              <div style="flex: 0 0 180px; min-width: 160px;">
+              <div style="flex: 0 0 150px; min-width: 140px;">
                 <label style="display:block; color: var(--text-gray); margin-bottom:5px;">Metoda</label>
                 <select class="form-control payment-method">
                   <option value="">Wybierz...</option>
@@ -926,12 +972,12 @@
                   <option value="cash" ${selectedMethod === 'cash' ? 'selected' : ''}>Gotówka</option>
                 </select>
               </div>
-              <div style="flex: 0 0 auto; display:flex; gap:8px; align-items:center;">
+              <div style="flex: 0 0 auto; display:flex; gap:6px; align-items:center;">
                 <button class="btn btn-primary confirm-payment-btn">${pay && pay.confirmed ? 'Zapisz' : 'Potwierdź'}</button>
                 ${pay ? '<button class="btn btn-outline delete-payment-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>' : ''}
-                <span class="status" style="color:${pay && pay.confirmed ? 'var(--success)' : 'var(--text-gray)'}; font-size:0.9rem;">${pay && pay.confirmed ? 'Potwierdzono' : 'Niepotwierdzono'}</span>
+                <span class="status" style="color:${pay && pay.confirmed ? 'var(--success)' : 'var(--text-gray)'}; font-size:0.85rem; white-space:nowrap;">${pay && pay.confirmed ? 'Potwierdzono' : 'Niepotwierdzono'}</span>
               </div>
-              <div style="flex: 1 1 140px; min-width: 140px; display:flex; gap:10px; align-items:center; justify-content:flex-end;">
+              <div style="flex: 1 1 120px; min-width: 120px; display:flex; gap:8px; align-items:center; justify-content:flex-end;">
                 <label style="display:flex; align-items:center; gap:8px; color: var(--text-gray);">
                   <input type="checkbox" class="consent-checkbox" ${p.consent_signed ? 'checked' : ''} style="width:auto;"/>
                   Zgoda podpisana
@@ -944,6 +990,16 @@
         });
         participantsList.innerHTML = '';
         participantsList.appendChild(fragment);
+
+        // Podsumowania: prosty zysk = suma zapłacona (brutto). Jeśli chcesz inne koszty, doprecyzuj.
+        updateParticipantsSummary({
+          totalCount: participants.length,
+          paidCount,
+          unpaidCount,
+          paidAmount,
+          unpaidAmount,
+          profit: paidAmount
+        });
       } catch (err) {
         console.error('Błąd ładowania uczestników/płatności:', err);
         participantsList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
