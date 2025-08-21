@@ -912,8 +912,10 @@
       sumCountEl.textContent = String(totalCount ?? 0);
       sumPaidCountEl.textContent = String(paidCount ?? 0);
       sumPaidAmountEl.textContent = `${(paidAmount ?? 0).toFixed(2)} zł`;
+      sumPaidAmountEl.style.color = 'var(--success)';
       sumUnpaidCountEl.textContent = String(unpaidCount ?? 0);
       sumUnpaidAmountEl.textContent = `${(unpaidAmount ?? 0).toFixed(2)} zł`;
+      sumUnpaidAmountEl.style.color = 'var(--error)';
       sumProfitEl.textContent = `${(profit ?? 0).toFixed(2)} zł`;
       const potential = (paidAmount ?? 0) + (unpaidAmount ?? 0);
       if (sumPotentialProfitEl) sumPotentialProfitEl.textContent = `${potential.toFixed(2)} zł`;
