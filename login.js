@@ -1,28 +1,36 @@
 // Wstaw swój Supabase URL i ANON KEY
 const SUPABASE_URL = "https://xsowdwnpguftmlvsogdb.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI";
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+async function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
-const loginBtn = document.getElementById("loginBtn");
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-const errorMsg = document.getElementById("errorMsg");
+  // Logowanie w Supabase Auth
+  const { data: session, error } = await supabase.auth.signInWithPassword({ email, password });
 
-loginBtn.addEventListener("click", async () => {
-    const email = emailInput.value;
-    const password = passwordInput.value;
+  if (error) {
+    alert("Błąd logowania: " + error.message);
+    return;
+  }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  // Sprawdzanie roli w tabeli profiles
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single();
 
-    if (error) {
-        errorMsg.textContent = error.message;
-    } else {
-        // Prosty przykład: jeśli email zawiera "admin" → panel admina
-        if (email.includes("admin")) {
-            window.location.href = "admin.html";
-        } else {
-            window.location.href = "trainer.html";
-        }
-    }
-});
+  if (profileError || !profile) {
+    alert("Nie znaleziono profilu użytkownika");
+    return;
+  }
+
+  // Przekierowanie według roli
+  if (profile.role === "admin") {
+    window.location.href = "/admin.html";
+  } else if (profile.role === "trainer") {
+    window.location.href = "/trainer.html";
+  }
+}
