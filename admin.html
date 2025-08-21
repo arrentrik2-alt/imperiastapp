@@ -940,6 +940,14 @@
 
         if (!participants || participants.length === 0) {
           participantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników w tej grupie</p></div>';
+          updateParticipantsSummary({
+            totalCount: 0,
+            paidCount: 0,
+            unpaidCount: 0,
+            paidAmount: 0,
+            unpaidAmount: 0,
+            profit: 0
+          });
           return;
         }
 
@@ -988,6 +996,7 @@
           const baseAmount = p.multisport ? Number(selectedGroup.multisport || 0) : Number(selectedGroup.fee || 0);
           const amountToShow = pay && typeof pay.amount === 'number' ? pay.amount : baseAmount;
           const selectedMethod = pay && typeof pay.method === 'string' ? pay.method : '';
+          const comment = pay && typeof pay.comment === 'string' ? pay.comment : '';
 
           if (pay && pay.confirmed) {
             paidCount += 1;
@@ -1023,6 +1032,9 @@
                   <option value="transfer" ${selectedMethod === 'transfer' ? 'selected' : ''}>Przelew</option>
                   <option value="cash" ${selectedMethod === 'cash' ? 'selected' : ''}>Gotówka</option>
                 </select>
+              </div>
+              <div style="flex: 1 1 160px; min-width: 140px;">
+                <input title="Komentarz" type="text" class="form-control small payment-comment" placeholder="Komentarz" value="${comment.replace(/"/g, '&quot;')}" />
               </div>
               <div style="flex: 0 0 auto; display:flex; gap:6px; align-items:center;">
                 <button class="btn btn-primary btn-sm confirm-payment-btn">${pay && pay.confirmed ? 'Zapisz' : 'OK'}</button>
@@ -1127,7 +1139,9 @@
         const amountInput = row.querySelector('.payment-amount');
         const amount = parseFloat(amountInput.value);
         const methodInput = row.querySelector('.payment-method');
+        const commentInput = row.querySelector('.payment-comment');
         const method = methodInput ? methodInput.value : '';
+        const comment = commentInput ? commentInput.value.trim() : '';
         if (isNaN(amount) || amount < 0) {
           alert('Podaj poprawną kwotę');
           return;
@@ -1153,13 +1167,13 @@
           if (existing) {
             const { error: updErr } = await supabase
               .from('payments')
-              .update({ amount, method, confirmed: true, confirmed_at: new Date().toISOString() })
+              .update({ amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() })
               .eq('id', existing.id);
             if (updErr) throw updErr;
           } else {
             const { error: insErr } = await supabase
               .from('payments')
-              .insert([{ participant_id: participantId, month: selectedMonth, amount, method, confirmed: true, confirmed_at: new Date().toISOString() }]);
+              .insert([{ participant_id: participantId, month: selectedMonth, amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() }]);
             if (insErr) throw insErr;
           }
           await loadParticipantsAndPayments();
