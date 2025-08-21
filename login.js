@@ -1,20 +1,21 @@
-// login.js
 import { supabase } from './supabaseClient.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-  const loginBtn = document.getElementById('loginBtn');
+async function login() {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
 
-  loginBtn.onclick = async () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    alert('Błąd logowania: ' + error.message);
+  } else {
+    // Zalogowano – przekieruj do panelu admina
+    window.location.href = 'admin.html';  // <-- tutaj zmień na swoją stronę panelu
+  }
+}
 
-    if (error) {
-      alert('Błąd logowania: ' + error.message);
-    } else {
-      alert('Zalogowano!');
-      // window.location.href = 'admin.html'; // przekierowanie po zalogowaniu
-    }
-  };
-});
+// Podpinamy funkcję do przycisku
+document.getElementById('loginBtn').onclick = login;
