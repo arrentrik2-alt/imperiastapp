@@ -700,12 +700,35 @@
 
   <script type="module">
     import { supabase } from './supabaseClient.js';
-    // FullCalendar
-    const fcCss = document.createElement('link');
-    fcCss.rel = 'stylesheet';
-    fcCss.href = 'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css';
-    document.head.appendChild(fcCss);
-    await import('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js');
+    // FullCalendar loader (lazy)
+    let fcLoaded = false;
+    async function ensureFullCalendarLoaded() {
+      if (fcLoaded || (window && window.FullCalendar)) { fcLoaded = true; return; }
+      await new Promise((resolve, reject) => {
+        // CSS once
+        if (!document.getElementById('fc-css')) {
+          const link = document.createElement('link');
+          link.id = 'fc-css';
+          link.rel = 'stylesheet';
+          link.href = 'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css';
+          document.head.appendChild(link);
+        }
+        // JS once
+        const existing = document.getElementById('fc-script');
+        const onReady = () => { fcLoaded = true; resolve(); };
+        if (existing) {
+          existing.addEventListener('load', onReady, { once: true });
+          existing.addEventListener('error', () => reject(new Error('FullCalendar load failed')), { once: true });
+          return;
+        }
+        const s = document.createElement('script');
+        s.id = 'fc-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js';
+        s.onload = onReady;
+        s.onerror = () => reject(new Error('FullCalendar load failed'));
+        document.body.appendChild(s);
+      });
+    }
     
     // Check if user is admin
     async function checkAdmin() {
@@ -916,6 +939,7 @@
         scheduleSection.style.display = 'block';
         setActiveNav('schedule');
         collapseSidebar();
+        await ensureFullCalendarLoaded();
         await renderSchedule();
       });
     }
@@ -942,6 +966,7 @@
 
     async function renderSchedule() {
       try {
+        if (!window.FullCalendar) throw new Error('FullCalendar not loaded');
         const { data: groups, error } = await supabase
           .from('groups')
           .select('*');
@@ -1765,6 +1790,15 @@
     document.addEventListener('DOMContentLoaded', async () => {
       await checkAdmin();
       setActiveNav('groups');
+      // Ensure groups section visible on first paint
+      const groupsSectionEl = document.getElementById('groups-section');
+      const groupDetailsSectionEl = document.getElementById('group-details-section');
+      const participantsSectionEl = document.getElementById('participants-section');
+      const scheduleSectionEl = document.getElementById('schedule-section');
+      if (groupsSectionEl) groupsSectionEl.style.display = 'block';
+      if (groupDetailsSectionEl) groupDetailsSectionEl.style.display = 'none';
+      if (participantsSectionEl) participantsSectionEl.style.display = 'none';
+      if (scheduleSectionEl) scheduleSectionEl.style.display = 'none';
       await loadGroups();
     });
   </script>
