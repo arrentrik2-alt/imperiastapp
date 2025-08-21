@@ -114,20 +114,26 @@
       display: none;
     }
     
-    .footer {
-      text-align: center;
-      margin-top: 25px;
-      color: var(--text-gray);
+    .debug-info {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: rgba(212, 175, 55, 0.1);
+      border-radius: 5px;
+      border-left: 3px solid var(--gold);
       font-size: 0.9rem;
     }
     
-    .footer a {
+    .debug-info h3 {
       color: var(--gold);
-      text-decoration: none;
+      margin-bottom: 10px;
     }
     
-    .footer a:hover {
-      text-decoration: underline;
+    .debug-toggle {
+      color: var(--gold);
+      cursor: pointer;
+      text-align: center;
+      margin-top: 15px;
+      font-size: 0.9rem;
     }
   </style>
 </head>
@@ -155,13 +161,36 @@
       <span id="errorText"></span>
     </div>
     
-    <div class="footer">
-      <p>Nie masz konta? <a href="#">Skontaktuj się z administratorem</a></p>
+    <div class="debug-toggle" id="debugToggle">Pokaż informacje diagnostyczne</div>
+    
+    <div class="debug-info" id="debugInfo" style="display: none;">
+      <h3>Informacje diagnostyczne:</h3>
+      <p>Jeśli widzisz komunikat "Nie masz uprawnień administratora", oznacza to że:</p>
+      <ol>
+        <li>Twoje konto nie ma roli 'admin' w tabeli profiles</li>
+        <li>Twoje konto nie istnieje w tabeli profiles</li>
+        <li>Wystąpił błąd podczas odczytu uprawnień</li>
+      </ol>
+      <p>Rozwiązania:</p>
+      <ol>
+        <li>Sprawdź w Supabase czy Twoje konto ma role 'admin' w tabeli profiles</li>
+        <li>Jeśli nie masz rekordu w profiles, uruchom w SQL Editor:<br>
+          <code>INSERT INTO profiles (id, role) VALUES ('twoje_user_id', 'admin');</code>
+        </li>
+      </ol>
     </div>
   </div>
 
   <script type="module">
     import { supabase } from './supabaseClient.js';
+    
+    // Pokazuj/ukryj informacje diagnostyczne
+    document.getElementById('debugToggle').addEventListener('click', function() {
+      const debugInfo = document.getElementById('debugInfo');
+      debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+      this.textContent = debugInfo.style.display === 'none' ? 
+        'Pokaż informacje diagnostyczne' : 'Ukryj informacje diagnostyczne';
+    });
     
     async function login() {
       const email = document.getElementById('email').value;
@@ -172,44 +201,61 @@
       // Reset error message
       errorMsg.style.display = 'none';
       
-      // Simple validation
+      // Prosta walidacja
       if (!email || !password) {
         errorText.textContent = 'Proszę wypełnić wszystkie pola';
         errorMsg.style.display = 'block';
         return;
       }
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) {
-        errorText.textContent = 'Błąd logowania: ' + error.message;
-        errorMsg.style.display = 'block';
-      } else {
-        // Check if user has admin role
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        
+        if (error) {
+          errorText.textContent = 'Błąd logowania: ' + error.message;
+          errorMsg.style.display = 'block';
+          return;
+        }
+        
+        // Sprawdź czy użytkownik ma uprawnienia administratora
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', data.user.id)
-          .single();
+          .maybeSingle();  // Używamy maybeSingle zamiast single dla lepszej obsługi błędów
           
-        if (profileError || !profile || profile.role !== "admin") {
-          errorText.textContent = 'Nie masz uprawnień administratora';
+        if (profileError) {
+          console.error('Błąd odczytu profilu:', profileError);
+          errorText.textContent = 'Błąd odczytu uprawnień: ' + profileError.message;
           errorMsg.style.display = 'block';
           await supabase.auth.signOut();
-        } else {
-          // Redirect to admin panel
-          window.location.href = 'admin.html';
+          return;
         }
+        
+        if (!profile || profile.role !== "admin") {
+          errorText.textContent = 'Nie masz uprawnień administratora. Skontaktuj się z administratorem systemu.';
+          errorMsg.style.display = 'block';
+          await supabase.auth.signOut();
+          return;
+        }
+        
+        // Przekieruj do panelu admina
+        window.location.href = 'admin.html';
+        
+      } catch (err) {
+        console.error('Nieoczekiwany błąd:', err);
+        errorText.textContent = 'Wystąpił nieoczekiwany błąd: ' + err.message;
+        errorMsg.style.display = 'block';
       }
     }
     
-    // Add event listeners
+    // Dodaj nasłuchiwanie zdarzeń
     document.getElementById('loginBtn').addEventListener('click', login);
     
-    // Allow login on Enter key
+    // Zezwól na logowanie po wciśnięciu Enter
     document.getElementById('password').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         login();
