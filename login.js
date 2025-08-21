@@ -1,4 +1,3 @@
-// login.js
 async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -11,7 +10,6 @@ async function login() {
   if (error) {
     alert("Błąd logowania: " + error.message);
   } else {
-    // przekierowanie po poprawnym logowaniu
     window.location.href = "/admin.html";
   }
 }
