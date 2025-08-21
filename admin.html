@@ -219,6 +219,11 @@
       margin-top: 15px;
       gap: 10px;
     }
+    /* Sidebar collapse */
+    .sidebar.collapsed { width: 70px; }
+    .sidebar.collapsed .logo-text, .sidebar.collapsed .link-text { display: none; }
+    .main-content.collapsed { margin-left: 70px; }
+    .logo h1 { white-space: normal; line-height: 1.2; }
     
     /* Modal */
     .modal {
@@ -415,8 +420,9 @@
 <body>
   <!-- Sidebar -->
   <aside class="sidebar">
-    <div class="logo">
-      <h1>Studio<span>Tańca<span>Imperia</span></h1>
+    <div class="logo" style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <button class="btn btn-outline" id="sidebar-toggle" title="Zwiń/Rozwiń" style="padding:6px 10px;"><i class="fas fa-bars"></i></button>
+      <h1><span class="logo-text">Studio Tańca Imperia</span></h1>
     </div>
     
     <ul class="nav-links">
@@ -584,7 +590,7 @@
           <i class="fas fa-times"></i>
         </button>
         <div class="modal-header">
-          <h3>Edytuj uczestnika</h3>
+          <h3 id="edit-participant-title">Edytuj uczestnika</h3>
         </div>
         <div class="form-group">
           <label>Imię</label>
@@ -725,6 +731,20 @@
     // Nav links
     const groupsLink = document.getElementById('nav-groups');
     const participantsLink = document.getElementById('nav-participants');
+    // Sidebar toggle
+    const sidebar = document.querySelector('.sidebar');
+    const mainContentEl = document.querySelector('.main-content');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle && sidebar && mainContentEl) {
+      sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+        if (sidebar.classList.contains('collapsed')) {
+          mainContentEl.classList.add('collapsed');
+        } else {
+          mainContentEl.classList.remove('collapsed');
+        }
+      });
+    }
 
     function setActiveNav(section) {
       if (groupsLink && participantsLink) {
@@ -1503,6 +1523,7 @@
     const closeEditParticipantModalBtn = document.getElementById('close-edit-participant-modal');
     const cancelEditParticipantBtn = document.getElementById('cancel-edit-participant');
     const saveEditParticipantBtn = document.getElementById('save-edit-participant');
+    const editParticipantTitleEl = document.getElementById('edit-participant-title');
     const editFirstNameEl = document.getElementById('edit-participant-first-name');
     const editLastNameEl = document.getElementById('edit-participant-last-name');
     const editPhoneEl = document.getElementById('edit-participant-phone');
@@ -1513,6 +1534,8 @@
 
     function openEditParticipantModal(p, groups) {
       editParticipantId = p.id;
+      isCreateParticipant = false;
+      if (editParticipantTitleEl) editParticipantTitleEl.textContent = 'Edytuj uczestnika';
       editFirstNameEl.value = p.first_name || '';
       editLastNameEl.value = p.last_name || '';
       editPhoneEl.value = p.phone || '';
@@ -1530,6 +1553,7 @@
     async function openCreateParticipantModal() {
       isCreateParticipant = true;
       editParticipantId = null;
+      if (editParticipantTitleEl) editParticipantTitleEl.textContent = 'Dodaj uczestnika';
       editFirstNameEl.value = '';
       editLastNameEl.value = '';
       editPhoneEl.value = '';
@@ -1549,7 +1573,7 @@
       }
       editParticipantModal.classList.add('active');
     }
-    function closeEditParticipantModal() { editParticipantModal.classList.remove('active'); editParticipantId = null; }
+    function closeEditParticipantModal() { editParticipantModal.classList.remove('active'); editParticipantId = null; isCreateParticipant = false; }
     closeEditParticipantModalBtn.addEventListener('click', closeEditParticipantModal);
     cancelEditParticipantBtn.addEventListener('click', closeEditParticipantModal);
     const addParticipantGlobalBtn = document.getElementById('add-participant-global');
