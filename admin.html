@@ -472,9 +472,15 @@
           <button class="btn btn-outline" id="back-to-groups-btn"><i class="fas fa-arrow-left"></i> Wróć</button>
           <h3 id="group-details-title">Szczegóły grupy</h3>
         </div>
-        <div style="display:flex; gap:10px; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
           <label for="month-select" style="color: var(--text-gray);">Miesiąc</label>
           <select id="month-select" class="form-control" style="width:220px;"></select>
+          <label for="participants-filter" style="color: var(--text-gray);">Filtr</label>
+          <select id="participants-filter" class="form-control" style="width:180px;">
+            <option value="all">Wszyscy</option>
+            <option value="paid">Kto zapłacił</option>
+            <option value="unpaid">Kto nie zapłacił</option>
+          </select>
           <button class="btn btn-primary" id="add-participant-btn"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button>
         </div>
       </div>
@@ -623,6 +629,7 @@
     const groupDetailsTitle = document.getElementById('group-details-title');
     const monthSelect = document.getElementById('month-select');
     const participantsList = document.getElementById('participants-list');
+    const participantsFilter = document.getElementById('participants-filter');
     const addParticipantBtn = document.getElementById('add-participant-btn');
     const addParticipantForm = document.getElementById('add-participant-form');
     const cancelAddParticipant = document.getElementById('cancel-add-participant');
@@ -875,7 +882,20 @@
 
         // Renderuj
         const fragment = document.createDocumentFragment();
-        participants.forEach(p => {
+        const filterValue = (participantsFilter && participantsFilter.value) ? participantsFilter.value : 'all';
+        const listToRender = participants.filter(p => {
+          const pay = paymentByParticipant.get(p.id) || null;
+          if (filterValue === 'paid') return !!(pay && pay.confirmed);
+          if (filterValue === 'unpaid') return !(pay && pay.confirmed);
+          return true;
+        });
+
+        if (listToRender.length === 0) {
+          participantsList.innerHTML = '<div class="empty-state"><p>Brak wyników dla wybranego filtra</p></div>';
+          return;
+        }
+
+        listToRender.forEach((p, index) => {
           const pay = paymentByParticipant.get(p.id) || null;
           const baseAmount = p.multisport ? Number(selectedGroup.multisport || 0) : Number(selectedGroup.fee || 0);
           const amountToShow = pay && typeof pay.amount === 'number' ? pay.amount : baseAmount;
@@ -886,8 +906,9 @@
           row.style.marginBottom = '10px';
           row.dataset.participantId = p.id;
           row.innerHTML = `
-            <div style="display:flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-              <div style="flex: 1 1 220px; min-width: 200px;">
+            <div style=\"display:flex; flex-wrap: wrap; gap: 12px; align-items: center;\">
+              <div style=\"flex: 0 0 36px; min-width: 36px; text-align:center; color: var(--gold); font-weight: 600;\">${index + 1}</div>
+              <div style=\"flex: 1 1 180px; min-width: 160px;\">
                 <div style="font-weight:600;">${p.first_name || ''} ${p.last_name || ''}</div>
                 <div style="color: var(--text-gray); font-size: 0.9rem;">${p.phone || ''}</div>
                 <div style="color: var(--text-gray); font-size: 0.85rem;">${p.multisport ? 'Multisport: tak' : 'Multisport: nie'}</div>
@@ -934,6 +955,13 @@
       selectedMonth = monthSelect.value;
       loadParticipantsAndPayments();
     });
+
+    // Filtr uczestników
+    if (participantsFilter) {
+      participantsFilter.addEventListener('change', () => {
+        loadParticipantsAndPayments();
+      });
+    }
 
     // Dodawanie uczestnika - UI toggle
     addParticipantBtn.addEventListener('click', () => {
