@@ -1,12 +1,56 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Admina</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Admina</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="supabaseClient.js"></script>
+<script type="module" src="groups.js"></script>
 </head>
 <body>
-  <h1>Witaj w panelu admina</h1>
-  <p>To jest szkielet panelu, później dodamy funkcje tworzenia grup, obecności itp.</p>
+  <header>
+    <h1>Panel Admina</h1>
+    <nav>
+      <button id="tab-groups">Grupy</button>
+      <!-- później kolejne zakładki -->
+    </nav>
+  </header>
+
+  <main>
+    <section id="groups-section">
+      <button id="add-group-btn">Dodaj grupę</button>
+      <div id="groups-list"></div>
+    </section>
+  </main>
+
+  <!-- Modal dodawania grupy -->
+  <div id="add-group-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Dodaj grupę</h2>
+      <label>Nazwa grupy: <input type="text" id="group-name"></label>
+      <label>Dzień: 
+        <select id="group-day">
+          <option value="Poniedziałek">Poniedziałek</option>
+          <option value="Wtorek">Wtorek</option>
+          <option value="Środa">Środa</option>
+          <option value="Czwartek">Czwartek</option>
+          <option value="Piątek">Piątek</option>
+          <option value="Sobota">Sobota</option>
+          <option value="Niedziela">Niedziela</option>
+        </select>
+      </label>
+      <label>Godzina rozpoczęcia: <input type="time" id="group-start"></label>
+      <label>Godzina zakończenia: <input type="time" id="group-end"></label>
+      <label>Trener: <input type="text" id="group-trainer"></label>
+      <label>Kwota: <input type="number" id="group-fee"></label>
+      <label>Kwota Multisport: <input type="number" id="group-multisport"></label>
+      <button id="save-group-btn">Zapisz</button>
+      <button id="close-group-modal">Anuluj</button>
+    </div>
+  </div>
+
+  <div id="overlay" class="hidden"></div>
+
 </body>
 </html>
