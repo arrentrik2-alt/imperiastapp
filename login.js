@@ -1,9 +1,4 @@
-// 1️⃣ Utwórz klienta Supabase
-<script src="supabaseClient.js"></script>
-<script src="login.js"></script>
-<script src="admin.js"></script>
-
-// 2️⃣ Funkcja logowania
+// Funkcja logowania
 async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
