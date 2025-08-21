@@ -777,7 +777,16 @@
       participantMultisport.checked = false;
     }
     backToGroupsBtn.addEventListener('click', showGroupsSection);
-
+    // Sidebar 'Grupy' link handler
+    const groupsLink = document.querySelectorAll('.nav-links a')[0];
+    groupsLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      participantsSection.style.display = 'none';
+      groupDetailsSection.style.display = 'none';
+      groupsSection.style.display = 'block';
+      await loadGroups();
+    });
+    
     // Navigate to Participants page
     const participantsLink = document.querySelectorAll('.nav-links a')[1];
     participantsLink.addEventListener('click', async (e) => {
@@ -908,14 +917,14 @@
           if (!byDay.has(g.day)) byDay.set(g.day, []);
           byDay.get(g.day).push(g);
         });
-        dayOrder.forEach(day => {
-          const arr = byDay.get(day);
-          if (!arr || arr.length === 0) return;
+        const rendered = new Set();
+        const renderDaySection = (dayLabel, list) => {
+          if (!list || list.length === 0) return;
           const header = document.createElement('div');
           header.className = 'groups-day-header';
-          header.innerHTML = `<h3 style="font-size:1rem; color: var(--text-gray);"><i class="fas fa-calendar-day" style="color: var(--gold); margin-right:6px;"></i>${day}</h3>`;
+          header.innerHTML = `<h3 style="font-size:1rem; color: var(--text-gray);"><i class="fas fa-calendar-day" style="color: var(--gold); margin-right:6px;"></i>${dayLabel}</h3>`;
           groupsList.appendChild(header);
-          arr.forEach(group => {
+          list.forEach(group => {
             const groupCard = document.createElement('div');
             groupCard.className = 'group-card';
             const startHHMM = formatTimeHHMM(group.start_time);
@@ -947,17 +956,14 @@
                 </button>
               </div>
             `;
-            // otwieranie szczegółów
             groupCard.addEventListener('click', (e) => {
               if (e.target.closest('.edit-btn') || e.target.closest('.delete-btn')) return;
               openGroupDetails(group);
             });
-            // edycja grupy
             groupCard.querySelector('.edit-btn').addEventListener('click', (e) => {
               e.stopPropagation();
               openEditGroupModal(group);
             });
-            // usuwanie grupy
             groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
               e.stopPropagation();
               if (!confirm('Usunąć grupę? Spowoduje to usunięcie uczestników i płatności powiązanych.')) return;
@@ -971,6 +977,17 @@
             });
             groupsList.appendChild(groupCard);
           });
+        };
+        dayOrder.forEach(day => {
+          const arr = byDay.get(day);
+          if (arr && arr.length) {
+            renderDaySection(day, arr);
+            rendered.add(day);
+          }
+        });
+        // Render all remaining unexpected day keys
+        byDay.forEach((arr, day) => {
+          if (!rendered.has(day)) renderDaySection(day, arr);
         });
       } catch (err) {
         console.error('Nieoczekiwany błąd:', err);
