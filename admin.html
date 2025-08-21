@@ -348,6 +348,8 @@
     .form-control.small { padding: 6px 8px; font-size: 0.9rem; }
     .participant-row { padding: 10px; }
     .btn.btn-sm { padding: 4px 8px; font-size: 0.85rem; }
+    .participant-row.paid { background-color: rgba(40, 167, 69, 0.08); border-left: 3px solid var(--success); }
+    .participant-row.unpaid { background-color: rgba(220, 53, 69, 0.06); border-left: 3px solid var(--error); }
     
     /* Loading spinner */
     .loading {
@@ -999,6 +1001,11 @@
           row.className = 'content-box participant-row';
           row.style.marginBottom = '10px';
           row.dataset.participantId = p.id;
+          if (pay && pay.confirmed) {
+            row.classList.add('paid');
+          } else {
+            row.classList.add('unpaid');
+          }
           row.innerHTML = `
             <div style="display:flex; flex-wrap: wrap; gap: 6px; align-items: center;">
               <div style="flex: 0 0 24px; min-width: 24px; text-align:center; color: var(--gold); font-weight: 600;">${index + 1}</div>
