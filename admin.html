@@ -445,7 +445,7 @@
       </div>
     </div>
 
-    <div class="content-box">
+    <div class="content-box" id="groups-section">
       <div class="content-header">
         <h3>Lista grup treningowych</h3>
         <button class="btn btn-primary" id="add-group-btn">
@@ -461,6 +461,51 @@
           <button class="btn btn-primary" id="add-first-group">
             <i class="fas fa-plus"></i> Dodaj pierwszą grupę
           </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Group Details Section (inline) -->
+    <div class="content-box" id="group-details-section" style="display:none;">
+      <div class="content-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="btn btn-outline" id="back-to-groups-btn"><i class="fas fa-arrow-left"></i> Wróć</button>
+          <h3 id="group-details-title">Szczegóły grupy</h3>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <label for="month-select" style="color: var(--text-gray);">Miesiąc</label>
+          <select id="month-select" class="form-control" style="width:220px;"></select>
+          <button class="btn btn-primary" id="add-participant-btn"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button>
+        </div>
+      </div>
+      <div id="add-participant-form" class="content-box" style="display:none; margin-top:10px;">
+        <div class="form-group">
+          <label>Imię</label>
+          <input type="text" id="participant-first-name" class="form-control" placeholder="Imię">
+        </div>
+        <div class="form-group">
+          <label>Nazwisko</label>
+          <input type="text" id="participant-last-name" class="form-control" placeholder="Nazwisko">
+        </div>
+        <div class="form-group">
+          <label>Telefon</label>
+          <input type="tel" id="participant-phone" class="form-control" placeholder="Numer telefonu">
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="participant-multisport" style="width:auto;">
+          <label for="participant-multisport" style="margin:0;">Korzysta z Multisport</label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" id="cancel-add-participant">Anuluj</button>
+          <button class="btn btn-primary" id="save-participant-btn"><i class="fas fa-save"></i> Dodaj uczestnika</button>
+        </div>
+      </div>
+      <div class="content-box" style="margin-top:15px;">
+        <div class="content-header" style="margin-bottom:12px;">
+          <h3 style="font-size:1.1rem;">Uczestnicy</h3>
+        </div>
+        <div id="participants-list">
+          <div class="empty-state"><p>Brak uczestników w tej grupie</p></div>
         </div>
       </div>
     </div>
@@ -529,64 +574,6 @@
     </div>
   </div>
 
-  <!-- Group Details Modal -->
-  <div class="modal" id="group-details-modal">
-    <div class="modal-content" style="max-width: 900px; width: 95%">
-      <button class="modal-close" id="close-group-details-modal">
-        <i class="fas fa-times"></i>
-      </button>
-
-      <div class="modal-header">
-        <h3 id="group-details-title">Szczegóły grupy</h3>
-      </div>
-
-      <div class="form-group" style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <div style="flex: 1 1 220px; min-width: 200px;">
-          <label for="month-select">Miesiąc</label>
-          <select id="month-select" class="form-control"></select>
-        </div>
-        <div style="flex: 0 0 auto">
-          <button class="btn btn-primary" id="add-participant-btn">
-            <i class="fas fa-user-plus"></i> Dodaj uczestnika
-          </button>
-        </div>
-      </div>
-
-      <div id="add-participant-form" class="content-box" style="display:none; margin-top:10px;">
-        <div class="form-group">
-          <label>Imię</label>
-          <input type="text" id="participant-first-name" class="form-control" placeholder="Imię">
-        </div>
-        <div class="form-group">
-          <label>Nazwisko</label>
-          <input type="text" id="participant-last-name" class="form-control" placeholder="Nazwisko">
-        </div>
-        <div class="form-group">
-          <label>Telefon</label>
-          <input type="tel" id="participant-phone" class="form-control" placeholder="Numer telefonu">
-        </div>
-        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
-          <input type="checkbox" id="participant-multisport" style="width:auto;">
-          <label for="participant-multisport" style="margin:0;">Korzysta z Multisport</label>
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-outline" id="cancel-add-participant">Anuluj</button>
-          <button class="btn btn-primary" id="save-participant-btn">
-            <i class="fas fa-save"></i> Dodaj uczestnika
-          </button>
-        </div>
-      </div>
-
-      <div class="content-box" style="margin-top:15px;">
-        <div class="content-header" style="margin-bottom:12px;">
-          <h3 style="font-size:1.1rem;">Uczestnicy</h3>
-        </div>
-        <div id="participants-list">
-          <div class="empty-state"><p>Brak uczestników w tej grupie</p></div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <script type="module">
     import { supabase } from './supabaseClient.js';
@@ -629,9 +616,10 @@
     const saveGroupBtn = document.getElementById('save-group-btn');
     const groupsList = document.getElementById('groups-list');
     const emptyState = document.getElementById('emptyState');
-    // Group details modal refs
-    const groupDetailsModal = document.getElementById('group-details-modal');
-    const closeGroupDetailsBtn = document.getElementById('close-group-details-modal');
+    // Group details section refs
+    const groupsSection = document.getElementById('groups-section');
+    const groupDetailsSection = document.getElementById('group-details-section');
+    const backToGroupsBtn = document.getElementById('back-to-groups-btn');
     const groupDetailsTitle = document.getElementById('group-details-title');
     const monthSelect = document.getElementById('month-select');
     const participantsList = document.getElementById('participants-list');
@@ -667,20 +655,22 @@
     closeModalBtn.addEventListener('click', closeModal);
     cancelGroupBtn.addEventListener('click', closeModal);
 
-    // Group details modal controls
-    function openGroupDetailsModal() {
-      groupDetailsModal.classList.add('active');
+    // Group details section controls
+    function showGroupDetailsSection() {
+      groupsSection.style.display = 'none';
+      groupDetailsSection.style.display = 'block';
     }
-    function closeGroupDetailsModal() {
-      groupDetailsModal.classList.remove('active');
-      // reset lightweight form
+    function showGroupsSection() {
+      groupDetailsSection.style.display = 'none';
+      groupsSection.style.display = 'block';
+      // reset
       addParticipantForm.style.display = 'none';
       participantFirstName.value = '';
       participantLastName.value = '';
       participantPhone.value = '';
       participantMultisport.checked = false;
     }
-    closeGroupDetailsBtn.addEventListener('click', closeGroupDetailsModal);
+    backToGroupsBtn.addEventListener('click', showGroupsSection);
     
     // Save group function
     saveGroupBtn.addEventListener('click', async () => {
@@ -851,7 +841,7 @@
       selectedGroup = group;
       groupDetailsTitle.textContent = `${group.name} — szczegóły`;
       populateMonthSelect(selectedMonth);
-      openGroupDetailsModal();
+      showGroupDetailsSection();
       loadParticipantsAndPayments();
     }
 
@@ -907,6 +897,7 @@
               </div>
               <div style="flex: 0 0 auto; display:flex; gap:8px; align-items:center;">
                 <button class="btn btn-primary confirm-payment-btn">${pay && pay.confirmed ? 'Zapisz' : 'Potwierdź'}</button>
+                ${pay ? '<button class="btn btn-outline delete-payment-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>' : ''}
                 <span class="status" style="color:${pay && pay.confirmed ? 'var(--success)' : 'var(--text-gray)'}; font-size:0.9rem;">${pay && pay.confirmed ? 'Potwierdzono' : 'Niepotwierdzono'}</span>
               </div>
               <div style="flex: 1 1 140px; min-width: 140px; display:flex; gap:10px; align-items:center; justify-content:flex-end;">
@@ -1040,6 +1031,31 @@
           await loadParticipantsAndPayments();
         } catch (err) {
           alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
+        }
+      }
+
+      // Usuwanie płatności dla wybranego miesiąca
+      if (e.target.closest('.delete-payment-btn')) {
+        if (!confirm('Usunąć płatność dla tego miesiąca?')) return;
+        try {
+          const { data: existing, error: selErr } = await supabase
+            .from('payments')
+            .select('id')
+            .eq('participant_id', participantId)
+            .eq('month', selectedMonth)
+            .limit(1)
+            .maybeSingle();
+          if (selErr) throw selErr;
+          if (existing) {
+            const { error: delErr } = await supabase
+              .from('payments')
+              .delete()
+              .eq('id', existing.id);
+            if (delErr) throw delErr;
+          }
+          await loadParticipantsAndPayments();
+        } catch (err) {
+          alert('Błąd usuwania płatności: ' + (err.message || 'Nieznany'));
         }
       }
     });
