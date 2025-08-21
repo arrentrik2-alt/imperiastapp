@@ -327,6 +327,27 @@
     .empty-state p {
       margin-bottom: 20px;
     }
+    /* Summary cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .summary-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .summary-card .label { color: var(--text-gray); font-size: 0.85rem; }
+    .summary-card .value { color: var(--gold); font-weight: 700; font-size: 1.05rem; }
+    .summary-card .sub { color: var(--text-light); font-weight: 600; font-size: 0.95rem; }
+    .progress { width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; border: 1px solid var(--border-dark); }
+    .progress-bar { height: 100%; background: var(--gold); width: 0%; transition: width 0.3s ease; }
+    /* Compact controls inside rows */
+    .form-control.small { padding: 6px 8px; font-size: 0.9rem; }
+    .participant-row { padding: 10px; }
+    .btn.btn-sm { padding: 4px 8px; font-size: 0.85rem; }
     
     /* Loading spinner */
     .loading {
@@ -507,11 +528,28 @@
         </div>
       </div>
       <div class="content-box" id="participants-summary" style="margin-top:10px; padding:12px;">
-        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-          <div style="color: var(--text-gray);">Uczestnicy: <span id="sum-count" style="color: var(--text-light); font-weight:600;">0</span></div>
-          <div style="color: var(--text-gray);">Zapłacili: <span id="sum-paid-count" style="color: var(--text-light); font-weight:600;">0</span> / <span id="sum-paid-amount" style="color: var(--text-light); font-weight:600;">0.00 zł</span></div>
-          <div style="color: var(--text-gray);">Niezapłacone: <span id="sum-unpaid-count" style="color: var(--text-light); font-weight:600;">0</span> / <span id="sum-unpaid-amount" style="color: var(--text-light); font-weight:600;">0.00 zł</span></div>
-          <div style="color: var(--text-gray);">Zysk: <span id="sum-profit" style="color: var(--text-light); font-weight:600;">0.00 zł</span></div>
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="label">Uczestnicy</div>
+            <div class="value" id="sum-count">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Zapłacili</div>
+            <div class="sub"><span id="sum-paid-count">0</span> osób</div>
+            <div class="value" id="sum-paid-amount">0.00 zł</div>
+            <div class="progress"><div class="progress-bar" id="sum-paid-progress" style="width:0%"></div></div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Niezapłacone</div>
+            <div class="sub"><span id="sum-unpaid-count">0</span> osób</div>
+            <div class="value" id="sum-unpaid-amount">0.00 zł</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Zysk</div>
+            <div class="value" id="sum-profit">0.00 zł</div>
+            <div class="label" style="margin-top:6px;">Potencjalny zysk</div>
+            <div class="sub" id="sum-potential-profit">0.00 zł</div>
+          </div>
         </div>
       </div>
       <div class="content-box" style="margin-top:15px;">
@@ -653,6 +691,8 @@
     const sumUnpaidCountEl = document.getElementById('sum-unpaid-count');
     const sumUnpaidAmountEl = document.getElementById('sum-unpaid-amount');
     const sumProfitEl = document.getElementById('sum-profit');
+    const sumPotentialProfitEl = document.getElementById('sum-potential-profit');
+    const sumPaidProgressEl = document.getElementById('sum-paid-progress');
 
     let selectedGroup = null;
     let selectedMonth = null; // 'YYYY-MM'
@@ -875,6 +915,11 @@
       sumUnpaidCountEl.textContent = String(unpaidCount ?? 0);
       sumUnpaidAmountEl.textContent = `${(unpaidAmount ?? 0).toFixed(2)} zł`;
       sumProfitEl.textContent = `${(profit ?? 0).toFixed(2)} zł`;
+      const potential = (paidAmount ?? 0) + (unpaidAmount ?? 0);
+      if (sumPotentialProfitEl) sumPotentialProfitEl.textContent = `${potential.toFixed(2)} zł`;
+      const totalForProgress = Math.max(1, (paidCount ?? 0) + (unpaidCount ?? 0));
+      const percent = Math.min(100, Math.max(0, Math.round(((paidCount ?? 0) / totalForProgress) * 100)));
+      if (sumPaidProgressEl) sumPaidProgressEl.style.width = percent + '%';
     }
 
     // Ładowanie uczestników + płatności dla wybranego miesiąca
@@ -949,40 +994,38 @@
           }
 
           const row = document.createElement('div');
-          row.className = 'content-box';
+          row.className = 'content-box participant-row';
           row.style.marginBottom = '10px';
           row.dataset.participantId = p.id;
           row.innerHTML = `
-            <div style=\"display:flex; flex-wrap: wrap; gap: 12px; align-items: center;\">
-              <div style=\"flex: 0 0 36px; min-width: 36px; text-align:center; color: var(--gold); font-weight: 600;\">${index + 1}</div>
-              <div style=\"flex: 1 1 150px; min-width: 140px;\"> 
-                <div style="font-weight:600;">${p.first_name || ''} ${p.last_name || ''}</div>
-                <div style="color: var(--text-gray); font-size: 0.8rem; line-height: 1.2;">${p.phone || ''} · ${p.multisport ? 'Multisport' : 'Std'}</div>
+            <div style="display:flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+              <div style="flex: 0 0 24px; min-width: 24px; text-align:center; color: var(--gold); font-weight: 600;">${index + 1}</div>
+              <div style="flex: 1 1 110px; min-width: 110px;">
+                <div style="font-weight:600; font-size: 0.95rem;">${p.first_name || ''} ${p.last_name || ''}</div>
+                <div style="color: var(--text-gray); font-size: 0.72rem; line-height: 1.1;">${p.phone || ''} · ${p.multisport ? 'Multisport' : 'Std'}</div>
               </div>
-              <div style="flex: 0 0 130px; min-width: 120px;">
-                <label style="display:block; color: var(--text-gray); margin-bottom:5px;">Kwota (${selectedMonth})</label>
-                <input type="number" step="0.01" class="form-control payment-amount" value="${amountToShow}" />
+              <div style="flex: 0 0 110px; min-width: 100px;">
+                <input title="Kwota (${selectedMonth})" type="number" step="0.01" class="form-control small payment-amount" value="${amountToShow}" />
               </div>
-              <div style="flex: 0 0 150px; min-width: 140px;">
-                <label style="display:block; color: var(--text-gray); margin-bottom:5px;">Metoda</label>
-                <select class="form-control payment-method">
-                  <option value="">Wybierz...</option>
+              <div style="flex: 0 0 120px; min-width: 110px;">
+                <select title="Metoda" class="form-control small payment-method">
+                  <option value="">Metoda...</option>
                   <option value="card" ${selectedMethod === 'card' ? 'selected' : ''}>Karta</option>
                   <option value="transfer" ${selectedMethod === 'transfer' ? 'selected' : ''}>Przelew</option>
                   <option value="cash" ${selectedMethod === 'cash' ? 'selected' : ''}>Gotówka</option>
                 </select>
               </div>
               <div style="flex: 0 0 auto; display:flex; gap:6px; align-items:center;">
-                <button class="btn btn-primary confirm-payment-btn">${pay && pay.confirmed ? 'Zapisz' : 'Potwierdź'}</button>
-                ${pay ? '<button class="btn btn-outline delete-payment-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>' : ''}
-                <span class="status" style="color:${pay && pay.confirmed ? 'var(--success)' : 'var(--text-gray)'}; font-size:0.85rem; white-space:nowrap;">${pay && pay.confirmed ? 'Potwierdzono' : 'Niepotwierdzono'}</span>
+                <button class="btn btn-primary btn-sm confirm-payment-btn">${pay && pay.confirmed ? 'Zapisz' : 'OK'}</button>
+                ${pay ? '<button class="btn btn-outline btn-sm delete-payment-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>' : ''}
+                <span class="status" style="color:${pay && pay.confirmed ? 'var(--success)' : 'var(--text-gray)'}; font-size:0.8rem; white-space:nowrap;">${pay && pay.confirmed ? 'OK' : 'Brak'}</span>
               </div>
-              <div style="flex: 1 1 120px; min-width: 120px; display:flex; gap:8px; align-items:center; justify-content:flex-end;">
-                <label style="display:flex; align-items:center; gap:8px; color: var(--text-gray);">
+              <div style="flex: 1 1 100px; min-width: 100px; display:flex; gap:6px; align-items:center; justify-content:flex-end;">
+                <label style="display:flex; align-items:center; gap:6px; color: var(--text-gray); font-size:0.8rem;">
                   <input type="checkbox" class="consent-checkbox" ${p.consent_signed ? 'checked' : ''} style="width:auto;"/>
-                  Zgoda podpisana
+                  Zgoda
                 </label>
-                <button class="btn btn-outline delete-participant-btn"><i class="fas fa-user-minus"></i></button>
+                <button class="btn btn-outline btn-sm delete-participant-btn" title="Usuń uczestnika"><i class="fas fa-user-minus"></i></button>
               </div>
             </div>
           `;
