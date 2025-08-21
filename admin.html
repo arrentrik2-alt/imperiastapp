@@ -569,6 +569,7 @@
         </div>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
           <input id="participants-search" class="form-control" placeholder="Szukaj: imię/nazwisko/telefon" style="width:260px;" />
+          <button class="btn btn-primary" id="add-participant-global"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button>
         </div>
       </div>
       <div id="participants-list-all">
@@ -1073,7 +1074,7 @@
     // Otwieranie szczegółów grupy
     function openGroupDetails(group) {
       selectedGroup = group;
-      groupDetailsTitle.textContent = `${group.name} — szczegóły`;
+      groupDetailsTitle.textContent = `${group.name}`;
       populateMonthSelect(selectedMonth);
       showGroupDetailsSection();
       loadParticipantsAndPayments();
@@ -1508,6 +1509,7 @@
     const editMultiEl = document.getElementById('edit-participant-multisport');
     const editGroupSelect = document.getElementById('edit-participant-group');
     let editParticipantId = null;
+    let isCreateParticipant = false;
 
     function openEditParticipantModal(p, groups) {
       editParticipantId = p.id;
@@ -1525,9 +1527,37 @@
       if (p.group_id) editGroupSelect.value = p.group_id;
       editParticipantModal.classList.add('active');
     }
+    async function openCreateParticipantModal() {
+      isCreateParticipant = true;
+      editParticipantId = null;
+      editFirstNameEl.value = '';
+      editLastNameEl.value = '';
+      editPhoneEl.value = '';
+      editMultiEl.checked = false;
+      try {
+        const { data: groups, error } = await supabase.from('groups').select('id,name').order('name', { ascending: true });
+        if (error) throw error;
+        editGroupSelect.innerHTML = '';
+        (groups || []).forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g.id;
+          opt.textContent = g.name;
+          editGroupSelect.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('Błąd ładowania grup:', err);
+      }
+      editParticipantModal.classList.add('active');
+    }
     function closeEditParticipantModal() { editParticipantModal.classList.remove('active'); editParticipantId = null; }
     closeEditParticipantModalBtn.addEventListener('click', closeEditParticipantModal);
     cancelEditParticipantBtn.addEventListener('click', closeEditParticipantModal);
+    const addParticipantGlobalBtn = document.getElementById('add-participant-global');
+    if (addParticipantGlobalBtn) {
+      addParticipantGlobalBtn.addEventListener('click', async () => {
+        await openCreateParticipantModal();
+      });
+    }
 
     if (participantsListAll) participantsListAll.addEventListener('click', async (e) => {
       const editBtn = e.target.closest('.edit-participant-btn');
@@ -1560,8 +1590,7 @@
     });
 
     saveEditParticipantBtn.addEventListener('click', async () => {
-      if (!editParticipantId) return;
-      const updates = {
+      const payload = {
         first_name: editFirstNameEl.value.trim(),
         last_name: editLastNameEl.value.trim(),
         phone: editPhoneEl.value.trim(),
@@ -1569,8 +1598,14 @@
         group_id: editGroupSelect.value || null
       };
       try {
-        const { error } = await supabase.from('participants').update(updates).eq('id', editParticipantId);
-        if (error) throw error;
+        if (isCreateParticipant || !editParticipantId) {
+          const { error } = await supabase.from('participants').insert([payload]);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('participants').update(payload).eq('id', editParticipantId);
+          if (error) throw error;
+        }
+        isCreateParticipant = false;
         closeEditParticipantModal();
         await loadAllParticipants();
       } catch (err) {
