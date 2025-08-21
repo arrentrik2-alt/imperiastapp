@@ -879,6 +879,7 @@
           const pay = paymentByParticipant.get(p.id) || null;
           const baseAmount = p.multisport ? Number(selectedGroup.multisport || 0) : Number(selectedGroup.fee || 0);
           const amountToShow = pay && typeof pay.amount === 'number' ? pay.amount : baseAmount;
+          const selectedMethod = pay && typeof pay.method === 'string' ? pay.method : '';
 
           const row = document.createElement('div');
           row.className = 'content-box';
@@ -894,6 +895,15 @@
               <div style="flex: 0 0 160px; min-width: 160px;">
                 <label style="display:block; color: var(--text-gray); margin-bottom:5px;">Kwota (${selectedMonth})</label>
                 <input type="number" step="0.01" class="form-control payment-amount" value="${amountToShow}" />
+              </div>
+              <div style="flex: 0 0 180px; min-width: 160px;">
+                <label style="display:block; color: var(--text-gray); margin-bottom:5px;">Metoda</label>
+                <select class="form-control payment-method">
+                  <option value="">Wybierz...</option>
+                  <option value="card" ${selectedMethod === 'card' ? 'selected' : ''}>Karta</option>
+                  <option value="transfer" ${selectedMethod === 'transfer' ? 'selected' : ''}>Przelew</option>
+                  <option value="cash" ${selectedMethod === 'cash' ? 'selected' : ''}>Gotówka</option>
+                </select>
               </div>
               <div style="flex: 0 0 auto; display:flex; gap:8px; align-items:center;">
                 <button class="btn btn-primary confirm-payment-btn">${pay && pay.confirmed ? 'Zapisz' : 'Potwierdź'}</button>
@@ -980,8 +990,14 @@
       if (e.target.closest('.confirm-payment-btn')) {
         const amountInput = row.querySelector('.payment-amount');
         const amount = parseFloat(amountInput.value);
+        const methodInput = row.querySelector('.payment-method');
+        const method = methodInput ? methodInput.value : '';
         if (isNaN(amount) || amount < 0) {
           alert('Podaj poprawną kwotę');
+          return;
+        }
+        if (!method) {
+          alert('Wybierz metodę płatności');
           return;
         }
         const btn = e.target.closest('.confirm-payment-btn');
@@ -1001,13 +1017,13 @@
           if (existing) {
             const { error: updErr } = await supabase
               .from('payments')
-              .update({ amount, confirmed: true, confirmed_at: new Date().toISOString() })
+              .update({ amount, method, confirmed: true, confirmed_at: new Date().toISOString() })
               .eq('id', existing.id);
             if (updErr) throw updErr;
           } else {
             const { error: insErr } = await supabase
               .from('payments')
-              .insert([{ participant_id: participantId, month: selectedMonth, amount, confirmed: true, confirmed_at: new Date().toISOString() }]);
+              .insert([{ participant_id: participantId, month: selectedMonth, amount, method, confirmed: true, confirmed_at: new Date().toISOString() }]);
             if (insErr) throw insErr;
           }
           await loadParticipantsAndPayments();
