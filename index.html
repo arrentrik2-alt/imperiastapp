@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Logowanie - Imperia Studio</title>
+  <title>Logowanie - GoldGym</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
@@ -31,12 +31,13 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      padding: 20px;
     }
     
     .login-container {
       background-color: var(--secondary-bg);
-      width: 90%;
-      max-width: 500px;
+      width: 100%;
+      max-width: 600px;
       padding: 30px;
       border-radius: 10px;
       box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
@@ -142,6 +143,27 @@
       background-color: rgba(0, 0, 0, 0.2);
       padding: 5px;
       border-radius: 3px;
+      margin: 5px 0;
+    }
+    
+    .sql-code {
+      background-color: #1a1a1a;
+      color: var(--gold-light);
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    
+    .step {
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border-dark);
+    }
+    
+    .step:last-child {
+      border-bottom: none;
     }
   </style>
 </head>
@@ -154,12 +176,12 @@
     
     <div class="input-group">
       <i class="fas fa-envelope"></i>
-      <input type="email" id="email" placeholder="Email">
+      <input type="email" id="email" placeholder="Email" value="admin@example.com">
     </div>
     
     <div class="input-group">
       <i class="fas fa-lock"></i>
-      <input type="password" id="password" placeholder="Hasło">
+      <input type="password" id="password" placeholder="Hasło" value="admin123">
     </div>
     
     <button class="btn" id="loginBtn">Zaloguj</button>
@@ -169,21 +191,51 @@
       <span id="errorText"></span>
     </div>
     
-    <div class="debug-toggle" id="debugToggle">Pokaż informacje diagnostyczne</div>
+    <div class="debug-toggle" id="debugToggle">Pokaż informacje diagnostyczne ▼</div>
     
     <div class="debug-info" id="debugInfo" style="display: none;">
-      <h3>Informacje diagnostyczne:</h3>
-      <p>Twoje ID użytkownika: <span class="user-id" id="userIdDisplay">-</span></p>
-      <p>Twoja rola: <span id="userRoleDisplay">-</span></p>
+      <h3>🔍 Diagnostyka problemu z uprawnieniami</h3>
       
-      <p style="margin-top: 15px;">Jeśli widzisz komunikat "Nie masz uprawnień administratora", wykonaj te kroki:</p>
-      <ol>
-        <li>Otwórz <strong>SQL Editor</strong> w Supabase</li>
-        <li>Wykonaj to zapytanie (używając swojego user_id powyżej):
-          <pre>UPDATE profiles SET role = 'admin' WHERE id = 'twoje_user_id';</pre>
-        </li>
-        <li>Spróbuj zalogować się ponownie</li>
-      </ol>
+      <div class="step">
+        <p><strong>Twój identyfikator użytkownika:</strong></p>
+        <div class="user-id" id="userIdDisplay">-</div>
+      </div>
+      
+      <div class="step">
+        <p><strong>Twoja rola w systemie:</strong> <span id="userRoleDisplay">-</span></p>
+      </div>
+      
+      <div class="step">
+        <h4>✅ Rozwiązanie problemu:</h4>
+        <p>Twoje konto nie ma rekordu w tabeli <code>profiles</code>. Wykonaj następujące kroki:</p>
+        
+        <ol>
+          <li>Otwórz <strong>SQL Editor</strong> w dashboardzie Supabase</li>
+          <li>Wklej poniższe zapytanie SQL</li>
+          <li>Kliknij <strong>RUN</strong> aby wykonać zapytanie</li>
+          <li>Spróbuj zalogować się ponownie</li>
+        </ol>
+        
+        <div class="sql-code" id="sqlCode">
+          INSERT INTO profiles (id, role) <br>
+          VALUES ('twoje_id', 'admin')<br>
+          ON CONFLICT (id) DO UPDATE <br>
+          SET role = 'admin';
+        </div>
+        
+        <button class="btn" id="copySqlBtn" style="margin-top: 10px;">
+          <i class="fas fa-copy"></i> Kopiuj zapytanie SQL
+        </button>
+      </div>
+      
+      <div class="step">
+        <h4>🔍 Sprawdź czy rekord został utworzony:</h4>
+        <p>Po wykonaniu powyższego zapytania, możesz sprawdzić czy rekord istnieje wykonując:</p>
+        
+        <div class="sql-code">
+          SELECT * FROM profiles WHERE id = 'twoje_id';
+        </div>
+      </div>
     </div>
   </div>
 
@@ -194,8 +246,24 @@
     document.getElementById('debugToggle').addEventListener('click', function() {
       const debugInfo = document.getElementById('debugInfo');
       debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
-      this.textContent = debugInfo.style.display === 'none' ? 
-        'Pokaż informacje diagnostyczne' : 'Ukryj informacje diagnostyczne';
+      this.innerHTML = debugInfo.style.display === 'none' ? 
+        'Pokaż informacje diagnostyczne ▼' : 'Ukryj informacje diagnostyczne ▲';
+    });
+    
+    // Kopiuj zapytanie SQL do schowka
+    document.getElementById('copySqlBtn').addEventListener('click', function() {
+      const sqlCode = document.getElementById('sqlCode').textContent;
+      const userId = document.getElementById('userIdDisplay').textContent;
+      const finalSql = sqlCode.replace(/twoje_id/g, userId);
+      
+      navigator.clipboard.writeText(finalSql).then(() => {
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-check"></i> Skopiowano!';
+        
+        setTimeout(() => {
+          this.innerHTML = originalText;
+        }, 2000);
+      });
     });
     
     async function login() {
@@ -205,6 +273,7 @@
       const errorText = document.getElementById('errorText');
       const userIdDisplay = document.getElementById('userIdDisplay');
       const userRoleDisplay = document.getElementById('userRoleDisplay');
+      const sqlCode = document.getElementById('sqlCode');
       
       // Reset error message
       errorMsg.style.display = 'none';
@@ -239,7 +308,12 @@
           .maybeSingle();
           
         // Wyświetl rolę użytkownika do debugowania
-        userRoleDisplay.textContent = profile ? profile.role : 'brak rekordu';
+        if (profile) {
+          userRoleDisplay.textContent = profile.role;
+        } else {
+          userRoleDisplay.textContent = 'BRAK REKORDU W TABELI PROFILES';
+          userRoleDisplay.style.color = '#ff6b6b';
+        }
         
         if (profileError) {
           console.error('Błąd odczytu profilu:', profileError);
@@ -250,12 +324,15 @@
         }
         
         if (!profile || profile.role !== "admin") {
-          errorText.textContent = 'Nie masz uprawnień administratora. Skontaktuj się z administratorem systemu.';
+          errorText.textContent = 'Nie masz uprawnień administratora.';
           errorMsg.style.display = 'block';
           
           // Pokaż panel debugowania
           document.getElementById('debugInfo').style.display = 'block';
-          document.getElementById('debugToggle').textContent = 'Ukryj informacje diagnostyczne';
+          document.getElementById('debugToggle').innerHTML = 'Ukryj informacje diagnostyczne ▲';
+          
+          // Aktualizuj zapytanie SQL z prawidłowym ID
+          sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
           
           await supabase.auth.signOut();
           return;
@@ -280,6 +357,13 @@
         login();
       }
     });
+    
+    // Automatycznie pokazuj panel debugowania jeśli były wcześniejsze problemy
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('debug') === '1') {
+      document.getElementById('debugInfo').style.display = 'block';
+      document.getElementById('debugToggle').innerHTML = 'Ukryj informacje diagnostyczne ▲';
+    }
   </script>
 </body>
 </html>
