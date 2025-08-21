@@ -3,15 +3,218 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Logowanie</title>
+  <title>Logowanie - GoldGym</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-bg: #121212;
+      --secondary-bg: #1e1e1e;
+      --gold: #d4af37;
+      --gold-light: #f1e5b9;
+      --text-light: #f5f5f5;
+      --text-gray: #b0b0b0;
+      --border-dark: #333;
+      --success: #28a745;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: var(--primary-bg);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .login-container {
+      background-color: var(--secondary-bg);
+      width: 90%;
+      max-width: 400px;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-dark);
+    }
+    
+    .logo {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .logo h1 {
+      color: var(--gold);
+      font-size: 2.2rem;
+      margin-bottom: 5px;
+    }
+    
+    .logo p {
+      color: var(--text-gray);
+      font-size: 1rem;
+    }
+    
+    .input-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+    
+    .input-group i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gold);
+    }
+    
+    .input-group input {
+      width: 100%;
+      padding: 12px 15px 12px 45px;
+      background-color: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--border-dark);
+      border-radius: 5px;
+      color: var(--text-light);
+      font-size: 1rem;
+    }
+    
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--gold);
+      color: var(--primary-bg);
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn:hover {
+      background-color: #c19b2e;
+    }
+    
+    .error-message {
+      background-color: rgba(220, 53, 69, 0.2);
+      color: #f5c6cb;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 20px;
+      text-align: center;
+      display: none;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 25px;
+      color: var(--text-gray);
+      font-size: 0.9rem;
+    }
+    
+    .footer a {
+      color: var(--gold);
+      text-decoration: none;
+    }
+    
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
-  <h1>Logowanie</h1>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Hasło">
-  <button id="loginBtn">Zaloguj</button>
+  <div class="login-container">
+    <div class="logo">
+      <h1>Gold<span>Gym</span></h1>
+      <p>Panel administracyjny</p>
+    </div>
+    
+    <div class="input-group">
+      <i class="fas fa-envelope"></i>
+      <input type="email" id="email" placeholder="Email">
+    </div>
+    
+    <div class="input-group">
+      <i class="fas fa-lock"></i>
+      <input type="password" id="password" placeholder="Hasło">
+    </div>
+    
+    <button class="btn" id="loginBtn">Zaloguj</button>
+    
+    <div class="error-message" id="errorMsg">
+      <i class="fas fa-exclamation-circle"></i> 
+      <span id="errorText"></span>
+    </div>
+    
+    <div class="footer">
+      <p>Nie masz konta? <a href="#">Skontaktuj się z administratorem</a></p>
+    </div>
+  </div>
 
-  <!-- Supabase 2.x CDN -->
-  <script type="module" src="login.js"></script>
+  <script type="module">
+    import { supabase } from './supabaseClient.js';
+    
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorMsg = document.getElementById('errorMsg');
+      const errorText = document.getElementById('errorText');
+      
+      // Reset error message
+      errorMsg.style.display = 'none';
+      
+      // Simple validation
+      if (!email || !password) {
+        errorText.textContent = 'Proszę wypełnić wszystkie pola';
+        errorMsg.style.display = 'block';
+        return;
+      }
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        errorText.textContent = 'Błąd logowania: ' + error.message;
+        errorMsg.style.display = 'block';
+      } else {
+        // Check if user has admin role
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (profileError || !profile || profile.role !== "admin") {
+          errorText.textContent = 'Nie masz uprawnień administratora';
+          errorMsg.style.display = 'block';
+          await supabase.auth.signOut();
+        } else {
+          // Redirect to admin panel
+          window.location.href = 'admin.html';
+        }
+      }
+    }
+    
+    // Add event listeners
+    document.getElementById('loginBtn').addEventListener('click', login);
+    
+    // Allow login on Enter key
+    document.getElementById('password').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        login();
+      }
+    });
+  </script>
 </body>
 </html>
