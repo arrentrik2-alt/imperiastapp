@@ -1494,7 +1494,7 @@
     closeEditParticipantModalBtn.addEventListener('click', closeEditParticipantModal);
     cancelEditParticipantBtn.addEventListener('click', closeEditParticipantModal);
 
-    participantsListAll.addEventListener('click', async (e) => {
+    if (participantsListAll) participantsListAll.addEventListener('click', async (e) => {
       const editBtn = e.target.closest('.edit-participant-btn');
       const delBtn = e.target.closest('.delete-participant-global-btn');
       if (editBtn) {
