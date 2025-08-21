@@ -420,13 +420,13 @@
     
     <ul class="nav-links">
       <li>
-        <a href="#" class="active">
+        <a href="#" id="nav-groups" class="active">
           <i class="fas fa-users"></i>
           <span class="link-text">Grupy</span>
         </a>
       </li>
       <li>
-        <a href="#">
+        <a href="#" id="nav-participants">
           <i class="fas fa-user-friends"></i>
           <span class="link-text">Uczestnicy</span>
         </a>
@@ -778,24 +778,37 @@
     }
     backToGroupsBtn.addEventListener('click', showGroupsSection);
     // Sidebar 'Grupy' link handler
-    const groupsLink = document.querySelectorAll('.nav-links a')[0];
-    groupsLink.addEventListener('click', async (e) => {
-      e.preventDefault();
-      participantsSection.style.display = 'none';
-      groupDetailsSection.style.display = 'none';
-      groupsSection.style.display = 'block';
-      await loadGroups();
-    });
+    const groupsLink = document.getElementById('nav-groups');
+    if (groupsLink) {
+      groupsLink.addEventListener('click', async (e) => {
+        try {
+          e.preventDefault();
+          participantsSection.style.display = 'none';
+          groupDetailsSection.style.display = 'none';
+          groupsSection.style.display = 'block';
+          await loadGroups();
+        } catch (err) {
+          console.error('Błąd przełączania na Grupy:', err);
+        }
+      });
+    }
     
     // Navigate to Participants page
-    const participantsLink = document.querySelectorAll('.nav-links a')[1];
-    participantsLink.addEventListener('click', async (e) => {
-      e.preventDefault();
-      groupsSection.style.display = 'none';
-      groupDetailsSection.style.display = 'none';
-      participantsSection.style.display = 'block';
-      await loadAllParticipants();
-    });
+    const participantsLink = document.getElementById('nav-participants');
+    if (participantsLink) {
+      participantsLink.addEventListener('click', async (e) => {
+        try {
+          e.preventDefault();
+          groupsSection.style.display = 'none';
+          groupDetailsSection.style.display = 'none';
+          participantsSection.style.display = 'block';
+          await loadAllParticipants();
+        } catch (err) {
+          console.error('Błąd przełączania na Uczestnicy:', err);
+          participantsListAll.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+        }
+      });
+    }
     
     // Edit group modal helpers
     const groupModalTitle = document.getElementById('group-modal-title');
@@ -824,7 +837,7 @@
       document.getElementById('group-fee').value = '';
       document.getElementById('group-multisport').value = '';
     }
-
+    
     // Save group function (add or edit)
     saveGroupBtn.addEventListener('click', async () => {
       const name = document.getElementById('group-name').value;
@@ -851,7 +864,7 @@
         let error, data;
         if (editId) {
           ({ error } = await supabase
-            .from('groups')
+          .from('groups')
             .update({ name, day, start_time: start, end_time: end, trainer, fee, multisport })
             .eq('id', editId));
         } else {
@@ -925,37 +938,37 @@
           header.innerHTML = `<h3 style="font-size:1rem; color: var(--text-gray);"><i class="fas fa-calendar-day" style="color: var(--gold); margin-right:6px;"></i>${dayLabel}</h3>`;
           groupsList.appendChild(header);
           list.forEach(group => {
-            const groupCard = document.createElement('div');
-            groupCard.className = 'group-card';
+          const groupCard = document.createElement('div');
+          groupCard.className = 'group-card';
             const startHHMM = formatTimeHHMM(group.start_time);
             const endHHMM = formatTimeHHMM(group.end_time);
-            groupCard.innerHTML = `
-              <h4>${group.name}</h4>
-              <div class="group-detail">
-                <i class="fas fa-calendar-day"></i>
+          groupCard.innerHTML = `
+            <h4>${group.name}</h4>
+            <div class="group-detail">
+              <i class="fas fa-calendar-day"></i>
                 <span>${group.day}, ${startHHMM} - ${endHHMM}</span>
-              </div>
-              <div class="group-detail">
-                <i class="fas fa-user-tie"></i>
-                <span>${group.trainer}</span>
-              </div>
-              <div class="group-detail">
-                <i class="fas fa-money-bill-wave"></i>
-                <span>Opłata: ${group.fee} zł</span>
-              </div>
-              <div class="group-detail">
-                <i class="fas fa-credit-card"></i>
-                <span>Multisport: ${group.multisport} zł</span>
-              </div>
-              <div class="group-actions">
-                <button class="btn btn-outline edit-btn" data-id="${group.id}">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-outline delete-btn" data-id="${group.id}">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            `;
+            </div>
+            <div class="group-detail">
+              <i class="fas fa-user-tie"></i>
+              <span>${group.trainer}</span>
+            </div>
+            <div class="group-detail">
+              <i class="fas fa-money-bill-wave"></i>
+              <span>Opłata: ${group.fee} zł</span>
+            </div>
+            <div class="group-detail">
+              <i class="fas fa-credit-card"></i>
+              <span>Multisport: ${group.multisport} zł</span>
+            </div>
+            <div class="group-actions">
+              <button class="btn btn-outline edit-btn" data-id="${group.id}">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-outline delete-btn" data-id="${group.id}">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          `;
             groupCard.addEventListener('click', (e) => {
               if (e.target.closest('.edit-btn') || e.target.closest('.delete-btn')) return;
               openGroupDetails(group);
@@ -975,7 +988,7 @@
                 alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany'));
               }
             });
-            groupsList.appendChild(groupCard);
+          groupsList.appendChild(groupCard);
           });
         };
         dayOrder.forEach(day => {
@@ -1440,6 +1453,7 @@
     if (participantsSearch) {
       participantsSearch.addEventListener('input', () => {
         const q = participantsSearch.value.toLowerCase().trim();
+        if (!participantsListAll) return;
         const cards = participantsListAll.querySelectorAll('.group-card');
         cards.forEach(c => {
           const text = c.textContent.toLowerCase();
