@@ -857,11 +857,13 @@
           arr.forEach(group => {
             const groupCard = document.createElement('div');
             groupCard.className = 'group-card';
+            const startHHMM = formatTimeHHMM(group.start_time);
+            const endHHMM = formatTimeHHMM(group.end_time);
             groupCard.innerHTML = `
               <h4>${group.name}</h4>
               <div class="group-detail">
                 <i class="fas fa-calendar-day"></i>
-                <span>${group.day}, ${group.start_time} - ${group.end_time}</span>
+                <span>${group.day}, ${startHHMM} - ${endHHMM}</span>
               </div>
               <div class="group-detail">
                 <i class="fas fa-user-tie"></i>
@@ -946,6 +948,13 @@
         monthSelect.selectedIndex = 0;
       }
       selectedMonth = monthSelect.value;
+    }
+
+    // Format time HH:MM (hide seconds)
+    function formatTimeHHMM(t) {
+      if (!t) return '';
+      const parts = String(t).split(':');
+      return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : String(t);
     }
 
     // Otwieranie szczegółów grupy
