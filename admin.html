@@ -529,6 +529,65 @@
     </div>
   </div>
 
+  <!-- Group Details Modal -->
+  <div class="modal" id="group-details-modal">
+    <div class="modal-content" style="max-width: 900px; width: 95%">
+      <button class="modal-close" id="close-group-details-modal">
+        <i class="fas fa-times"></i>
+      </button>
+
+      <div class="modal-header">
+        <h3 id="group-details-title">Szczegóły grupy</h3>
+      </div>
+
+      <div class="form-group" style="display:flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <div style="flex: 1 1 220px; min-width: 200px;">
+          <label for="month-select">Miesiąc</label>
+          <select id="month-select" class="form-control"></select>
+        </div>
+        <div style="flex: 0 0 auto">
+          <button class="btn btn-primary" id="add-participant-btn">
+            <i class="fas fa-user-plus"></i> Dodaj uczestnika
+          </button>
+        </div>
+      </div>
+
+      <div id="add-participant-form" class="content-box" style="display:none; margin-top:10px;">
+        <div class="form-group">
+          <label>Imię</label>
+          <input type="text" id="participant-first-name" class="form-control" placeholder="Imię">
+        </div>
+        <div class="form-group">
+          <label>Nazwisko</label>
+          <input type="text" id="participant-last-name" class="form-control" placeholder="Nazwisko">
+        </div>
+        <div class="form-group">
+          <label>Telefon</label>
+          <input type="tel" id="participant-phone" class="form-control" placeholder="Numer telefonu">
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="participant-multisport" style="width:auto;">
+          <label for="participant-multisport" style="margin:0;">Korzysta z Multisport</label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" id="cancel-add-participant">Anuluj</button>
+          <button class="btn btn-primary" id="save-participant-btn">
+            <i class="fas fa-save"></i> Dodaj uczestnika
+          </button>
+        </div>
+      </div>
+
+      <div class="content-box" style="margin-top:15px;">
+        <div class="content-header" style="margin-bottom:12px;">
+          <h3 style="font-size:1.1rem;">Uczestnicy</h3>
+        </div>
+        <div id="participants-list">
+          <div class="empty-state"><p>Brak uczestników w tej grupie</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { supabase } from './supabaseClient.js';
     
@@ -570,6 +629,23 @@
     const saveGroupBtn = document.getElementById('save-group-btn');
     const groupsList = document.getElementById('groups-list');
     const emptyState = document.getElementById('emptyState');
+    // Group details modal refs
+    const groupDetailsModal = document.getElementById('group-details-modal');
+    const closeGroupDetailsBtn = document.getElementById('close-group-details-modal');
+    const groupDetailsTitle = document.getElementById('group-details-title');
+    const monthSelect = document.getElementById('month-select');
+    const participantsList = document.getElementById('participants-list');
+    const addParticipantBtn = document.getElementById('add-participant-btn');
+    const addParticipantForm = document.getElementById('add-participant-form');
+    const cancelAddParticipant = document.getElementById('cancel-add-participant');
+    const saveParticipantBtn = document.getElementById('save-participant-btn');
+    const participantFirstName = document.getElementById('participant-first-name');
+    const participantLastName = document.getElementById('participant-last-name');
+    const participantPhone = document.getElementById('participant-phone');
+    const participantMultisport = document.getElementById('participant-multisport');
+
+    let selectedGroup = null;
+    let selectedMonth = null; // 'YYYY-MM'
     
     function openModal() {
       addGroupModal.classList.add('active');
@@ -590,6 +666,21 @@
     addFirstGroupBtn.addEventListener('click', openModal);
     closeModalBtn.addEventListener('click', closeModal);
     cancelGroupBtn.addEventListener('click', closeModal);
+
+    // Group details modal controls
+    function openGroupDetailsModal() {
+      groupDetailsModal.classList.add('active');
+    }
+    function closeGroupDetailsModal() {
+      groupDetailsModal.classList.remove('active');
+      // reset lightweight form
+      addParticipantForm.style.display = 'none';
+      participantFirstName.value = '';
+      participantLastName.value = '';
+      participantPhone.value = '';
+      participantMultisport.checked = false;
+    }
+    closeGroupDetailsBtn.addEventListener('click', closeGroupDetailsModal);
     
     // Save group function
     saveGroupBtn.addEventListener('click', async () => {
@@ -708,7 +799,12 @@
               </button>
             </div>
           `;
-          
+          // Otwórz szczegóły grupy po kliknięciu karty (z wykluczeniem przycisków akcji)
+          groupCard.addEventListener('click', (e) => {
+            if (e.target.closest('.edit-btn') || e.target.closest('.delete-btn')) return;
+            openGroupDetails(group);
+          });
+
           groupsList.appendChild(groupCard);
         });
       } catch (err) {
@@ -716,6 +812,258 @@
         groupsList.innerHTML = '<div class="empty-state"><p>Wystąpił nieoczekiwany błąd: ' + err.message + '</p></div>';
       }
     }
+
+    // Pomocnicze: lista 12 miesięcy (bieżący + 11 wstecz)
+    function getLast12MonthsOptions() {
+      const formatter = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' });
+      const options = [];
+      const now = new Date();
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const value = `${yyyy}-${mm}`;
+        const label = formatter.format(d);
+        options.push({ value, label });
+      }
+      return options;
+    }
+
+    function populateMonthSelect(defaultValue) {
+      monthSelect.innerHTML = '';
+      const opts = getLast12MonthsOptions();
+      opts.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        monthSelect.appendChild(opt);
+      });
+      if (defaultValue) {
+        monthSelect.value = defaultValue;
+      } else {
+        monthSelect.selectedIndex = 0;
+      }
+      selectedMonth = monthSelect.value;
+    }
+
+    // Otwieranie szczegółów grupy
+    function openGroupDetails(group) {
+      selectedGroup = group;
+      groupDetailsTitle.textContent = `${group.name} — szczegóły`;
+      populateMonthSelect(selectedMonth);
+      openGroupDetailsModal();
+      loadParticipantsAndPayments();
+    }
+
+    // Ładowanie uczestników + płatności dla wybranego miesiąca
+    async function loadParticipantsAndPayments() {
+      if (!selectedGroup || !selectedMonth) return;
+      participantsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
+      try {
+        const { data: participants, error: participantsError } = await supabase
+          .from('participants')
+          .select('*')
+          .eq('group_id', selectedGroup.id)
+          .order('last_name', { ascending: true });
+        if (participantsError) throw participantsError;
+
+        if (!participants || participants.length === 0) {
+          participantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników w tej grupie</p></div>';
+          return;
+        }
+
+        const participantIds = participants.map(p => p.id);
+        const { data: payments, error: paymentsError } = await supabase
+          .from('payments')
+          .select('*')
+          .in('participant_id', participantIds)
+          .eq('month', selectedMonth);
+        if (paymentsError) throw paymentsError;
+
+        const paymentByParticipant = new Map();
+        (payments || []).forEach(pay => paymentByParticipant.set(pay.participant_id, pay));
+
+        // Renderuj
+        const fragment = document.createDocumentFragment();
+        participants.forEach(p => {
+          const pay = paymentByParticipant.get(p.id) || null;
+          const baseAmount = p.multisport ? Number(selectedGroup.multisport || 0) : Number(selectedGroup.fee || 0);
+          const amountToShow = pay && typeof pay.amount === 'number' ? pay.amount : baseAmount;
+
+          const row = document.createElement('div');
+          row.className = 'content-box';
+          row.style.marginBottom = '10px';
+          row.dataset.participantId = p.id;
+          row.innerHTML = `
+            <div style="display:flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+              <div style="flex: 1 1 220px; min-width: 200px;">
+                <div style="font-weight:600;">${p.first_name || ''} ${p.last_name || ''}</div>
+                <div style="color: var(--text-gray); font-size: 0.9rem;">${p.phone || ''}</div>
+                <div style="color: var(--text-gray); font-size: 0.85rem;">${p.multisport ? 'Multisport: tak' : 'Multisport: nie'}</div>
+              </div>
+              <div style="flex: 0 0 160px; min-width: 160px;">
+                <label style="display:block; color: var(--text-gray); margin-bottom:5px;">Kwota (${selectedMonth})</label>
+                <input type="number" step="0.01" class="form-control payment-amount" value="${amountToShow}" />
+              </div>
+              <div style="flex: 0 0 auto; display:flex; gap:8px; align-items:center;">
+                <button class="btn btn-primary confirm-payment-btn">${pay && pay.confirmed ? 'Zapisz' : 'Potwierdź'}</button>
+                <span class="status" style="color:${pay && pay.confirmed ? 'var(--success)' : 'var(--text-gray)'}; font-size:0.9rem;">${pay && pay.confirmed ? 'Potwierdzono' : 'Niepotwierdzono'}</span>
+              </div>
+              <div style="flex: 1 1 140px; min-width: 140px; display:flex; gap:10px; align-items:center; justify-content:flex-end;">
+                <label style="display:flex; align-items:center; gap:8px; color: var(--text-gray);">
+                  <input type="checkbox" class="consent-checkbox" ${p.consent_signed ? 'checked' : ''} style="width:auto;"/>
+                  Zgoda podpisana
+                </label>
+                <button class="btn btn-outline delete-participant-btn"><i class="fas fa-user-minus"></i></button>
+              </div>
+            </div>
+          `;
+          fragment.appendChild(row);
+        });
+        participantsList.innerHTML = '';
+        participantsList.appendChild(fragment);
+      } catch (err) {
+        console.error('Błąd ładowania uczestników/płatności:', err);
+        participantsList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+      }
+    }
+
+    // Zmiana miesiąca
+    monthSelect.addEventListener('change', () => {
+      selectedMonth = monthSelect.value;
+      loadParticipantsAndPayments();
+    });
+
+    // Dodawanie uczestnika - UI toggle
+    addParticipantBtn.addEventListener('click', () => {
+      addParticipantForm.style.display = addParticipantForm.style.display === 'none' ? 'block' : 'none';
+    });
+    cancelAddParticipant.addEventListener('click', () => {
+      addParticipantForm.style.display = 'none';
+      participantFirstName.value = '';
+      participantLastName.value = '';
+      participantPhone.value = '';
+      participantMultisport.checked = false;
+    });
+
+    // Zapis nowego uczestnika
+    saveParticipantBtn.addEventListener('click', async () => {
+      if (!selectedGroup) return;
+      const fn = participantFirstName.value.trim();
+      const ln = participantLastName.value.trim();
+      const phone = participantPhone.value.trim();
+      const multi = !!participantMultisport.checked;
+      if (!fn || !ln) {
+        alert('Podaj imię i nazwisko');
+        return;
+      }
+      saveParticipantBtn.disabled = true;
+      const original = saveParticipantBtn.innerHTML;
+      saveParticipantBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
+      try {
+        const { error } = await supabase
+          .from('participants')
+          .insert([{ group_id: selectedGroup.id, first_name: fn, last_name: ln, phone, multisport: multi, consent_signed: false }]);
+        if (error) throw error;
+        addParticipantForm.style.display = 'none';
+        participantFirstName.value = '';
+        participantLastName.value = '';
+        participantPhone.value = '';
+        participantMultisport.checked = false;
+        await loadParticipantsAndPayments();
+      } catch (err) {
+        alert('Błąd dodawania uczestnika: ' + (err.message || 'Nieznany'));
+      } finally {
+        saveParticipantBtn.disabled = false;
+        saveParticipantBtn.innerHTML = original;
+      }
+    });
+
+    // Delegacja zdarzeń na liście uczestników: potwierdzenie płatności, zgoda, usunięcie
+    participantsList.addEventListener('click', async (e) => {
+      const row = e.target.closest('[data-participant-id]');
+      if (!row) return;
+      const participantId = row.dataset.participantId;
+
+      // Potwierdzenie/Zapis płatności
+      if (e.target.closest('.confirm-payment-btn')) {
+        const amountInput = row.querySelector('.payment-amount');
+        const amount = parseFloat(amountInput.value);
+        if (isNaN(amount) || amount < 0) {
+          alert('Podaj poprawną kwotę');
+          return;
+        }
+        const btn = e.target.closest('.confirm-payment-btn');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading"></span>';
+        try {
+          // Spróbuj znaleźć istniejącą płatność
+          const { data: existing, error: selErr } = await supabase
+            .from('payments')
+            .select('id')
+            .eq('participant_id', participantId)
+            .eq('month', selectedMonth)
+            .limit(1)
+            .maybeSingle();
+          if (selErr) throw selErr;
+          if (existing) {
+            const { error: updErr } = await supabase
+              .from('payments')
+              .update({ amount, confirmed: true, confirmed_at: new Date().toISOString() })
+              .eq('id', existing.id);
+            if (updErr) throw updErr;
+          } else {
+            const { error: insErr } = await supabase
+              .from('payments')
+              .insert([{ participant_id: participantId, month: selectedMonth, amount, confirmed: true, confirmed_at: new Date().toISOString() }]);
+            if (insErr) throw insErr;
+          }
+          await loadParticipantsAndPayments();
+        } catch (err) {
+          alert('Błąd zapisu płatności: ' + (err.message || 'Nieznany'));
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = original;
+        }
+      }
+
+      // Usuwanie uczestnika
+      if (e.target.closest('.delete-participant-btn')) {
+        if (!confirm('Usunąć uczestnika z grupy?')) return;
+        try {
+          const { error } = await supabase
+            .from('participants')
+            .delete()
+            .eq('id', participantId);
+          if (error) throw error;
+          await loadParticipantsAndPayments();
+        } catch (err) {
+          alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
+        }
+      }
+    });
+
+    // Zgoda podpisana - change na checkboxie
+    participantsList.addEventListener('change', async (e) => {
+      const row = e.target.closest('[data-participant-id]');
+      if (!row) return;
+      if (e.target.classList.contains('consent-checkbox')) {
+        const participantId = row.dataset.participantId;
+        const checked = !!e.target.checked;
+        try {
+          const { error } = await supabase
+            .from('participants')
+            .update({ consent_signed: checked })
+            .eq('id', participantId);
+          if (error) throw error;
+        } catch (err) {
+          alert('Błąd zapisu zgody: ' + (err.message || 'Nieznany'));
+          // rollback UI
+          e.target.checked = !e.target.checked;
+        }
+      }
+    });
     
     // Inicjalizacja
     document.addEventListener('DOMContentLoaded', async () => {
