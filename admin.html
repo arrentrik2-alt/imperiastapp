@@ -4,34 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Admina</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Panel Admina</h1>
+  <h1>Witaj w panelu admina!</h1>
   <button id="logoutBtn">Wyloguj się</button>
 
-  <section id="dashboard">
-    <h2>Funkcje admina</h2>
+  <!-- Supabase client -->
+  <script src="supabaseClient.js"></script>
+  <!-- logika panelu admina -->
+  <script>
+    // Sprawdzenie, czy użytkownik jest zalogowany
+    async function checkAuth() {
+      const { data: { session }, error } = await supabase.auth.getSession();
 
-    <div id="groups">
-      <h3>Grupy</h3>
-      <ul id="groupList"></ul>
-      <input type="text" id="newGroupName" placeholder="Nazwa grupy">
-      <button onclick="addGroup()">Dodaj grupę</button>
-    </div>
+      if (!session) {
+        // jeśli nie ma sesji, przekieruj na login
+        window.location.href = "/index.html";
+      } else {
+        console.log("Zalogowany użytkownik:", session.user.email);
+      }
+    }
 
-    <div id="attendance">
-      <h3>Obecności</h3>
-      <p>Tu wyświetlisz listę obecności</p>
-    </div>
+    checkAuth();
 
-    <div id="payments">
-      <h3>Płatności</h3>
-      <p>Tu wyświetlisz płatności</p>
-    </div>
-  </section>
-
-  <script src="admin.js"></script>
+    // Wylogowanie
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        alert("Błąd wylogowania: " + error.message);
+      } else {
+        window.location.href = "/index.html";
+      }
+    });
+  </script>
 </body>
 </html>
