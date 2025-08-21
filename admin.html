@@ -1,60 +1,1670 @@
-body {
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #f3f4f6;
-}
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admina - Grupy</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-bg: #121212;
+      --secondary-bg: #1e1e1e;
+      --gold: #d4af37;
+      --gold-light: #f1e5b9;
+      --text-light: #f5f5f5;
+      --text-gray: #b0b0b0;
+      --border-dark: #333;
+      --success: #28a745;
+      --error: #dc3545;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: var(--primary-bg);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background-color: var(--secondary-bg);
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      padding: 20px 0;
+      border-right: 1px solid var(--border-dark);
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    
+    .logo {
+      text-align: center;
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border-dark);
+      margin-bottom: 20px;
+    }
+    
+    .logo h1 {
+      color: var(--gold);
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .logo span {
+      color: var(--text-light);
+    }
+    
+    .nav-links {
+      list-style: none;
+      padding: 0 15px;
+    }
+    
+    .nav-links li {
+      margin-bottom: 5px;
+    }
+    
+    .nav-links a {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      text-decoration: none;
+      color: var(--text-gray);
+      border-radius: 5px;
+      transition: all 0.3s ease;
+    }
+    
+    .nav-links a:hover, .nav-links a.active {
+      background-color: rgba(212, 175, 55, 0.1);
+      color: var(--gold);
+    }
+    
+    .nav-links a i {
+      margin-right: 10px;
+      font-size: 1.1rem;
+    }
+    
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      margin-left: 250px;
+      padding: 20px;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border-dark);
+    }
+    
+    .header h2 {
+      color: var(--gold);
+      font-size: 1.8rem;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+    }
+    
+    .user-info span {
+      margin-right: 15px;
+      color: var(--text-gray);
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+    }
+    
+    .btn i {
+      margin-right: 5px;
+    }
+    
+    .btn-primary {
+      background-color: var(--gold);
+      color: var(--primary-bg);
+    }
+    
+    .btn-primary:hover {
+      background-color: #c19b2e;
+    }
+    
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+    }
+    
+    .btn-outline:hover {
+      background-color: rgba(212, 175, 55, 0.1);
+    }
+    
+    /* Content Box */
+    .content-box {
+      background-color: var(--secondary-bg);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-dark);
+    }
+    
+    .content-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .content-header h3 {
+      color: var(--gold);
+      font-size: 1.3rem;
+    }
+    
+    /* Groups List */
+    .group-card {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 15px;
+      border: 1px solid var(--border-dark);
+      transition: all 0.3s ease;
+      margin-bottom: 12px;
+    }
+    .groups-day-header { padding: 8px 4px; margin: 10px 0 6px; border-bottom: 1px dashed var(--border-dark); }
+    
+    .group-card:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+    }
+    
+    .group-card h4 {
+      color: var(--gold);
+      margin-bottom: 10px;
+      font-size: 1.1rem;
+    }
+    
+    .group-detail {
+      display: flex;
+      margin-bottom: 8px;
+      color: var(--text-gray);
+      font-size: 0.9rem;
+    }
+    
+    .group-detail i {
+      margin-right: 8px;
+      color: var(--gold);
+      width: 16px;
+    }
+    
+    .group-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 15px;
+      gap: 10px;
+    }
+    /* Sidebar collapse */
+    .sidebar.collapsed { width: 70px; }
+    .sidebar.collapsed .logo-text, .sidebar.collapsed .link-text { display: none; }
+    .main-content.collapsed { margin-left: 70px; }
+    .logo h1 { white-space: normal; line-height: 1.2; }
+    .sidebar.collapsed .nav-links { padding: 0 10px; }
+    .sidebar.collapsed .nav-links a { justify-content: center; padding: 15px 10px; }
+    .sidebar.collapsed .nav-links a i { margin-right: 0; font-size: 1.3rem; }
+    #sidebar-toggle { position: absolute; right: 10px; top: 10px; z-index: 1001; }
+    
+    /* Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .modal-content {
+      background-color: var(--secondary-bg);
+      width: 90%;
+      max-width: 500px;
+      border-radius: 8px;
+      padding: 25px;
+      border: 1px solid var(--border-dark);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    
+    .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: none;
+      border: none;
+      color: var(--text-gray);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    
+    .modal-close:hover {
+      color: var(--text-light);
+    }
+    
+    .modal-header {
+      margin-bottom: 20px;
+      padding-right: 30px;
+    }
+    
+    .modal-header h3 {
+      color: var(--gold);
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text-gray);
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 10px;
+      background-color: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--border-dark);
+      border-radius: 4px;
+      color: var(--text-light);
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+      gap: 10px;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-gray);
+    }
+    
+    .empty-state i {
+      font-size: 3rem;
+      color: var(--gold);
+      margin-bottom: 15px;
+    }
+    
+    .empty-state p {
+      margin-bottom: 20px;
+    }
+    /* Summary cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .summary-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .summary-card .label { color: var(--text-gray); font-size: 0.85rem; }
+    .summary-card .value { color: var(--gold); font-weight: 700; font-size: 1.05rem; }
+    .summary-card .sub { color: var(--text-light); font-weight: 600; font-size: 0.95rem; }
+    .progress { width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; border: 1px solid var(--border-dark); }
+    .progress-bar { height: 100%; background: var(--gold); width: 0%; transition: width 0.3s ease; }
+    /* Compact controls inside rows */
+    .form-control.small { padding: 6px 8px; font-size: 0.9rem; }
+    .participant-row { padding: 10px; }
+    .btn.btn-sm { padding: 4px 8px; font-size: 0.85rem; }
+    .participant-row.paid { background-color: rgba(40, 167, 69, 0.08); border-left: 3px solid var(--success); }
+    .participant-row.unpaid { background-color: rgba(220, 53, 69, 0.06); border-left: 3px solid var(--error); }
+    .p-index { color: var(--gold); font-weight: 700; margin-right: 8px; }
+    
+    /* Loading spinner */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: var(--gold);
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Responsive */
+    @media (max-width: 992px) {
+      .sidebar {
+        width: 70px;
+      }
+      
+      .sidebar .logo-text, .sidebar .link-text {
+        display: none;
+      }
+      
+      .sidebar .logo {
+        padding: 10px;
+      }
+      
+      .nav-links {
+        padding: 0 10px;
+      }
+      
+      .nav-links a {
+        justify-content: center;
+        padding: 15px 10px;
+      }
+      
+      .nav-links a i {
+        margin-right: 0;
+        font-size: 1.3rem;
+      }
+      
+      .main-content {
+        margin-left: 70px;
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .sidebar {
+        width: 0;
+        overflow: hidden;
+      }
+      
+      .main-content {
+        margin-left: 0;
+      }
+      
+      .groups-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo" style="display:flex; flex-direction:column; align-items:center; gap:8px; position:relative; padding:44px 20px 20px;">
+      <button class="btn btn-outline" id="sidebar-toggle" title="Zwiń/Rozwiń" style="padding:6px 10px;"><i class="fas fa-bars"></i></button>
+      <h1 style="margin:0;"><span class="logo-text">Studio Tańca Imperia</span></h1>
+    </div>
+    
+    <ul class="nav-links">
+      <li>
+        <a href="#" id="nav-groups" class="active">
+          <i class="fas fa-users"></i>
+          <span class="link-text">Grupy</span>
+        </a>
+      </li>
+      <li>
+        <a href="#" id="nav-participants">
+          <i class="fas fa-user-friends"></i>
+          <span class="link-text">Uczestnicy</span>
+        </a>
+      </li>
+      <li>
+        <a href="#">
+          <i class="fas fa-calendar-alt"></i>
+          <span class="link-text">Harmonogram</span>
+        </a>
+      </li>
+      <li>
+        <a href="#">
+          <i class="fas fa-chart-line"></i>
+          <span class="link-text">Płatności</span>
+        </a>
+      </li>
+      <li>
+        <a href="#">
+          <i class="fas fa-cog"></i>
+          <span class="link-text">Ustawienia</span>
+        </a>
+      </li>
+    </ul>
+  </aside>
 
-.login-container {
-    background: white;
-    padding: 2rem;
-    border-radius: 1rem;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    text-align: center;
-}
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="header">
+      <h2>Zarządzanie grupami</h2>
+      <div class="user-info">
+        <span>Witaj, Admin!</span>
+        <button class="btn btn-outline" id="logoutBtn">
+          <i class="fas fa-sign-out-alt"></i> Wyloguj
+        </button>
+      </div>
+    </div>
 
-input {
-    display: block;
-    margin: 0.5rem auto;
-    padding: 0.5rem;
-    width: 80%;
-}
+    <div class="content-box" id="groups-section">
+      <div class="content-header">
+        <h3>Lista grup treningowych</h3>
+        <button class="btn btn-primary" id="add-group-btn">
+          <i class="fas fa-plus"></i> Dodaj grupę
+        </button>
+      </div>
 
-button {
-    padding: 0.5rem 2rem;
-    margin-top: 1rem;
-    background-color: #0ea5e9;
-    color: white;
-    border: none;
-    border-radius: 0.5rem;
-    cursor: pointer;
-}
+      <div id="groups-list">
+        <!-- Groups will be loaded here dynamically -->
+        <div class="empty-state" id="emptyState">
+          <i class="fas fa-users"></i>
+          <p>Brak grup do wyświetlenia</p>
+          <button class="btn btn-primary" id="add-first-group">
+            <i class="fas fa-plus"></i> Dodaj pierwszą grupę
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Group Details Section (inline) -->
+    <div class="content-box" id="group-details-section" style="display:none;">
+      <div class="content-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="btn btn-outline" id="back-to-groups-btn"><i class="fas fa-arrow-left"></i> Wróć</button>
+          <h3 id="group-details-title">Szczegóły grupy</h3>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+          <label for="month-select" style="color: var(--text-gray);">Miesiąc</label>
+          <select id="month-select" class="form-control" style="width:220px;"></select>
+          <label for="participants-filter" style="color: var(--text-gray);">Filtr</label>
+          <select id="participants-filter" class="form-control" style="width:180px;">
+            <option value="all">Wszyscy</option>
+            <option value="paid">Kto zapłacił</option>
+            <option value="unpaid">Kto nie zapłacił</option>
+          </select>
+          <button class="btn btn-primary" id="add-participant-btn"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button>
+        </div>
+      </div>
+      <div id="add-participant-form" class="content-box" style="display:none; margin-top:10px;">
+        <div class="form-group">
+          <label>Imię</label>
+          <input type="text" id="participant-first-name" class="form-control" placeholder="Imię">
+        </div>
+        <div class="form-group">
+          <label>Nazwisko</label>
+          <input type="text" id="participant-last-name" class="form-control" placeholder="Nazwisko">
+        </div>
+        <div class="form-group">
+          <label>Telefon</label>
+          <input type="tel" id="participant-phone" class="form-control" placeholder="Numer telefonu">
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="participant-multisport" style="width:auto;">
+          <label for="participant-multisport" style="margin:0;">Korzysta z Multisport</label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" id="cancel-add-participant">Anuluj</button>
+          <button class="btn btn-primary" id="save-participant-btn"><i class="fas fa-save"></i> Dodaj uczestnika</button>
+        </div>
+      </div>
+      <div class="content-box" id="participants-summary" style="margin-top:10px; padding:12px;">
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="label">Uczestnicy</div>
+            <div class="value" id="sum-count">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Zapłacili</div>
+            <div class="sub"><span id="sum-paid-count">0</span> osób</div>
+            <div class="value" id="sum-paid-amount">0.00 zł</div>
+            <div class="progress"><div class="progress-bar" id="sum-paid-progress" style="width:0%"></div></div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Niezapłacone</div>
+            <div class="sub"><span id="sum-unpaid-count">0</span> osób</div>
+            <div class="value" id="sum-unpaid-amount">0.00 zł</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Zysk</div>
+            <div class="value" id="sum-profit">0.00 zł</div>
+            <div class="label" style="margin-top:6px;">Potencjalny zysk</div>
+            <div class="sub" id="sum-potential-profit">0.00 zł</div>
+          </div>
+        </div>
+      </div>
+      <div class="content-box" style="margin-top:15px;">
+        <div class="content-header" style="margin-bottom:12px;">
+          <h3 style="font-size:1.1rem;">Uczestnicy</h3>
+        </div>
+        <div id="participants-list">
+          <div class="empty-state"><p>Brak uczestników w tej grupie</p></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Participants Section -->
+    <div class="content-box" id="participants-section" style="display:none;">
+      <div class="content-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h3>Uczestnicy</h3>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+          <input id="participants-search" class="form-control" placeholder="Szukaj: imię/nazwisko/telefon" style="width:260px;" />
+          <button class="btn btn-primary" id="add-participant-global"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button>
+        </div>
+      </div>
+      <div id="participants-list-all">
+        <div class="empty-state"><p>Brak uczestników</p></div>
+      </div>
+    </div>
 
-button:hover {
-    background-color: #0284c7;
-}
+    <!-- Edit Participant Modal -->
+    <div class="modal" id="edit-participant-modal">
+      <div class="modal-content">
+        <button class="modal-close" id="close-edit-participant-modal">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="modal-header">
+          <h3 id="edit-participant-title">Edytuj uczestnika</h3>
+        </div>
+        <div class="form-group">
+          <label>Imię</label>
+          <input type="text" id="edit-participant-first-name" class="form-control" placeholder="Imię">
+        </div>
+        <div class="form-group">
+          <label>Nazwisko</label>
+          <input type="text" id="edit-participant-last-name" class="form-control" placeholder="Nazwisko">
+        </div>
+        <div class="form-group">
+          <label>Telefon</label>
+          <input type="tel" id="edit-participant-phone" class="form-control" placeholder="Telefon">
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="edit-participant-multisport" style="width:auto;">
+          <label for="edit-participant-multisport" style="margin:0;">Korzysta z Multisport</label>
+        </div>
+        <div class="form-group">
+          <label>Grupa</label>
+          <select id="edit-participant-group" class="form-control"></select>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" id="cancel-edit-participant">Anuluj</button>
+          <button class="btn btn-primary" id="save-edit-participant"><i class="fas fa-save"></i> Zapisz</button>
+        </div>
+      </div>
+    </div>
 
-#errorMsg {
-    color: red;
-    margin-top: 0.5rem;
-}
-.hidden { display: none; }
-.modal {
-  position: fixed;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  background: white;
-  padding: 1rem;
-  border-radius: 8px;
-  z-index: 1001;
-  width: 300px;
-}
-#overlay {
-  position: fixed;
-  top:0; left:0; width:100%; height:100%;
-  background: rgba(0,0,0,0.5);
-  z-index:1000;
-}
+  <!-- Add Group Modal -->
+  <div class="modal" id="add-group-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-group-modal">
+        <i class="fas fa-times"></i>
+      </button>
+      
+      <div class="modal-header">
+        <h3 id="group-modal-title">Dodaj nową grupę</h3>
+      </div>
+      
+      <div class="form-group">
+        <label for="group-name">Nazwa grupy</label>
+        <input type="text" id="group-name" class="form-control" placeholder="Nazwa grupy">
+      </div>
+      
+      <div class="form-group">
+        <label for="group-day">Dzień tygodnia</label>
+        <select id="group-day" class="form-control">
+          <option value="Poniedziałek">Poniedziałek</option>
+          <option value="Wtorek">Wtorek</option>
+          <option value="Środa">Środa</option>
+          <option value="Czwartek">Czwartek</option>
+          <option value="Piątek">Piątek</option>
+          <option value="Sobota">Sobota</option>
+          <option value="Niedziela">Niedziela</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="group-start">Godzina rozpoczęcia</label>
+        <input type="time" id="group-start" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="group-end">Godzina zakończenia</label>
+        <input type="time" id="group-end" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="group-trainer">Trener</label>
+        <input type="text" id="group-trainer" class="form-control" placeholder="Imię i nazwisko trenera">
+      </div>
+      
+      <div class="form-group">
+        <label for="group-fee">Kwota (zł)</label>
+        <input type="number" id="group-fee" class="form-control" placeholder="0.00" step="0.01">
+      </div>
+      
+      <div class="form-group">
+        <label for="group-multisport">Kwota Multisport (zł)</label>
+        <input type="number" id="group-multisport" class="form-control" placeholder="0.00" step="0.01">
+      </div>
+      
+      <div class="form-actions">
+        <button class="btn btn-outline" id="cancel-group-btn">Anuluj</button>
+        <button class="btn btn-primary" id="save-group-btn">
+          <i class="fas fa-save"></i> Zapisz grupę
+        </button>
+      </div>
+    </div>
+  </div>
 
+
+  <script type="module">
+    import { supabase } from './supabaseClient.js';
+    
+    // Check if user is admin
+    async function checkAdmin() {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        alert("Nie jesteś zalogowany");
+        window.location.href = "login.html";
+        return;
+      }
+      
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+        
+      if (error || !profile || profile.role !== "admin") {
+        alert("Nie masz uprawnień administratora");
+        window.location.href = "login.html";
+        return;
+      }
+    }
+    
+    // Logout function
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "login.html";
+    });
+    
+    // Modal functionality
+    const addGroupModal = document.getElementById('add-group-modal');
+    const addGroupBtn = document.getElementById('add-group-btn');
+    const addFirstGroupBtn = document.getElementById('add-first-group');
+    const closeModalBtn = document.getElementById('close-group-modal');
+    const cancelGroupBtn = document.getElementById('cancel-group-btn');
+    const saveGroupBtn = document.getElementById('save-group-btn');
+    const groupsList = document.getElementById('groups-list');
+    const emptyState = document.getElementById('emptyState');
+    // Participants page refs (global)
+    const participantsSection = document.getElementById('participants-section');
+    const participantsListAll = document.getElementById('participants-list-all');
+    const participantsSearch = document.getElementById('participants-search');
+    // Nav links
+    const groupsLink = document.getElementById('nav-groups');
+    const participantsLink = document.getElementById('nav-participants');
+    // Sidebar toggle
+    const sidebar = document.querySelector('.sidebar');
+    const mainContentEl = document.querySelector('.main-content');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    function collapseSidebar() {
+      if (!sidebar || !mainContentEl) return;
+      sidebar.classList.add('collapsed');
+      mainContentEl.classList.add('collapsed');
+    }
+    function expandSidebar() {
+      if (!sidebar || !mainContentEl) return;
+      sidebar.classList.remove('collapsed');
+      mainContentEl.classList.remove('collapsed');
+    }
+    if (sidebarToggle && sidebar && mainContentEl) {
+      sidebarToggle.style.cursor = 'pointer';
+      sidebarToggle.addEventListener('click', (ev) => {
+        ev.preventDefault(); ev.stopPropagation();
+        if (sidebar.classList.contains('collapsed')) expandSidebar(); else collapseSidebar();
+      });
+      // Fallback: delegate on document
+      document.addEventListener('click', (ev) => {
+        const btn = ev.target && ev.target.closest ? ev.target.closest('#sidebar-toggle') : null;
+        if (!btn) return;
+        ev.preventDefault(); ev.stopPropagation();
+        if (sidebar.classList.contains('collapsed')) expandSidebar(); else collapseSidebar();
+      });
+    }
+
+    function setActiveNav(section) {
+      if (groupsLink && participantsLink) {
+        if (section === 'groups') {
+          groupsLink.classList.add('active');
+          participantsLink.classList.remove('active');
+        } else if (section === 'participants') {
+          participantsLink.classList.add('active');
+          groupsLink.classList.remove('active');
+        }
+      }
+    }
+    // Group details section refs
+    const groupsSection = document.getElementById('groups-section');
+    const groupDetailsSection = document.getElementById('group-details-section');
+    const backToGroupsBtn = document.getElementById('back-to-groups-btn');
+    const groupDetailsTitle = document.getElementById('group-details-title');
+    const monthSelect = document.getElementById('month-select');
+    const participantsList = document.getElementById('participants-list');
+    const participantsFilter = document.getElementById('participants-filter');
+    const addParticipantBtn = document.getElementById('add-participant-btn');
+    const addParticipantForm = document.getElementById('add-participant-form');
+    const cancelAddParticipant = document.getElementById('cancel-add-participant');
+    const saveParticipantBtn = document.getElementById('save-participant-btn');
+    const participantFirstName = document.getElementById('participant-first-name');
+    const participantLastName = document.getElementById('participant-last-name');
+    const participantPhone = document.getElementById('participant-phone');
+    const participantMultisport = document.getElementById('participant-multisport');
+    // Summary refs
+    const sumCountEl = document.getElementById('sum-count');
+    const sumPaidCountEl = document.getElementById('sum-paid-count');
+    const sumPaidAmountEl = document.getElementById('sum-paid-amount');
+    const sumUnpaidCountEl = document.getElementById('sum-unpaid-count');
+    const sumUnpaidAmountEl = document.getElementById('sum-unpaid-amount');
+    const sumProfitEl = document.getElementById('sum-profit');
+    const sumPotentialProfitEl = document.getElementById('sum-potential-profit');
+    const sumPaidProgressEl = document.getElementById('sum-paid-progress');
+
+    let selectedGroup = null;
+    let selectedMonth = null; // 'YYYY-MM'
+    
+    function openModal() {
+      addGroupModal.classList.add('active');
+    }
+    
+    function closeModal() {
+      addGroupModal.classList.remove('active');
+      // Reset trybu formularza
+      resetGroupFormMode();
+    }
+    
+    addGroupBtn.addEventListener('click', openModal);
+    addFirstGroupBtn.addEventListener('click', openModal);
+    closeModalBtn.addEventListener('click', closeModal);
+    cancelGroupBtn.addEventListener('click', closeModal);
+
+    // Group details section controls
+    function showGroupDetailsSection() {
+      groupsSection.style.display = 'none';
+      groupDetailsSection.style.display = 'block';
+      setActiveNav('groups');
+      collapseSidebar();
+    }
+    function showGroupsSection() {
+      groupDetailsSection.style.display = 'none';
+      groupsSection.style.display = 'block';
+      participantsSection.style.display = 'none';
+      setActiveNav('groups');
+      collapseSidebar();
+      // reset
+      addParticipantForm.style.display = 'none';
+      participantFirstName.value = '';
+      participantLastName.value = '';
+      participantPhone.value = '';
+      participantMultisport.checked = false;
+    }
+    backToGroupsBtn.addEventListener('click', showGroupsSection);
+    // Sidebar 'Grupy' link handler
+    if (groupsLink) {
+      groupsLink.addEventListener('click', async (e) => {
+        try {
+          e.preventDefault();
+          participantsSection.style.display = 'none';
+          groupDetailsSection.style.display = 'none';
+          groupsSection.style.display = 'block';
+          setActiveNav('groups');
+          collapseSidebar();
+          await loadGroups();
+        } catch (err) {
+          console.error('Błąd przełączania na Grupy:', err);
+        }
+      });
+    }
+    
+    // Navigate to Participants page
+    if (participantsLink) {
+      participantsLink.addEventListener('click', async (e) => {
+        try {
+          e.preventDefault();
+          groupsSection.style.display = 'none';
+          groupDetailsSection.style.display = 'none';
+          participantsSection.style.display = 'block';
+          setActiveNav('participants');
+          collapseSidebar();
+          await loadAllParticipants();
+        } catch (err) {
+          console.error('Błąd przełączania na Uczestnicy:', err);
+          participantsListAll.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+        }
+      });
+    }
+    
+    // Edit group modal helpers
+    const groupModalTitle = document.getElementById('group-modal-title');
+    function fillGroupForm(g) {
+      document.getElementById('group-name').value = g.name || '';
+      document.getElementById('group-day').value = g.day || 'Poniedziałek';
+      document.getElementById('group-start').value = g.start_time || '';
+      document.getElementById('group-end').value = g.end_time || '';
+      document.getElementById('group-trainer').value = g.trainer || '';
+      document.getElementById('group-fee').value = g.fee ?? '';
+      document.getElementById('group-multisport').value = g.multisport ?? '';
+    }
+    function openEditGroupModal(group) {
+      groupModalTitle.textContent = 'Edytuj grupę';
+      fillGroupForm(group);
+      addGroupModal.classList.add('active');
+      saveGroupBtn.dataset.editId = group.id;
+    }
+    function resetGroupFormMode() {
+      groupModalTitle.textContent = 'Dodaj nową grupę';
+      delete saveGroupBtn.dataset.editId;
+      document.getElementById('group-name').value = '';
+      document.getElementById('group-start').value = '';
+      document.getElementById('group-end').value = '';
+      document.getElementById('group-trainer').value = '';
+      document.getElementById('group-fee').value = '';
+      document.getElementById('group-multisport').value = '';
+    }
+    
+    // Save group function (add or edit)
+    saveGroupBtn.addEventListener('click', async () => {
+      const name = document.getElementById('group-name').value;
+      const day = document.getElementById('group-day').value;
+      const start = document.getElementById('group-start').value;
+      const end = document.getElementById('group-end').value;
+      const trainer = document.getElementById('group-trainer').value;
+      const fee = parseFloat(document.getElementById('group-fee').value);
+      const multisport = parseFloat(document.getElementById('group-multisport').value);
+      
+      // Walidacja pól
+      if (!name || !day || !start || !end || !trainer || isNaN(fee) || isNaN(multisport)) {
+        alert('Proszę wypełnić wszystkie pola poprawnie');
+        return;
+      }
+      
+      // Zmień tekst przycisku na ładowanie
+      const originalText = saveGroupBtn.innerHTML;
+      saveGroupBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
+      saveGroupBtn.disabled = true;
+      
+      try {
+        const editId = saveGroupBtn.dataset.editId;
+        let error, data;
+        if (editId) {
+          ({ error } = await supabase
+          .from('groups')
+            .update({ name, day, start_time: start, end_time: end, trainer, fee, multisport })
+            .eq('id', editId));
+        } else {
+          ({ data, error } = await supabase
+            .from('groups')
+            .insert([{ name, day, start_time: start, end_time: end, trainer, fee, multisport }])
+            .select());
+        }
+          
+        if (error) {
+          console.error('Błąd dodawania grupy:', error);
+          alert('Błąd dodawania grupy: ' + error.message);
+        } else {
+          console.log('Grupa zapisana pomyślnie:', data);
+          alert('Grupa zapisana pomyślnie!');
+          closeModal();
+          loadGroups();
+        }
+      } catch (err) {
+        console.error('Nieoczekiwany błąd:', err);
+        alert('Wystąpił nieoczekiwany błąd: ' + err.message);
+      } finally {
+        // Przywróć oryginalny tekst przycisku
+        saveGroupBtn.innerHTML = originalText;
+        saveGroupBtn.disabled = false;
+      }
+    });
+    
+    // Wczytanie wszystkich grup
+    async function loadGroups() {
+      // Pokaż stan ładowania
+      groupsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie grup...</p></div>';
+      
+      try {
+        const { data, error } = await supabase
+          .from('groups')
+          .select('*')
+          .order('day', { ascending: true })
+          .order('start_time', { ascending: true });
+          
+        if (error) {
+          console.error('Błąd wczytywania grup:', error);
+          groupsList.innerHTML = '<div class="empty-state"><p>Błąd wczytywania grup: ' + error.message + '</p></div>';
+          return;
+        }
+        
+        if (!data || data.length === 0) {
+          // Pokaż stan pustej listy
+          emptyState.style.display = 'block';
+          groupsList.innerHTML = '';
+          groupsList.appendChild(emptyState);
+          return;
+        }
+        
+        // Ukryj stan pustej listy
+        emptyState.style.display = 'none';
+        
+        // Wyczyść listę i zgrupuj po dniu tygodnia
+        groupsList.innerHTML = '';
+        const dayOrder = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
+        const byDay = new Map();
+        data.forEach(g => {
+          if (!byDay.has(g.day)) byDay.set(g.day, []);
+          byDay.get(g.day).push(g);
+        });
+        const rendered = new Set();
+        const renderDaySection = (dayLabel, list) => {
+          if (!list || list.length === 0) return;
+          const header = document.createElement('div');
+          header.className = 'groups-day-header';
+          header.innerHTML = `<h3 style="font-size:1rem; color: var(--text-gray);"><i class="fas fa-calendar-day" style="color: var(--gold); margin-right:6px;"></i>${dayLabel}</h3>`;
+          groupsList.appendChild(header);
+          list.forEach(group => {
+          const groupCard = document.createElement('div');
+          groupCard.className = 'group-card';
+            const startHHMM = formatTimeHHMM(group.start_time);
+            const endHHMM = formatTimeHHMM(group.end_time);
+          groupCard.innerHTML = `
+            <h4>${group.name}</h4>
+            <div class="group-detail">
+              <i class="fas fa-calendar-day"></i>
+                <span>${group.day}, ${startHHMM} - ${endHHMM}</span>
+            </div>
+            <div class="group-detail">
+              <i class="fas fa-user-tie"></i>
+              <span>${group.trainer}</span>
+            </div>
+            <div class="group-detail">
+              <i class="fas fa-money-bill-wave"></i>
+              <span>Opłata: ${group.fee} zł</span>
+            </div>
+            <div class="group-detail">
+              <i class="fas fa-credit-card"></i>
+              <span>Multisport: ${group.multisport} zł</span>
+            </div>
+            <div class="group-actions">
+              <button class="btn btn-outline edit-btn" data-id="${group.id}">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-outline delete-btn" data-id="${group.id}">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          `;
+            groupCard.addEventListener('click', (e) => {
+              if (e.target.closest('.edit-btn') || e.target.closest('.delete-btn')) return;
+              openGroupDetails(group);
+            });
+            groupCard.querySelector('.edit-btn').addEventListener('click', (e) => {
+              e.stopPropagation();
+              openEditGroupModal(group);
+            });
+            groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (!confirm('Usunąć grupę? Spowoduje to usunięcie uczestników i płatności powiązanych.')) return;
+              try {
+                const { error } = await supabase.from('groups').delete().eq('id', group.id);
+                if (error) throw error;
+                await loadGroups();
+              } catch (err) {
+                alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany'));
+              }
+            });
+          groupsList.appendChild(groupCard);
+          });
+        };
+        dayOrder.forEach(day => {
+          const arr = byDay.get(day);
+          if (arr && arr.length) {
+            renderDaySection(day, arr);
+            rendered.add(day);
+          }
+        });
+        // Render all remaining unexpected day keys
+        byDay.forEach((arr, day) => {
+          if (!rendered.has(day)) renderDaySection(day, arr);
+        });
+      } catch (err) {
+        console.error('Nieoczekiwany błąd:', err);
+        groupsList.innerHTML = '<div class="empty-state"><p>Wystąpił nieoczekiwany błąd: ' + err.message + '</p></div>';
+      }
+    }
+
+    // Pomocnicze: lista 12 miesięcy (bieżący + 11 wstecz)
+    function getLast12MonthsOptions() {
+      const formatter = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' });
+      const options = [];
+      const now = new Date();
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const value = `${yyyy}-${mm}`;
+        const label = formatter.format(d);
+        options.push({ value, label });
+      }
+      return options;
+    }
+
+    function populateMonthSelect(defaultValue) {
+      monthSelect.innerHTML = '';
+      const opts = getLast12MonthsOptions();
+      opts.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        monthSelect.appendChild(opt);
+      });
+      if (defaultValue) {
+        monthSelect.value = defaultValue;
+      } else {
+        monthSelect.selectedIndex = 0;
+      }
+      selectedMonth = monthSelect.value;
+    }
+
+    // Format time HH:MM (hide seconds)
+    function formatTimeHHMM(t) {
+      if (!t) return '';
+      const parts = String(t).split(':');
+      return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : String(t);
+    }
+
+    // Otwieranie szczegółów grupy
+    function openGroupDetails(group) {
+      selectedGroup = group;
+      groupDetailsTitle.textContent = `${group.name}`;
+      populateMonthSelect(selectedMonth);
+      showGroupDetailsSection();
+      loadParticipantsAndPayments();
+    }
+
+    function updateParticipantsSummary({ totalCount, paidCount, unpaidCount, paidAmount, unpaidAmount, profit }) {
+      if (!sumCountEl) return;
+      sumCountEl.textContent = String(totalCount ?? 0);
+      sumPaidCountEl.textContent = String(paidCount ?? 0);
+      sumPaidAmountEl.textContent = `${(paidAmount ?? 0).toFixed(2)} zł`;
+      sumPaidAmountEl.style.color = 'var(--success)';
+      sumUnpaidCountEl.textContent = String(unpaidCount ?? 0);
+      sumUnpaidAmountEl.textContent = `${(unpaidAmount ?? 0).toFixed(2)} zł`;
+      sumUnpaidAmountEl.style.color = 'var(--error)';
+      sumProfitEl.textContent = `${(profit ?? 0).toFixed(2)} zł`;
+      const potential = (paidAmount ?? 0) + (unpaidAmount ?? 0);
+      if (sumPotentialProfitEl) sumPotentialProfitEl.textContent = `${potential.toFixed(2)} zł`;
+      const totalForProgress = Math.max(1, (paidCount ?? 0) + (unpaidCount ?? 0));
+      const percent = Math.min(100, Math.max(0, Math.round(((paidCount ?? 0) / totalForProgress) * 100)));
+      if (sumPaidProgressEl) sumPaidProgressEl.style.width = percent + '%';
+    }
+
+    // Ładowanie uczestników + płatności dla wybranego miesiąca
+    async function loadParticipantsAndPayments() {
+      if (!selectedGroup || !selectedMonth) return;
+      participantsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
+      try {
+        const { data: participants, error: participantsError } = await supabase
+          .from('participants')
+          .select('*')
+          .eq('group_id', selectedGroup.id)
+          .order('last_name', { ascending: true });
+        if (participantsError) throw participantsError;
+
+        if (!participants || participants.length === 0) {
+          participantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników w tej grupie</p></div>';
+          updateParticipantsSummary({
+            totalCount: 0,
+            paidCount: 0,
+            unpaidCount: 0,
+            paidAmount: 0,
+            unpaidAmount: 0,
+            profit: 0
+          });
+          return;
+        }
+
+        const participantIds = participants.map(p => p.id);
+        const { data: payments, error: paymentsError } = await supabase
+          .from('payments')
+          .select('*')
+          .in('participant_id', participantIds)
+          .eq('month', selectedMonth);
+        if (paymentsError) throw paymentsError;
+
+        const paymentByParticipant = new Map();
+        (payments || []).forEach(pay => paymentByParticipant.set(pay.participant_id, pay));
+
+        // Renderuj
+        const fragment = document.createDocumentFragment();
+        const filterValue = (participantsFilter && participantsFilter.value) ? participantsFilter.value : 'all';
+        const listToRender = participants.filter(p => {
+          const pay = paymentByParticipant.get(p.id) || null;
+          if (filterValue === 'paid') return !!(pay && pay.confirmed);
+          if (filterValue === 'unpaid') return !(pay && pay.confirmed);
+          return true;
+        });
+
+        if (listToRender.length === 0) {
+          participantsList.innerHTML = '<div class="empty-state"><p>Brak wyników dla wybranego filtra</p></div>';
+          // Summary zerowe
+          updateParticipantsSummary({
+            totalCount: participants.length,
+            paidCount: 0,
+            unpaidCount: 0,
+            paidAmount: 0,
+            unpaidAmount: 0,
+            profit: 0
+          });
+          return;
+        }
+
+        let paidCount = 0;
+        let unpaidCount = 0;
+        let paidAmount = 0;
+        let unpaidAmount = 0;
+
+        listToRender.forEach((p, index) => {
+          const pay = paymentByParticipant.get(p.id) || null;
+          const baseAmount = p.multisport ? Number(selectedGroup.multisport || 0) : Number(selectedGroup.fee || 0);
+          const amountToShow = pay && typeof pay.amount === 'number' ? pay.amount : baseAmount;
+          const selectedMethod = pay && typeof pay.method === 'string' ? pay.method : '';
+          const comment = pay && typeof pay.comment === 'string' ? pay.comment : '';
+
+          if (pay && pay.confirmed) {
+            paidCount += 1;
+            paidAmount += Number(pay.amount || 0);
+          } else {
+            unpaidCount += 1;
+            unpaidAmount += Number(baseAmount);
+          }
+
+          const row = document.createElement('div');
+          row.className = 'content-box participant-row';
+          row.style.marginBottom = '10px';
+          row.dataset.participantId = p.id;
+          if (pay && pay.confirmed) {
+            row.classList.add('paid');
+          } else {
+            row.classList.add('unpaid');
+          }
+          row.innerHTML = `
+            <div style="display:flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+              <div style="flex: 0 0 24px; min-width: 24px; text-align:center; color: var(--gold); font-weight: 600;">${index + 1}</div>
+              <div style="flex: 1 1 110px; min-width: 110px;">
+                <div style="font-weight:600; font-size: 0.95rem;">${p.first_name || ''} ${p.last_name || ''}</div>
+                <div style="color: var(--text-gray); font-size: 0.72rem; line-height: 1.1;">${p.phone || ''} · ${p.multisport ? 'Multisport' : 'Std'}</div>
+              </div>
+              <div style="flex: 0 0 110px; min-width: 100px;">
+                <input title="Kwota (${selectedMonth})" type="number" step="0.01" class="form-control small payment-amount" value="${amountToShow}" />
+              </div>
+              <div style="flex: 0 0 120px; min-width: 110px;">
+                <select title="Metoda" class="form-control small payment-method">
+                  <option value="">Metoda...</option>
+                  <option value="card" ${selectedMethod === 'card' ? 'selected' : ''}>Karta</option>
+                  <option value="transfer" ${selectedMethod === 'transfer' ? 'selected' : ''}>Przelew</option>
+                  <option value="cash" ${selectedMethod === 'cash' ? 'selected' : ''}>Gotówka</option>
+                </select>
+              </div>
+              <div style="flex: 1 1 160px; min-width: 140px;">
+                <input title="Komentarz" type="text" class="form-control small payment-comment" placeholder="Komentarz" value="${comment.replace(/"/g, '&quot;')}" />
+              </div>
+              <div style="flex: 0 0 auto; display:flex; gap:6px; align-items:center;">
+                <button class="btn btn-primary btn-sm confirm-payment-btn">${pay && pay.confirmed ? 'Zapisz' : 'OK'}</button>
+                ${pay ? '<button class="btn btn-outline btn-sm delete-payment-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>' : ''}
+                <span class="status" style="color:${pay && pay.confirmed ? 'var(--success)' : 'var(--text-gray)'}; font-size:0.8rem; white-space:nowrap;">${pay && pay.confirmed ? 'OK' : 'Brak'}</span>
+              </div>
+              <div style="flex: 1 1 100px; min-width: 100px; display:flex; gap:6px; align-items:center; justify-content:flex-end;">
+                <label style="display:flex; align-items:center; gap:6px; color: var(--text-gray); font-size:0.8rem;">
+                  <input type="checkbox" class="consent-checkbox" ${p.consent_signed ? 'checked' : ''} style="width:auto;"/>
+                  Zgoda
+                </label>
+                <button class="btn btn-outline btn-sm delete-participant-btn" title="Usuń uczestnika"><i class="fas fa-user-minus"></i></button>
+              </div>
+            </div>
+          `;
+          fragment.appendChild(row);
+        });
+        participantsList.innerHTML = '';
+        participantsList.appendChild(fragment);
+
+        // Podsumowania: prosty zysk = suma zapłacona (brutto). Jeśli chcesz inne koszty, doprecyzuj.
+        updateParticipantsSummary({
+          totalCount: participants.length,
+          paidCount,
+          unpaidCount,
+          paidAmount,
+          unpaidAmount,
+          profit: paidAmount
+        });
+      } catch (err) {
+        console.error('Błąd ładowania uczestników/płatności:', err);
+        participantsList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+      }
+    }
+
+    // Zmiana miesiąca
+    monthSelect.addEventListener('change', () => {
+      selectedMonth = monthSelect.value;
+      loadParticipantsAndPayments();
+    });
+
+    // Filtr uczestników
+    if (participantsFilter) {
+      participantsFilter.addEventListener('change', () => {
+        loadParticipantsAndPayments();
+      });
+    }
+
+    // Dodawanie uczestnika - UI toggle
+    addParticipantBtn.addEventListener('click', () => {
+      addParticipantForm.style.display = addParticipantForm.style.display === 'none' ? 'block' : 'none';
+    });
+    cancelAddParticipant.addEventListener('click', () => {
+      addParticipantForm.style.display = 'none';
+      participantFirstName.value = '';
+      participantLastName.value = '';
+      participantPhone.value = '';
+      participantMultisport.checked = false;
+    });
+
+    // Zapis nowego uczestnika
+    saveParticipantBtn.addEventListener('click', async () => {
+      if (!selectedGroup) return;
+      const fn = participantFirstName.value.trim();
+      const ln = participantLastName.value.trim();
+      const phone = participantPhone.value.trim();
+      const multi = !!participantMultisport.checked;
+      if (!fn || !ln) {
+        alert('Podaj imię i nazwisko');
+        return;
+      }
+      saveParticipantBtn.disabled = true;
+      const original = saveParticipantBtn.innerHTML;
+      saveParticipantBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
+      try {
+        const { error } = await supabase
+          .from('participants')
+          .insert([{ group_id: selectedGroup.id, first_name: fn, last_name: ln, phone, multisport: multi, consent_signed: false }]);
+        if (error) throw error;
+        addParticipantForm.style.display = 'none';
+        participantFirstName.value = '';
+        participantLastName.value = '';
+        participantPhone.value = '';
+        participantMultisport.checked = false;
+        await loadParticipantsAndPayments();
+      } catch (err) {
+        alert('Błąd dodawania uczestnika: ' + (err.message || 'Nieznany'));
+      } finally {
+        saveParticipantBtn.disabled = false;
+        saveParticipantBtn.innerHTML = original;
+      }
+    });
+
+    // Delegacja zdarzeń na liście uczestników: potwierdzenie płatności, zgoda, usunięcie
+    participantsList.addEventListener('click', async (e) => {
+      const row = e.target.closest('[data-participant-id]');
+      if (!row) return;
+      const participantId = row.dataset.participantId;
+
+      // Potwierdzenie/Zapis płatności
+      if (e.target.closest('.confirm-payment-btn')) {
+        const amountInput = row.querySelector('.payment-amount');
+        const amount = parseFloat(amountInput.value);
+        const methodInput = row.querySelector('.payment-method');
+        const commentInput = row.querySelector('.payment-comment');
+        const method = methodInput ? methodInput.value : '';
+        const comment = commentInput ? commentInput.value.trim() : '';
+        if (isNaN(amount) || amount < 0) {
+          alert('Podaj poprawną kwotę');
+          return;
+        }
+        if (!method) {
+          alert('Wybierz metodę płatności');
+          return;
+        }
+        const btn = e.target.closest('.confirm-payment-btn');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading"></span>';
+        try {
+          // Spróbuj znaleźć istniejącą płatność
+          const { data: existing, error: selErr } = await supabase
+            .from('payments')
+            .select('id')
+            .eq('participant_id', participantId)
+            .eq('month', selectedMonth)
+            .limit(1)
+            .maybeSingle();
+          if (selErr) throw selErr;
+          if (existing) {
+            const { error: updErr } = await supabase
+              .from('payments')
+              .update({ amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() })
+              .eq('id', existing.id);
+            if (updErr) throw updErr;
+          } else {
+            const { error: insErr } = await supabase
+              .from('payments')
+              .insert([{ participant_id: participantId, month: selectedMonth, amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() }]);
+            if (insErr) throw insErr;
+          }
+          await loadParticipantsAndPayments();
+        } catch (err) {
+          alert('Błąd zapisu płatności: ' + (err.message || 'Nieznany'));
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = original;
+        }
+      }
+
+      // Usuwanie uczestnika
+      if (e.target.closest('.delete-participant-btn')) {
+        if (!confirm('Usunąć uczestnika z grupy?')) return;
+        try {
+          const { error } = await supabase
+            .from('participants')
+            .delete()
+            .eq('id', participantId);
+          if (error) throw error;
+          await loadParticipantsAndPayments();
+        } catch (err) {
+          alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
+        }
+      }
+
+      // Usuwanie płatności dla wybranego miesiąca
+      if (e.target.closest('.delete-payment-btn')) {
+        if (!confirm('Usunąć płatność dla tego miesiąca?')) return;
+        try {
+          const { data: existing, error: selErr } = await supabase
+            .from('payments')
+            .select('id')
+            .eq('participant_id', participantId)
+            .eq('month', selectedMonth)
+            .limit(1)
+            .maybeSingle();
+          if (selErr) throw selErr;
+          if (existing) {
+            const { error: delErr } = await supabase
+              .from('payments')
+              .delete()
+              .eq('id', existing.id);
+            if (delErr) throw delErr;
+          }
+          await loadParticipantsAndPayments();
+        } catch (err) {
+          alert('Błąd usuwania płatności: ' + (err.message || 'Nieznany'));
+        }
+      }
+    });
+
+    // Zgoda podpisana - change na checkboxie
+    participantsList.addEventListener('change', async (e) => {
+      const row = e.target.closest('[data-participant-id]');
+      if (!row) return;
+      if (e.target.classList.contains('consent-checkbox')) {
+        const participantId = row.dataset.participantId;
+        const checked = !!e.target.checked;
+        try {
+          const { error } = await supabase
+            .from('participants')
+            .update({ consent_signed: checked })
+            .eq('id', participantId);
+          if (error) throw error;
+        } catch (err) {
+          alert('Błąd zapisu zgody: ' + (err.message || 'Nieznany'));
+          // rollback UI
+          e.target.checked = !e.target.checked;
+        }
+      }
+    });
+    
+    // -------- Participants page logic --------
+    async function loadAllParticipants() {
+      participantsListAll.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
+      try {
+        const [{ data: participants, error: pErr }, { data: groups, error: gErr }] = await Promise.all([
+          supabase.from('participants').select('*').order('last_name', { ascending: true }),
+          supabase.from('groups').select('id,name')
+        ]);
+        if (pErr) throw pErr;
+        if (gErr) throw gErr;
+        if (!participants || participants.length === 0) {
+          participantsListAll.innerHTML = '<div class="empty-state"><p>Brak uczestników</p></div>';
+          return;
+        }
+        const groupIdToName = new Map(groups.map(g => [g.id, g.name]));
+        const participantIds = participants.map(p => p.id);
+        const { data: payments, error: payErr } = await supabase
+          .from('payments')
+          .select('participant_id, amount, confirmed')
+          .in('participant_id', participantIds);
+        if (payErr) throw payErr;
+        const payAgg = new Map();
+        (payments || []).forEach(pay => {
+          const agg = payAgg.get(pay.participant_id) || { paid: 0, unpaid: 0 };
+          if (pay.confirmed) agg.paid += Number(pay.amount || 0);
+          else agg.unpaid += Number(pay.amount || 0);
+          payAgg.set(pay.participant_id, agg);
+        });
+
+        // Render list with numbering
+        const fragment = document.createDocumentFragment();
+        participants.forEach((p, idx) => {
+          const agg = payAgg.get(p.id) || { paid: 0, unpaid: 0 };
+          const card = document.createElement('div');
+          card.className = 'group-card';
+          card.innerHTML = `
+            <h4><span class="p-index">${idx + 1}</span>${p.first_name || ''} ${p.last_name || ''}</h4>
+            <div class="group-detail"><i class="fas fa-phone"></i><span>${p.phone || ''}</span></div>
+            <div class="group-detail"><i class="fas fa-money-bill-wave"></i><span>Zapłacone: <span style=\"color: var(--success);\">${agg.paid.toFixed(2)} zł</span> · Niezapłacone: <span style=\"color: var(--error);\">${agg.unpaid.toFixed(2)} zł</span></span></div>
+            <div class="group-detail"><i class="fas fa-users"></i><span>Grupa: ${groupIdToName.get(p.group_id) || '-'}</span></div>
+            <div class="group-actions">
+              <button class="btn btn-outline edit-participant-btn" data-id="${p.id}"><i class="fas fa-edit"></i></button>
+              <button class="btn btn-outline delete-participant-global-btn" data-id="${p.id}"><i class="fas fa-trash"></i></button>
+            </div>
+          `;
+          fragment.appendChild(card);
+        });
+        participantsListAll.innerHTML = '';
+        participantsListAll.appendChild(fragment);
+        renumberVisibleParticipants();
+      } catch (err) {
+        participantsListAll.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+      }
+    }
+
+    function renumberVisibleParticipants() {
+      if (!participantsListAll) return;
+      const cards = Array.from(participantsListAll.querySelectorAll('.group-card'));
+      let counter = 1;
+      cards.forEach(card => {
+        if (card.style.display === 'none') return;
+        const badge = card.querySelector('.p-index');
+        if (badge) badge.textContent = String(counter++);
+      });
+    }
+
+    // Search filter for participants page
+    if (participantsSearch) {
+      participantsSearch.addEventListener('input', () => {
+        const q = participantsSearch.value.toLowerCase().trim();
+        if (!participantsListAll) return;
+        const cards = participantsListAll.querySelectorAll('.group-card');
+        cards.forEach(c => {
+          const text = c.textContent.toLowerCase();
+          c.style.display = text.includes(q) ? '' : 'none';
+        });
+        renumberVisibleParticipants();
+      });
+    }
+
+    // Edit/Delete actions on participants page
+    const editParticipantModal = document.getElementById('edit-participant-modal');
+    const closeEditParticipantModalBtn = document.getElementById('close-edit-participant-modal');
+    const cancelEditParticipantBtn = document.getElementById('cancel-edit-participant');
+    const saveEditParticipantBtn = document.getElementById('save-edit-participant');
+    const editParticipantTitleEl = document.getElementById('edit-participant-title');
+    const editFirstNameEl = document.getElementById('edit-participant-first-name');
+    const editLastNameEl = document.getElementById('edit-participant-last-name');
+    const editPhoneEl = document.getElementById('edit-participant-phone');
+    const editMultiEl = document.getElementById('edit-participant-multisport');
+    const editGroupSelect = document.getElementById('edit-participant-group');
+    let editParticipantId = null;
+    let isCreateParticipant = false;
+
+    function openEditParticipantModal(p, groups) {
+      editParticipantId = p.id;
+      isCreateParticipant = false;
+      if (editParticipantTitleEl) editParticipantTitleEl.textContent = 'Edytuj uczestnika';
+      editFirstNameEl.value = p.first_name || '';
+      editLastNameEl.value = p.last_name || '';
+      editPhoneEl.value = p.phone || '';
+      editMultiEl.checked = !!p.multisport;
+      editGroupSelect.innerHTML = '';
+      groups.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.id;
+        opt.textContent = g.name;
+        editGroupSelect.appendChild(opt);
+      });
+      if (p.group_id) editGroupSelect.value = p.group_id;
+      editParticipantModal.classList.add('active');
+    }
+    async function openCreateParticipantModal() {
+      isCreateParticipant = true;
+      editParticipantId = null;
+      if (editParticipantTitleEl) editParticipantTitleEl.textContent = 'Dodaj uczestnika';
+      editFirstNameEl.value = '';
+      editLastNameEl.value = '';
+      editPhoneEl.value = '';
+      editMultiEl.checked = false;
+      try {
+        const { data: groups, error } = await supabase.from('groups').select('id,name').order('name', { ascending: true });
+        if (error) throw error;
+        editGroupSelect.innerHTML = '';
+        (groups || []).forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g.id;
+          opt.textContent = g.name;
+          editGroupSelect.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('Błąd ładowania grup:', err);
+      }
+      editParticipantModal.classList.add('active');
+    }
+    function closeEditParticipantModal() { editParticipantModal.classList.remove('active'); editParticipantId = null; isCreateParticipant = false; }
+    closeEditParticipantModalBtn.addEventListener('click', closeEditParticipantModal);
+    cancelEditParticipantBtn.addEventListener('click', closeEditParticipantModal);
+    const addParticipantGlobalBtn = document.getElementById('add-participant-global');
+    if (addParticipantGlobalBtn) {
+      addParticipantGlobalBtn.addEventListener('click', async () => {
+        await openCreateParticipantModal();
+      });
+    }
+
+    if (participantsListAll) participantsListAll.addEventListener('click', async (e) => {
+      const editBtn = e.target.closest('.edit-participant-btn');
+      const delBtn = e.target.closest('.delete-participant-global-btn');
+      if (editBtn) {
+        const pid = editBtn.dataset.id;
+        try {
+          const [{ data: p, error: pErr }, { data: groups, error: gErr }] = await Promise.all([
+            supabase.from('participants').select('*').eq('id', pid).maybeSingle(),
+            supabase.from('groups').select('id,name').order('name', { ascending: true })
+          ]);
+          if (pErr) throw pErr;
+          if (gErr) throw gErr;
+          openEditParticipantModal(p, groups || []);
+        } catch (err) {
+          alert('Błąd wczytania uczestnika: ' + (err.message || 'Nieznany'));
+        }
+      }
+      if (delBtn) {
+        const pid = delBtn.dataset.id;
+        if (!confirm('Usunąć uczestnika?')) return;
+        try {
+          const { error } = await supabase.from('participants').delete().eq('id', pid);
+          if (error) throw error;
+          await loadAllParticipants();
+        } catch (err) {
+          alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
+        }
+      }
+    });
+
+    saveEditParticipantBtn.addEventListener('click', async () => {
+      const payload = {
+        first_name: editFirstNameEl.value.trim(),
+        last_name: editLastNameEl.value.trim(),
+        phone: editPhoneEl.value.trim(),
+        multisport: !!editMultiEl.checked,
+        group_id: editGroupSelect.value || null
+      };
+      try {
+        if (isCreateParticipant || !editParticipantId) {
+          const { error } = await supabase.from('participants').insert([payload]);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('participants').update(payload).eq('id', editParticipantId);
+          if (error) throw error;
+        }
+        isCreateParticipant = false;
+        closeEditParticipantModal();
+        await loadAllParticipants();
+      } catch (err) {
+        alert('Błąd zapisu uczestnika: ' + (err.message || 'Nieznany'));
+      }
+    });
+    
+    // Inicjalizacja
+    document.addEventListener('DOMContentLoaded', async () => {
+      await checkAdmin();
+      setActiveNav('groups');
+      await loadGroups();
+    });
+  </script>
+</body>
+</html>
