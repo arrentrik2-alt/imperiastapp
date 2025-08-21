@@ -346,6 +346,7 @@
     .btn.btn-sm { padding: 4px 8px; font-size: 0.85rem; }
     .participant-row.paid { background-color: rgba(40, 167, 69, 0.08); border-left: 3px solid var(--success); }
     .participant-row.unpaid { background-color: rgba(220, 53, 69, 0.06); border-left: 3px solid var(--error); }
+    .p-index { color: var(--gold); font-weight: 700; margin-right: 8px; }
     
     /* Loading spinner */
     .loading {
@@ -720,6 +721,21 @@
     const participantsSection = document.getElementById('participants-section');
     const participantsListAll = document.getElementById('participants-list-all');
     const participantsSearch = document.getElementById('participants-search');
+    // Nav links
+    const groupsLink = document.getElementById('nav-groups');
+    const participantsLink = document.getElementById('nav-participants');
+
+    function setActiveNav(section) {
+      if (groupsLink && participantsLink) {
+        if (section === 'groups') {
+          groupsLink.classList.add('active');
+          participantsLink.classList.remove('active');
+        } else if (section === 'participants') {
+          participantsLink.classList.add('active');
+          groupsLink.classList.remove('active');
+        }
+      }
+    }
     // Group details section refs
     const groupsSection = document.getElementById('groups-section');
     const groupDetailsSection = document.getElementById('group-details-section');
@@ -768,11 +784,13 @@
     function showGroupDetailsSection() {
       groupsSection.style.display = 'none';
       groupDetailsSection.style.display = 'block';
+      setActiveNav('groups');
     }
     function showGroupsSection() {
       groupDetailsSection.style.display = 'none';
       groupsSection.style.display = 'block';
       participantsSection.style.display = 'none';
+      setActiveNav('groups');
       // reset
       addParticipantForm.style.display = 'none';
       participantFirstName.value = '';
@@ -782,7 +800,6 @@
     }
     backToGroupsBtn.addEventListener('click', showGroupsSection);
     // Sidebar 'Grupy' link handler
-    const groupsLink = document.getElementById('nav-groups');
     if (groupsLink) {
       groupsLink.addEventListener('click', async (e) => {
         try {
@@ -790,6 +807,7 @@
           participantsSection.style.display = 'none';
           groupDetailsSection.style.display = 'none';
           groupsSection.style.display = 'block';
+          setActiveNav('groups');
           await loadGroups();
         } catch (err) {
           console.error('Błąd przełączania na Grupy:', err);
@@ -798,7 +816,6 @@
     }
     
     // Navigate to Participants page
-    const participantsLink = document.getElementById('nav-participants');
     if (participantsLink) {
       participantsLink.addEventListener('click', async (e) => {
         try {
@@ -806,6 +823,7 @@
           groupsSection.style.display = 'none';
           groupDetailsSection.style.display = 'none';
           participantsSection.style.display = 'block';
+          setActiveNav('participants');
           await loadAllParticipants();
         } catch (err) {
           console.error('Błąd przełączania na Uczestnicy:', err);
@@ -1428,14 +1446,14 @@
           payAgg.set(pay.participant_id, agg);
         });
 
-        // Render list
+        // Render list with numbering
         const fragment = document.createDocumentFragment();
-        participants.forEach(p => {
+        participants.forEach((p, idx) => {
           const agg = payAgg.get(p.id) || { paid: 0, unpaid: 0 };
           const card = document.createElement('div');
           card.className = 'group-card';
           card.innerHTML = `
-            <h4>${p.first_name || ''} ${p.last_name || ''}</h4>
+            <h4><span class="p-index">${idx + 1}</span>${p.first_name || ''} ${p.last_name || ''}</h4>
             <div class="group-detail"><i class="fas fa-phone"></i><span>${p.phone || ''}</span></div>
             <div class="group-detail"><i class="fas fa-money-bill-wave"></i><span>Zapłacone: <span style=\"color: var(--success);\">${agg.paid.toFixed(2)} zł</span> · Niezapłacone: <span style=\"color: var(--error);\">${agg.unpaid.toFixed(2)} zł</span></span></div>
             <div class="group-detail"><i class="fas fa-users"></i><span>Grupa: ${groupIdToName.get(p.group_id) || '-'}</span></div>
@@ -1448,9 +1466,21 @@
         });
         participantsListAll.innerHTML = '';
         participantsListAll.appendChild(fragment);
+        renumberVisibleParticipants();
       } catch (err) {
         participantsListAll.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
       }
+    }
+
+    function renumberVisibleParticipants() {
+      if (!participantsListAll) return;
+      const cards = Array.from(participantsListAll.querySelectorAll('.group-card'));
+      let counter = 1;
+      cards.forEach(card => {
+        if (card.style.display === 'none') return;
+        const badge = card.querySelector('.p-index');
+        if (badge) badge.textContent = String(counter++);
+      });
     }
 
     // Search filter for participants page
@@ -1463,6 +1493,7 @@
           const text = c.textContent.toLowerCase();
           c.style.display = text.includes(q) ? '' : 'none';
         });
+        renumberVisibleParticipants();
       });
     }
 
@@ -1550,6 +1581,7 @@
     // Inicjalizacja
     document.addEventListener('DOMContentLoaded', async () => {
       await checkAdmin();
+      setActiveNav('groups');
       await loadGroups();
     });
   </script>
