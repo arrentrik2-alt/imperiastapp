@@ -1,36 +1,445 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panel Admina</title>
-<link rel="stylesheet" href="style.css">
-<script type="module" src="supabaseClient.js"></script>
-<script type="module" src="groups.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admina - Grupy</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-bg: #121212;
+      --secondary-bg: #1e1e1e;
+      --gold: #d4af37;
+      --gold-light: #f1e5b9;
+      --text-light: #f5f5f5;
+      --text-gray: #b0b0b0;
+      --border-dark: #333;
+      --success: #28a745;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: var(--primary-bg);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background-color: var(--secondary-bg);
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      padding: 20px 0;
+      border-right: 1px solid var(--border-dark);
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    
+    .logo {
+      text-align: center;
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border-dark);
+      margin-bottom: 20px;
+    }
+    
+    .logo h1 {
+      color: var(--gold);
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .logo span {
+      color: var(--text-light);
+    }
+    
+    .nav-links {
+      list-style: none;
+      padding: 0 15px;
+    }
+    
+    .nav-links li {
+      margin-bottom: 5px;
+    }
+    
+    .nav-links a {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      text-decoration: none;
+      color: var(--text-gray);
+      border-radius: 5px;
+      transition: all 0.3s ease;
+    }
+    
+    .nav-links a:hover, .nav-links a.active {
+      background-color: rgba(212, 175, 55, 0.1);
+      color: var(--gold);
+    }
+    
+    .nav-links a i {
+      margin-right: 10px;
+      font-size: 1.1rem;
+    }
+    
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      margin-left: 250px;
+      padding: 20px;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border-dark);
+    }
+    
+    .header h2 {
+      color: var(--gold);
+      font-size: 1.8rem;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+    }
+    
+    .user-info span {
+      margin-right: 15px;
+      color: var(--text-gray);
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+      background-color: var(--gold);
+      color: var(--primary-bg);
+    }
+    
+    .btn-primary:hover {
+      background-color: #c19b2e;
+    }
+    
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+    }
+    
+    .btn-outline:hover {
+      background-color: rgba(212, 175, 55, 0.1);
+    }
+    
+    /* Content Box */
+    .content-box {
+      background-color: var(--secondary-bg);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-dark);
+    }
+    
+    .content-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .content-header h3 {
+      color: var(--gold);
+      font-size: 1.3rem;
+    }
+    
+    /* Groups List */
+    .groups-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    
+    .group-card {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 15px;
+      border: 1px solid var(--border-dark);
+      transition: all 0.3s ease;
+    }
+    
+    .group-card:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+    }
+    
+    .group-card h4 {
+      color: var(--gold);
+      margin-bottom: 10px;
+      font-size: 1.1rem;
+    }
+    
+    .group-detail {
+      display: flex;
+      margin-bottom: 8px;
+      color: var(--text-gray);
+      font-size: 0.9rem;
+    }
+    
+    .group-detail i {
+      margin-right: 8px;
+      color: var(--gold);
+      width: 16px;
+    }
+    
+    .group-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 15px;
+      gap: 10px;
+    }
+    
+    /* Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .modal-content {
+      background-color: var(--secondary-bg);
+      width: 90%;
+      max-width: 500px;
+      border-radius: 8px;
+      padding: 25px;
+      border: 1px solid var(--border-dark);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    
+    .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: none;
+      border: none;
+      color: var(--text-gray);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    
+    .modal-close:hover {
+      color: var(--text-light);
+    }
+    
+    .modal-header {
+      margin-bottom: 20px;
+      padding-right: 30px;
+    }
+    
+    .modal-header h3 {
+      color: var(--gold);
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text-gray);
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 10px;
+      background-color: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--border-dark);
+      border-radius: 4px;
+      color: var(--text-light);
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+      gap: 10px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 992px) {
+      .sidebar {
+        width: 70px;
+      }
+      
+      .sidebar .logo-text, .sidebar .link-text {
+        display: none;
+      }
+      
+      .sidebar .logo {
+        padding: 10px;
+      }
+      
+      .nav-links {
+        padding: 0 10px;
+      }
+      
+      .nav-links a {
+        justify-content: center;
+        padding: 15px 10px;
+      }
+      
+      .nav-links a i {
+        margin-right: 0;
+        font-size: 1.3rem;
+      }
+      
+      .main-content {
+        margin-left: 70px;
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .sidebar {
+        width: 0;
+        overflow: hidden;
+      }
+      
+      .main-content {
+        margin-left: 0;
+      }
+      
+      .groups-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Panel Admina</h1>
-    <nav>
-      <button id="tab-groups">Grupy</button>
-      <!-- później kolejne zakładki -->
-    </nav>
-  </header>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <h1>Gold<span>Gym</span></h1>
+    </div>
+    
+    <ul class="nav-links">
+      <li>
+        <a href="#" class="active">
+          <i class="fas fa-users"></i>
+          <span class="link-text">Grupy</span>
+        </a>
+      </li>
+      <li>
+        <a href="#">
+          <i class="fas fa-user-friends"></i>
+          <span class="link-text">Uczestnicy</span>
+        </a>
+      </li>
+      <li>
+        <a href="#">
+          <i class="fas fa-calendar-alt"></i>
+          <span class="link-text">Harmonogram</span>
+        </a>
+      </li>
+      <li>
+        <a href="#">
+          <i class="fas fa-chart-line"></i>
+          <span class="link-text">Płatności</span>
+        </a>
+      </li>
+      <li>
+        <a href="#">
+          <i class="fas fa-cog"></i>
+          <span class="link-text">Ustawienia</span>
+        </a>
+      </li>
+    </ul>
+  </aside>
 
-  <main>
-    <section id="groups-section">
-      <button id="add-group-btn">Dodaj grupę</button>
-      <div id="groups-list"></div>
-    </section>
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="header">
+      <h2>Zarządzanie grupami</h2>
+      <div class="user-info">
+        <span>Witaj, Admin!</span>
+        <button class="btn btn-outline" id="logoutBtn">
+          <i class="fas fa-sign-out-alt"></i> Wyloguj
+        </button>
+      </div>
+    </div>
+
+    <div class="content-box">
+      <div class="content-header">
+        <h3>Lista grup treningowych</h3>
+        <button class="btn btn-primary" id="add-group-btn">
+          <i class="fas fa-plus"></i> Dodaj grupę
+        </button>
+      </div>
+
+      <div class="groups-grid" id="groups-list">
+        <!-- Groups will be loaded here dynamically -->
+      </div>
+    </div>
   </main>
 
-  <!-- Modal dodawania grupy -->
-  <div id="add-group-modal" class="modal hidden">
+  <!-- Add Group Modal -->
+  <div class="modal" id="add-group-modal">
     <div class="modal-content">
-      <h2>Dodaj grupę</h2>
-      <label>Nazwa grupy: <input type="text" id="group-name"></label>
-      <label>Dzień: 
-        <select id="group-day">
+      <button class="modal-close" id="close-group-modal">
+        <i class="fas fa-times"></i>
+      </button>
+      
+      <div class="modal-header">
+        <h3>Dodaj nową grupę</h3>
+      </div>
+      
+      <div class="form-group">
+        <label for="group-name">Nazwa grupy</label>
+        <input type="text" id="group-name" class="form-control" placeholder="Nazwa grupy">
+      </div>
+      
+      <div class="form-group">
+        <label for="group-day">Dzień tygodnia</label>
+        <select id="group-day" class="form-control">
           <option value="Poniedziałek">Poniedziałek</option>
           <option value="Wtorek">Wtorek</option>
           <option value="Środa">Środa</option>
@@ -39,18 +448,193 @@
           <option value="Sobota">Sobota</option>
           <option value="Niedziela">Niedziela</option>
         </select>
-      </label>
-      <label>Godzina rozpoczęcia: <input type="time" id="group-start"></label>
-      <label>Godzina zakończenia: <input type="time" id="group-end"></label>
-      <label>Trener: <input type="text" id="group-trainer"></label>
-      <label>Kwota: <input type="number" id="group-fee"></label>
-      <label>Kwota Multisport: <input type="number" id="group-multisport"></label>
-      <button id="save-group-btn">Zapisz</button>
-      <button id="close-group-modal">Anuluj</button>
+      </div>
+      
+      <div class="form-group">
+        <label for="group-start">Godzina rozpoczęcia</label>
+        <input type="time" id="group-start" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="group-end">Godzina zakończenia</label>
+        <input type="time" id="group-end" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="group-trainer">Trener</label>
+        <input type="text" id="group-trainer" class="form-control" placeholder="Imię i nazwisko trenera">
+      </div>
+      
+      <div class="form-group">
+        <label for="group-fee">Kwota (zł)</label>
+        <input type="number" id="group-fee" class="form-control" placeholder="0.00" step="0.01">
+      </div>
+      
+      <div class="form-group">
+        <label for="group-multisport">Kwota Multisport (zł)</label>
+        <input type="number" id="group-multisport" class="form-control" placeholder="0.00" step="0.01">
+      </div>
+      
+      <div class="form-actions">
+        <button class="btn btn-outline" id="cancel-group-btn">Anuluj</button>
+        <button class="btn btn-primary" id="save-group-btn">Zapisz grupę</button>
+      </div>
     </div>
   </div>
 
-  <div id="overlay" class="hidden"></div>
-
+  <script type="module">
+    import { supabase } from './supabaseClient.js';
+    
+    // Check if user is admin
+    async function checkAdmin() {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        alert("Nie jesteś zalogowany");
+        window.location.href = "login.html";
+        return;
+      }
+      
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+        
+      if (error || !profile || profile.role !== "admin") {
+        alert("Nie masz uprawnień administratora");
+        window.location.href = "login.html";
+        return;
+      }
+    }
+    
+    // Logout function
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "login.html";
+    });
+    
+    // Modal functionality
+    const addGroupModal = document.getElementById('add-group-modal');
+    const addGroupBtn = document.getElementById('add-group-btn');
+    const closeModalBtn = document.getElementById('close-group-modal');
+    const cancelGroupBtn = document.getElementById('cancel-group-btn');
+    const saveGroupBtn = document.getElementById('save-group-btn');
+    
+    function openModal() {
+      addGroupModal.classList.add('active');
+    }
+    
+    function closeModal() {
+      addGroupModal.classList.remove('active');
+    }
+    
+    addGroupBtn.addEventListener('click', openModal);
+    closeModalBtn.addEventListener('click', closeModal);
+    cancelGroupBtn.addEventListener('click', closeModal);
+    
+    // Save group function
+    saveGroupBtn.addEventListener('click', async () => {
+      const name = document.getElementById('group-name').value;
+      const day = document.getElementById('group-day').value;
+      const start = document.getElementById('group-start').value;
+      const end = document.getElementById('group-end').value;
+      const trainer = document.getElementById('group-trainer').value;
+      const fee = parseFloat(document.getElementById('group-fee').value);
+      const multisport = parseFloat(document.getElementById('group-multisport').value);
+      
+      const { data, error } = await supabase
+        .from('groups')
+        .insert([{ 
+          name, 
+          day, 
+          start_time: start, 
+          end_time: end, 
+          trainer, 
+          fee, 
+          multisport 
+        }]);
+        
+      if (error) {
+        alert('Błąd dodawania grupy: ' + error.message);
+      } else {
+        alert('Grupa dodana pomyślnie!');
+        closeModal();
+        loadGroups();
+        
+        // Clear form
+        document.getElementById('group-name').value = '';
+        document.getElementById('group-start').value = '';
+        document.getElementById('group-end').value = '';
+        document.getElementById('group-trainer').value = '';
+        document.getElementById('group-fee').value = '';
+        document.getElementById('group-multisport').value = '';
+      }
+    });
+    
+    // Load groups function
+    async function loadGroups() {
+      const { data, error } = await supabase
+        .from('groups')
+        .select('*')
+        .order('day', { ascending: true })
+        .order('start_time', { ascending: true });
+        
+      const groupsList = document.getElementById('groups-list');
+      
+      if (error) {
+        groupsList.innerHTML = '<p>Błąd wczytywania grup</p>';
+        return;
+      }
+      
+      if (data.length === 0) {
+        groupsList.innerHTML = '<p>Brak grup do wyświetlenia</p>';
+        return;
+      }
+      
+      groupsList.innerHTML = '';
+      
+      data.forEach(group => {
+        const groupCard = document.createElement('div');
+        groupCard.className = 'group-card';
+        
+        groupCard.innerHTML = `
+          <h4>${group.name}</h4>
+          <div class="group-detail">
+            <i class="fas fa-calendar-day"></i>
+            <span>${group.day}, ${group.start_time} - ${group.end_time}</span>
+          </div>
+          <div class="group-detail">
+            <i class="fas fa-user-tie"></i>
+            <span>${group.trainer}</span>
+          </div>
+          <div class="group-detail">
+            <i class="fas fa-money-bill-wave"></i>
+            <span>Opłata: ${group.fee} zł</span>
+          </div>
+          <div class="group-detail">
+            <i class="fas fa-credit-card"></i>
+            <span>Multisport: ${group.multisport} zł</span>
+          </div>
+          <div class="group-actions">
+            <button class="btn btn-outline edit-btn" data-id="${group.id}">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-outline delete-btn" data-id="${group.id}">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        `;
+        
+        groupsList.appendChild(groupCard);
+      });
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      checkAdmin();
+      loadGroups();
+    });
+  </script>
 </body>
 </html>
