@@ -4,15 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Logowanie</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 </head>
 <body>
-  <h1>Logowanie</h1>
- <input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Hasło">
-<button onclick="login()">Zaloguj się</button>
-<script src="login.js"></script>
+  <h1>Panel logowania</h1>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Hasło">
+  <button onclick="login()">Zaloguj się</button>
 
+  <!-- najpierw Supabase client -->
+  <script src="supabaseClient.js"></script>
+  <!-- potem logika logowania -->
   <script src="login.js"></script>
 </body>
 </html>
