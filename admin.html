@@ -559,7 +559,57 @@
         </div>
       </div>
     </div>
-  </main>
+    
+    <!-- Participants Section -->
+    <div class="content-box" id="participants-section" style="display:none;">
+      <div class="content-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h3>Uczestnicy</h3>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+          <input id="participants-search" class="form-control" placeholder="Szukaj: imię/nazwisko/telefon" style="width:260px;" />
+        </div>
+      </div>
+      <div id="participants-list-all">
+        <div class="empty-state"><p>Brak uczestników</p></div>
+      </div>
+    </div>
+
+    <!-- Edit Participant Modal -->
+    <div class="modal" id="edit-participant-modal">
+      <div class="modal-content">
+        <button class="modal-close" id="close-edit-participant-modal">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="modal-header">
+          <h3>Edytuj uczestnika</h3>
+        </div>
+        <div class="form-group">
+          <label>Imię</label>
+          <input type="text" id="edit-participant-first-name" class="form-control" placeholder="Imię">
+        </div>
+        <div class="form-group">
+          <label>Nazwisko</label>
+          <input type="text" id="edit-participant-last-name" class="form-control" placeholder="Nazwisko">
+        </div>
+        <div class="form-group">
+          <label>Telefon</label>
+          <input type="tel" id="edit-participant-phone" class="form-control" placeholder="Telefon">
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="edit-participant-multisport" style="width:auto;">
+          <label for="edit-participant-multisport" style="margin:0;">Korzysta z Multisport</label>
+        </div>
+        <div class="form-group">
+          <label>Grupa</label>
+          <select id="edit-participant-group" class="form-control"></select>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" id="cancel-edit-participant">Anuluj</button>
+          <button class="btn btn-primary" id="save-edit-participant"><i class="fas fa-save"></i> Zapisz</button>
+        </div>
+      </div>
+    </div>
 
   <!-- Add Group Modal -->
   <div class="modal" id="add-group-modal">
@@ -718,6 +768,7 @@
     function showGroupsSection() {
       groupDetailsSection.style.display = 'none';
       groupsSection.style.display = 'block';
+      participantsSection.style.display = 'none';
       // reset
       addParticipantForm.style.display = 'none';
       participantFirstName.value = '';
@@ -726,6 +777,16 @@
       participantMultisport.checked = false;
     }
     backToGroupsBtn.addEventListener('click', showGroupsSection);
+
+    // Navigate to Participants page
+    const participantsLink = document.querySelectorAll('.nav-links a')[1];
+    participantsLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      groupsSection.style.display = 'none';
+      groupDetailsSection.style.display = 'none';
+      participantsSection.style.display = 'block';
+      await loadAllParticipants();
+    });
     
     // Edit group modal helpers
     const groupModalTitle = document.getElementById('group-modal-title');
@@ -1301,6 +1362,153 @@
           // rollback UI
           e.target.checked = !e.target.checked;
         }
+      }
+    });
+    
+    // -------- Participants page logic --------
+    async function loadAllParticipants() {
+      participantsListAll.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
+      try {
+        const [{ data: participants, error: pErr }, { data: groups, error: gErr }] = await Promise.all([
+          supabase.from('participants').select('*').order('last_name', { ascending: true }),
+          supabase.from('groups').select('id,name')
+        ]);
+        if (pErr) throw pErr;
+        if (gErr) throw gErr;
+        if (!participants || participants.length === 0) {
+          participantsListAll.innerHTML = '<div class="empty-state"><p>Brak uczestników</p></div>';
+          return;
+        }
+        const groupIdToName = new Map(groups.map(g => [g.id, g.name]));
+        const participantIds = participants.map(p => p.id);
+        const { data: payments, error: payErr } = await supabase
+          .from('payments')
+          .select('participant_id, amount, confirmed')
+          .in('participant_id', participantIds);
+        if (payErr) throw payErr;
+        const payAgg = new Map();
+        (payments || []).forEach(pay => {
+          const agg = payAgg.get(pay.participant_id) || { paid: 0, unpaid: 0 };
+          if (pay.confirmed) agg.paid += Number(pay.amount || 0);
+          else agg.unpaid += Number(pay.amount || 0);
+          payAgg.set(pay.participant_id, agg);
+        });
+
+        // Render list
+        const fragment = document.createDocumentFragment();
+        participants.forEach(p => {
+          const agg = payAgg.get(p.id) || { paid: 0, unpaid: 0 };
+          const card = document.createElement('div');
+          card.className = 'group-card';
+          card.innerHTML = `
+            <h4>${p.first_name || ''} ${p.last_name || ''}</h4>
+            <div class="group-detail"><i class="fas fa-phone"></i><span>${p.phone || ''}</span></div>
+            <div class="group-detail"><i class="fas fa-money-bill-wave"></i><span>Zapłacone: <span style=\"color: var(--success);\">${agg.paid.toFixed(2)} zł</span> · Niezapłacone: <span style=\"color: var(--error);\">${agg.unpaid.toFixed(2)} zł</span></span></div>
+            <div class="group-detail"><i class="fas fa-users"></i><span>Grupa: ${groupIdToName.get(p.group_id) || '-'}</span></div>
+            <div class="group-actions">
+              <button class="btn btn-outline edit-participant-btn" data-id="${p.id}"><i class="fas fa-edit"></i></button>
+              <button class="btn btn-outline delete-participant-global-btn" data-id="${p.id}"><i class="fas fa-trash"></i></button>
+            </div>
+          `;
+          fragment.appendChild(card);
+        });
+        participantsListAll.innerHTML = '';
+        participantsListAll.appendChild(fragment);
+      } catch (err) {
+        participantsListAll.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+      }
+    }
+
+    // Search filter for participants page
+    if (participantsSearch) {
+      participantsSearch.addEventListener('input', () => {
+        const q = participantsSearch.value.toLowerCase().trim();
+        const cards = participantsListAll.querySelectorAll('.group-card');
+        cards.forEach(c => {
+          const text = c.textContent.toLowerCase();
+          c.style.display = text.includes(q) ? '' : 'none';
+        });
+      });
+    }
+
+    // Edit/Delete actions on participants page
+    const editParticipantModal = document.getElementById('edit-participant-modal');
+    const closeEditParticipantModalBtn = document.getElementById('close-edit-participant-modal');
+    const cancelEditParticipantBtn = document.getElementById('cancel-edit-participant');
+    const saveEditParticipantBtn = document.getElementById('save-edit-participant');
+    const editFirstNameEl = document.getElementById('edit-participant-first-name');
+    const editLastNameEl = document.getElementById('edit-participant-last-name');
+    const editPhoneEl = document.getElementById('edit-participant-phone');
+    const editMultiEl = document.getElementById('edit-participant-multisport');
+    const editGroupSelect = document.getElementById('edit-participant-group');
+    let editParticipantId = null;
+
+    function openEditParticipantModal(p, groups) {
+      editParticipantId = p.id;
+      editFirstNameEl.value = p.first_name || '';
+      editLastNameEl.value = p.last_name || '';
+      editPhoneEl.value = p.phone || '';
+      editMultiEl.checked = !!p.multisport;
+      editGroupSelect.innerHTML = '';
+      groups.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.id;
+        opt.textContent = g.name;
+        editGroupSelect.appendChild(opt);
+      });
+      if (p.group_id) editGroupSelect.value = p.group_id;
+      editParticipantModal.classList.add('active');
+    }
+    function closeEditParticipantModal() { editParticipantModal.classList.remove('active'); editParticipantId = null; }
+    closeEditParticipantModalBtn.addEventListener('click', closeEditParticipantModal);
+    cancelEditParticipantBtn.addEventListener('click', closeEditParticipantModal);
+
+    participantsListAll.addEventListener('click', async (e) => {
+      const editBtn = e.target.closest('.edit-participant-btn');
+      const delBtn = e.target.closest('.delete-participant-global-btn');
+      if (editBtn) {
+        const pid = editBtn.dataset.id;
+        try {
+          const [{ data: p, error: pErr }, { data: groups, error: gErr }] = await Promise.all([
+            supabase.from('participants').select('*').eq('id', pid).maybeSingle(),
+            supabase.from('groups').select('id,name').order('name', { ascending: true })
+          ]);
+          if (pErr) throw pErr;
+          if (gErr) throw gErr;
+          openEditParticipantModal(p, groups || []);
+        } catch (err) {
+          alert('Błąd wczytania uczestnika: ' + (err.message || 'Nieznany'));
+        }
+      }
+      if (delBtn) {
+        const pid = delBtn.dataset.id;
+        if (!confirm('Usunąć uczestnika?')) return;
+        try {
+          const { error } = await supabase.from('participants').delete().eq('id', pid);
+          if (error) throw error;
+          await loadAllParticipants();
+        } catch (err) {
+          alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
+        }
+      }
+    });
+
+    saveEditParticipantBtn.addEventListener('click', async () => {
+      if (!editParticipantId) return;
+      const updates = {
+        first_name: editFirstNameEl.value.trim(),
+        last_name: editLastNameEl.value.trim(),
+        phone: editPhoneEl.value.trim(),
+        multisport: !!editMultiEl.checked,
+        group_id: editGroupSelect.value || null
+      };
+      try {
+        const { error } = await supabase.from('participants').update(updates).eq('id', editParticipantId);
+        if (error) throw error;
+        closeEditParticipantModal();
+        await loadAllParticipants();
+      } catch (err) {
+        alert('Błąd zapisu uczestnika: ' + (err.message || 'Nieznany'));
       }
     });
     
