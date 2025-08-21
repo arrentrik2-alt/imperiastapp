@@ -10,6 +10,7 @@ async function login() {
   if (error) {
     alert("Błąd logowania: " + error.message);
   } else {
-    window.location.href = "/admin.html";
+    // przekierowanie do panelu admina
+    window.location.href = "admin.html";
   }
 }
