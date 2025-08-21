@@ -3,23 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Logowanie - Moja Apka PWA</title>
-  <link rel="manifest" href="manifest.json">
+  <title>Logowanie</title>
 </head>
 <body>
-  <h1>Panel logowania</h1>
+  <h1>Logowanie</h1>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Hasło">
+  <button id="loginBtn">Zaloguj</button>
 
-  <input type="email" id="email" placeholder="Email"><br><br>
-  <input type="password" id="password" placeholder="Hasło"><br><br>
-  <button onclick="login()">Zaloguj się</button>
-
-  <!-- Supabase JS CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-
-  <!-- Twój klient Supabase -->
-  <script src="supabaseClient.js"></script>
-
-  <!-- Logika logowania -->
-  <script src="login.js"></script>
+  <!-- Supabase 2.x CDN -->
+  <script type="module" src="login.js"></script>
 </body>
 </html>
