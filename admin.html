@@ -1100,7 +1100,7 @@
               google_event_id: googleEventId,
               months: monthsVal, color: colorVal,
               calendar_id: DEFAULT_CALENDAR_ID, timezone: DEFAULT_TIMEZONE
-            }).then(r=>{ if(!r?.ok){ console.error('Calendar update failed', r); alert('Błąd zapisu do kalendarza: '+(r?.error||'nieznany')); } });
+            }).then(r=>{ if(!r?.ok){ console.warn('Calendar update warning', r); } });
           } else {
             const resp = await sendCalendarRequest({
               action: 'create', id: editId, name, trainer, day_pl: day,
@@ -1112,8 +1112,7 @@
             if (resp && resp.ok && resp.eventId) {
               await supabase.from('groups').update({ google_event_id: resp.eventId }).eq('id', editId);
             } else if (resp && !resp.ok) {
-              console.error('Calendar create failed', resp);
-              alert('Błąd tworzenia w kalendarzu: '+(resp.error||'nieznany'));
+              console.warn('Calendar create warning', resp);
             }
           }
         } else {
@@ -1136,8 +1135,7 @@
             if (resp && resp.ok && resp.eventId) {
               await supabase.from('groups').update({ google_event_id: resp.eventId }).eq('id', g.id);
             } else if (resp && !resp.ok) {
-              console.error('Calendar create failed', resp);
-              alert('Błąd tworzenia w kalendarzu: '+(resp.error||'nieznany'));
+              console.warn('Calendar create warning', resp);
             }
           }
         }
@@ -1253,13 +1251,13 @@
                 const fresh = await supabase.from('groups').select('google_event_id').eq('id', group.id).maybeSingle();
                 const evId = fresh?.data?.google_event_id || group.google_event_id || '';
                 if (evId) {
+                  // Always attempt calendar delete (fallback on SUPA_GROUP_ID if no eventId)
                   const delResp = await sendCalendarRequest({
-                    action: 'delete', id: group.id, google_event_id: evId,
+                    action: 'delete', id: group.id, google_event_id: evId || '',
                     calendar_id: DEFAULT_CALENDAR_ID, timezone: DEFAULT_TIMEZONE
                   });
                   if (delResp && !delResp.ok) {
                     console.warn('Calendar delete warning:', delResp);
-                    alert('Uwaga: nie udało się usunąć z Google Kalendarza: ' + (delResp.error || 'nieznany błąd'));
                   }
                 }
                 const { error } = await supabase.from('groups').delete().eq('id', group.id);
