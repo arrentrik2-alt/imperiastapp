@@ -1018,10 +1018,12 @@
       fillGroupForm(group);
       addGroupModal.classList.add('active');
       saveGroupBtn.dataset.editId = group.id;
+      saveGroupBtn.dataset.editGoogleId = group.google_event_id || '';
     }
     function resetGroupFormMode() {
       groupModalTitle.textContent = 'Dodaj nową grupę';
       delete saveGroupBtn.dataset.editId;
+      delete saveGroupBtn.dataset.editGoogleId;
       document.getElementById('group-name').value = '';
       document.getElementById('group-start').value = '';
       document.getElementById('group-end').value = '';
@@ -1059,11 +1061,49 @@
           .from('groups')
             .update({ name, day, start_time: start, end_time: end, trainer, fee, multisport })
             .eq('id', editId));
+
+          // Calendar: update or create if missing
+          const { next_start_iso, next_end_iso, byday_code } = computeNextIsoPair(day, start, end);
+          const googleEventId = saveGroupBtn.dataset.editGoogleId || '';
+          if (googleEventId) {
+            await sendCalendarRequest({
+              action: 'update', id: editId, name, trainer, day_pl: day,
+              byday_code, start_time: start, end_time: end,
+              next_start_iso, next_end_iso,
+              google_event_id: googleEventId,
+              calendar_id: DEFAULT_CALENDAR_ID, timezone: DEFAULT_TIMEZONE
+            });
+          } else {
+            const resp = await sendCalendarRequest({
+              action: 'create', id: editId, name, trainer, day_pl: day,
+              byday_code, start_time: start, end_time: end,
+              next_start_iso, next_end_iso,
+              calendar_id: DEFAULT_CALENDAR_ID, timezone: DEFAULT_TIMEZONE
+            });
+            if (resp && resp.ok && resp.eventId) {
+              await supabase.from('groups').update({ google_event_id: resp.eventId }).eq('id', editId);
+            }
+          }
         } else {
-          ({ data, error } = await supabase
+          const insertRes = await supabase
             .from('groups')
             .insert([{ name, day, start_time: start, end_time: end, trainer, fee, multisport }])
-            .select());
+            .select();
+          data = insertRes.data;
+          error = insertRes.error;
+          if (!error && data && data[0]) {
+            const g = data[0];
+            const { next_start_iso, next_end_iso, byday_code } = computeNextIsoPair(day, start, end);
+            const resp = await sendCalendarRequest({
+              action: 'create', id: g.id, name, trainer, day_pl: day,
+              byday_code, start_time: start, end_time: end,
+              next_start_iso, next_end_iso,
+              calendar_id: DEFAULT_CALENDAR_ID, timezone: DEFAULT_TIMEZONE
+            });
+            if (resp && resp.ok && resp.eventId) {
+              await supabase.from('groups').update({ google_event_id: resp.eventId }).eq('id', g.id);
+            }
+          }
         }
           
         if (error) {
