@@ -1073,7 +1073,7 @@
               next_start_iso, next_end_iso,
               google_event_id: googleEventId,
               calendar_id: DEFAULT_CALENDAR_ID, timezone: DEFAULT_TIMEZONE
-            });
+            }).then(r=>{ if(!r?.ok){ console.error('Calendar update failed', r); alert('Błąd zapisu do kalendarza: '+(r?.error||'nieznany')); } });
           } else {
             const resp = await sendCalendarRequest({
               action: 'create', id: editId, name, trainer, day_pl: day,
@@ -1083,6 +1083,9 @@
             });
             if (resp && resp.ok && resp.eventId) {
               await supabase.from('groups').update({ google_event_id: resp.eventId }).eq('id', editId);
+            } else if (resp && !resp.ok) {
+              console.error('Calendar create failed', resp);
+              alert('Błąd tworzenia w kalendarzu: '+(resp.error||'nieznany'));
             }
           }
         } else {
@@ -1103,6 +1106,9 @@
             });
             if (resp && resp.ok && resp.eventId) {
               await supabase.from('groups').update({ google_event_id: resp.eventId }).eq('id', g.id);
+            } else if (resp && !resp.ok) {
+              console.error('Calendar create failed', resp);
+              alert('Błąd tworzenia w kalendarzu: '+(resp.error||'nieznany'));
             }
           }
         }
