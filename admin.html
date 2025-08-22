@@ -690,6 +690,26 @@
         <input type="number" id="group-multisport" class="form-control" placeholder="0.00" step="0.01">
       </div>
       
+      <div class="form-group">
+        <label for="group-months">Czas trwania kursu (miesiące)</label>
+        <input type="number" id="group-months" class="form-control" placeholder="np. 3" min="1" step="1">
+      </div>
+      
+      <div class="form-group">
+        <label for="group-color">Kolor wydarzenia (Google Calendar)</label>
+        <select id="group-color" class="form-control">
+          <option value="">Domyślny</option>
+          <option value="blue">Niebieski</option>
+          <option value="green">Zielony</option>
+          <option value="red">Czerwony</option>
+          <option value="yellow">Żółty</option>
+          <option value="orange">Pomarańczowy</option>
+          <option value="turquoise">Turkusowy</option>
+          <option value="purple">Fioletowy</option>
+          <option value="gray">Szary</option>
+        </select>
+      </div>
+      
       <div class="form-actions">
         <button class="btn btn-outline" id="cancel-group-btn">Anuluj</button>
         <button class="btn btn-primary" id="save-group-btn">
@@ -1013,6 +1033,8 @@
       document.getElementById('group-trainer').value = g.trainer || '';
       document.getElementById('group-fee').value = g.fee ?? '';
       document.getElementById('group-multisport').value = g.multisport ?? '';
+      document.getElementById('group-months').value = g.months ?? '';
+      document.getElementById('group-color').value = g.color || '';
     }
     function openEditGroupModal(group) {
       groupModalTitle.textContent = 'Edytuj grupę';
@@ -1031,6 +1053,8 @@
       document.getElementById('group-trainer').value = '';
       document.getElementById('group-fee').value = '';
       document.getElementById('group-multisport').value = '';
+      document.getElementById('group-months').value = '';
+      document.getElementById('group-color').value = '';
     }
     
     // Save group function (add or edit)
@@ -1042,6 +1066,8 @@
       const trainer = document.getElementById('group-trainer').value;
       const fee = parseFloat(document.getElementById('group-fee').value);
       const multisport = parseFloat(document.getElementById('group-multisport').value);
+      const monthsVal = parseInt(document.getElementById('group-months').value || '0', 10) || null;
+      const colorVal = document.getElementById('group-color').value || '';
       
       // Walidacja pól
       if (!name || !day || !start || !end || !trainer || isNaN(fee) || isNaN(multisport)) {
@@ -1060,7 +1086,7 @@
         if (editId) {
           ({ error } = await supabase
           .from('groups')
-            .update({ name, day, start_time: start, end_time: end, trainer, fee, multisport })
+            .update({ name, day, start_time: start, end_time: end, trainer, fee, multisport, months: monthsVal, color: colorVal })
             .eq('id', editId));
 
           // Calendar: update or create if missing
@@ -1072,6 +1098,7 @@
               byday_code, start_time: start, end_time: end,
               next_start_iso, next_end_iso,
               google_event_id: googleEventId,
+              months: monthsVal, color: colorVal,
               calendar_id: DEFAULT_CALENDAR_ID, timezone: DEFAULT_TIMEZONE
             }).then(r=>{ if(!r?.ok){ console.error('Calendar update failed', r); alert('Błąd zapisu do kalendarza: '+(r?.error||'nieznany')); } });
           } else {
@@ -1079,6 +1106,7 @@
               action: 'create', id: editId, name, trainer, day_pl: day,
               byday_code, start_time: start, end_time: end,
               next_start_iso, next_end_iso,
+              months: monthsVal, color: colorVal,
               calendar_id: DEFAULT_CALENDAR_ID, timezone: DEFAULT_TIMEZONE
             });
             if (resp && resp.ok && resp.eventId) {
@@ -1091,7 +1119,7 @@
         } else {
           const insertRes = await supabase
             .from('groups')
-            .insert([{ name, day, start_time: start, end_time: end, trainer, fee, multisport }])
+            .insert([{ name, day, start_time: start, end_time: end, trainer, fee, multisport, months: monthsVal, color: colorVal }])
             .select();
           data = insertRes.data;
           error = insertRes.error;
@@ -1102,6 +1130,7 @@
               action: 'create', id: g.id, name, trainer, day_pl: day,
               byday_code, start_time: start, end_time: end,
               next_start_iso, next_end_iso,
+              months: monthsVal, color: colorVal,
               calendar_id: DEFAULT_CALENDAR_ID, timezone: DEFAULT_TIMEZONE
             });
             if (resp && resp.ok && resp.eventId) {
@@ -1850,7 +1879,7 @@
     });
 
     // Google Apps Script bridge (provide your Web App URL here)
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzegvVdePzk0L5q-KKBJGFg9xD5Wu4yiVuf6VUoHp5tGc2WmcbYKtt5jTuPDDTefSVd/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5OVc6QAacJh8wJ0meTEEjFnUIHeCinarysrUabfg15xazhICxYzR-xndRA4Y-PBWa/exec';
     const DEFAULT_CALENDAR_ID = 'primary';
     const DEFAULT_TIMEZONE = 'Europe/Warsaw';
     
