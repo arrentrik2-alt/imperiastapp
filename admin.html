@@ -1063,7 +1063,7 @@
             .eq('id', editId));
 
           // Calendar: update or create if missing
-          const { next_start_iso, next_end_iso, byday_code } = computeNextIsoPair(day, start, end);
+          const { next_start_iso, next_end_iso, byday_code } = safeComputeNextIsoPair(day, start, end);
           const googleEventId = saveGroupBtn.dataset.editGoogleId || '';
           if (googleEventId) {
             await sendCalendarRequest({
@@ -1093,7 +1093,7 @@
           error = insertRes.error;
           if (!error && data && data[0]) {
             const g = data[0];
-            const { next_start_iso, next_end_iso, byday_code } = computeNextIsoPair(day, start, end);
+            const { next_start_iso, next_end_iso, byday_code } = safeComputeNextIsoPair(day, start, end);
             const resp = await sendCalendarRequest({
               action: 'create', id: g.id, name, trainer, day_pl: day,
               byday_code, start_time: start, end_time: end,
@@ -1841,6 +1841,29 @@
       if (scheduleSectionEl) scheduleSectionEl.style.display = 'none';
       await loadGroups();
     });
+
+    // Google Apps Script bridge (provide your Web App URL here)
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzegvVdePzk0L5q-KKBJGFg9xD5Wu4yiVuf6VUoHp5tGc2WmcbYKtt5jTuPDDTefSVd/exec';
+    const DEFAULT_CALENDAR_ID = 'primary';
+    const DEFAULT_TIMEZONE = 'Europe/Warsaw';
+    
+    function safeComputeNextIsoPair(dayPl, startHHMM, endHHMM) {
+      try { if (typeof computeNextIsoPair === 'function') return computeNextIsoPair(dayPl, startHHMM, endHHMM); } catch (e) {}
+      const map = { 'Poniedziałek':'MO','Wtorek':'TU','Środa':'WE','Czwartek':'TH','Piątek':'FR','Sobota':'SA','Niedziela':'SU' };
+      const byday = map[dayPl] || 'MO';
+      const idxMap = { SU:0, MO:1, TU:2, WE:3, TH:4, FR:5, SA:6 };
+      const idx = idxMap[byday] ?? 1;
+      const [sh, sm] = String(startHHMM||'00:00').split(':').map(n=>parseInt(n,10)||0);
+      const [eh, em] = String(endHHMM||'00:00').split(':').map(n=>parseInt(n,10)||0);
+      const now = new Date();
+      const d = new Date(now); d.setSeconds(0,0);
+      let delta = idx - d.getDay(); if (delta < 0) delta += 7; d.setDate(d.getDate()+delta); d.setHours(sh, sm, 0, 0);
+      if (d <= now) d.setDate(d.getDate()+7);
+      const end = new Date(d.getTime()); end.setHours(eh, em, 0, 0);
+      if (end <= d) end.setTime(d.getTime() + 60*60*1000);
+      const fmt = (dd)=>{ const pad=n=>String(n).padStart(2,'0'); const tzMin=-dd.getTimezoneOffset(); const sign=tzMin>=0?'+':'-'; const tzh=pad(Math.floor(Math.abs(tzMin)/60)); const tzm=pad(Math.abs(tzMin)%60); return `${dd.getFullYear()}-${pad(dd.getMonth()+1)}-${pad(dd.getDate())}T${pad(dd.getHours())}:${pad(dd.getMinutes())}:${pad(dd.getSeconds())}${sign}${tzh}:${tzm}`; };
+      return { next_start_iso: fmt(d), next_end_iso: fmt(end), byday_code: byday };
+    }
   </script>
 </body>
 </html>
