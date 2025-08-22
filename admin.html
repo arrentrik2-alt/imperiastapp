@@ -1249,6 +1249,16 @@
               e.stopPropagation();
               if (!confirm('Usunąć grupę? Spowoduje to usunięcie uczestników i płatności powiązanych.')) return;
               try {
+                // Delete from Google Calendar if linked
+                if (group.google_event_id) {
+                  const delResp = await sendCalendarRequest({
+                    action: 'delete', id: group.id, google_event_id: group.google_event_id,
+                    calendar_id: DEFAULT_CALENDAR_ID, timezone: DEFAULT_TIMEZONE
+                  });
+                  if (delResp && !delResp.ok) {
+                    console.warn('Calendar delete warning:', delResp);
+                  }
+                }
                 const { error } = await supabase.from('groups').delete().eq('id', group.id);
                 if (error) throw error;
                 await loadGroups();
