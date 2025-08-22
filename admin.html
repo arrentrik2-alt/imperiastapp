@@ -1249,14 +1249,17 @@
               e.stopPropagation();
               if (!confirm('Usunąć grupę? Spowoduje to usunięcie uczestników i płatności powiązanych.')) return;
               try {
-                // Delete from Google Calendar if linked
-                if (group.google_event_id) {
+                // Pobierz świeże google_event_id z bazy (grupa mogła być zaktualizowana po renderze)
+                const fresh = await supabase.from('groups').select('google_event_id').eq('id', group.id).maybeSingle();
+                const evId = fresh?.data?.google_event_id || group.google_event_id || '';
+                if (evId) {
                   const delResp = await sendCalendarRequest({
-                    action: 'delete', id: group.id, google_event_id: group.google_event_id,
+                    action: 'delete', id: group.id, google_event_id: evId,
                     calendar_id: DEFAULT_CALENDAR_ID, timezone: DEFAULT_TIMEZONE
                   });
                   if (delResp && !delResp.ok) {
                     console.warn('Calendar delete warning:', delResp);
+                    alert('Uwaga: nie udało się usunąć z Google Kalendarza: ' + (delResp.error || 'nieznany błąd'));
                   }
                 }
                 const { error } = await supabase.from('groups').delete().eq('id', group.id);
