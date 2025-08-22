@@ -1909,7 +1909,13 @@
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
-        return await res.json();
+        const txt = await res.text();
+        try {
+          return JSON.parse(txt);
+        } catch (_) {
+          console.error('Calendar bridge non-JSON response:', txt);
+          return { ok: false, error: 'Non-JSON response from Apps Script', raw: txt.slice(0, 300) };
+        }
       } catch (e) {
         console.error('Calendar bridge error:', e);
         return { ok: false, error: e?.message || 'Network error' };
