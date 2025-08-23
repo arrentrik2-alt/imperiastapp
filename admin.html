@@ -2435,6 +2435,8 @@
         <div class="form-group"><label>Imię</label><input type="text" id="trainer-first-name" class="form-control" placeholder="Imię"></div>
         <div class="form-group"><label>Nazwisko</label><input type="text" id="trainer-last-name" class="form-control" placeholder="Nazwisko"></div>
         <div class="form-group"><label>Email</label><input type="email" id="trainer-email" class="form-control" placeholder="Email"></div>
+        <div class="form-group"><label>Hasło</label><input type="password" id="trainer-password" class="form-control" placeholder="Hasło (min. 8 znaków)"></div>
+        <div class="form-group"><label>Powtórz hasło</label><input type="password" id="trainer-password2" class="form-control" placeholder="Powtórz hasło"></div>
         <div class="form-actions" style="justify-content: flex-end;">
           <button class="btn btn-outline" id="cancel-trainer-btn" type="button">Anuluj</button>
           <button class="btn btn-primary" id="save-trainer-btn" type="button"><i class="fas fa-save"></i> Zapisz</button>
@@ -2448,10 +2450,12 @@
     const trainerFirstNameEl = trainerModal.querySelector('#trainer-first-name');
     const trainerLastNameEl = trainerModal.querySelector('#trainer-last-name');
     const trainerEmailEl = trainerModal.querySelector('#trainer-email');
+    const trainerPasswordEl = trainerModal.querySelector('#trainer-password');
+    const trainerPassword2El = trainerModal.querySelector('#trainer-password2');
     const trainerModalTitle = trainerModal.querySelector('#trainer-modal-title');
     let editingTrainerId = null;
     function openTrainerModal() { trainerModal.classList.add('active'); }
-    function closeTrainerModal() { trainerModal.classList.remove('active'); editingTrainerId = null; trainerModalTitle.textContent = 'Dodaj trenera'; if (trainerFirstNameEl) trainerFirstNameEl.value=''; if (trainerLastNameEl) trainerLastNameEl.value=''; if (trainerEmailEl) trainerEmailEl.value=''; }
+    function closeTrainerModal() { trainerModal.classList.remove('active'); editingTrainerId = null; trainerModalTitle.textContent = 'Dodaj trenera'; if (trainerFirstNameEl) trainerFirstNameEl.value=''; if (trainerLastNameEl) trainerLastNameEl.value=''; if (trainerEmailEl) trainerEmailEl.value=''; if (trainerPasswordEl) trainerPasswordEl.value=''; if (trainerPassword2El) trainerPassword2El.value=''; }
     if (addTrainerBtn) addTrainerBtn.addEventListener('click', () => { editingTrainerId = null; trainerModalTitle.textContent = 'Dodaj trenera'; openTrainerModal(); });
     closeTrainerModalBtn.addEventListener('click', closeTrainerModal);
     cancelTrainerBtn.addEventListener('click', closeTrainerModal);
@@ -2509,7 +2513,13 @@
       const first = (trainerFirstNameEl?.value || '').trim();
       const last = (trainerLastNameEl?.value || '').trim();
       const email = (trainerEmailEl?.value || '').trim();
+      const pwd = (trainerPasswordEl?.value || '').trim();
+      const pwd2 = (trainerPassword2El?.value || '').trim();
       if (!first || !last || !email) { alert('Wypełnij imię, nazwisko i email'); return; }
+      if (!editingTrainerId) {
+        if (!pwd || pwd.length < 8) { alert('Hasło musi mieć min. 8 znaków'); return; }
+        if (pwd !== pwd2) { alert('Hasła nie są zgodne'); return; }
+      }
       saveTrainerBtn.disabled = true; const original = saveTrainerBtn.innerHTML; saveTrainerBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
       try {
         if (editingTrainerId) {
@@ -2538,8 +2548,7 @@
           const ALT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI';
           const memoryStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
           const alt = createSupabaseClient(ALT_SUPABASE_URL, ALT_SUPABASE_KEY, { auth: { storage: memoryStorage } });
-          const tempPassword = 'Trainer-' + Math.random().toString(36).slice(2, 10) + '!A1';
-          const { data: signData, error: signErr } = await alt.auth.signUp({ email, password: tempPassword });
+          const { data: signData, error: signErr } = await alt.auth.signUp({ email, password: pwd });
           if (signErr) throw signErr;
           const newUserId = signData?.user?.id || null;
           if (!newUserId) throw new Error('Nie udało się utworzyć konta trenera');
@@ -2554,8 +2563,6 @@
             .eq('id', newUserId);
           // if update fails, ignore; at least role exists
           try { await alt.auth.signOut(); } catch {}
-          // Send password reset link so trener ustawi własne hasło
-          try { await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/login.html' }); } catch (e) { console.warn('resetPassword mail warn', e); }
         }
         closeTrainerModal();
         await loadTrainers();
