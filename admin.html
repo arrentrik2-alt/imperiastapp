@@ -449,6 +449,12 @@
         </a>
       </li>
       <li>
+        <a href="#" id="nav-first-dance">
+          <i class="fas fa-heart"></i>
+          <span class="link-text">Pierwszy taniec</span>
+        </a>
+      </li>
+      <li>
         <a href="#" id="nav-schedule">
           <i class="fas fa-calendar-alt"></i>
           <span class="link-text">Harmonogram</span>
@@ -633,6 +639,43 @@
       <div id="lesson-participants-summary"></div>
       <div class="content-box" id="lesson-entries-list" style="margin-top:12px;"></div>
       <div style="margin-top:12px; text-align:right; color: var(--gold); font-weight:600;" id="lesson-total"></div>
+    </div>
+
+    <!-- First Dance Section: identical UI as lessons -->
+    <div class="content-box" id="first-dance-section" style="display:none;">
+      <div class="content-header" style="gap:10px; align-items:center;">
+        <h3 id="fd-title" style="margin-right:auto;">Pierwszy taniec</h3>
+        <label for="fd-month-select" style="color: var(--text-gray);">Miesiąc</label>
+        <select id="fd-month-select" class="form-control" style="width:220px;"></select>
+        <button class="btn btn-primary" id="fd-add-entry-btn"><i class="fas fa-plus"></i> Dodaj lekcję</button>
+      </div>
+      <div class="content-box" id="fd-summary" style="margin-bottom:12px; padding:12px;">
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="label">Lekcje</div>
+            <div class="value" id="fd-sum-count">0</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Zapłacone</div>
+            <div class="sub"><span id="fd-sum-paid-count">0</span> szt</div>
+            <div class="value" id="fd-sum-paid-amount">0.00 zł</div>
+            <div class="progress"><div class="progress-bar" id="fd-sum-paid-progress" style="width:0%"></div></div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Niezapłacone</div>
+            <div class="sub"><span id="fd-sum-unpaid-count">0</span> szt</div>
+            <div class="value" id="fd-sum-unpaid-amount">0.00 zł</div>
+          </div>
+          <div class="summary-card">
+            <div class="label">Zysk</div>
+            <div class="value" id="fd-sum-profit">0.00 zł</div>
+            <div class="label" style="margin-top:6px;">Potencjalny zysk</div>
+            <div class="sub" id="fd-sum-potential">0.00 zł</div>
+          </div>
+        </div>
+      </div>
+      <div class="content-box" id="fd-entries-list" style="margin-top:12px;"></div>
+      <div style="margin-top:12px; text-align:right; color: var(--gold); font-weight:600;" id="fd-total"></div>
     </div>
 
     <!-- Schedule Section -->
@@ -901,6 +944,7 @@
     const groupsLink = document.getElementById('nav-groups');
     const participantsLink = document.getElementById('nav-participants');
     const lessonsLink = document.getElementById('nav-lessons');
+    const firstDanceLink = document.getElementById('nav-first-dance');
     const scheduleLink = document.getElementById('nav-schedule');
     const trainersLink = document.getElementById('nav-trainers');
     const scheduleSection = document.getElementById('schedule-section');
@@ -909,6 +953,7 @@
     const lessonsList = document.getElementById('lessons-list');
     const createLessonBtn = document.getElementById('create-lesson-btn');
     const lessonDetailsSection = document.getElementById('lesson-details-section');
+    const firstDanceSection = document.getElementById('first-dance-section');
     const lessonDetailsTitle = document.getElementById('lesson-details-title');
     const addLessonEntryBtn = document.getElementById('add-lesson-entry-btn');
     const deleteLessonBtn = document.getElementById('delete-lesson-btn');
@@ -982,6 +1027,14 @@
           groupsLink.classList.remove('active');
           participantsLink.classList.remove('active');
           if (lessonsLink) lessonsLink.classList.remove('active');
+          if (firstDanceLink) firstDanceLink.classList.remove('active');
+          if (trainersLink) trainersLink.classList.remove('active');
+        } else if (section === 'first_dance') {
+          if (firstDanceLink) firstDanceLink.classList.add('active');
+          groupsLink.classList.remove('active');
+          participantsLink.classList.remove('active');
+          if (lessonsLink) lessonsLink.classList.remove('active');
+          if (scheduleLink) scheduleLink.classList.remove('active');
           if (trainersLink) trainersLink.classList.remove('active');
         } else if (section === 'trainers') {
           if (trainersLink) trainersLink.classList.add('active');
@@ -1129,6 +1182,7 @@
         groupDetailsSection.style.display = 'none';
         participantsSection.style.display = 'none';
         scheduleSection.style.display = 'none';
+        if (firstDanceSection) firstDanceSection.style.display = 'none';
         if (lessonsSection) lessonsSection.style.display = 'none';
         if (lessonDetailsSection) lessonDetailsSection.style.display = 'block';
         if (lessonDetailsTitle) lessonDetailsTitle.textContent = 'Lekcje';
@@ -1150,11 +1204,29 @@
         groupDetailsSection.style.display = 'none';
         participantsSection.style.display = 'none';
         if (lessonsSection) lessonsSection.style.display = 'none';
+        if (firstDanceSection) firstDanceSection.style.display = 'none';
         if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
         scheduleSection.style.display = 'block';
         setActiveNav('schedule');
         collapseSidebar();
         // Only Google Calendar embed is shown now
+      });
+    }
+
+    // Navigate to First Dance page
+    if (firstDanceLink) {
+      firstDanceLink.addEventListener('click', async (e) => {
+        e.preventDefault();
+        groupsSection.style.display = 'none';
+        groupDetailsSection.style.display = 'none';
+        participantsSection.style.display = 'none';
+        if (lessonsSection) lessonsSection.style.display = 'none';
+        if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
+        scheduleSection.style.display = 'none';
+        if (firstDanceSection) firstDanceSection.style.display = 'block';
+        setActiveNav('first_dance');
+        collapseSidebar();
+        await renderFirstDanceForMonth();
       });
     }
 
@@ -2659,10 +2731,12 @@
     const leTrainerEl = lessonEntryModal.querySelector('#le-trainer');
     const leParticipantsContainer = lessonEntryModal.querySelector('#le-participants-container');
     const leAddParticipantBtn = lessonEntryModal.querySelector('#le-add-participant-btn');
+    let entryTypeContext = 'private';
     if (leAddParticipantBtn) leAddParticipantBtn.addEventListener('click', () => {
       if (leParticipantsContainer) leParticipantsContainer.appendChild(createLessonParticipantRow());
     });
     if (addLessonEntryBtn) addLessonEntryBtn.addEventListener('click', () => {
+      entryTypeContext = 'private';
       leAmount.value = '';
       if (leNewLessonFields) {
         leNewLessonFields.style.display = 'block';
@@ -2728,13 +2802,14 @@
             if (lpIns.error) throw lpIns.error;
           }
         }
-        const payload = { lesson_id: lessonIdToUse, type: 'private', use_package: false, package: null, amount, month: monthVal };
+        const payload = { lesson_id: lessonIdToUse, type: entryTypeContext || 'private', use_package: false, package: null, amount, month: monthVal };
         if (leDate && leDate.value) payload.lesson_date = leDate.value;
         if (leTime && leTime.value) payload.lesson_time = leTime.value;
         const ins = await supabase.from('lesson_entries').insert([payload]);
         if (ins.error) throw ins.error;
         closeLessonEntryModal();
-        await renderLessonsForMonth();
+        // Refresh appropriate view
+        if (firstDanceSection && firstDanceSection.style.display === 'block') await renderFirstDanceForMonth(); else await renderLessonsForMonth();
       } catch (err) {
         alert('Błąd zapisu lekcji: ' + (err.message || 'Nieznany'));
       }
@@ -2926,6 +3001,179 @@
         if (lessonEntriesList) lessonEntriesList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
       }
     }
+
+    // First Dance: reuse lessons logic, scoped by type 'first_dance'
+    async function renderFirstDanceForMonth() {
+      const fdMonthSelect = document.getElementById('fd-month-select');
+      const fdEntriesList = document.getElementById('fd-entries-list');
+      const fdSumCount = document.getElementById('fd-sum-count');
+      const fdSumPaidCount = document.getElementById('fd-sum-paid-count');
+      const fdSumPaidAmount = document.getElementById('fd-sum-paid-amount');
+      const fdSumUnpaidCount = document.getElementById('fd-sum-unpaid-count');
+      const fdSumUnpaidAmount = document.getElementById('fd-sum-unpaid-amount');
+      const fdSumPaidProgress = document.getElementById('fd-sum-paid-progress');
+      const fdSumProfit = document.getElementById('fd-sum-profit');
+      const fdSumPotential = document.getElementById('fd-sum-potential');
+      const fdTotalEl = document.getElementById('fd-total');
+      try {
+        if (!selectedLessonMonth) {
+          const now = new Date();
+          const yyyy = now.getFullYear();
+          const mm = String(now.getMonth() + 1).padStart(2, '0');
+          selectedLessonMonth = `${yyyy}-${mm}`;
+        }
+        if (fdMonthSelect) {
+          fdMonthSelect.innerHTML = '';
+          const opts = getLast12MonthsOptions();
+          opts.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o.value; opt.textContent = o.label;
+            fdMonthSelect.appendChild(opt);
+          });
+          fdMonthSelect.value = selectedLessonMonth;
+        }
+        if (fdEntriesList) {
+          fdEntriesList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie lekcji...</p></div>';
+        }
+        const { data: entries, error: eErr } = await supabase
+          .from('lesson_entries')
+          .select('*')
+          .eq('month', selectedLessonMonth)
+          .eq('type', 'first_dance');
+        if (eErr) throw eErr;
+        if (!entries || entries.length === 0) {
+          if (fdEntriesList) fdEntriesList.innerHTML = '<div class="empty-state"><p>Brak lekcji</p></div>';
+          if (fdSumCount) fdSumCount.textContent = '0';
+          if (fdSumPaidCount) fdSumPaidCount.textContent = '0';
+          if (fdSumUnpaidCount) fdSumUnpaidCount.textContent = '0';
+          if (fdSumPaidAmount) fdSumPaidAmount.textContent = '0.00 zł';
+          if (fdSumUnpaidAmount) fdSumUnpaidAmount.textContent = '0.00 zł';
+          if (fdSumProfit) fdSumProfit.textContent = '0.00 zł';
+          if (fdSumPotential) fdSumPotential.textContent = '0.00 zł';
+          if (fdSumPaidProgress) fdSumPaidProgress.style.width = '0%';
+          return;
+        }
+        const lessonIds = Array.from(new Set(entries.map(e => e.lesson_id)));
+        const [{ data: links, error: linkErr }, { data: lessons, error: lErr }] = await Promise.all([
+          supabase.from('lesson_participants').select('lesson_id, participant_id, effective_from_month, effective_to_month').in('lesson_id', lessonIds),
+          supabase.from('lessons').select('id, trainer').in('id', lessonIds)
+        ]);
+        if (linkErr) throw linkErr;
+        if (lErr) throw lErr;
+        const activeLinksByLesson = new Map();
+        (links || []).forEach(l => {
+          const fromOk = !l.effective_from_month || l.effective_from_month <= selectedLessonMonth;
+          const toOk = !l.effective_to_month || l.effective_to_month > selectedLessonMonth;
+          if (!(fromOk && toOk)) return;
+          const arr = activeLinksByLesson.get(l.lesson_id) || [];
+          arr.push(l.participant_id);
+          activeLinksByLesson.set(l.lesson_id, arr);
+        });
+        const allPIds = Array.from(new Set((links || []).map(l => l.participant_id)));
+        const { data: parts, error: pErr } = allPIds.length ? await supabase.from('participants').select('id, first_name, last_name, phone').in('id', allPIds) : { data: [], error: null };
+        if (pErr) throw pErr;
+        const pMap = new Map((parts || []).map(p => [p.id, p]));
+        const trainerMap = new Map((lessons || []).map(l => [l.id, l.trainer || '']));
+        const getEntryDate = (ent) => {
+          if (ent.lesson_date) {
+            const [y, m, d] = String(ent.lesson_date).split('-').map(n => parseInt(n, 10));
+            const date = new Date(Date.UTC(y, (m || 1) - 1, d || 1, 0, 0, 0));
+            if (ent.lesson_time) {
+              const [hh, mm] = String(ent.lesson_time).split(':').map(n => parseInt(n, 10) || 0);
+              date.setUTCHours(hh, mm, 0, 0);
+            }
+            return date;
+          }
+          return new Date(ent.created_at);
+        };
+        const sorted = (entries || []).slice().sort((a,b) => getEntryDate(b) - getEntryDate(a));
+        const fragment = document.createDocumentFragment();
+        let total = 0;
+        sorted.forEach(ent => {
+          total += Number(ent.amount || 0);
+          const box = document.createElement('div');
+          box.className = 'content-box participant-row ' + (ent.confirmed ? 'paid' : 'unpaid');
+          box.style.marginBottom = '8px';
+          box.dataset.createdAt = ent.created_at || '';
+          const pIds = activeLinksByLesson.get(ent.lesson_id) || [];
+          const names = pIds.map(id => {
+            const person = pMap.get(id) || {}; return `${(person.first_name||'').trim()} ${(person.last_name||'').trim()}`.trim();
+          }).filter(Boolean);
+          const trainerName = trainerMap.get(ent.lesson_id) || '';
+          const title = `Lekcja prywatna — ${names.length ? names.join(', ') : '(bez uczestników)'}`;
+          box.innerHTML = `
+            <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+              <div style="flex:1 1 220px; min-width:180px;">
+                <div class="group-detail"><i class="fas fa-book"></i><span>${title}</span>${trainerName ? ` <span style=\"color: var(--text-gray);\"> — ${trainerName}</span>` : ''}</div>
+              </div>
+              <div style="flex:0 0 140px; min-width:120px;">
+                <input title="Kwota (${selectedLessonMonth})" type="number" step="0.01" class="form-control small le-amount" value="${Number(ent.amount || 0).toFixed(2)}" />
+              </div>
+              <div style="flex:0 0 120px; min-width:110px;">
+                <select title="Metoda" class="form-control small le-method">
+                  <option value="">Metoda...</option>
+                  <option value="card" ${ent.method === 'card' ? 'selected' : ''}>Karta</option>
+                  <option value="transfer" ${ent.method === 'transfer' ? 'selected' : ''}>Przelew</option>
+                  <option value="cash" ${ent.method === 'cash' ? 'selected' : ''}>Gotówka</option>
+                </select>
+              </div>
+              <div style="flex:1 1 160px; min-width:140px;">
+                <input title="Komentarz" type="text" class="form-control small le-comment" placeholder="Komentarz" value="${(ent.comment || '').replace(/"/g, '&quot;')}" />
+              </div>
+              <div style="flex:0 0 auto; display:flex; gap:6px; align-items:center;">
+                <button class="btn btn-primary btn-sm le-confirm-btn">${ent.confirmed ? 'Zapisz' : 'OK'}</button>
+                ${ent.confirmed ? '<span class="status" style="color: var(--success); font-size:0.8rem; white-space:nowrap;">OK</span>' : '<span class="status" style="color: var(--text-gray); font-size:0.8rem; white-space:nowrap;">Brak</span>'}
+                <button class="btn btn-outline btn-sm le-delete-payment-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>
+                <button class="btn btn-outline btn-sm le-delete-lesson-btn" title="Usuń lekcję"><i class="fas fa-trash"></i></button>
+              </div>
+              <div style="flex:0 0 auto; display:flex; gap:6px; align-items:center;">
+                <input type="date" class="form-control small le-date" value="${ent.lesson_date ? String(ent.lesson_date).substring(0,10) : ''}" />
+                <input type="time" class="form-control small le-time" value="${ent.lesson_time ? ent.lesson_time : ''}" />
+              </div>
+            </div>
+          `;
+          box.dataset.entryId = ent.id;
+          fragment.appendChild(box);
+        });
+        const paidCount = entries.filter(e => e.confirmed).length;
+        const unpaidCount = entries.length - paidCount;
+        const paidAmount = entries.filter(e => e.confirmed).reduce((s,e)=> s + Number(e.amount || 0), 0);
+        const unpaidAmount = entries.filter(e => !e.confirmed).reduce((s,e)=> s + Number(e.amount || 0), 0);
+        if (fdSumCount) fdSumCount.textContent = String(entries.length);
+        if (fdSumPaidCount) fdSumPaidCount.textContent = String(paidCount);
+        if (fdSumUnpaidCount) fdSumUnpaidCount.textContent = String(unpaidCount);
+        if (fdSumPaidAmount) { fdSumPaidAmount.textContent = `${paidAmount.toFixed(2)} zł`; fdSumPaidAmount.style.color = 'var(--success)'; }
+        if (fdSumUnpaidAmount) { fdSumUnpaidAmount.textContent = `${unpaidAmount.toFixed(2)} zł`; fdSumUnpaidAmount.style.color = 'var(--error)'; }
+        if (fdSumProfit) fdSumProfit.textContent = `${paidAmount.toFixed(2)} zł`;
+        if (fdSumPotential) fdSumPotential.textContent = `${(paidAmount + unpaidAmount).toFixed(2)} zł`;
+        const percent = entries.length ? Math.round((paidCount / entries.length) * 100) : 0;
+        if (fdSumPaidProgress) fdSumPaidProgress.style.width = percent + '%';
+        if (fdEntriesList) { fdEntriesList.innerHTML = ''; fdEntriesList.appendChild(fragment); }
+        if (fdTotalEl) fdTotalEl.textContent = `Suma: ${total.toFixed(2)} zł`;
+      } catch (err) {
+        const fdEntriesList = document.getElementById('fd-entries-list');
+        if (fdEntriesList) fdEntriesList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+      }
+    }
+
+    const fdMonthSelect = document.getElementById('fd-month-select');
+    if (fdMonthSelect) fdMonthSelect.addEventListener('change', async () => { selectedLessonMonth = fdMonthSelect.value; await renderFirstDanceForMonth(); });
+
+    const fdAddEntryBtn = document.getElementById('fd-add-entry-btn');
+    if (fdAddEntryBtn) fdAddEntryBtn.addEventListener('click', () => {
+      entryTypeContext = 'first_dance';
+      // Reuse lesson entry modal
+      const leAmount = document.querySelector('#le-amount');
+      const leNewLessonFields = document.querySelector('#le-new-lesson-fields');
+      const leTrainerEl = document.querySelector('#le-trainer');
+      const leParticipantsContainer = document.querySelector('#le-participants-container');
+      if (leAmount) leAmount.value = '';
+      if (leNewLessonFields) leNewLessonFields.style.display = 'block';
+      if (leTrainerEl) leTrainerEl.value = '';
+      if (leParticipantsContainer) { leParticipantsContainer.innerHTML = ''; leParticipantsContainer.appendChild(createLessonParticipantRow()); }
+      selectedLessonId = null;
+      openLessonEntryModal();
+    });
 
     async function loadLessons() {
       if (!lessonsList) return;
