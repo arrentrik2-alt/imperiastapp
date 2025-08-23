@@ -1951,6 +1951,7 @@
           const agg = { paid: (gAgg.paid + lAgg.paid), unpaid: (gAgg.unpaid + lAgg.unpaid + unpaidExpectedMonth) };
           const card = document.createElement('div');
           card.className = 'group-card';
+          card.dataset.pid = p.id;
           const groupNames = (linksByParticipant.get(p.id) || []).map(id => groupIdToName.get(id) || '-');
           card.innerHTML = `
             <h4><span class="p-index">${idx + 1}</span>${p.first_name || ''} ${p.last_name || ''}</h4>
@@ -2007,6 +2008,86 @@
         const badge = card.querySelector('.p-index');
         if (badge) badge.textContent = String(counter++);
       });
+    }
+
+    // Floating preview modal for participant unpaid details
+    const previewModal = document.createElement('div');
+    previewModal.className = 'modal';
+    previewModal.id = 'participant-preview-modal';
+    previewModal.innerHTML = `
+      <div class="modal-content" style="max-width:600px;">
+        <button class="modal-close" id="close-preview-modal"><i class="fas fa-times"></i></button>
+        <div class="modal-header"><h3>Nieopłacone pozycje</h3></div>
+        <div id="preview-body"><div class="empty-state"><span class="loading"></span><p>Ładowanie...</p></div></div>
+      </div>`;
+    document.body.appendChild(previewModal);
+    const closePreviewModalBtn = previewModal.querySelector('#close-preview-modal');
+    const previewBody = previewModal.querySelector('#preview-body');
+    function openPreviewModal() { previewModal.classList.add('active'); }
+    function closePreviewModal() { previewModal.classList.remove('active'); }
+    closePreviewModalBtn.addEventListener('click', closePreviewModal);
+
+    async function showParticipantUnpaidPreview(participantId) {
+      openPreviewModal();
+      if (previewBody) previewBody.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie...</p></div>';
+      try {
+        // Unpaid group payments (all months)
+        const { data: gp, error: gpErr } = await supabase
+          .from('payments')
+          .select('month, amount, confirmed, method, comment')
+          .eq('participant_id', participantId)
+          .order('month', { ascending: false });
+        if (gpErr) throw gpErr;
+        const unpaidGroups = (gp || []).filter(p => !p.confirmed && Number(p.amount || 0) > 0);
+
+        // Unpaid lessons (participant share)
+        const { data: lpLinks, error: lpErr } = await supabase
+          .from('lesson_participants')
+          .select('lesson_id')
+          .eq('participant_id', participantId);
+        if (lpErr) throw lpErr;
+        const lessonIds = Array.from(new Set((lpLinks || []).map(l => l.lesson_id)));
+        let unpaidLessons = [];
+        if (lessonIds.length) {
+          const { data: le, error: leErr } = await supabase
+            .from('lesson_entries')
+            .select('id, lesson_id, month, amount, confirmed, lesson_date, lesson_time')
+            .in('lesson_id', lessonIds);
+          if (leErr) throw leErr;
+          // Need participant counts to split amount
+          const { data: lpAll, error: lpAllErr } = await supabase
+            .from('lesson_participants')
+            .select('lesson_id, participant_id')
+            .in('lesson_id', lessonIds);
+          if (lpAllErr) throw lpAllErr;
+          const countByLesson = new Map();
+          (lpAll || []).forEach(l => {
+            countByLesson.set(l.lesson_id, 1 + (countByLesson.get(l.lesson_id) || 0));
+          });
+          unpaidLessons = (le || []).filter(e => !e.confirmed).map(e => {
+            const cnt = Math.max(1, countByLesson.get(e.lesson_id) || 1);
+            const share = Number(e.amount || 0) / cnt;
+            return { ...e, share };
+          }).filter(e => e.share > 0);
+        }
+
+        const groupList = unpaidGroups.map(p => `<li><strong>Grupa:</strong> ${p.month} — ${Number(p.amount||0).toFixed(2)} zł</li>`).join('');
+        const lessonList = unpaidLessons.map(e => {
+          const d = e.lesson_date ? String(e.lesson_date) : (e.month || '-');
+          const time = e.lesson_time ? ` ${e.lesson_time}` : '';
+          return `<li><strong>Lekcja:</strong> ${d}${time} — ${e.share.toFixed(2)} zł (udział)</li>`;
+        }).join('');
+        const html = `
+          <div class="content-box" style="padding:12px;">
+            <h4 style="margin-top:0;">Zaległości</h4>
+            ${(!unpaidGroups.length && !unpaidLessons.length) ? '<div class="group-detail"><span>Brak zaległości</span></div>' : ''}
+            ${unpaidGroups.length ? `<div class="group-detail"><i class="fas fa-users"></i><span>Płatności grupowe</span></div><ul style="margin:8px 0 12px 18px;">${groupList}</ul>` : ''}
+            ${unpaidLessons.length ? `<div class="group-detail"><i class="fas fa-book"></i><span>Lekcje prywatne</span></div><ul style="margin:8px 0 0 18px;">${lessonList}</ul>` : ''}
+          </div>`;
+        if (previewBody) previewBody.innerHTML = html;
+      } catch (err) {
+        if (previewBody) previewBody.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+      }
     }
 
     // Search filter for participants page
@@ -2124,6 +2205,7 @@
     if (participantsListAll) participantsListAll.addEventListener('click', async (e) => {
       const editBtn = e.target.closest('.edit-participant-btn');
       const delBtn = e.target.closest('.delete-participant-global-btn');
+      const cardEl = e.target.closest('.group-card');
       if (editBtn) {
         const pid = editBtn.dataset.id;
         try {
@@ -2148,6 +2230,23 @@
         } catch (err) {
           alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
         }
+      }
+      // Preview unpaid when clicking on card (excluding action buttons)
+      if (cardEl && !editBtn && !delBtn) {
+        const pid = cardEl.dataset.pid;
+        if (pid) { await showParticipantUnpaidPreview(pid); }
+      }
+    });
+
+    // Also enable preview in inactive list
+    const participantsListInactive = document.getElementById('participants-list-inactive');
+    if (participantsListInactive) participantsListInactive.addEventListener('click', async (e) => {
+      const editBtn = e.target.closest('.edit-participant-btn');
+      const delBtn = e.target.closest('.delete-participant-global-btn');
+      const cardEl = e.target.closest('.group-card');
+      if (cardEl && !editBtn && !delBtn) {
+        const pid = cardEl.dataset.pid;
+        if (pid) { await showParticipantUnpaidPreview(pid); }
       }
     });
 
