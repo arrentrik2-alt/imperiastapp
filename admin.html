@@ -998,6 +998,8 @@
         setActiveNav('lessons');
         collapseSidebar();
         await loadLessons();
+        // ensure participants page reflects new people created via lessons
+        try { await loadAllParticipants(); } catch {}
       });
     }
 
@@ -2054,23 +2056,36 @@
       if (!lessonsList) return;
       lessonsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie zajęć...</p></div>';
       try {
-        const { data, error } = await supabase
+        const { data: lessons, error } = await supabase
           .from('lessons')
-          .select('id, created_at, trainer, participant_id, participants:first_name, participants:last_name, participants:phone')
+          .select('id, created_at, trainer, participant_id')
           .order('created_at', { ascending: false });
         if (error) throw error;
-        if (!data || data.length === 0) {
+        if (!lessons || lessons.length === 0) {
           lessonsList.innerHTML = '<div class="empty-state"><i class="fas fa-book"></i><p>Brak zajęć</p></div>';
           return;
         }
+        const pIds = Array.from(new Set(lessons.map(l => l.participant_id).filter(Boolean)));
+        let pMap = new Map();
+        if (pIds.length) {
+          const { data: parts, error: pErr } = await supabase
+            .from('participants')
+            .select('id, first_name, last_name, phone')
+            .in('id', pIds);
+          if (pErr) throw pErr;
+          (parts || []).forEach(p => pMap.set(p.id, p));
+        }
         const fragment = document.createDocumentFragment();
-        data.forEach((l, idx) => {
+        lessons.forEach((l, idx) => {
           const card = document.createElement('div');
           card.className = 'group-card';
-          const pName = `${l.participants?.first_name || ''} ${l.participants?.last_name || ''}`.trim();
-          const phone = l.participants?.phone || '';
+          const p = pMap.get(l.participant_id) || {};
+          const firstName = (p.first_name || '').trim();
+          const lastName = (p.last_name || '').trim();
+          const pName = `${firstName} ${lastName}`.trim();
+          const phone = p.phone || '';
           card.innerHTML = `
-            <h4><span class="p-index">${idx + 1}</span>${pName || '(bez imienia)'} — ${l.trainer || ''}</h4>
+            <h4><span class="p-index">${idx + 1}</span>Zajęcia ${firstName || '(bez imienia)'} — ${l.trainer || ''}</h4>
             <div class="group-detail"><i class="fas fa-phone"></i><span>${phone}</span></div>
             <div class="group-detail"><i class="fas fa-calendar"></i><span>${new Date(l.created_at).toLocaleString('pl-PL')}</span></div>
           `;
@@ -2118,12 +2133,13 @@
           .from('lessons')
           .insert([{ participant_id: participantId, trainer }]);
         if (lessonIns.error) throw lessonIns.error;
+        await loadLessons();
+        try { await loadAllParticipants(); } catch {}
         closeLessonModal();
         lessonFirstNameEl.value = '';
         lessonLastNameEl.value = '';
         lessonPhoneEl.value = '';
         lessonTrainerEl.value = '';
-        await loadLessons();
       } catch (err) {
         alert('Błąd zapisu zajęć: ' + (err.message || 'Nieznany'));
       } finally {
