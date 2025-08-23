@@ -1055,7 +1055,7 @@
       });
     }
 
-    // Navigate to Lessons page
+    // Navigate to Lessons page (show details view by default)
     if (lessonsLink) {
       lessonsLink.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -1063,12 +1063,13 @@
         groupDetailsSection.style.display = 'none';
         participantsSection.style.display = 'none';
         scheduleSection.style.display = 'none';
-        if (lessonsSection) lessonsSection.style.display = 'block';
-        if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
+        if (lessonsSection) lessonsSection.style.display = 'none';
+        if (lessonDetailsSection) lessonDetailsSection.style.display = 'block';
         setActiveNav('lessons');
         collapseSidebar();
-        await loadLessons();
-        // ensure participants page reflects new people created via lessons
+        if (selectedLessonId) {
+          await renderLessonDetails();
+        }
         try { await loadAllParticipants(); } catch {}
       });
     }
@@ -2223,6 +2224,17 @@
       <div class="modal-content">
         <button class="modal-close" id="close-lesson-entry-modal"><i class="fas fa-times"></i></button>
         <div class="modal-header"><h3>Dodaj lekcję</h3></div>
+        <div id="le-new-lesson-fields" style="display:none;">
+          <div class="form-group">
+            <label>Trener</label>
+            <input type="text" id="le-trainer" class="form-control" placeholder="Imię i nazwisko trenera" />
+          </div>
+          <div class="form-group">
+            <label>Uczestnicy</label>
+            <div id="le-participants-container"></div>
+            <div style="margin-top: 8px;"><button class="btn btn-outline" id="le-add-participant-btn" type="button"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button></div>
+          </div>
+        </div>
         <div class="form-group">
           <label>Rodzaj lekcji</label>
           <select id="le-type" class="form-control">
@@ -2276,7 +2288,33 @@
     const leAmount = lessonEntryModal.querySelector('#le-amount');
     const leDate = lessonEntryModal.querySelector('#le-date');
     const leTime = lessonEntryModal.querySelector('#le-time');
-    if (addLessonEntryBtn) addLessonEntryBtn.addEventListener('click', () => { if (!selectedLessonId) return; leType.value = 'private'; leUsePackage.checked = false; leAmount.value = ''; lePackageToggle.style.display = 'none'; lePackageSelectWrap.style.display = 'none'; openLessonEntryModal(); });
+    const leNewLessonFields = lessonEntryModal.querySelector('#le-new-lesson-fields');
+    const leTrainerEl = lessonEntryModal.querySelector('#le-trainer');
+    const leParticipantsContainer = lessonEntryModal.querySelector('#le-participants-container');
+    const leAddParticipantBtn = lessonEntryModal.querySelector('#le-add-participant-btn');
+    if (leAddParticipantBtn) leAddParticipantBtn.addEventListener('click', () => {
+      if (leParticipantsContainer) leParticipantsContainer.appendChild(createLessonParticipantRow());
+    });
+    if (addLessonEntryBtn) addLessonEntryBtn.addEventListener('click', () => {
+      leType.value = 'private';
+      leUsePackage.checked = false;
+      leAmount.value = '';
+      lePackageToggle.style.display = 'none';
+      lePackageSelectWrap.style.display = 'none';
+      if (leNewLessonFields) {
+        if (selectedLessonId) {
+          leNewLessonFields.style.display = 'none';
+        } else {
+          leNewLessonFields.style.display = 'block';
+          if (leTrainerEl) leTrainerEl.value = '';
+          if (leParticipantsContainer) {
+            leParticipantsContainer.innerHTML = '';
+            leParticipantsContainer.appendChild(createLessonParticipantRow());
+          }
+        }
+      }
+      openLessonEntryModal();
+    });
     closeLessonEntryBtn.addEventListener('click', closeLessonEntryModal);
     cancelLessonEntryBtn.addEventListener('click', closeLessonEntryModal);
     leType.addEventListener('change', () => {
@@ -2292,26 +2330,67 @@
       lePackageSelectWrap.style.display = leUsePackage.checked ? 'block' : 'none';
     });
     if (saveLessonEntryBtn) saveLessonEntryBtn.addEventListener('click', async () => {
-      if (!selectedLessonId) { alert('Brak wybranych zajęć'); return; }
       const type = leType.value;
       const amount = parseFloat(leAmount.value || '0');
       const usePackage = !!leUsePackage.checked;
       const pkg = usePackage ? lePackage.value : null;
       if (!type || isNaN(amount) || amount < 0) { alert('Podaj poprawny typ i kwotę'); return; }
-      // compute selected month from lessonMonthSelect
       if (!selectedLessonMonth) {
         const now = new Date(); const yyyy = now.getFullYear(); const mm = String(now.getMonth()+1).padStart(2,'0');
         selectedLessonMonth = `${yyyy}-${mm}`;
       }
       const monthVal = lessonMonthSelect ? (lessonMonthSelect.value || selectedLessonMonth) : selectedLessonMonth;
       try {
-        const payload = { lesson_id: selectedLessonId, type, use_package: usePackage, package: pkg, amount, month: monthVal };
+        let lessonIdToUse = selectedLessonId;
+        // If no lesson selected, create lesson with trainer and participants first
+        if (!lessonIdToUse) {
+          const trainerName = (leTrainerEl && leTrainerEl.value ? leTrainerEl.value.trim() : '');
+          if (!trainerName) { alert('Podaj trenera'); return; }
+          const rows = Array.from(leParticipantsContainer ? leParticipantsContainer.querySelectorAll('.lesson-participant-row') : []);
+          if (!rows.length) { alert('Dodaj co najmniej jednego uczestnika'); return; }
+          const phoneToId = new Map();
+          const participantIds = [];
+          for (const row of rows) {
+            const fn = (row.querySelector('.lp-first-name')?.value || '').trim();
+            const ln = (row.querySelector('.lp-last-name')?.value || '').trim();
+            const phone = (row.querySelector('.lp-phone')?.value || '').trim();
+            if (!fn || !ln || !phone) { alert('Wypełnij imię, nazwisko i telefon dla każdego uczestnika'); return; }
+            let participantId = phoneToId.get(phone) || null;
+            if (!participantId) {
+              const found = await supabase.from('participants').select('id').eq('phone', phone).maybeSingle();
+              if (found.error) throw found.error;
+              if (found.data) {
+                participantId = found.data.id;
+                await supabase.from('participants').update({ first_name: fn, last_name: ln }).eq('id', participantId);
+              } else {
+                const insP = await supabase
+                  .from('participants')
+                  .insert([{ first_name: fn, last_name: ln, phone, multisport: false, consent_signed: false }])
+                  .select('id')
+                  .single();
+                if (insP.error) throw insP.error;
+                participantId = insP.data.id;
+              }
+              phoneToId.set(phone, participantId);
+            }
+            participantIds.push(participantId);
+          }
+          const lessonCreate = await supabase.from('lessons').insert([{ trainer: trainerName }]).select('id').single();
+          if (lessonCreate.error) throw lessonCreate.error;
+          lessonIdToUse = lessonCreate.data.id;
+          for (const pid of participantIds) {
+            const lpIns = await supabase.from('lesson_participants').insert([{ lesson_id: lessonIdToUse, participant_id: pid }]);
+            if (lpIns.error) throw lpIns.error;
+          }
+          selectedLessonId = lessonIdToUse;
+        }
+        const payload = { lesson_id: lessonIdToUse, type, use_package: usePackage, package: pkg, amount, month: monthVal };
         if (leDate && leDate.value) payload.lesson_date = leDate.value;
         if (leTime && leTime.value) payload.lesson_time = leTime.value;
         const ins = await supabase.from('lesson_entries').insert([payload]);
         if (ins.error) throw ins.error;
         closeLessonEntryModal();
-        await renderLessonDetails();
+        await openLessonDetails(lessonIdToUse);
       } catch (err) {
         alert('Błąd zapisu lekcji: ' + (err.message || 'Nieznany'));
       }
