@@ -30,8 +30,6 @@
       color: var(--text-light);
       min-height: 100vh;
       display: flex;
-      /* hide until JS/CSS fully applied to avoid flash of unstyled text */
-      visibility: hidden;
     }
     
     /* Sidebar */
@@ -1509,38 +1507,12 @@
       if (!selectedGroup || !selectedMonth) return;
       participantsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
       try {
-        // Load participants directly assigned to group
-        const [{ data: directParticipants, error: directErr }, { data: mappings, error: mapErr }] = await Promise.all([
-          supabase.from('participants').select('*').eq('group_id', selectedGroup.id).order('last_name', { ascending: true }),
-          // load mapping participant ids from participant_groups if table exists
-          hasParticipantGroups ? supabase.from('participant_groups').select('participant_id').eq('group_id', selectedGroup.id) : Promise.resolve({ data: [] })
-        ]);
-        if (directErr) throw directErr;
-        if (mapErr) console.warn('participant_groups load error', mapErr);
-        const mappedIds = (mappings || []).map(m => m.participant_id).filter(Boolean);
-        let mappedParticipants = [];
-        if (mappedIds.length) {
-          const { data: mp, error: mpErr } = await supabase.from('participants').select('*').in('id', mappedIds).order('last_name', { ascending: true });
-          if (mpErr) throw mpErr;
-          mappedParticipants = mp || [];
-        }
-        // Merge unique participants (by id)
-        const byId = new Map();
-        (directParticipants || []).forEach(p => byId.set(p.id, p));
-        (mappedParticipants || []).forEach(p => { if (!byId.has(p.id)) byId.set(p.id, p); });
-        const participants = Array.from(byId.values()).sort((a,b)=> (a.last_name||'').localeCompare(b.last_name||''));
-        if (!participants || participants.length === 0) {
-          participantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników w tej grupie</p></div>';
-          updateParticipantsSummary({
-            totalCount: 0,
-            paidCount: 0,
-            unpaidCount: 0,
-            paidAmount: 0,
-            unpaidAmount: 0,
-            profit: 0
-          });
-          return;
-        }
+        const { data: participants, error: participantsError } = await supabase
+          .from('participants')
+          .select('*')
+          .eq('group_id', selectedGroup.id)
+          .order('last_name', { ascending: true });
+        if (participantsError) throw participantsError;
 
         if (!participants || participants.length === 0) {
           participantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników w tej grupie</p></div>';
@@ -2117,8 +2089,6 @@
       try { sidebarToggle = sidebarToggle || document.getElementById('sidebar-toggle'); } catch(e){}
 
       await checkAdmin();
-      // show page now that JS initialized
-      try { document.body.style.visibility = ''; } catch(e){}
       setActiveNav('groups');
       // Ensure groups section visible on first paint
       const groupsSectionEl = document.getElementById('groups-section');
@@ -2377,7 +2347,6 @@
         if (savedStudent) await syncStudentToParticipants(savedStudent);
         addStudentModal.classList.remove('active');
         await loadAllStudents();
-        try { if (typeof loadAllParticipants === 'function') await loadAllParticipants(); } catch(e){ console.warn('loadAllParticipants after save student failed', e); }
       });
     }
 
