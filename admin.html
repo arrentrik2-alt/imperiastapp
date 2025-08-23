@@ -1049,22 +1049,24 @@
 
     // Group details section controls
     function showGroupDetailsSection() {
-      hideAllSections();
+      groupsSection.style.display = 'none';
       groupDetailsSection.style.display = 'block';
       setActiveNav('groups');
       collapseSidebar();
     }
     function showGroupsSection() {
-      hideAllSections();
+      groupDetailsSection.style.display = 'none';
       groupsSection.style.display = 'block';
+      participantsSection.style.display = 'none';
+      scheduleSection.style.display = 'none';
       setActiveNav('groups');
       collapseSidebar();
       // reset
-      if (addParticipantForm) addParticipantForm.style.display = 'none';
-      if (participantFirstName) participantFirstName.value = '';
-      if (participantLastName) participantLastName.value = '';
-      if (participantPhone) participantPhone.value = '';
-      if (participantMultisport) participantMultisport.checked = false;
+      addParticipantForm.style.display = 'none';
+      participantFirstName.value = '';
+      participantLastName.value = '';
+      participantPhone.value = '';
+      participantMultisport.checked = false;
     }
     backToGroupsBtn.addEventListener('click', showGroupsSection);
     // Sidebar 'Grupy' link handler
@@ -1072,7 +1074,9 @@
       groupsLink.addEventListener('click', async (e) => {
         try {
           e.preventDefault();
-          hideAllSections();
+          participantsSection.style.display = 'none';
+          groupDetailsSection.style.display = 'none';
+          scheduleSection.style.display = 'none';
           groupsSection.style.display = 'block';
           setActiveNav('groups');
           collapseSidebar();
@@ -1088,14 +1092,16 @@
       participantsLink.addEventListener('click', async (e) => {
         try {
           e.preventDefault();
-          hideAllSections();
+          groupsSection.style.display = 'none';
+          groupDetailsSection.style.display = 'none';
+          scheduleSection.style.display = 'none';
           participantsSection.style.display = 'block';
           setActiveNav('participants');
           collapseSidebar();
           await loadAllParticipants();
         } catch (err) {
           console.error('Błąd przełączania na Uczestnicy:', err);
-          if (participantsListAll) participantsListAll.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+          participantsListAll.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
         }
       });
     }
@@ -1104,10 +1110,13 @@
     if (scheduleLink) {
       scheduleLink.addEventListener('click', async (e) => {
         e.preventDefault();
-        hideAllSections();
+        groupsSection.style.display = 'none';
+        groupDetailsSection.style.display = 'none';
+        participantsSection.style.display = 'none';
         scheduleSection.style.display = 'block';
         setActiveNav('schedule');
         collapseSidebar();
+        // Only Google Calendar embed is shown now
       });
     }
 
@@ -2156,7 +2165,10 @@
     let selectedStudent = null;
 
     function showLessonsSection() {
-      hideAllSections();
+      groupsSection.style.display = 'none';
+      groupDetailsSection.style.display = 'none';
+      participantsSection.style.display = 'none';
+      scheduleSection.style.display = 'none';
       lessonsSection.style.display = 'block';
       setActiveNav('lessons');
       collapseSidebar();
@@ -2437,21 +2449,6 @@
           await loadStudentLessonsAndPayments();
         }
       });
-    }
-
-    // Hide all content sections helper
-    function hideAllSections() {
-      try {
-        const ids = ['groups-section','group-details-section','participants-section','schedule-section','lessons-section','student-details-section'];
-        ids.forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.style.display = 'none';
-        });
-        // Also clear volatile lists so content doesn't accumulate between views
-        ['students-list-all','participants-list-all','groups-list','student-lessons-list'].forEach(cid => {
-          try { const c = document.getElementById(cid); if (c) c.innerHTML = ''; } catch(e){}
-        });
-      } catch(e) { console.warn('hideAllSections error', e); }
     }
   </script>
 </body>
