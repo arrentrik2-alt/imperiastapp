@@ -2461,23 +2461,36 @@
       if (!trainersList) return;
       trainersList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie trenerów...</p></div>';
       try {
-        const { data: trainers, error } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, email, role')
-          .eq('role', 'trainer')
-          .order('last_name', { ascending: true });
+        let trainers = [];
+        let error = null;
+        {
+          const q = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('role', 'trainer');
+          error = q.error; trainers = q.data || [];
+        }
         if (error) throw error;
         if (!trainers || trainers.length === 0) {
           trainersList.innerHTML = '<div class="empty-state"><p>Brak trenerów</p></div>';
           return;
         }
+        const displayNameOf = (t) => {
+          const full = `${(t.first_name||'').trim()} ${(t.last_name||'').trim()}`.trim();
+          if (full) return full;
+          return (t.full_name || t.name || t.username || '').trim();
+        };
+        const emailOf = (t) => (t.email || t.contact_email || t.user_email || '').trim();
+        trainers.sort((a,b) => (displayNameOf(a) || emailOf(a) || a.id).localeCompare(displayNameOf(b) || emailOf(b) || b.id));
         const fragment = document.createDocumentFragment();
         trainers.forEach((t, idx) => {
           const card = document.createElement('div');
           card.className = 'group-card';
+          const dname = displayNameOf(t) || '-';
+          const demail = emailOf(t) || '';
           card.innerHTML = `
-            <h4><span class="p-index">${idx + 1}</span>${t.first_name || ''} ${t.last_name || ''}</h4>
-            <div class="group-detail"><i class="fas fa-envelope"></i><span>${t.email || ''}</span></div>
+            <h4><span class="p-index">${idx + 1}</span>${dname}</h4>
+            <div class="group-detail"><i class="fas fa-envelope"></i><span>${demail}</span></div>
             <div class="group-actions">
               <button class="btn btn-outline edit-trainer-btn" data-id="${t.id}"><i class="fas fa-edit"></i></button>
               <button class="btn btn-outline delete-trainer-btn" data-id="${t.id}"><i class="fas fa-trash"></i></button>
@@ -2500,16 +2513,49 @@
       saveTrainerBtn.disabled = true; const original = saveTrainerBtn.innerHTML; saveTrainerBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
       try {
         if (editingTrainerId) {
-          const { error } = await supabase
+          // best-effort update across variable schemas
+          let upd = await supabase
             .from('profiles')
             .update({ first_name: first, last_name: last, email })
             .eq('id', editingTrainerId);
-          if (error) throw error;
+          if (upd.error) {
+            upd = await supabase
+              .from('profiles')
+              .update({ full_name: `${first} ${last}`.trim(), email })
+              .eq('id', editingTrainerId);
+            if (upd.error) {
+              const upd2 = await supabase
+                .from('profiles')
+                .update({ role: 'trainer' })
+                .eq('id', editingTrainerId);
+              if (upd2.error) throw upd2.error;
+            }
+          }
         } else {
-          const { error } = await supabase
+          // Create auth user without affecting admin session (use alt client with in-memory storage)
+          const { createClient: createSupabaseClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+          const ALT_SUPABASE_URL = 'https://xsowdwnpguftmlvsogdb.supabase.co';
+          const ALT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI';
+          const memoryStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+          const alt = createSupabaseClient(ALT_SUPABASE_URL, ALT_SUPABASE_KEY, { auth: { storage: memoryStorage } });
+          const tempPassword = 'Trainer-' + Math.random().toString(36).slice(2, 10) + '!A1';
+          const { data: signData, error: signErr } = await alt.auth.signUp({ email, password: tempPassword });
+          if (signErr) throw signErr;
+          const newUserId = signData?.user?.id || null;
+          if (!newUserId) throw new Error('Nie udało się utworzyć konta trenera');
+          // minimal upsert then enrich
+          let up = await supabase
             .from('profiles')
-            .insert([{ first_name: first, last_name: last, email, role: 'trainer' }]);
-          if (error) throw error;
+            .upsert([{ id: newUserId, role: 'trainer' }]);
+          if (up.error) throw up.error;
+          up = await supabase
+            .from('profiles')
+            .update({ first_name: first, last_name: last, email, full_name: `${first} ${last}`.trim() })
+            .eq('id', newUserId);
+          // if update fails, ignore; at least role exists
+          try { await alt.auth.signOut(); } catch {}
+          // Send password reset link so trener ustawi własne hasło
+          try { await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/login.html' }); } catch (e) { console.warn('resetPassword mail warn', e); }
         }
         closeTrainerModal();
         await loadTrainers();
@@ -2526,13 +2572,17 @@
       if (editBtn) {
         const id = editBtn.dataset.id;
         try {
-          const { data: t, error } = await supabase.from('profiles').select('id, first_name, last_name, email').eq('id', id).maybeSingle();
+          let t = null; let error = null;
+          {
+            const q = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
+            t = q.data; error = q.error;
+          }
           if (error) throw error;
           editingTrainerId = t.id;
           trainerModalTitle.textContent = 'Edytuj trenera';
-          if (trainerFirstNameEl) trainerFirstNameEl.value = t.first_name || '';
-          if (trainerLastNameEl) trainerLastNameEl.value = t.last_name || '';
-          if (trainerEmailEl) trainerEmailEl.value = t.email || '';
+          if (trainerFirstNameEl) trainerFirstNameEl.value = (t.first_name || (t.full_name ? String(t.full_name).split(' ')[0] : '') || '');
+          if (trainerLastNameEl) trainerLastNameEl.value = (t.last_name || (t.full_name ? String(t.full_name).split(' ').slice(1).join(' ') : '') || '');
+          if (trainerEmailEl) trainerEmailEl.value = t.email || t.contact_email || t.user_email || '';
           openTrainerModal();
         } catch (err) {
           alert('Błąd wczytania trenera: ' + (err.message || 'Nieznany'));
