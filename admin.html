@@ -577,6 +577,20 @@
       </div>
     </div>
     
+    <!-- Participants Section -->
+    <div class="content-box" id="participants-section" style="display:none;">
+      <div class="content-header">
+        <h3>Uczestnicy</h3>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="btn btn-primary" id="add-participant-global"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button>
+          <input id="participants-search" class="form-control" placeholder="Szukaj (imię/nazwisko/telefon)" style="width:260px;" />
+        </div>
+      </div>
+      <div id="participants-list-all">
+        <div class="empty-state"><p>Brak uczestników</p></div>
+      </div>
+    </div>
+
     <!-- Schedule Section -->
     <div class="content-box" id="schedule-section" style="display:none;">
       <div class="content-header">
@@ -585,8 +599,10 @@
           <button class="btn btn-primary" id="add-group-from-schedule"><i class="fas fa-plus"></i> Dodaj grupę</button>
         </div>
       </div>
-      <div id="gcal-embed" style="margin-top:12px;">
-        <iframe src="https://calendar.google.com/calendar/embed?src=imperia.studiotanca%40gmail.com&ctz=Europe%2FWarsaw" style="border:0; width:100%; height:600px;" frameborder="0" scrolling="no"></iframe>
+      <div id="gcal-embed" style="margin-top:12px;" role="region">
+        <div id="calendar">
+          <iframe src="https://calendar.google.com/calendar/embed?src=imperia.studiotanca%40gmail.com&ctz=Europe%2FWarsaw" style="border:0; width:100%; height:600px;" frameborder="0" scrolling="no"></iframe>
+        </div>
       </div>
     </div>
 
