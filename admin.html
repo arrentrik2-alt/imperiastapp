@@ -1298,6 +1298,8 @@
     
     // Wczytanie wszystkich grup
     async function loadGroups() {
+      // Defensive: ensure element exists
+      if (!groupsList) { console.error('loadGroups: groupsList not found'); return; }
       // Pokaż stan ładowania
       groupsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie grup...</p></div>';
       
@@ -1813,6 +1815,7 @@
     
     // -------- Participants page logic --------
     async function loadAllParticipants() {
+      if (!participantsListAll) { console.error('loadAllParticipants: participantsListAll not found'); return; }
       participantsListAll.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
       try {
         const [{ data: participants, error: pErr }, { data: groups, error: gErr }] = await Promise.all([
@@ -2150,6 +2153,7 @@
     if (hasPartnerChk) hasPartnerChk.addEventListener('change', ()=>{ partnerFields.style.display = hasPartnerChk.checked ? 'block' : 'none'; });
 
     async function loadAllStudents() {
+      if (!studentsListAll) { console.error('loadAllStudents: studentsListAll not found'); return; }
       studentsListAll.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczniów...</p></div>';
       const { data, error } = await supabase.from('students').select('*').order('last_name', { ascending: true });
       if (error) {
@@ -2303,6 +2307,7 @@
 
     async function loadStudentLessonsAndPayments() {
       if (!selectedStudent) return;
+      if (!studentLessonsList) { console.error('loadStudentLessonsAndPayments: studentLessonsList not found'); return; }
       studentLessonsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie lekcji...</p></div>';
       const { data: lessons, error } = await supabase.from('lessons').select('*').eq('student_id', selectedStudent.id).order('created_at', { ascending: false });
       if (error) { studentLessonsList.innerHTML = '<div class="empty-state"><p>Błąd: '+error.message+'</p></div>'; return; }
