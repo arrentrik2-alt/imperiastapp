@@ -581,10 +581,12 @@
     <div class="content-box" id="lessons-section" style="display:none;">
       <div class="content-header">
         <h3>Lekcje</h3>
+        <div>
+          <button class="btn btn-primary" id="create-lesson-btn"><i class="fas fa-plus"></i> Utwórz zajęcia</button>
+        </div>
       </div>
-      <div class="empty-state">
-        <i class="fas fa-book"></i>
-        <p>Ta strona jest pusta. Wkrótce tutaj pojawią się lekcje.</p>
+      <div id="lessons-list">
+        <div class="empty-state"><i class="fas fa-book"></i><p>Brak zajęć</p></div>
       </div>
     </div>
 
@@ -819,6 +821,8 @@
     const scheduleLink = document.getElementById('nav-schedule');
     const scheduleSection = document.getElementById('schedule-section');
     const lessonsSection = document.getElementById('lessons-section');
+    const lessonsList = document.getElementById('lessons-list');
+    const createLessonBtn = document.getElementById('create-lesson-btn');
     const addGroupFromScheduleBtn = document.getElementById('add-group-from-schedule');
     const calendarEl = document.getElementById('calendar');
     let calendar;
@@ -993,6 +997,7 @@
         if (lessonsSection) lessonsSection.style.display = 'block';
         setActiveNav('lessons');
         collapseSidebar();
+        await loadLessons();
       });
     }
 
@@ -2012,6 +2017,118 @@
       if (lessonsSectionEl) lessonsSectionEl.style.display = 'none';
       if (scheduleSectionEl) scheduleSectionEl.style.display = 'none';
       await loadGroups();
+    });
+
+    // Lessons Modal
+    const lessonModal = document.createElement('div');
+    lessonModal.className = 'modal';
+    lessonModal.id = 'create-lesson-modal';
+    lessonModal.innerHTML = `
+      <div class="modal-content">
+        <button class="modal-close" id="close-lesson-modal"><i class="fas fa-times"></i></button>
+        <div class="modal-header"><h3>Utwórz zajęcia</h3></div>
+        <div class="form-group"><label>Imię</label><input type="text" id="lesson-first-name" class="form-control" placeholder="Imię"></div>
+        <div class="form-group"><label>Nazwisko</label><input type="text" id="lesson-last-name" class="form-control" placeholder="Nazwisko"></div>
+        <div class="form-group"><label>Telefon</label><input type="tel" id="lesson-phone" class="form-control" placeholder="Telefon"></div>
+        <div class="form-group"><label>Trener</label><input type="text" id="lesson-trainer" class="form-control" placeholder="Imię i nazwisko trenera"></div>
+        <div class="form-actions">
+          <button class="btn btn-outline" id="cancel-lesson-btn">Anuluj</button>
+          <button class="btn btn-primary" id="save-lesson-btn"><i class="fas fa-save"></i> Zapisz</button>
+        </div>
+      </div>`;
+    document.body.appendChild(lessonModal);
+    const openLessonModal = () => lessonModal.classList.add('active');
+    const closeLessonModal = () => lessonModal.classList.remove('active');
+    const closeLessonModalBtn = lessonModal.querySelector('#close-lesson-modal');
+    const cancelLessonBtn = lessonModal.querySelector('#cancel-lesson-btn');
+    const saveLessonBtn = lessonModal.querySelector('#save-lesson-btn');
+    const lessonFirstNameEl = lessonModal.querySelector('#lesson-first-name');
+    const lessonLastNameEl = lessonModal.querySelector('#lesson-last-name');
+    const lessonPhoneEl = lessonModal.querySelector('#lesson-phone');
+    const lessonTrainerEl = lessonModal.querySelector('#lesson-trainer');
+    closeLessonModalBtn.addEventListener('click', closeLessonModal);
+    cancelLessonBtn.addEventListener('click', closeLessonModal);
+    if (createLessonBtn) createLessonBtn.addEventListener('click', openLessonModal);
+
+    async function loadLessons() {
+      if (!lessonsList) return;
+      lessonsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie zajęć...</p></div>';
+      try {
+        const { data, error } = await supabase
+          .from('lessons')
+          .select('id, created_at, trainer, participant_id, participants:first_name, participants:last_name, participants:phone')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          lessonsList.innerHTML = '<div class="empty-state"><i class="fas fa-book"></i><p>Brak zajęć</p></div>';
+          return;
+        }
+        const fragment = document.createDocumentFragment();
+        data.forEach((l, idx) => {
+          const card = document.createElement('div');
+          card.className = 'group-card';
+          const pName = `${l.participants?.first_name || ''} ${l.participants?.last_name || ''}`.trim();
+          const phone = l.participants?.phone || '';
+          card.innerHTML = `
+            <h4><span class="p-index">${idx + 1}</span>${pName || '(bez imienia)'} — ${l.trainer || ''}</h4>
+            <div class="group-detail"><i class="fas fa-phone"></i><span>${phone}</span></div>
+            <div class="group-detail"><i class="fas fa-calendar"></i><span>${new Date(l.created_at).toLocaleString('pl-PL')}</span></div>
+          `;
+          fragment.appendChild(card);
+        });
+        lessonsList.innerHTML = '';
+        lessonsList.appendChild(fragment);
+      } catch (err) {
+        lessonsList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+      }
+    }
+
+    // Save lesson: ensure participant exists (by phone), else create; then insert lesson
+    if (saveLessonBtn) saveLessonBtn.addEventListener('click', async () => {
+      const fn = lessonFirstNameEl.value.trim();
+      const ln = lessonLastNameEl.value.trim();
+      const phone = lessonPhoneEl.value.trim();
+      const trainer = lessonTrainerEl.value.trim();
+      if (!fn || !ln || !phone || !trainer) { alert('Uzupełnij wszystkie pola'); return; }
+      saveLessonBtn.disabled = true; const original = saveLessonBtn.innerHTML; saveLessonBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
+      try {
+        let participantId = null;
+        // Try find participant by phone
+        const { data: existing, error: selErr } = await supabase
+          .from('participants')
+          .select('id')
+          .eq('phone', phone)
+          .maybeSingle();
+        if (selErr) throw selErr;
+        if (existing) {
+          participantId = existing.id;
+          // Optionally update name if blank
+          await supabase.from('participants').update({ first_name: fn, last_name: ln }).eq('id', participantId);
+        } else {
+          const ins = await supabase
+            .from('participants')
+            .insert([{ first_name: fn, last_name: ln, phone, multisport: false, consent_signed: false }])
+            .select('id')
+            .single();
+          if (ins.error) throw ins.error;
+          participantId = ins.data.id;
+        }
+        // Create lesson
+        const lessonIns = await supabase
+          .from('lessons')
+          .insert([{ participant_id: participantId, trainer }]);
+        if (lessonIns.error) throw lessonIns.error;
+        closeLessonModal();
+        lessonFirstNameEl.value = '';
+        lessonLastNameEl.value = '';
+        lessonPhoneEl.value = '';
+        lessonTrainerEl.value = '';
+        await loadLessons();
+      } catch (err) {
+        alert('Błąd zapisu zajęć: ' + (err.message || 'Nieznany'));
+      } finally {
+        saveLessonBtn.disabled = false; saveLessonBtn.innerHTML = original;
+      }
     });
 
     // Google Apps Script bridge (provide your Web App URL here)
