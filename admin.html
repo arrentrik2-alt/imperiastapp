@@ -2618,8 +2618,8 @@
     });
     
     // Inicjalizacja
-    document.addEventListener('DOMContentLoaded', async () => {
-      await checkAdmin();
+    async function initAdmin() {
+      try { await checkAdmin(); } catch {}
       setActiveNav('groups');
       // Ensure groups section visible on first paint
       const groupsSectionEl = document.getElementById('groups-section');
@@ -2635,7 +2635,12 @@
       if (scheduleSectionEl) scheduleSectionEl.style.display = 'none';
       if (trainersSectionEl) trainersSectionEl.style.display = 'none';
       await loadGroups();
-    });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAdmin);
+    } else {
+      initAdmin();
+    }
 
     // Lessons Modal
     const lessonModal = document.createElement('div');
