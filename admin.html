@@ -449,6 +449,12 @@
         </a>
       </li>
       <li>
+        <a href="#" id="nav-lessons">
+          <i class="fas fa-chalkboard-teacher"></i>
+          <span class="link-text">Lekcje</span>
+        </a>
+      </li>
+      <li>
         <a href="#">
           <i class="fas fa-chart-line"></i>
           <span class="link-text">Płatności</span>
@@ -584,19 +590,140 @@
       </div>
     </div>
 
-    <!-- Participants Section -->
-    <div class="content-box" id="participants-section" style="display:none;">
+    <!-- Lessons Section -->
+    <div class="content-box" id="lessons-section" style="display:none;">
       <div class="content-header">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <h3>Uczestnicy</h3>
-        </div>
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
-          <input id="participants-search" class="form-control" placeholder="Szukaj: imię/nazwisko/telefon" style="width:260px;" />
-          <button class="btn btn-primary" id="add-participant-global"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button>
+        <h3>Lekcje</h3>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="btn btn-primary" id="add-student-btn"><i class="fas fa-user-plus"></i> Dodaj ucznia</button>
+          <input id="lesson-students-search" class="form-control" placeholder="Szukaj ucznia (imię/nazwisko/telefon)" style="width:260px;" />
         </div>
       </div>
-      <div id="participants-list-all">
-        <div class="empty-state"><p>Brak uczestników</p></div>
+      <div id="students-list-all">
+        <div class="empty-state"><p>Brak uczniów</p></div>
+      </div>
+    </div>
+
+    <!-- Student Details Section -->
+    <div class="content-box" id="student-details-section" style="display:none;">
+      <div class="content-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="btn btn-outline" id="back-to-lessons-btn"><i class="fas fa-arrow-left"></i> Wróć</button>
+          <h3 id="student-details-title">Uczeń</h3>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="btn btn-primary" id="add-lesson-btn"><i class="fas fa-plus"></i> Dodaj lekcję</button>
+        </div>
+      </div>
+      <div class="content-box" id="student-summary" style="margin-top:10px; padding:12px;">
+        <div class="summary-grid">
+          <div class="summary-card"><div class="label">Liczba lekcji</div><div class="value" id="sum-lessons-count">0</div></div>
+          <div class="summary-card"><div class="label">Zapłacone</div><div class="sub"><span id="sum-lessons-paid-count">0</span> szt.</div><div class="value" id="sum-lessons-paid-amount">0.00 zł</div><div class="progress"><div class="progress-bar" id="sum-lessons-paid-progress" style="width:0%"></div></div></div>
+          <div class="summary-card"><div class="label">Niezapłacone</div><div class="sub"><span id="sum-lessons-unpaid-count">0</span> szt.</div><div class="value" id="sum-lessons-unpaid-amount">0.00 zł</div></div>
+          <div class="summary-card"><div class="label">Zysk</div><div class="value" id="sum-lessons-profit">0.00 zł</div><div class="label" style="margin-top:6px;">Potencjalny zysk</div><div class="sub" id="sum-lessons-potential">0.00 zł</div></div>
+        </div>
+      </div>
+      <div class="content-box" style="margin-top:15px;">
+        <div class="content-header" style="margin-bottom:12px;">
+          <h3 style="font-size:1.1rem;">Lekcje ucznia</h3>
+        </div>
+        <div id="student-lessons-list"><div class="empty-state"><p>Brak lekcji</p></div></div>
+      </div>
+    </div>
+
+    <!-- Add Lesson Modal -->
+    <div class="modal" id="add-lesson-modal">
+      <div class="modal-content">
+        <button class="modal-close" id="close-add-lesson-modal"><i class="fas fa-times"></i></button>
+        <div class="modal-header"><h3>Dodaj lekcję</h3></div>
+        <div class="form-group">
+          <label for="lesson-type">Rodzaj lekcji</label>
+          <select id="lesson-type" class="form-control">
+            <option value="pierwszy_taniec">Pierwszy taniec</option>
+            <option value="lekcja_tanca">Lekcja tańca</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="lesson-day">Dzień tygodnia</label>
+          <select id="lesson-day" class="form-control">
+            <option>Poniedziałek</option><option>Wtorek</option><option>Środa</option><option>Czwartek</option><option>Piątek</option><option>Sobota</option><option>Niedziela</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="lesson-start">Godzina rozpoczęcia</label>
+          <input type="time" id="lesson-start" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="lesson-end">Godzina zakończenia</label>
+          <input type="time" id="lesson-end" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="lesson-trainer">Trener</label>
+          <input type="text" id="lesson-trainer" class="form-control" placeholder="Imię i nazwisko trenera">
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="lesson-package-toggle" style="width:auto;">
+          <label for="lesson-package-toggle" style="margin:0;">Pakiet (dla pierwszego tańca)</label>
+        </div>
+        <div class="form-group" id="lesson-package-group" style="display:none;">
+          <label for="lesson-package">Pakiet</label>
+          <select id="lesson-package" class="form-control">
+            <option value="">Wybierz pakiet</option>
+            <option value="express">Express (850 zł)</option>
+            <option value="standard">Standard (1300 zł)</option>
+            <option value="full">Full (1900 zł)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="lesson-amount">Kwota (zł)</label>
+          <input type="number" id="lesson-amount" class="form-control" step="0.01" placeholder="0.00">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" id="cancel-add-lesson">Anuluj</button>
+          <button class="btn btn-primary" id="save-lesson-btn"><i class="fas fa-save"></i> Zapisz</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div class="modal" id="add-student-modal">
+      <div class="modal-content">
+        <button class="modal-close" id="close-add-student-modal"><i class="fas fa-times"></i></button>
+        <div class="modal-header"><h3>Dodaj ucznia</h3></div>
+        <div class="form-group">
+          <label>Imię</label>
+          <input type="text" id="student-first-name" class="form-control" placeholder="Imię">
+        </div>
+        <div class="form-group">
+          <label>Nazwisko</label>
+          <input type="text" id="student-last-name" class="form-control" placeholder="Nazwisko">
+        </div>
+        <div class="form-group">
+          <label>Telefon</label>
+          <input type="tel" id="student-phone" class="form-control" placeholder="Telefon">
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="has-partner" style="width:auto;">
+          <label for="has-partner" style="margin:0;">Dodaj partnera</label>
+        </div>
+        <div id="partner-fields" style="display:none;">
+          <div class="form-group">
+            <label>Imię partnera</label>
+            <input type="text" id="partner-first-name" class="form-control" placeholder="Imię partnera">
+          </div>
+          <div class="form-group">
+            <label>Nazwisko partnera</label>
+            <input type="text" id="partner-last-name" class="form-control" placeholder="Nazwisko partnera">
+          </div>
+          <div class="form-group">
+            <label>Telefon partnera</label>
+            <input type="tel" id="partner-phone" class="form-control" placeholder="Telefon partnera">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" id="cancel-add-student">Anuluj</button>
+          <button class="btn btn-primary" id="save-student-btn"><i class="fas fa-save"></i> Zapisz</button>
+        </div>
       </div>
     </div>
 
@@ -798,7 +925,9 @@
     const groupsLink = document.getElementById('nav-groups');
     const participantsLink = document.getElementById('nav-participants');
     const scheduleLink = document.getElementById('nav-schedule');
+    const lessonsLink = document.getElementById('nav-lessons');
     const scheduleSection = document.getElementById('schedule-section');
+    const lessonsSection = document.getElementById('lessons-section');
     const addGroupFromScheduleBtn = document.getElementById('add-group-from-schedule');
     const calendarEl = document.getElementById('calendar');
     let calendar;
@@ -837,14 +966,22 @@
           groupsLink.classList.add('active');
           participantsLink.classList.remove('active');
           if (scheduleLink) scheduleLink.classList.remove('active');
+          if (lessonsLink) lessonsLink.classList.remove('active');
         } else if (section === 'participants') {
           participantsLink.classList.add('active');
           groupsLink.classList.remove('active');
           if (scheduleLink) scheduleLink.classList.remove('active');
+          if (lessonsLink) lessonsLink.classList.remove('active');
         } else if (section === 'schedule') {
           if (scheduleLink) scheduleLink.classList.add('active');
           groupsLink.classList.remove('active');
           participantsLink.classList.remove('active');
+          if (lessonsLink) lessonsLink.classList.remove('active');
+        } else if (section === 'lessons') {
+          if (lessonsLink) lessonsLink.classList.add('active');
+          groupsLink.classList.remove('active');
+          participantsLink.classList.remove('active');
+          if (scheduleLink) scheduleLink.classList.remove('active');
         }
       }
     }
@@ -1927,6 +2064,331 @@
         // Swallow noisy CORS errors; treat as best-effort
         return { ok: true, transport: 'no-cors-error', note: e?.message || 'network error' };
       }
+    }
+
+    // Lessons nav
+    const addStudentModal = document.getElementById('add-student-modal');
+    const addStudentBtn = document.getElementById('add-student-btn');
+    const closeAddStudentModal = document.getElementById('close-add-student-modal');
+    const cancelAddStudent = document.getElementById('cancel-add-student');
+    const saveStudentBtn = document.getElementById('save-student-btn');
+    const hasPartnerChk = document.getElementById('has-partner');
+    const partnerFields = document.getElementById('partner-fields');
+    const lessonsSearch = document.getElementById('lesson-students-search');
+    const studentsListAll = document.getElementById('students-list-all');
+    const studentDetailsSection = document.getElementById('student-details-section');
+    const backToLessonsBtn = document.getElementById('back-to-lessons-btn');
+    const studentDetailsTitle = document.getElementById('student-details-title');
+    const studentLessonsList = document.getElementById('student-lessons-list');
+    const addLessonBtn = document.getElementById('add-lesson-btn');
+    const addLessonModal = document.getElementById('add-lesson-modal');
+    const closeAddLessonModal = document.getElementById('close-add-lesson-modal');
+    const cancelAddLesson = document.getElementById('cancel-add-lesson');
+    const saveLessonBtn = document.getElementById('save-lesson-btn');
+    const lessonTypeEl = document.getElementById('lesson-type');
+    const lessonDayEl = document.getElementById('lesson-day');
+    const lessonStartEl = document.getElementById('lesson-start');
+    const lessonEndEl = document.getElementById('lesson-end');
+    const lessonTrainerEl = document.getElementById('lesson-trainer');
+    const lessonAmountEl = document.getElementById('lesson-amount');
+    const lessonPackageToggle = document.getElementById('lesson-package-toggle');
+    const lessonPackageGroup = document.getElementById('lesson-package-group');
+    const lessonPackageEl = document.getElementById('lesson-package');
+
+    const sumLessonsCountEl = document.getElementById('sum-lessons-count');
+    const sumLessonsPaidCountEl = document.getElementById('sum-lessons-paid-count');
+    const sumLessonsPaidAmountEl = document.getElementById('sum-lessons-paid-amount');
+    const sumLessonsUnpaidCountEl = document.getElementById('sum-lessons-unpaid-count');
+    const sumLessonsUnpaidAmountEl = document.getElementById('sum-lessons-unpaid-amount');
+    const sumLessonsProfitEl = document.getElementById('sum-lessons-profit');
+    const sumLessonsPotentialEl = document.getElementById('sum-lessons-potential');
+    const sumLessonsPaidProgressEl = document.getElementById('sum-lessons-paid-progress');
+
+    let selectedStudent = null;
+
+    function showLessonsSection() {
+      groupsSection.style.display = 'none';
+      groupDetailsSection.style.display = 'none';
+      participantsSection.style.display = 'none';
+      scheduleSection.style.display = 'none';
+      lessonsSection.style.display = 'block';
+      setActiveNav('lessons');
+      collapseSidebar();
+      loadAllStudents();
+    }
+    if (lessonsLink) {
+      lessonsLink.addEventListener('click', (e) => { e.preventDefault(); showLessonsSection(); });
+    }
+
+    function showStudentDetails(student) {
+      selectedStudent = student;
+      studentDetailsTitle.textContent = `${student.first_name || ''} ${student.last_name || ''}`;
+      lessonsSection.style.display = 'none';
+      studentDetailsSection.style.display = 'block';
+      loadStudentLessonsAndPayments();
+    }
+    if (backToLessonsBtn) backToLessonsBtn.addEventListener('click', showLessonsSection);
+
+    function openAddStudentModal() { addStudentModal.classList.add('active'); }
+    function closeAddStudent() { addStudentModal.classList.remove('active'); }
+    if (addStudentBtn) addStudentBtn.addEventListener('click', openAddStudentModal);
+    if (closeAddStudentModal) closeAddStudentModal.addEventListener('click', closeAddStudent);
+    if (cancelAddStudent) cancelAddStudent.addEventListener('click', closeAddStudent);
+    if (hasPartnerChk) hasPartnerChk.addEventListener('change', ()=>{ partnerFields.style.display = hasPartnerChk.checked ? 'block' : 'none'; });
+
+    async function loadAllStudents() {
+      studentsListAll.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczniów...</p></div>';
+      const { data, error } = await supabase.from('students').select('*').order('last_name', { ascending: true });
+      if (error) {
+        studentsListAll.innerHTML = '<div class="empty-state"><p>Błąd: '+(error.message||'Nieznany')+'</p></div>';
+        return;
+      }
+      if (!data || data.length === 0) {
+        studentsListAll.innerHTML = '<div class="empty-state"><p>Brak uczniów</p></div>';
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      data.forEach((s, idx) => {
+        const card = document.createElement('div');
+        card.className = 'group-card';
+        card.innerHTML = `
+          <h4><span class="p-index">${idx+1}</span>${s.first_name||''} ${s.last_name||''}</h4>
+          <div class="group-detail"><i class="fas fa-phone"></i><span>${s.phone||''}</span></div>
+          ${s.partner_first_name||s.partner_last_name||s.partner_phone ? `<div class=\"group-detail\"><i class=\"fas fa-user-friends\"></i><span>Partner: ${(s.partner_first_name||'')} ${(s.partner_last_name||'')} ${s.partner_phone?('('+s.partner_phone+')'):''}</span></div>` : ''}
+          <div class="group-actions">
+            <button class="btn btn-outline edit-student-btn" data-id="${s.id}"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-outline delete-student-btn" data-id="${s.id}"><i class="fas fa-trash"></i></button>
+          </div>
+        `;
+        card.addEventListener('click', (e)=>{
+          if (e.target.closest('.edit-student-btn') || e.target.closest('.delete-student-btn')) return;
+          showStudentDetails(s);
+        });
+        frag.appendChild(card);
+      });
+      studentsListAll.innerHTML = '';
+      studentsListAll.appendChild(frag);
+    }
+
+    if (lessonsSearch) {
+      lessonsSearch.addEventListener('input', ()=>{
+        const q = lessonsSearch.value.toLowerCase().trim();
+        const cards = studentsListAll.querySelectorAll('.group-card');
+        cards.forEach(c=>{
+          const text = c.textContent.toLowerCase();
+          c.style.display = text.includes(q) ? '' : 'none';
+        });
+      });
+    }
+
+    if (saveStudentBtn) {
+      saveStudentBtn.addEventListener('click', async ()=>{
+        const fn = document.getElementById('student-first-name').value.trim();
+        const ln = document.getElementById('student-last-name').value.trim();
+        const ph = document.getElementById('student-phone').value.trim();
+        const pf = document.getElementById('partner-first-name').value.trim();
+        const pl = document.getElementById('partner-last-name').value.trim();
+        const pp = document.getElementById('partner-phone').value.trim();
+        if (!fn || !ln) { alert('Podaj imię i nazwisko'); return; }
+        const { error } = await supabase.from('students').insert([{ first_name: fn, last_name: ln, phone: ph, partner_first_name: pf||null, partner_last_name: pl||null, partner_phone: pp||null }]);
+        if (error) { alert('Błąd zapisu ucznia: '+error.message); return; }
+        addStudentModal.classList.remove('active');
+        await loadAllStudents();
+      });
+    }
+
+    // Edit/Delete student functionality
+    if (studentsListAll) {
+      studentsListAll.addEventListener('click', async (e)=>{
+        const editBtn = e.target.closest('.edit-student-btn');
+        const deleteBtn = e.target.closest('.delete-student-btn');
+        if (!editBtn && !deleteBtn) return;
+        e.stopPropagation();
+        const studentId = editBtn ? editBtn.dataset.id : deleteBtn.dataset.id;
+        if (editBtn) {
+          // Load student data for editing
+          const { data: student, error } = await supabase.from('students').select('*').eq('id', studentId).single();
+          if (error) { alert('Błąd ładowania ucznia: '+error.message); return; }
+          document.getElementById('student-first-name').value = student.first_name || '';
+          document.getElementById('student-last-name').value = student.last_name || '';
+          document.getElementById('student-phone').value = student.phone || '';
+          document.getElementById('partner-first-name').value = student.partner_first_name || '';
+          document.getElementById('partner-last-name').value = student.partner_last_name || '';
+          document.getElementById('partner-phone').value = student.partner_phone || '';
+          document.getElementById('has-partner').checked = !!(student.partner_first_name || student.partner_last_name || student.partner_phone);
+          partnerFields.style.display = document.getElementById('has-partner').checked ? 'block' : 'none';
+          // Change save button to update mode
+          saveStudentBtn.textContent = 'Zaktualizuj';
+          saveStudentBtn.dataset.editId = studentId;
+          openAddStudentModal();
+        }
+        if (deleteBtn) {
+          if (!confirm('Usunąć ucznia i wszystkie jego lekcje?')) return;
+          const { error } = await supabase.from('students').delete().eq('id', studentId);
+          if (error) { alert('Błąd usuwania ucznia: '+error.message); return; }
+          await loadAllStudents();
+        }
+      });
+    }
+
+    // Reset form when opening add modal (not edit)
+    if (addStudentBtn) {
+      addStudentBtn.addEventListener('click', ()=>{
+        document.getElementById('student-first-name').value = '';
+        document.getElementById('student-last-name').value = '';
+        document.getElementById('student-phone').value = '';
+        document.getElementById('partner-first-name').value = '';
+        document.getElementById('partner-last-name').value = '';
+        document.getElementById('partner-phone').value = '';
+        document.getElementById('has-partner').checked = false;
+        partnerFields.style.display = 'none';
+        saveStudentBtn.textContent = 'Zapisz';
+        delete saveStudentBtn.dataset.editId;
+      });
+    }
+
+    // Update save button to handle both add and edit
+    if (saveStudentBtn) {
+      const originalSaveHandler = saveStudentBtn.onclick;
+      saveStudentBtn.onclick = null;
+      saveStudentBtn.addEventListener('click', async ()=>{
+        const editId = saveStudentBtn.dataset.editId;
+        const fn = document.getElementById('student-first-name').value.trim();
+        const ln = document.getElementById('student-last-name').value.trim();
+        const ph = document.getElementById('student-phone').value.trim();
+        const pf = document.getElementById('partner-first-name').value.trim();
+        const pl = document.getElementById('partner-last-name').value.trim();
+        const pp = document.getElementById('partner-phone').value.trim();
+        if (!fn || !ln) { alert('Podaj imię i nazwisko'); return; }
+        const studentData = { first_name: fn, last_name: ln, phone: ph, partner_first_name: pf||null, partner_last_name: pl||null, partner_phone: pp||null };
+        let error;
+        if (editId) {
+          const { error: updateError } = await supabase.from('students').update(studentData).eq('id', editId);
+          error = updateError;
+        } else {
+          const { error: insertError } = await supabase.from('students').insert([studentData]);
+          error = insertError;
+        }
+        if (error) { alert('Błąd zapisu ucznia: '+error.message); return; }
+        addStudentModal.classList.remove('active');
+        await loadAllStudents();
+      });
+    }
+
+    // Add Lesson modal controls
+    function openAddLessonModal() { addLessonModal.classList.add('active'); }
+    function closeAddLesson() { addLessonModal.classList.remove('active'); }
+    if (addLessonBtn) addLessonBtn.addEventListener('click', ()=>{ if (selectedStudent) openAddLessonModal(); });
+    if (closeAddLessonModal) closeAddLessonModal.addEventListener('click', closeAddLesson);
+    if (cancelAddLesson) cancelAddLesson.addEventListener('click', closeAddLesson);
+    if (lessonPackageToggle) lessonPackageToggle.addEventListener('change', ()=>{ lessonPackageGroup.style.display = lessonPackageToggle.checked ? 'block' : 'none'; });
+    if (lessonPackageEl) lessonPackageEl.addEventListener('change', ()=>{
+      const v = lessonPackageEl.value;
+      const map = { express: 850, standard: 1300, full: 1900 };
+      if (map[v] != null) lessonAmountEl.value = String(map[v].toFixed ? map[v].toFixed(2) : map[v]);
+    });
+
+    async function loadStudentLessonsAndPayments() {
+      if (!selectedStudent) return;
+      studentLessonsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie lekcji...</p></div>';
+      const { data: lessons, error } = await supabase.from('lessons').select('*').eq('student_id', selectedStudent.id).order('created_at', { ascending: false });
+      if (error) { studentLessonsList.innerHTML = '<div class="empty-state"><p>Błąd: '+error.message+'</p></div>'; return; }
+      if (!lessons || lessons.length === 0) { studentLessonsList.innerHTML = '<div class="empty-state"><p>Brak lekcji</p></div>'; updateStudentSummary({ count:0, paidC:0, unpaidC:0, paidA:0, unpaidA:0 }); return; }
+      const ids = lessons.map(l=>l.id);
+      const { data: pays } = await supabase.from('lesson_payments').select('*').in('lesson_id', ids);
+      const payByLesson = new Map();
+      (pays||[]).forEach(p=>payByLesson.set(p.lesson_id, p));
+      let paidC=0, unpaidC=0, paidA=0, unpaidA=0;
+      const frag = document.createDocumentFragment();
+      lessons.forEach((l, idx)=>{
+        const pay = payByLesson.get(l.id) || null;
+        const isPaid = !!(pay && pay.confirmed);
+        if (isPaid) { paidC++; paidA += Number(pay.amount||0); } else { unpaidC++; unpaidA += Number(l.amount||0); }
+        const row = document.createElement('div');
+        row.className = 'content-box participant-row';
+        row.style.marginBottom = '10px';
+        row.dataset.lessonId = l.id;
+        row.innerHTML = `
+          <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+            <div style="flex:0 0 24px; text-align:center; color: var(--gold); font-weight:600;">${idx+1}</div>
+            <div style="flex:1 1 200px; min-width:180px;">
+              <div style="font-weight:600; font-size:0.95rem;">${l.type==='pierwszy_taniec'?'Pierwszy taniec':'Lekcja tańca'}</div>
+              <div style="color: var(--text-gray); font-size:0.8rem; line-height:1.1;">${l.day} • ${formatTimeHHMM(l.start_time)}-${formatTimeHHMM(l.end_time)} • ${l.trainer||''}</div>
+            </div>
+            <div style="flex:0 0 120px; min-width:110px;">
+              <input title="Kwota" type="number" step="0.01" class="form-control small lesson-amount" value="${(pay && pay.amount!=null)?pay.amount:(l.amount||0)}" />
+            </div>
+            <div style="flex:0 0 auto; display:flex; gap:6px; align-items:center;">
+              <button class="btn btn-primary btn-sm confirm-lesson-payment-btn">${isPaid?'Zapisz':'Potwierdź'}</button>
+              <span class="status" style="color:${isPaid?'var(--success)':'var(--text-gray)'}; font-size:0.8rem; white-space:nowrap;">${isPaid?'OK':'Brak'}</span>
+            </div>
+            <div style="flex:1 1 100px; display:flex; gap:6px; align-items:center; justify-content:flex-end;">
+              <button class="btn btn-outline btn-sm delete-lesson-btn" title="Usuń lekcję"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        `;
+        frag.appendChild(row);
+      });
+      studentLessonsList.innerHTML = '';
+      studentLessonsList.appendChild(frag);
+      updateStudentSummary({ count: lessons.length, paidC, unpaidC, paidA, unpaidA });
+    }
+
+    function updateStudentSummary({ count, paidC, unpaidC, paidA, unpaidA }) {
+      sumLessonsCountEl.textContent = String(count||0);
+      sumLessonsPaidCountEl.textContent = String(paidC||0);
+      sumLessonsPaidAmountEl.textContent = `${(paidA||0).toFixed(2)} zł`;
+      sumLessonsUnpaidCountEl.textContent = String(unpaidC||0);
+      sumLessonsUnpaidAmountEl.textContent = `${(unpaidA||0).toFixed(2)} zł`;
+      sumLessonsProfitEl.textContent = `${(paidA||0).toFixed(2)} zł`;
+      sumLessonsPotentialEl.textContent = `${((paidA||0)+(unpaidA||0)).toFixed(2)} zł`;
+      const total = Math.max(1, (paidC||0)+(unpaidC||0));
+      const percent = Math.min(100, Math.round(((paidC||0)/total)*100));
+      sumLessonsPaidProgressEl.style.width = percent + '%';
+    }
+
+    if (saveLessonBtn) {
+      saveLessonBtn.addEventListener('click', async ()=>{
+        if (!selectedStudent) return;
+        const type = lessonTypeEl.value;
+        const day = lessonDayEl.value;
+        const start = lessonStartEl.value;
+        const end = lessonEndEl.value;
+        const trainer = lessonTrainerEl.value.trim();
+        const amount = parseFloat(lessonAmountEl.value||'0');
+        const package_name = lessonPackageToggle.checked ? (lessonPackageEl.value||null) : null;
+        if (!type || !day || !start || !end || !trainer) { alert('Uzupełnij wszystkie pola lekcji'); return; }
+        const { error } = await supabase.from('lessons').insert([{ student_id: selectedStudent.id, type, day, start_time: start, end_time: end, trainer, amount, package_name }]);
+        if (error) { alert('Błąd zapisu lekcji: '+error.message); return; }
+        addLessonModal.classList.remove('active');
+        await loadStudentLessonsAndPayments();
+      });
+    }
+
+    if (studentLessonsList) {
+      studentLessonsList.addEventListener('click', async (e)=>{
+        const row = e.target.closest('[data-lesson-id]'); if (!row) return;
+        const lessonId = row.dataset.lessonId;
+        if (e.target.closest('.confirm-lesson-payment-btn')) {
+          const amountEl = row.querySelector('.lesson-amount');
+          const amt = parseFloat(amountEl.value||'0');
+          if (isNaN(amt) || amt < 0) { alert('Podaj poprawną kwotę'); return; }
+          // upsert payment
+          const existing = await supabase.from('lesson_payments').select('id').eq('lesson_id', lessonId).maybeSingle();
+          if (existing.data) {
+            await supabase.from('lesson_payments').update({ amount: amt, confirmed: true, confirmed_at: new Date().toISOString() }).eq('id', existing.data.id);
+          } else {
+            await supabase.from('lesson_payments').insert([{ lesson_id: lessonId, amount: amt, confirmed: true, confirmed_at: new Date().toISOString() }]);
+          }
+          await loadStudentLessonsAndPayments();
+        }
+        if (e.target.closest('.delete-lesson-btn')) {
+          if (!confirm('Usunąć lekcję?')) return;
+          await supabase.from('lesson_payments').delete().eq('lesson_id', lessonId);
+          await supabase.from('lessons').delete().eq('id', lessonId);
+          await loadStudentLessonsAndPayments();
+        }
+      });
     }
   </script>
 </body>
