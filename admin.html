@@ -2086,35 +2086,43 @@
       try {
         const { data: lessons, error } = await supabase
           .from('lessons')
-          .select('id, created_at, trainer, participant_id')
+          .select('id, created_at, trainer')
           .order('created_at', { ascending: false });
         if (error) throw error;
         if (!lessons || lessons.length === 0) {
           lessonsList.innerHTML = '<div class="empty-state"><i class="fas fa-book"></i><p>Brak zajęć</p></div>';
           return;
         }
-        const pIds = Array.from(new Set(lessons.map(l => l.participant_id).filter(Boolean)));
-        let pMap = new Map();
-        if (pIds.length) {
-          const { data: parts, error: pErr } = await supabase
-            .from('participants')
-            .select('id, first_name, last_name, phone')
-            .in('id', pIds);
-          if (pErr) throw pErr;
-          (parts || []).forEach(p => pMap.set(p.id, p));
-        }
+        // Fetch participants for all lessons via join table
+        const lIds = lessons.map(l => l.id);
+        const { data: links, error: linkErr } = await supabase
+          .from('lesson_participants')
+          .select('lesson_id, participant_id')
+          .in('lesson_id', lIds);
+        if (linkErr) throw linkErr;
+        const allPIds = Array.from(new Set((links || []).map(x => x.participant_id)));
+        const { data: parts, error: pErr } = allPIds.length ? await supabase
+          .from('participants')
+          .select('id, first_name, last_name, phone')
+          .in('id', allPIds) : { data: [], error: null };
+        if (pErr) throw pErr;
+        const pMap = new Map((parts || []).map(p => [p.id, p]));
+        const byLesson = new Map();
+        (links || []).forEach(l => {
+          const arr = byLesson.get(l.lesson_id) || [];
+          arr.push(pMap.get(l.participant_id));
+          byLesson.set(l.lesson_id, arr);
+        });
         const fragment = document.createDocumentFragment();
         lessons.forEach((l, idx) => {
           const card = document.createElement('div');
           card.className = 'group-card';
-          const p = pMap.get(l.participant_id) || {};
-          const firstName = (p.first_name || '').trim();
-          const lastName = (p.last_name || '').trim();
-          const pName = `${firstName} ${lastName}`.trim();
-          const phone = p.phone || '';
+          const plist = (byLesson.get(l.id) || []).filter(Boolean);
+          const names = plist.map(p => (p?.first_name || '').trim()).filter(Boolean);
+          const phones = plist.map(p => p?.phone || '').filter(Boolean);
           card.innerHTML = `
-            <h4><span class="p-index">${idx + 1}</span>Zajęcia ${firstName || '(bez imienia)'} — ${l.trainer || ''}</h4>
-            <div class="group-detail"><i class="fas fa-phone"></i><span>${phone}</span></div>
+            <h4><span class="p-index">${idx + 1}</span>Zajęcia ${names.length ? names.join(', ') : '(bez imion)'} — ${l.trainer || ''}</h4>
+            <div class="group-detail"><i class="fas fa-phone"></i><span>${phones.join(', ')}</span></div>
             <div class="group-detail"><i class="fas fa-calendar"></i><span>${new Date(l.created_at).toLocaleString('pl-PL')}</span></div>
           `;
           fragment.appendChild(card);
@@ -2158,9 +2166,16 @@
             }
             phoneToId.set(phone, participantId);
           }
-          const lessonIns = await supabase.from('lessons').insert([{ participant_id: participantId, trainer }]);
-          if (lessonIns.error) throw lessonIns.error;
+          // Create or reuse a single lesson for this save
+          if (!window._currentLessonIdForSave) {
+            const lessonCreate = await supabase.from('lessons').insert([{ trainer }]).select('id').single();
+            if (lessonCreate.error) throw lessonCreate.error;
+            window._currentLessonIdForSave = lessonCreate.data.id;
+          }
+          const lpIns = await supabase.from('lesson_participants').insert([{ lesson_id: window._currentLessonIdForSave, participant_id: participantId }]);
+          if (lpIns.error) throw lpIns.error;
         }
+        window._currentLessonIdForSave = null;
         await loadLessons();
         try { await loadAllParticipants(); } catch {}
         closeLessonModal();
