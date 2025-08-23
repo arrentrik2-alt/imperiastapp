@@ -939,6 +939,7 @@
     let participantsSection = document.getElementById('participants-section');
     let participantsListAll = document.getElementById('participants-list-all');
     let participantsSearch = document.getElementById('participants-search');
+    let hasParticipantGroups = true;
     // Nav links
     let groupsLink = document.getElementById('nav-groups');
     let participantsLink = document.getElementById('nav-participants');
@@ -2352,9 +2353,15 @@
     // Sync student with participants table when saving (if not exists create participant record)
     async function syncStudentToParticipants(student) {
       try {
-        const existing = await supabase.from('participants').select('*').or(`first_name.eq.${student.first_name},phone.eq.${student.phone}`).maybeSingle();
-        if (existing.data) return existing.data;
-        const payload = { first_name: student.first_name, last_name: student.last_name, phone: student.phone, group_id: null };
+        let existingRes;
+        if (student.phone) {
+          existingRes = await supabase.from('participants').select('*').eq('phone', student.phone).maybeSingle();
+        } else {
+          existingRes = await supabase.from('participants').select('*').match({ first_name: student.first_name, last_name: student.last_name }).maybeSingle();
+        }
+        const existing = existingRes?.data || existingRes;
+        if (existing && existing.id) return existing;
+        const payload = { first_name: student.first_name, last_name: student.last_name, phone: student.phone || null, group_id: null };
         const { data, error } = await supabase.from('participants').insert([payload]).select().maybeSingle();
         if (error) throw error;
         return data;
@@ -2383,27 +2390,38 @@
         const frag = document.createDocumentFragment();
         data.forEach(p=>{
           const row = document.createElement('div'); row.className='group-card';
-          row.innerHTML = `<h4>${p.first_name} ${p.last_name}</h4><div class="group-detail"><span>${p.phone||''}</span></div><div style="display:flex; gap:8px;"><button class="btn btn-primary add-participant-to-lesson" data-id="${p.id}">Dodaj</button></div>`;
+          row.innerHTML = `<label style="display:flex; gap:10px; align-items:center;"><input type="checkbox" class="existing-participant-checkbox" data-id="${p.id}"> <div><h4 style=\"margin:0;\">${p.first_name} ${p.last_name}</h4><div class=\"group-detail\"><span>${p.phone||''}</span></div></div></label>`;
           frag.appendChild(row);
         });
+        // Add action bar
+        const actionBar = document.createElement('div'); actionBar.style.display='flex'; actionBar.style.justifyContent='flex-end'; actionBar.style.marginTop='8px';
+        actionBar.innerHTML = '<button class="btn btn-outline" id="cancel-existing-participant">Anuluj</button> <button class="btn btn-primary" id="add-selected-existing-participants">Dodaj wybranych</button>';
         results.innerHTML = '';
         results.appendChild(frag);
-        results.querySelectorAll('.add-participant-to-lesson').forEach(btn=>btn.addEventListener('click', async (e)=>{
-          const pid = btn.dataset.id; if (!pid || !selectedStudent) return;
-          // Link participant -> lesson by creating a lesson record with student_id set to participant's linked student or create student
-          const { data: participant } = await supabase.from('participants').select('*').eq('id', pid).maybeSingle();
-          // Ensure student exists for this participant
-          const { data: student } = await supabase.from('students').select('*').or(`phone.eq.${participant.phone},first_name.eq.${participant.first_name}`).maybeSingle();
-          let studentId = student?.id;
-          if (!studentId) {
-            const { data: newS } = await supabase.from('students').insert([{ first_name: participant.first_name, last_name: participant.last_name, phone: participant.phone }]).select().maybeSingle();
-            studentId = newS?.id;
-          }
-          if (!studentId) { alert('Nie można dodać uczestnika'); return; }
-          // Create lesson for this student (selectedStudent is contextless here; better approach would be to open add-lesson form prefilled)
-          alert('Utworzono powiązanie uczestnika ze studentem. Teraz otwórz Dodaj lekcję i wybierz tego ucznia.');
-          modal.classList.remove('active');
-        }));
+        results.appendChild(actionBar);
+        // wire buttons
+        const addSelectedBtn = results.querySelector('#add-selected-existing-participants');
+        if (addSelectedBtn) addSelectedBtn.addEventListener('click', async ()=>{
+          const checked = Array.from(results.querySelectorAll('.existing-participant-checkbox:checked')).map(c=>c.dataset.id);
+          if (!checked.length) { alert('Wybierz przynajmniej jednego uczestnika'); return; }
+          try {
+            for (const pid of checked) {
+              const { data: participant } = await supabase.from('participants').select('*').eq('id', pid).maybeSingle();
+              if (!participant) continue;
+              // ensure student exists
+              let { data: student } = await supabase.from('students').select('*').eq('phone', participant.phone).maybeSingle();
+              if (!student) {
+                const { data: newS } = await supabase.from('students').insert([{ first_name: participant.first_name, last_name: participant.last_name, phone: participant.phone }]).select().maybeSingle();
+                student = newS;
+              }
+            }
+            modal.classList.remove('active');
+            await loadAllStudents();
+            alert('Wybrani uczestnicy zostali dodani do listy uczniów. Teraz możesz im przypisać lekcje.');
+          } catch(e) { alert('Błąd dodawania: ' + (e.message||e)); }
+        });
+        const cancelBtnInner = results.querySelector('#cancel-existing-participant');
+        if (cancelBtnInner) cancelBtnInner.addEventListener('click', ()=>modal.classList.remove('active'));
       }
       if (searchEl) searchEl.addEventListener('input', ()=>{ loadExistingResults(searchEl.value.trim()); });
     })();
