@@ -769,8 +769,8 @@
           <label for="edit-participant-multisport" style="margin:0;">Korzysta z Multisport</label>
         </div>
         <div class="form-group">
-          <label>Grupy (możesz wybrać wiele)</label>
-          <select id="edit-participant-group" class="form-control" multiple size="6"></select>
+          <label>Grupa</label>
+          <select id="edit-participant-group" class="form-control"></select>
         </div>
         <div class="form-actions">
           <button class="btn btn-outline" id="cancel-edit-participant">Anuluj</button>
@@ -939,7 +939,6 @@
     let participantsSection = document.getElementById('participants-section');
     let participantsListAll = document.getElementById('participants-list-all');
     let participantsSearch = document.getElementById('participants-search');
-    let hasParticipantGroups = true;
     // Nav links
     let groupsLink = document.getElementById('nav-groups');
     let participantsLink = document.getElementById('nav-participants');
@@ -1933,14 +1932,7 @@
         opt.textContent = g.name;
         editGroupSelect.appendChild(opt);
       });
-      // pre-select multiple groups from participant_groups mapping
-      (async function(){
-        try {
-          const { data: mappings } = await supabase.from('participant_groups').select('group_id').eq('participant_id', p.id);
-          const selected = (mappings||[]).map(m=>m.group_id);
-          Array.from(editGroupSelect.options).forEach(opt => { opt.selected = selected.includes(opt.value); });
-        } catch(e) { console.warn('openEditParticipantModal mapping fetch', e); }
-      })();
+      if (p.group_id) editGroupSelect.value = p.group_id;
       editParticipantModal.classList.add('active');
     }
     async function openCreateParticipantModal() {
@@ -2011,36 +2003,17 @@
         first_name: editFirstNameEl.value.trim(),
         last_name: editLastNameEl.value.trim(),
         phone: editPhoneEl.value.trim(),
-        multisport: !!editMultiEl.checked
+        multisport: !!editMultiEl.checked,
+        group_id: editGroupSelect.value || null
       };
-      // collect selected group ids (multiple)
-      const selectedGroups = Array.from(editGroupSelect.selectedOptions || []).map(o => o.value);
       try {
-        let pid = editParticipantId;
         if (isCreateParticipant || !editParticipantId) {
-          const { data, error } = await supabase.from('participants').insert([payload]).select().maybeSingle();
+          const { error } = await supabase.from('participants').insert([payload]);
           if (error) throw error;
-          pid = data.id;
         } else {
           const { error } = await supabase.from('participants').update(payload).eq('id', editParticipantId);
           if (error) throw error;
         }
-
-        // update participant_groups mapping: remove old and insert new
-        if (pid) {
-          const { error: delErr } = await supabase.from('participant_groups').delete().eq('participant_id', pid);
-          if (delErr) throw delErr;
-          if (selectedGroups && selectedGroups.length) {
-            const inserts = selectedGroups.map(gid => ({ participant_id: pid, group_id: gid }));
-            const { error: insErr } = await supabase.from('participant_groups').insert(inserts);
-            if (insErr) throw insErr;
-          }
-          // For backward compatibility, set participants.group_id to first selected (or null)
-          const primary = selectedGroups && selectedGroups.length ? selectedGroups[0] : null;
-          const { error: updPrimaryErr } = await supabase.from('participants').update({ group_id: primary }).eq('id', pid);
-          if (updPrimaryErr) console.warn('Could not update primary group_id', updPrimaryErr);
-        }
-
         isCreateParticipant = false;
         closeEditParticipantModal();
         await loadAllParticipants();
@@ -2255,7 +2228,21 @@
       });
     }
 
-    // simple insert removed; unified handler below handles add/edit and syncing
+    if (saveStudentBtn) {
+      saveStudentBtn.addEventListener('click', async ()=>{
+        const fn = document.getElementById('student-first-name').value.trim();
+        const ln = document.getElementById('student-last-name').value.trim();
+        const ph = document.getElementById('student-phone').value.trim();
+        const pf = document.getElementById('partner-first-name').value.trim();
+        const pl = document.getElementById('partner-last-name').value.trim();
+        const pp = document.getElementById('partner-phone').value.trim();
+        if (!fn || !ln) { alert('Podaj imię i nazwisko'); return; }
+        const { error } = await supabase.from('students').insert([{ first_name: fn, last_name: ln, phone: ph, partner_first_name: pf||null, partner_last_name: pl||null, partner_phone: pp||null }]);
+        if (error) { alert('Błąd zapisu ucznia: '+error.message); return; }
+        addStudentModal.classList.remove('active');
+        await loadAllStudents();
+      });
+    }
 
     // Edit/Delete student functionality
     if (studentsListAll) {
@@ -2322,109 +2309,18 @@
         if (!fn || !ln) { alert('Podaj imię i nazwisko'); return; }
         const studentData = { first_name: fn, last_name: ln, phone: ph, partner_first_name: pf||null, partner_last_name: pl||null, partner_phone: pp||null };
         let error;
-        let savedStudent = null;
         if (editId) {
-          const { data: updateData, error: updateError } = await supabase.from('students').update(studentData).eq('id', editId).select().maybeSingle();
+          const { error: updateError } = await supabase.from('students').update(studentData).eq('id', editId);
           error = updateError;
-          savedStudent = updateData;
         } else {
-          // Try upsert by phone to avoid duplicates
-          try {
-            const { data: existing } = await supabase.from('students').select('*').eq('phone', studentData.phone).maybeSingle();
-            if (existing) {
-              const { data: updateData, error: upd } = await supabase.from('students').update(studentData).eq('id', existing.id).select().maybeSingle();
-              error = upd;
-              savedStudent = updateData;
-            } else {
-              const { data: insertData, error: insertError } = await supabase.from('students').insert([studentData]).select().maybeSingle();
-              error = insertError;
-              savedStudent = insertData;
-            }
-          } catch(e) { error = e; }
+          const { error: insertError } = await supabase.from('students').insert([studentData]);
+          error = insertError;
         }
         if (error) { alert('Błąd zapisu ucznia: '+error.message); return; }
-        // Sync to participants table
-        if (savedStudent) await syncStudentToParticipants(savedStudent);
         addStudentModal.classList.remove('active');
         await loadAllStudents();
       });
     }
-
-    // Sync student with participants table when saving (if not exists create participant record)
-    async function syncStudentToParticipants(student) {
-      try {
-        let existingRes;
-        if (student.phone) {
-          existingRes = await supabase.from('participants').select('*').eq('phone', student.phone).maybeSingle();
-        } else {
-          existingRes = await supabase.from('participants').select('*').match({ first_name: student.first_name, last_name: student.last_name }).maybeSingle();
-        }
-        const existing = existingRes?.data || existingRes;
-        if (existing && existing.id) return existing;
-        const payload = { first_name: student.first_name, last_name: student.last_name, phone: student.phone || null, group_id: null };
-        const { data, error } = await supabase.from('participants').insert([payload]).select().maybeSingle();
-        if (error) throw error;
-        return data;
-      } catch (e) { console.warn('syncStudentToParticipants err', e); return null; }
-    }
-
-    // Wire existing participant modal actions
-    (function wireExistingParticipantModal(){
-      const openBtn = document.getElementById('add-existing-participant-btn');
-      const modal = document.getElementById('add-existing-participant-modal');
-      const closeBtn = modal ? modal.querySelector('#close-existing-participant-modal') : null;
-      const cancelBtn = modal ? modal.querySelector('#cancel-existing-participant') : null;
-      const searchEl = modal ? modal.querySelector('#existing-participant-search') : null;
-      const results = modal ? modal.querySelector('#existing-participant-results') : null;
-      if (openBtn && modal) {
-        openBtn.addEventListener('click', ()=>{ modal.classList.add('active'); if (searchEl) searchEl.focus(); loadExistingResults(''); });
-      }
-      if (closeBtn) closeBtn.addEventListener('click', ()=>modal.classList.remove('active'));
-      if (cancelBtn) cancelBtn.addEventListener('click', ()=>modal.classList.remove('active'));
-      async function loadExistingResults(q) {
-        if (!results) return;
-        results.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie...</p></div>';
-        const { data, error } = await supabase.from('participants').select('*').ilike('first_name', `%${q}%`).order('last_name', { ascending: true });
-        if (error) { results.innerHTML = '<div class="empty-state"><p>Błąd: '+error.message+'</p></div>'; return; }
-        if (!data || data.length===0) { results.innerHTML = '<div class="empty-state"><p>Brak wyników</p></div>'; return; }
-        const frag = document.createDocumentFragment();
-        data.forEach(p=>{
-          const row = document.createElement('div'); row.className='group-card';
-          row.innerHTML = `<label style="display:flex; gap:10px; align-items:center;"><input type="checkbox" class="existing-participant-checkbox" data-id="${p.id}"> <div><h4 style=\"margin:0;\">${p.first_name} ${p.last_name}</h4><div class=\"group-detail\"><span>${p.phone||''}</span></div></div></label>`;
-          frag.appendChild(row);
-        });
-        // Add action bar
-        const actionBar = document.createElement('div'); actionBar.style.display='flex'; actionBar.style.justifyContent='flex-end'; actionBar.style.marginTop='8px';
-        actionBar.innerHTML = '<button class="btn btn-outline" id="cancel-existing-participant">Anuluj</button> <button class="btn btn-primary" id="add-selected-existing-participants">Dodaj wybranych</button>';
-        results.innerHTML = '';
-        results.appendChild(frag);
-        results.appendChild(actionBar);
-        // wire buttons
-        const addSelectedBtn = results.querySelector('#add-selected-existing-participants');
-        if (addSelectedBtn) addSelectedBtn.addEventListener('click', async ()=>{
-          const checked = Array.from(results.querySelectorAll('.existing-participant-checkbox:checked')).map(c=>c.dataset.id);
-          if (!checked.length) { alert('Wybierz przynajmniej jednego uczestnika'); return; }
-          try {
-            for (const pid of checked) {
-              const { data: participant } = await supabase.from('participants').select('*').eq('id', pid).maybeSingle();
-              if (!participant) continue;
-              // ensure student exists
-              let { data: student } = await supabase.from('students').select('*').eq('phone', participant.phone).maybeSingle();
-              if (!student) {
-                const { data: newS } = await supabase.from('students').insert([{ first_name: participant.first_name, last_name: participant.last_name, phone: participant.phone }]).select().maybeSingle();
-                student = newS;
-              }
-            }
-            modal.classList.remove('active');
-            await loadAllStudents();
-            alert('Wybrani uczestnicy zostali dodani do listy uczniów. Teraz możesz im przypisać lekcje.');
-          } catch(e) { alert('Błąd dodawania: ' + (e.message||e)); }
-        });
-        const cancelBtnInner = results.querySelector('#cancel-existing-participant');
-        if (cancelBtnInner) cancelBtnInner.addEventListener('click', ()=>modal.classList.remove('active'));
-      }
-      if (searchEl) searchEl.addEventListener('input', ()=>{ loadExistingResults(searchEl.value.trim()); });
-    })();
 
     // Add Lesson modal controls
     function openAddLessonModal() { addLessonModal.classList.add('active'); }
@@ -2557,35 +2453,6 @@
         });
       } catch(e) { console.warn('hideAllSections error', e); }
     }
-
-    // Add existing participant button (in lessons header) modal HTML – appended dynamically if not present
-    (function ensureExistingParticipantUI(){
-      try {
-        const hdr = document.querySelector('#lessons-section .content-header div');
-        if (hdr && !document.getElementById('add-existing-participant-btn')) {
-          const btn = document.createElement('button');
-          btn.className = 'btn btn-outline';
-          btn.id = 'add-existing-participant-btn';
-          btn.innerHTML = '<i class="fas fa-user-plus"></i> Dodaj istniejącego';
-          hdr.appendChild(btn);
-        }
-        if (!document.getElementById('add-existing-participant-modal')) {
-          const modal = document.createElement('div');
-          modal.className = 'modal'; modal.id = 'add-existing-participant-modal';
-          modal.innerHTML = `
-            <div class="modal-content">
-              <button class="modal-close" id="close-existing-participant-modal"><i class="fas fa-times"></i></button>
-              <div class="modal-header"><h3>Wybierz uczestnika</h3></div>
-              <div class="form-group">
-                <input id="existing-participant-search" class="form-control" placeholder="Szukaj uczestnika..." />
-              </div>
-              <div id="existing-participant-results" style="max-height:300px; overflow:auto;"></div>
-              <div class="form-actions"><button class="btn btn-outline" id="cancel-existing-participant">Anuluj</button></div>
-            </div>`;
-          document.body.appendChild(modal);
-        }
-      } catch(e) { console.warn('ensureExistingParticipantUI err', e); }
-    })();
   </script>
 </body>
 </html>
