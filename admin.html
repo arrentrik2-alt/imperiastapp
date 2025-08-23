@@ -2010,6 +2010,19 @@
       }
     });
     
+    // Global error reporters to help debug runtime issues
+    window.addEventListener('error', function(ev) {
+      try { alert('JS Error: ' + (ev.message || 'unknown') + '\n' + (ev.filename || '') + ':' + (ev.lineno || '?')); } catch(e) {}
+    });
+    window.addEventListener('unhandledrejection', function(ev) {
+      try { alert('Unhandled Promise rejection: ' + (ev.reason && ev.reason.message ? ev.reason.message : String(ev.reason))); } catch(e) {}
+    });
+
+    // Nav click logger
+    try {
+      document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', (ev)=>{ try { console.log('nav click', a.id); } catch(e){} }));
+    } catch(e) {}
+
     // Inicjalizacja
     document.addEventListener('DOMContentLoaded', async () => {
       await checkAdmin();
