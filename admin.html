@@ -1731,30 +1731,16 @@
         }
       }
 
-      // Usuwanie uczestnika: jeśli należy do wielu grup → usuń tylko powiązanie; jeśli do jednej → usuń całego uczestnika
+      // Usuwanie uczestnika z grupy: zawsze usuń tylko powiązanie (uczestnik pozostaje w systemie i lekcjach)
       if (e.target.closest('.delete-participant-btn')) {
         if (!confirm('Usunąć uczestnika z tej grupy?')) return;
         try {
-          const { data: links, error: linksErr } = await supabase
+          const { error: delLinkErr } = await supabase
             .from('participant_groups')
-            .select('group_id')
-            .eq('participant_id', participantId);
-          if (linksErr) throw linksErr;
-          const linkCount = (links || []).length;
-          if (linkCount > 1) {
-            const { error: delLinkErr } = await supabase
-              .from('participant_groups')
-              .delete()
-              .eq('participant_id', participantId)
-              .eq('group_id', selectedGroup.id);
-            if (delLinkErr) throw delLinkErr;
-          } else {
-            const { error: delPErr } = await supabase
-              .from('participants')
-              .delete()
-              .eq('id', participantId);
-            if (delPErr) throw delPErr;
-          }
+            .delete()
+            .eq('participant_id', participantId)
+            .eq('group_id', selectedGroup.id);
+          if (delLinkErr) throw delLinkErr;
           await loadParticipantsAndPayments();
         } catch (err) {
           alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
