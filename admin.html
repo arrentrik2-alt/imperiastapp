@@ -2379,8 +2379,7 @@
         const { data: entries, error: eErr } = await supabase
           .from('lesson_entries')
           .select('*')
-          .eq('month', selectedLessonMonth)
-          .order('created_at', { ascending: false });
+          .eq('month', selectedLessonMonth);
         if (eErr) throw eErr;
         if (!entries || entries.length === 0) {
           if (lessonEntriesList) lessonEntriesList.innerHTML = '<div class="empty-state"><p>Brak lekcji</p></div>';
@@ -2415,9 +2414,30 @@
         if (pErr) throw pErr;
         const pMap = new Map((parts || []).map(p => [p.id, p]));
         const trainerMap = new Map((lessons || []).map(l => [l.id, l.trainer || '']));
+        // Sort entries by nearest to now: upcoming (soonest first) then past (latest first)
+        const now = new Date();
+        const getEntryDate = (ent) => {
+          if (ent.lesson_date) {
+            const [y, m, d] = String(ent.lesson_date).split('-').map(n => parseInt(n, 10));
+            const date = new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
+            if (ent.lesson_time) {
+              const [hh, mm] = String(ent.lesson_time).split(':').map(n => parseInt(n, 10) || 0);
+              date.setHours(hh, mm, 0, 0);
+            }
+            return date;
+          }
+          return new Date(ent.created_at);
+        };
+        const upcoming = [];
+        const past = [];
+        (entries || []).forEach(ent => { (getEntryDate(ent) >= now ? upcoming : past).push(ent); });
+        upcoming.sort((a,b) => getEntryDate(a) - getEntryDate(b));
+        past.sort((a,b) => getEntryDate(b) - getEntryDate(a));
+        const sortedEntries = [...upcoming, ...past];
+
         const fragment = document.createDocumentFragment();
         let total = 0;
-        entries.forEach(ent => {
+        sortedEntries.forEach(ent => {
           total += Number(ent.amount || 0);
           const box = document.createElement('div');
           box.className = 'content-box participant-row ' + (ent.confirmed ? 'paid' : 'unpaid');
@@ -2450,7 +2470,7 @@
               <div style="flex:0 0 auto; display:flex; gap:6px; align-items:center;">
                 <button class="btn btn-primary btn-sm le-confirm-btn">${ent.confirmed ? 'Zapisz' : 'OK'}</button>
                 ${ent.confirmed ? '<span class="status" style="color: var(--success); font-size:0.8rem; white-space:nowrap;">OK</span>' : '<span class="status" style="color: var(--text-gray); font-size:0.8rem; white-space:nowrap;">Brak</span>'}
-                <button class="btn btn-outline btn-sm le-delete-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>
+                <button class="btn btn-outline btn-sm le-delete-btn" title="Usuń lekcję"><i class="fas fa-trash"></i></button>
               </div>
               <div style="flex:0 0 auto; display:flex; gap:6px; align-items:center;">
                 <input type="date" class="form-control small le-date" value="${ent.lesson_date ? String(ent.lesson_date).substring(0,10) : ''}" />
@@ -2718,16 +2738,16 @@
         } finally { btn.disabled = false; btn.innerHTML = original; }
       }
       if (e.target.closest('.le-delete-btn')) {
-        if (!confirm('Usunąć potwierdzenie tej płatności?')) return;
+        if (!confirm('Usunąć tę lekcję?')) return;
         try {
           const { error } = await supabase
             .from('lesson_entries')
-            .update({ confirmed: false, confirmed_at: null, method: '', comment: '' })
+            .delete()
             .eq('id', entryId);
           if (error) throw error;
           await renderLessonsForMonth();
         } catch (err3) {
-          alert('Błąd cofnięcia płatności: ' + (err3.message || 'Nieznany'));
+          alert('Błąd usuwania lekcji: ' + (err3.message || 'Nieznany'));
         }
       }
     });
