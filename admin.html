@@ -769,8 +769,8 @@
           <label for="edit-participant-multisport" style="margin:0;">Korzysta z Multisport</label>
         </div>
         <div class="form-group">
-          <label>Grupa</label>
-          <select id="edit-participant-group" class="form-control"></select>
+          <label>Grupy (możesz wybrać wiele)</label>
+          <select id="edit-participant-group" class="form-control" multiple size="6"></select>
         </div>
         <div class="form-actions">
           <button class="btn btn-outline" id="cancel-edit-participant">Anuluj</button>
@@ -1932,7 +1932,14 @@
         opt.textContent = g.name;
         editGroupSelect.appendChild(opt);
       });
-      if (p.group_id) editGroupSelect.value = p.group_id;
+      // pre-select multiple groups from participant_groups mapping
+      (async function(){
+        try {
+          const { data: mappings } = await supabase.from('participant_groups').select('group_id').eq('participant_id', p.id);
+          const selected = (mappings||[]).map(m=>m.group_id);
+          Array.from(editGroupSelect.options).forEach(opt => { opt.selected = selected.includes(opt.value); });
+        } catch(e) { console.warn('openEditParticipantModal mapping fetch', e); }
+      })();
       editParticipantModal.classList.add('active');
     }
     async function openCreateParticipantModal() {
@@ -2003,17 +2010,36 @@
         first_name: editFirstNameEl.value.trim(),
         last_name: editLastNameEl.value.trim(),
         phone: editPhoneEl.value.trim(),
-        multisport: !!editMultiEl.checked,
-        group_id: editGroupSelect.value || null
+        multisport: !!editMultiEl.checked
       };
+      // collect selected group ids (multiple)
+      const selectedGroups = Array.from(editGroupSelect.selectedOptions || []).map(o => o.value);
       try {
+        let pid = editParticipantId;
         if (isCreateParticipant || !editParticipantId) {
-          const { error } = await supabase.from('participants').insert([payload]);
+          const { data, error } = await supabase.from('participants').insert([payload]).select().maybeSingle();
           if (error) throw error;
+          pid = data.id;
         } else {
           const { error } = await supabase.from('participants').update(payload).eq('id', editParticipantId);
           if (error) throw error;
         }
+
+        // update participant_groups mapping: remove old and insert new
+        if (pid) {
+          const { error: delErr } = await supabase.from('participant_groups').delete().eq('participant_id', pid);
+          if (delErr) throw delErr;
+          if (selectedGroups && selectedGroups.length) {
+            const inserts = selectedGroups.map(gid => ({ participant_id: pid, group_id: gid }));
+            const { error: insErr } = await supabase.from('participant_groups').insert(inserts);
+            if (insErr) throw insErr;
+          }
+          // For backward compatibility, set participants.group_id to first selected (or null)
+          const primary = selectedGroups && selectedGroups.length ? selectedGroups[0] : null;
+          const { error: updPrimaryErr } = await supabase.from('participants').update({ group_id: primary }).eq('id', pid);
+          if (updPrimaryErr) console.warn('Could not update primary group_id', updPrimaryErr);
+        }
+
         isCreateParticipant = false;
         closeEditParticipantModal();
         await loadAllParticipants();
