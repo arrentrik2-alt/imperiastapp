@@ -1725,7 +1725,7 @@
                 <div style="color: var(--text-gray); font-size: 0.72rem; line-height: 1.1;">${p.phone || ''} · ${p.multisport ? 'Multisport' : 'Std'}</div>
               </div>
               <div style="flex: 0 0 110px; min-width: 100px;">
-                <input title="Kwota (${selectedMonth})" type="number" step="0.01" class="form-control small payment-amount" value="${amountToShow}" />
+                <input title="Kwota (${selectedMonth})" type="number" step="0.01" class="form-control small payment-amount" value="${amountToShow}" data-initial="${amountToShow}" />
               </div>
               <div style="flex: 0 0 120px; min-width: 110px;">
                 <select title="Metoda" class="form-control small payment-method">
@@ -1771,6 +1771,41 @@
         participantsList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
       }
     }
+
+    // Auto-save amount edits (unconfirmed) on group participants list
+    if (participantsList) participantsList.addEventListener('change', async (e) => {
+      const input = e.target.closest('.payment-amount');
+      if (!input) return;
+      const row = e.target.closest('[data-participant-id]');
+      if (!row) return;
+      const participantId = row.dataset.participantId;
+      const newAmount = parseFloat(input.value);
+      if (isNaN(newAmount) || newAmount < 0) { alert('Podaj poprawną kwotę'); input.value = input.dataset.initial || '0'; return; }
+      try {
+        const { data: existing } = await supabase
+          .from('payments')
+          .select('id')
+          .eq('participant_id', participantId)
+          .eq('month', selectedMonth)
+          .maybeSingle();
+        if (existing) {
+          const { error } = await supabase
+            .from('payments')
+            .update({ amount: newAmount })
+            .eq('id', existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('payments')
+            .insert([{ participant_id: participantId, month: selectedMonth, amount: newAmount, confirmed: false }]);
+          if (error) throw error;
+        }
+        input.dataset.initial = String(newAmount);
+        await loadParticipantsAndPayments();
+      } catch (err) {
+        alert('Błąd zapisu kwoty: ' + (err.message || 'Nieznany'));
+      }
+    });
 
     // Zmiana miesiąca
     monthSelect.addEventListener('change', () => {
@@ -2241,10 +2276,12 @@
           const time = e.lesson_time ? ` ${e.lesson_time}` : '';
           return `<li><strong>Lekcja:</strong> ${d}${time} — ${e.share.toFixed(2)} zł (udział)</li>`;
         }).join('');
+        const anyGroupDue = (unpaidGroups.length > 0) || (unpaidExpectedMonth > 0);
+        const anyLessonDue = unpaidLessons.length > 0;
         const html = `
           <div class="content-box" style="padding:12px;">
             <h4 style="margin-top:0;">Zaległości</h4>
-            ${(!unpaidGroups.length && !unpaidLessons.length) ? '<div class="group-detail"><span>Brak zaległości</span></div>' : ''}
+            ${(!(anyGroupDue || anyLessonDue)) ? '<div class="group-detail"><span>Brak zaległości</span></div>' : ''}
             ${(unpaidGroups.length || unpaidExpectedMonth > 0) ? `<div class="group-detail"><i class="fas fa-users"></i><span>Płatności grupowe</span></div><ul style="margin:8px 0 12px 18px;">${groupListExpected}${groupListUnpaid}</ul>` : ''}
             ${unpaidLessons.length ? `<div class="group-detail"><i class="fas fa-book"></i><span>Lekcje prywatne</span></div><ul style="margin:8px 0 0 18px;">${lessonList}</ul>` : ''}
           </div>`;
@@ -3149,7 +3186,7 @@
                 <div class="group-detail"><i class="fas fa-book"></i><span>${title}</span>${trainerName ? ` <span style=\"color: var(--text-gray);\"> — ${trainerName}</span>` : ''}</div>
               </div>
               <div style="flex:0 0 140px; min-width:120px;">
-                <input title="Kwota (${selectedLessonMonth})" type="number" step="0.01" class="form-control small le-amount" value="${Number(ent.amount || 0).toFixed(2)}" />
+                <input title="Kwota (${selectedLessonMonth})" type="number" step="0.01" class="form-control small le-amount" value="${Number(ent.amount || 0).toFixed(2)}" data-entry-id="${ent.id}" />
               </div>
               <div style="flex:0 0 120px; min-width:110px;">
                 <select title="Metoda" class="form-control small le-method">
@@ -3219,6 +3256,24 @@
 
     // First dance actions (delegation)
     const fdEntriesList = document.getElementById('fd-entries-list');
+    if (fdEntriesList) fdEntriesList.addEventListener('change', async (e) => {
+      const input = e.target.closest('.le-amount');
+      if (!input) return;
+      const row = e.target.closest('.content-box.participant-row');
+      if (!row) return;
+      const entryId = row.dataset.entryId;
+      const newAmount = parseFloat(input.value || '0');
+      if (isNaN(newAmount) || newAmount < 0) { alert('Podaj poprawną kwotę'); return; }
+      try {
+        const { error } = await supabase
+          .from('lesson_entries')
+          .update({ amount: newAmount })
+          .eq('id', entryId)
+          .eq('type', 'first_dance');
+        if (error) throw error;
+        await renderFirstDanceForMonth();
+      } catch (err) { alert('Błąd zapisu kwoty: ' + (err.message || 'Nieznany')); }
+    });
     if (fdEntriesList) fdEntriesList.addEventListener('click', async (e) => {
       const row = e.target.closest('.content-box.participant-row');
       if (!row) return;
@@ -3416,7 +3471,7 @@
                     <div class="group-detail"><i class="fas fa-book"></i><span>${typeLabel}${pkg} — ${names.length ? names.join(', ') : '(bez uczestników)'} </span></div>
                   </div>
                   <div style="flex:0 0 140px; min-width:120px;">
-                    <input title="Kwota (${selectedLessonMonth})" type="number" step="0.01" class="form-control small le-amount" value="${Number(ent.amount || 0).toFixed(2)}" />
+                    <input title="Kwota (${selectedLessonMonth})" type="number" step="0.01" class="form-control small le-amount" value="${Number(ent.amount || 0).toFixed(2)}" data-entry-id="${ent.id}" />
                   </div>
                   <div style="flex:0 0 120px; min-width:110px;">
                     <select title="Metoda" class="form-control small le-method">
@@ -3485,6 +3540,26 @@
         await renderLessonsForMonth();
       });
     }
+
+    // Auto-save amount change on lessons list
+    if (lessonEntriesList) lessonEntriesList.addEventListener('change', async (e) => {
+      const input = e.target.closest('.le-amount');
+      if (!input) return;
+      const row = e.target.closest('.content-box.participant-row');
+      if (!row) return;
+      const entryId = row.dataset.entryId;
+      const newAmount = parseFloat(input.value || '0');
+      if (isNaN(newAmount) || newAmount < 0) { alert('Podaj poprawną kwotę'); return; }
+      try {
+        const { error } = await supabase
+          .from('lesson_entries')
+          .update({ amount: newAmount })
+          .eq('id', entryId)
+          .eq('type', 'private');
+        if (error) throw error;
+        await renderLessonsForMonth();
+      } catch (err) { alert('Błąd zapisu kwoty: ' + (err.message || 'Nieznany')); }
+    });
 
     // Confirm/save handlers for lesson entries (delegation)
     if (lessonEntriesList) lessonEntriesList.addEventListener('click', async (e) => {
