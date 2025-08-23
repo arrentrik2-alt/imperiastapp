@@ -1037,6 +1037,7 @@
           participantsLink.classList.remove('active');
           if (lessonsLink) lessonsLink.classList.remove('active');
           if (scheduleLink) scheduleLink.classList.remove('active');
+          if (trainersLink) trainersLink.classList.remove('active');
           if (firstDanceLink) firstDanceLink.classList.remove('active');
         } else if (section === 'participants') {
           participantsLink.classList.add('active');
@@ -1124,6 +1125,7 @@
     function showGroupDetailsSection() {
       groupsSection.style.display = 'none';
       groupDetailsSection.style.display = 'block';
+      if (trainersSection) trainersSection.style.display = 'none';
       setActiveNav('groups');
       collapseSidebar();
     }
@@ -1133,6 +1135,8 @@
       participantsSection.style.display = 'none';
       if (lessonsSection) lessonsSection.style.display = 'none';
       scheduleSection.style.display = 'none';
+      if (trainersSection) trainersSection.style.display = 'none';
+      if (firstDanceSection) firstDanceSection.style.display = 'none';
       setActiveNav('groups');
       collapseSidebar();
       // reset
@@ -1154,6 +1158,7 @@
           if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
           if (firstDanceSection) firstDanceSection.style.display = 'none';
           scheduleSection.style.display = 'none';
+          if (trainersSection) trainersSection.style.display = 'none';
           groupsSection.style.display = 'block';
           setActiveNav('groups');
           collapseSidebar();
@@ -1175,6 +1180,7 @@
           if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
           if (firstDanceSection) firstDanceSection.style.display = 'none';
           scheduleSection.style.display = 'none';
+          if (trainersSection) trainersSection.style.display = 'none';
           participantsSection.style.display = 'block';
           setActiveNav('participants');
           collapseSidebar();
@@ -1215,6 +1221,7 @@
         groupDetailsSection.style.display = 'none';
         participantsSection.style.display = 'none';
         scheduleSection.style.display = 'none';
+        if (trainersSection) trainersSection.style.display = 'none';
         if (firstDanceSection) firstDanceSection.style.display = 'none';
         if (lessonsSection) lessonsSection.style.display = 'none';
         if (lessonDetailsSection) lessonDetailsSection.style.display = 'block';
@@ -1239,6 +1246,7 @@
         if (lessonsSection) lessonsSection.style.display = 'none';
         if (firstDanceSection) firstDanceSection.style.display = 'none';
         if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
+        if (trainersSection) trainersSection.style.display = 'none';
         scheduleSection.style.display = 'block';
         setActiveNav('schedule');
         collapseSidebar();
@@ -1256,6 +1264,7 @@
         if (lessonsSection) lessonsSection.style.display = 'none';
         if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
         scheduleSection.style.display = 'none';
+        if (trainersSection) trainersSection.style.display = 'none';
         if (firstDanceSection) firstDanceSection.style.display = 'block';
         setActiveNav('first_dance');
         collapseSidebar();
