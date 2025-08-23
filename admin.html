@@ -545,7 +545,7 @@
           <button class="btn btn-outline" id="back-to-groups-btn"><i class="fas fa-arrow-left"></i> Wróć</button>
           <h3 id="group-details-title">Szczegóły grupy</h3>
         </div>
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+        <div id="group-controls-row" style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
           <label for="month-select" style="color: var(--text-gray);">Miesiąc</label>
           <select id="month-select" class="form-control" style="width:220px;"></select>
           <label for="participants-filter" style="color: var(--text-gray);">Filtr</label>
@@ -556,6 +556,10 @@
           </select>
           <button class="btn btn-primary" id="add-participant-btn"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button>
         </div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button class="btn btn-primary" id="group-view-tab">Podgląd grupy</button>
+        <button class="btn btn-outline" id="group-attendance-tab">Dziennik</button>
       </div>
       <div id="add-participant-form" class="content-box" style="display:none; margin-top:10px;">
         <div class="form-group">
@@ -610,6 +614,28 @@
         </div>
         <div id="participants-list">
           <div class="empty-state"><p>Brak uczestników w tej grupie</p></div>
+        </div>
+      </div>
+      <!-- Attendance (Dziennik) Panel -->
+      <div id="group-attendance-panel" style="display:none; margin-top:15px;">
+        <div class="content-box" style="padding:12px;">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap: wrap;">
+            <label for="attendance-month-select" style="color: var(--text-gray);">Miesiąc</label>
+            <select id="attendance-month-select" class="form-control" style="width:220px;"></select>
+            <div id="attendance-dates" style="display:flex; gap:8px; flex-wrap: wrap;"></div>
+          </div>
+        </div>
+        <div class="content-box" style="margin-top:10px;">
+          <div class="content-header" style="align-items:center; gap:10px;">
+            <h3 style="font-size:1.1rem; margin-right:auto;">Obecność</h3>
+            <div>
+              <button class="btn btn-primary" id="confirm-attendance-btn" style="display:none;">Zatwierdź obecność</button>
+              <button class="btn btn-outline" id="edit-attendance-btn" style="display:none;">Popraw</button>
+            </div>
+          </div>
+          <div id="attendance-list">
+            <div class="empty-state"><p>Brak uczestników</p></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1669,6 +1695,12 @@
       populateMonthSelect(selectedMonth);
       showGroupDetailsSection();
       loadParticipantsAndPayments();
+
+      // Prepare attendance UI state
+      setupAttendanceTabs();
+      populateAttendanceMonthSelect();
+      renderAttendanceDates();
+      renderAttendanceList();
     }
 
     function updateParticipantsSummary({ totalCount, paidCount, unpaidCount, paidAmount, unpaidAmount, profit }) {
@@ -3803,6 +3835,234 @@
         return { ok: true, transport: 'no-cors-error', note: e?.message || 'network error' };
       }
     }
+
+    // ===== Dziennik (Attendance) =====
+    const groupViewTabBtn = document.getElementById('group-view-tab');
+    const groupAttendanceTabBtn = document.getElementById('group-attendance-tab');
+    const groupControlsRow = document.getElementById('group-controls-row');
+    const attendancePanel = document.getElementById('group-attendance-panel');
+    const attendanceMonthSelect = document.getElementById('attendance-month-select');
+    const attendanceDatesWrap = document.getElementById('attendance-dates');
+    const attendanceList = document.getElementById('attendance-list');
+    const confirmAttendanceBtn = document.getElementById('confirm-attendance-btn');
+    const editAttendanceBtn = document.getElementById('edit-attendance-btn');
+
+    const lockedAttendanceDates = new Set(); // dates 'YYYY-MM-DD' that are confirmed (locked)
+    let attendanceSelectedDate = null; // 'YYYY-MM-DD'
+    let inMemoryAttendance = new Map(); // key: date -> Set(participant_id)
+
+    function setupAttendanceTabs() {
+      if (!groupViewTabBtn || !groupAttendanceTabBtn) return;
+      // Default: show group view
+      groupViewTabBtn.classList.add('btn-primary');
+      groupViewTabBtn.classList.remove('btn-outline');
+      groupAttendanceTabBtn.classList.add('btn-outline');
+      groupAttendanceTabBtn.classList.remove('btn-primary');
+      showGroupView();
+
+      groupViewTabBtn.onclick = () => {
+        showGroupView();
+      };
+      groupAttendanceTabBtn.onclick = () => {
+        showAttendanceView();
+      };
+    }
+
+    function showGroupView() {
+      if (groupControlsRow) groupControlsRow.style.display = 'flex';
+      const summary = document.getElementById('participants-summary');
+      const list = document.getElementById('participants-list');
+      if (summary) summary.style.display = '';
+      if (list) list.style.display = '';
+      if (attendancePanel) attendancePanel.style.display = 'none';
+      if (groupViewTabBtn && groupAttendanceTabBtn) {
+        groupViewTabBtn.classList.add('btn-primary');
+        groupViewTabBtn.classList.remove('btn-outline');
+        groupAttendanceTabBtn.classList.add('btn-outline');
+        groupAttendanceTabBtn.classList.remove('btn-primary');
+      }
+    }
+
+    function showAttendanceView() {
+      if (groupControlsRow) groupControlsRow.style.display = 'none';
+      const summary = document.getElementById('participants-summary');
+      const list = document.getElementById('participants-list');
+      if (summary) summary.style.display = 'none';
+      if (list) list.style.display = 'none';
+      if (attendancePanel) attendancePanel.style.display = '';
+      if (groupViewTabBtn && groupAttendanceTabBtn) {
+        groupViewTabBtn.classList.remove('btn-primary');
+        groupViewTabBtn.classList.add('btn-outline');
+        groupAttendanceTabBtn.classList.remove('btn-outline');
+        groupAttendanceTabBtn.classList.add('btn-primary');
+      }
+    }
+
+    function populateAttendanceMonthSelect() {
+      if (!attendanceMonthSelect) return;
+      attendanceMonthSelect.innerHTML = '';
+      const opts = getLast12MonthsOptions();
+      opts.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        attendanceMonthSelect.appendChild(opt);
+      });
+      attendanceMonthSelect.value = selectedMonth || opts[0]?.value || '';
+      attendanceMonthSelect.onchange = () => {
+        selectedMonth = attendanceMonthSelect.value;
+        attendanceSelectedDate = null;
+        renderAttendanceDates();
+        renderAttendanceList();
+      };
+    }
+
+    function getWeekdayIndex(plDay) {
+      const map = {
+        'Niedziela': 0,
+        'Poniedziałek': 1,
+        'Wtorek': 2,
+        'Środa': 3,
+        'Czwartek': 4,
+        'Piątek': 5,
+        'Sobota': 6
+      };
+      return map[plDay] ?? 0;
+    }
+
+    function getSessionDatesForMonth(group, monthValue) {
+      if (!group || !monthValue) return [];
+      const [yyyy, mm] = monthValue.split('-').map(s => parseInt(s, 10));
+      const first = new Date(yyyy, mm - 1, 1);
+      const last = new Date(yyyy, mm, 0);
+      const targetDow = getWeekdayIndex(group.day);
+      const dates = [];
+      for (let d = new Date(first); d <= last; d.setDate(d.getDate() + 1)) {
+        if (d.getDay() === targetDow) {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          dates.push(`${y}-${m}-${day}`);
+        }
+      }
+      return dates;
+    }
+
+    function renderAttendanceDates() {
+      if (!attendanceDatesWrap || !selectedGroup) return;
+      const dates = getSessionDatesForMonth(selectedGroup, selectedMonth);
+      attendanceDatesWrap.innerHTML = '';
+      dates.forEach(dateStr => {
+        const btn = document.createElement('button');
+        const isSelected = attendanceSelectedDate === dateStr;
+        btn.className = isSelected ? 'btn btn-primary' : 'btn btn-outline';
+        btn.textContent = dateStr;
+        btn.onclick = () => {
+          attendanceSelectedDate = dateStr;
+          renderAttendanceList();
+          renderAttendanceDates();
+        };
+        attendanceDatesWrap.appendChild(btn);
+      });
+      // Auto-select first date if none
+      if (!attendanceSelectedDate && dates.length) {
+        attendanceSelectedDate = dates[0];
+        renderAttendanceDates();
+      }
+    }
+
+    async function fetchActiveParticipantsForSelectedMonth() {
+      // reuse logic from loadParticipantsAndPayments membership window
+      const { data: pgRows } = await supabase
+        .from('participant_groups')
+        .select('participant_id, effective_from_month, effective_to_month')
+        .eq('group_id', selectedGroup.id);
+      const activeRows = (pgRows || []).filter(r => {
+        const fromOk = !r.effective_from_month || r.effective_from_month <= selectedMonth;
+        const toOk = !r.effective_to_month || r.effective_to_month > selectedMonth;
+        return fromOk && toOk;
+      });
+      if (!activeRows.length) return [];
+      const pIds = activeRows.map(r => r.participant_id);
+      const { data: participants } = await supabase
+        .from('participants')
+        .select('id, first_name, last_name')
+        .in('id', pIds)
+        .order('last_name', { ascending: true });
+      return participants || [];
+    }
+
+    function isPresent(participantId) {
+      const set = inMemoryAttendance.get(attendanceSelectedDate);
+      return !!(set && set.has(participantId));
+    }
+
+    function togglePresence(participantId, checked) {
+      const set = inMemoryAttendance.get(attendanceSelectedDate) || new Set();
+      if (checked) set.add(participantId); else set.delete(participantId);
+      inMemoryAttendance.set(attendanceSelectedDate, set);
+    }
+
+    async function renderAttendanceList() {
+      if (!attendanceList) return;
+      if (!attendanceSelectedDate) {
+        attendanceList.innerHTML = '<div class="empty-state"><p>Wybierz termin zajęć</p></div>';
+        confirmAttendanceBtn.style.display = 'none';
+        editAttendanceBtn.style.display = 'none';
+        return;
+      }
+      const participants = await fetchActiveParticipantsForSelectedMonth();
+      if (!participants.length) {
+        attendanceList.innerHTML = '<div class="empty-state"><p>Brak uczestników</p></div>';
+        confirmAttendanceBtn.style.display = 'none';
+        editAttendanceBtn.style.display = 'none';
+        return;
+      }
+      const canEdit = attendanceSelectedDate ? !lockedAttendanceDates.has(attendanceSelectedDate) : true;
+      const frag = document.createDocumentFragment();
+      participants.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'list-row';
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.justifyContent = 'space-between';
+        row.style.padding = '8px 12px';
+        const name = document.createElement('div');
+        name.textContent = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+        const right = document.createElement('div');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.style.width = 'auto';
+        checkbox.disabled = !canEdit;
+        checkbox.checked = isPresent(p.id);
+        checkbox.onchange = (ev) => {
+          togglePresence(p.id, ev.target.checked);
+        };
+        right.appendChild(checkbox);
+        row.appendChild(name);
+        row.appendChild(right);
+        frag.appendChild(row);
+      });
+      attendanceList.innerHTML = '';
+      attendanceList.appendChild(frag);
+      if (confirmAttendanceBtn) confirmAttendanceBtn.style.display = canEdit ? '' : 'none';
+      if (editAttendanceBtn) editAttendanceBtn.style.display = canEdit ? 'none' : '';
+    }
+
+    if (confirmAttendanceBtn) {
+      confirmAttendanceBtn.onclick = async () => {
+        if (attendanceSelectedDate) lockedAttendanceDates.add(attendanceSelectedDate);
+        renderAttendanceList();
+        // TODO: persist to DB in the future (e.g., group_attendance table)
+      };
+    }
+    if (editAttendanceBtn) {
+      editAttendanceBtn.onclick = () => {
+        if (attendanceSelectedDate) lockedAttendanceDates.delete(attendanceSelectedDate);
+        renderAttendanceList();
+      };
+    }
+    // ===== end Dziennik =====
   </script>
 </body>
 </html>
