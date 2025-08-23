@@ -597,6 +597,7 @@
         <label for="lesson-month-select" style="color: var(--text-gray);">Miesiąc</label>
         <select id="lesson-month-select" class="form-control" style="width:220px;"></select>
         <button class="btn btn-primary" id="add-lesson-entry-btn"><i class="fas fa-plus"></i> Dodaj lekcję</button>
+        <button class="btn btn-outline" id="delete-lesson-btn" title="Usuń zajęcia"><i class="fas fa-trash"></i></button>
       </div>
       <div class="content-box" id="lesson-summary" style="margin-bottom:12px; padding:12px;">
         <div class="summary-grid">
@@ -864,6 +865,7 @@
     const lessonDetailsSection = document.getElementById('lesson-details-section');
     const lessonDetailsTitle = document.getElementById('lesson-details-title');
     const addLessonEntryBtn = document.getElementById('add-lesson-entry-btn');
+    const deleteLessonBtn = document.getElementById('delete-lesson-btn');
     const lessonEntriesList = document.getElementById('lesson-entries-list');
     const lessonParticipantsSummary = document.getElementById('lesson-participants-summary');
     const lessonTotalEl = document.getElementById('lesson-total');
@@ -2501,6 +2503,19 @@
         if (lessonEntriesList) lessonEntriesList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
       }
     }
+    if (deleteLessonBtn) deleteLessonBtn.addEventListener('click', async () => {
+      if (!selectedLessonId) return;
+      if (!confirm('Usunąć całe zajęcia? Spowoduje to usunięcie wszystkich lekcji w tych zajęciach.')) return;
+      try {
+        const { error } = await supabase.from('lessons').delete().eq('id', selectedLessonId);
+        if (error) throw error;
+        selectedLessonId = null;
+        if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
+        if (lessonsSection) { lessonsSection.style.display = 'block'; await loadLessons(); }
+      } catch (err) {
+        alert('Błąd usuwania zajęć: ' + (err.message || 'Nieznany'));
+      }
+    });
     // Month change for lessons
     if (lessonMonthSelect) {
       lessonMonthSelect.addEventListener('change', async () => {
