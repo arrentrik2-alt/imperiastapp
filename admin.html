@@ -1705,7 +1705,10 @@
             paidAmount += Number(pay.amount || 0);
           } else {
             unpaidCount += 1;
-            unpaidAmount += Number(baseAmount);
+            // Jeśli mamy niepotwierdzony wpis płatności z edytowaną kwotą, uwzględnij tę kwotę;
+            // w przeciwnym razie użyj kwoty bazowej z grupy
+            const unpaidVal = (pay && typeof pay.amount === 'number') ? Number(pay.amount) : Number(baseAmount);
+            unpaidAmount += unpaidVal;
           }
 
           const row = document.createElement('div');
