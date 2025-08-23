@@ -909,32 +909,32 @@
     });
     
     // Modal functionality
-    const addGroupModal = document.getElementById('add-group-modal');
-    const addGroupBtn = document.getElementById('add-group-btn');
-    const addFirstGroupBtn = document.getElementById('add-first-group');
-    const closeModalBtn = document.getElementById('close-group-modal');
-    const cancelGroupBtn = document.getElementById('cancel-group-btn');
-    const saveGroupBtn = document.getElementById('save-group-btn');
-    const groupsList = document.getElementById('groups-list');
-    const emptyState = document.getElementById('emptyState');
+    let addGroupModal = document.getElementById('add-group-modal');
+    let addGroupBtn = document.getElementById('add-group-btn');
+    let addFirstGroupBtn = document.getElementById('add-first-group');
+    let closeModalBtn = document.getElementById('close-group-modal');
+    let cancelGroupBtn = document.getElementById('cancel-group-btn');
+    let saveGroupBtn = document.getElementById('save-group-btn');
+    let groupsList = document.getElementById('groups-list');
+    let emptyState = document.getElementById('emptyState');
     // Participants page refs (global)
-    const participantsSection = document.getElementById('participants-section');
-    const participantsListAll = document.getElementById('participants-list-all');
-    const participantsSearch = document.getElementById('participants-search');
+    let participantsSection = document.getElementById('participants-section');
+    let participantsListAll = document.getElementById('participants-list-all');
+    let participantsSearch = document.getElementById('participants-search');
     // Nav links
-    const groupsLink = document.getElementById('nav-groups');
-    const participantsLink = document.getElementById('nav-participants');
-    const scheduleLink = document.getElementById('nav-schedule');
-    const lessonsLink = document.getElementById('nav-lessons');
-    const scheduleSection = document.getElementById('schedule-section');
-    const lessonsSection = document.getElementById('lessons-section');
-    const addGroupFromScheduleBtn = document.getElementById('add-group-from-schedule');
-    const calendarEl = document.getElementById('calendar');
+    let groupsLink = document.getElementById('nav-groups');
+    let participantsLink = document.getElementById('nav-participants');
+    let scheduleLink = document.getElementById('nav-schedule');
+    let lessonsLink = document.getElementById('nav-lessons');
+    let scheduleSection = document.getElementById('schedule-section');
+    let lessonsSection = document.getElementById('lessons-section');
+    let addGroupFromScheduleBtn = document.getElementById('add-group-from-schedule');
+    let calendarEl = document.getElementById('calendar');
     let calendar;
     // Sidebar toggle
-    const sidebar = document.querySelector('.sidebar');
-    const mainContentEl = document.querySelector('.main-content');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
+    let sidebar = document.querySelector('.sidebar');
+    let mainContentEl = document.querySelector('.main-content');
+    let sidebarToggle = document.getElementById('sidebar-toggle');
     function collapseSidebar() {
       if (!sidebar || !mainContentEl) return;
       sidebar.classList.add('collapsed');
@@ -2025,9 +2025,33 @@
     try {
       document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', (ev)=>{ try { console.log('nav click', a.id); } catch(e){} }));
     } catch(e) {}
-
+    
     // Inicjalizacja
     document.addEventListener('DOMContentLoaded', async () => {
+      // Re-query global elements to ensure they're present
+      try { addGroupModal = addGroupModal || document.getElementById('add-group-modal'); } catch(e){}
+      try { addGroupBtn = addGroupBtn || document.getElementById('add-group-btn'); } catch(e){}
+      try { addFirstGroupBtn = addFirstGroupBtn || document.getElementById('add-first-group'); } catch(e){}
+      try { closeModalBtn = closeModalBtn || document.getElementById('close-group-modal'); } catch(e){}
+      try { cancelGroupBtn = cancelGroupBtn || document.getElementById('cancel-group-btn'); } catch(e){}
+      try { saveGroupBtn = saveGroupBtn || document.getElementById('save-group-btn'); } catch(e){}
+      try { groupsList = groupsList || document.getElementById('groups-list'); } catch(e){}
+      try { emptyState = emptyState || document.getElementById('emptyState'); } catch(e){}
+      try { participantsSection = participantsSection || document.getElementById('participants-section'); } catch(e){}
+      try { participantsListAll = participantsListAll || document.getElementById('participants-list-all'); } catch(e){}
+      try { participantsSearch = participantsSearch || document.getElementById('participants-search'); } catch(e){}
+      try { groupsLink = groupsLink || document.getElementById('nav-groups'); } catch(e){}
+      try { participantsLink = participantsLink || document.getElementById('nav-participants'); } catch(e){}
+      try { scheduleLink = scheduleLink || document.getElementById('nav-schedule'); } catch(e){}
+      try { lessonsLink = lessonsLink || document.getElementById('nav-lessons'); } catch(e){}
+      try { scheduleSection = scheduleSection || document.getElementById('schedule-section'); } catch(e){}
+      try { lessonsSection = lessonsSection || document.getElementById('lessons-section'); } catch(e){}
+      try { addGroupFromScheduleBtn = addGroupFromScheduleBtn || document.getElementById('add-group-from-schedule'); } catch(e){}
+      try { calendarEl = calendarEl || document.getElementById('calendar'); } catch(e){}
+      try { sidebar = sidebar || document.querySelector('.sidebar'); } catch(e){}
+      try { mainContentEl = mainContentEl || document.querySelector('.main-content'); } catch(e){}
+      try { sidebarToggle = sidebarToggle || document.getElementById('sidebar-toggle'); } catch(e){}
+
       await checkAdmin();
       setActiveNav('groups');
       // Ensure groups section visible on first paint
