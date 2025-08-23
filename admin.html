@@ -1842,10 +1842,54 @@
           payAgg.set(pay.participant_id, agg);
         });
 
+        // Lessons aggregation per participant (include both paid and unpaid)
+        const { data: lpLinks, error: lpErr } = await supabase
+          .from('lesson_participants')
+          .select('lesson_id, participant_id')
+          .in('participant_id', participantIds);
+        if (lpErr) throw lpErr;
+        const lessonIds = Array.from(new Set((lpLinks || []).map(l => l.lesson_id)));
+        let leEntries = [];
+        if (lessonIds.length) {
+          const { data: le, error: leErr } = await supabase
+            .from('lesson_entries')
+            .select('lesson_id, amount, confirmed')
+            .in('lesson_id', lessonIds);
+          if (leErr) throw leErr;
+          leEntries = le || [];
+        }
+        // Count participants per lesson (full counts)
+        let lpAll = lpLinks || [];
+        if (lessonIds.length) {
+          const { data: lpAllData, error: lpAllErr } = await supabase
+            .from('lesson_participants')
+            .select('lesson_id, participant_id')
+            .in('lesson_id', lessonIds);
+          if (!lpAllErr && lpAllData) lpAll = lpAllData;
+        }
+        const lessonIdToParticipants = new Map();
+        (lpAll || []).forEach(l => {
+          const arr = lessonIdToParticipants.get(l.lesson_id) || [];
+          arr.push(l.participant_id);
+          lessonIdToParticipants.set(l.lesson_id, arr);
+        });
+        const leAgg = new Map();
+        (leEntries || []).forEach(ent => {
+          const pList = lessonIdToParticipants.get(ent.lesson_id) || [];
+          const share = Number(ent.amount || 0) / Math.max(1, pList.length);
+          pList.forEach(pid => {
+            const agg = leAgg.get(pid) || { paid: 0, unpaid: 0 };
+            if (ent.confirmed) agg.paid += share; else agg.unpaid += share;
+            leAgg.set(pid, agg);
+          });
+        });
+
         // Render list with numbering
         const fragment = document.createDocumentFragment();
         participants.forEach((p, idx) => {
-          const agg = payAgg.get(p.id) || { paid: 0, unpaid: 0 };
+          const gAgg = payAgg.get(p.id) || { paid: 0, unpaid: 0 };
+          const lAgg = leAgg.get(p.id) || { paid: 0, unpaid: 0 };
+          const agg = { paid: (gAgg.paid + lAgg.paid), unpaid: (gAgg.unpaid + lAgg.unpaid) };
           const card = document.createElement('div');
           card.className = 'group-card';
           const groupNames = (linksByParticipant.get(p.id) || []).map(id => groupIdToName.get(id) || '-');
@@ -2167,6 +2211,16 @@
             <option value="Full">Full</option>
           </select>
         </div>
+        <div class="form-group" style="display:flex; gap:8px; align-items:center;">
+          <div style="flex:1 1 50%">
+            <label>Dzień</label>
+            <input type="date" id="le-date" class="form-control" />
+          </div>
+          <div style="flex:1 1 50%">
+            <label>Godzina</label>
+            <input type="time" id="le-time" class="form-control" />
+          </div>
+        </div>
         <div class="form-group">
           <label>Kwota (zł)</label>
           <input type="number" id="le-amount" class="form-control" placeholder="0.00" step="0.01" />
@@ -2188,6 +2242,8 @@
     const lePackageSelectWrap = lessonEntryModal.querySelector('#le-package-select');
     const lePackage = lessonEntryModal.querySelector('#le-package');
     const leAmount = lessonEntryModal.querySelector('#le-amount');
+    const leDate = lessonEntryModal.querySelector('#le-date');
+    const leTime = lessonEntryModal.querySelector('#le-time');
     if (addLessonEntryBtn) addLessonEntryBtn.addEventListener('click', () => { if (!selectedLessonId) return; leType.value = 'private'; leUsePackage.checked = false; leAmount.value = ''; lePackageToggle.style.display = 'none'; lePackageSelectWrap.style.display = 'none'; openLessonEntryModal(); });
     closeLessonEntryBtn.addEventListener('click', closeLessonEntryModal);
     cancelLessonEntryBtn.addEventListener('click', closeLessonEntryModal);
@@ -2217,7 +2273,10 @@
       }
       const monthVal = lessonMonthSelect ? (lessonMonthSelect.value || selectedLessonMonth) : selectedLessonMonth;
       try {
-        const ins = await supabase.from('lesson_entries').insert([{ lesson_id: selectedLessonId, type, use_package: usePackage, package: pkg, amount, month: monthVal }]);
+        const payload = { lesson_id: selectedLessonId, type, use_package: usePackage, package: pkg, amount, month: monthVal };
+        if (leDate && leDate.value) payload.lesson_date = leDate.value;
+        if (leTime && leTime.value) payload.lesson_time = leTime.value;
+        const ins = await supabase.from('lesson_entries').insert([payload]);
         if (ins.error) throw ins.error;
         closeLessonEntryModal();
         await renderLessonDetails();
@@ -2355,7 +2414,7 @@
             entries.forEach(ent => {
               total += Number(ent.amount || 0);
               const box = document.createElement('div');
-              box.className = 'content-box';
+              box.className = 'content-box participant-row ' + (ent.confirmed ? 'paid' : 'unpaid');
               box.style.marginBottom = '8px';
               const typeLabel = ent.type === 'private' ? 'Lekcja prywatna' : 'Pierwszy taniec';
               const pkg = ent.use_package && ent.package ? `, Pakiet: ${ent.package}` : '';
@@ -2398,8 +2457,8 @@
             if (leSumCount) leSumCount.textContent = String(entries.length);
             if (leSumPaidCount) leSumPaidCount.textContent = String(paidCount);
             if (leSumUnpaidCount) leSumUnpaidCount.textContent = String(unpaidCount);
-            if (leSumPaidAmount) leSumPaidAmount.textContent = `${paidAmount.toFixed(2)} zł`;
-            if (leSumUnpaidAmount) leSumUnpaidAmount.textContent = `${unpaidAmount.toFixed(2)} zł`;
+            if (leSumPaidAmount) { leSumPaidAmount.textContent = `${paidAmount.toFixed(2)} zł`; leSumPaidAmount.style.color = 'var(--success)'; }
+            if (leSumUnpaidAmount) { leSumUnpaidAmount.textContent = `${unpaidAmount.toFixed(2)} zł`; leSumUnpaidAmount.style.color = 'var(--error)'; }
             if (leSumProfit) leSumProfit.textContent = `${paidAmount.toFixed(2)} zł`;
             if (leSumPotential) leSumPotential.textContent = `${(paidAmount + unpaidAmount).toFixed(2)} zł`;
             const percent = entries.length ? Math.round((paidCount / entries.length) * 100) : 0;
@@ -2413,6 +2472,41 @@
         if (lessonEntriesList) lessonEntriesList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
       }
     }
+    // Month change for lessons
+    if (lessonMonthSelect) {
+      lessonMonthSelect.addEventListener('change', async () => {
+        selectedLessonMonth = lessonMonthSelect.value;
+        await renderLessonDetails();
+      });
+    }
+
+    // Confirm/save handlers for lesson entries (delegation)
+    if (lessonEntriesList) lessonEntriesList.addEventListener('click', async (e) => {
+      const row = e.target.closest('.content-box.participant-row');
+      if (!row) return;
+      const entryId = row.dataset.entryId;
+      if (e.target.closest('.le-confirm-btn')) {
+        const amount = parseFloat(row.querySelector('.le-amount')?.value || '0');
+        const method = row.querySelector('.le-method')?.value || '';
+        const comment = row.querySelector('.le-comment')?.value?.trim() || '';
+        const dateVal = row.querySelector('.le-date')?.value || null;
+        const timeVal = row.querySelector('.le-time')?.value || null;
+        if (isNaN(amount) || amount < 0) { alert('Podaj poprawną kwotę'); return; }
+        if (!method) { alert('Wybierz metodę płatności'); return; }
+        const btn = e.target.closest('.le-confirm-btn');
+        const original = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="loading"></span>';
+        try {
+          const { error } = await supabase
+            .from('lesson_entries')
+            .update({ amount, method, comment, lesson_date: dateVal, lesson_time: timeVal, confirmed: true, confirmed_at: new Date().toISOString() })
+            .eq('id', entryId);
+          if (error) throw error;
+          await renderLessonDetails();
+        } catch (err2) {
+          alert('Błąd zapisu płatności: ' + (err2.message || 'Nieznany'));
+        } finally { btn.disabled = false; btn.innerHTML = original; }
+      }
+    });
 
     // Save lesson: ensure participants exist (by phone), else create; then insert lessons
     if (saveLessonBtn) saveLessonBtn.addEventListener('click', async () => {
