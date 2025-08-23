@@ -461,6 +461,12 @@
         </a>
       </li>
       <li>
+        <a href="#" id="nav-trainers">
+          <i class="fas fa-user-tie"></i>
+          <span class="link-text">Trenerzy</span>
+        </a>
+      </li>
+      <li>
         <a href="#">
           <i class="fas fa-cog"></i>
           <span class="link-text">Ustawienia</span>
@@ -683,6 +689,19 @@
       </div>
     </div>
 
+    <!-- Trainers Section -->
+    <div class="content-box" id="trainers-section" style="display:none;">
+      <div class="content-header">
+        <h3>Trenerzy</h3>
+        <div>
+          <button class="btn btn-primary" id="add-trainer-btn"><i class="fas fa-user-plus"></i> Dodaj trenera</button>
+        </div>
+      </div>
+      <div id="trainers-list">
+        <div class="empty-state"><p>Brak trenerów</p></div>
+      </div>
+    </div>
+
     <!-- Edit Participant Modal -->
     <div class="modal" id="edit-participant-modal">
       <div class="modal-content">
@@ -883,7 +902,9 @@
     const participantsLink = document.getElementById('nav-participants');
     const lessonsLink = document.getElementById('nav-lessons');
     const scheduleLink = document.getElementById('nav-schedule');
+    const trainersLink = document.getElementById('nav-trainers');
     const scheduleSection = document.getElementById('schedule-section');
+    const trainersSection = document.getElementById('trainers-section');
     const lessonsSection = document.getElementById('lessons-section');
     const lessonsList = document.getElementById('lessons-list');
     const createLessonBtn = document.getElementById('create-lesson-btn');
@@ -949,16 +970,25 @@
           groupsLink.classList.remove('active');
           if (lessonsLink) lessonsLink.classList.remove('active');
           if (scheduleLink) scheduleLink.classList.remove('active');
+          if (trainersLink) trainersLink.classList.remove('active');
         } else if (section === 'lessons') {
           if (lessonsLink) lessonsLink.classList.add('active');
           groupsLink.classList.remove('active');
           participantsLink.classList.remove('active');
           if (scheduleLink) scheduleLink.classList.remove('active');
+          if (trainersLink) trainersLink.classList.remove('active');
         } else if (section === 'schedule') {
           if (scheduleLink) scheduleLink.classList.add('active');
           groupsLink.classList.remove('active');
           participantsLink.classList.remove('active');
           if (lessonsLink) lessonsLink.classList.remove('active');
+          if (trainersLink) trainersLink.classList.remove('active');
+        } else if (section === 'trainers') {
+          if (trainersLink) trainersLink.classList.add('active');
+          groupsLink.classList.remove('active');
+          participantsLink.classList.remove('active');
+          if (lessonsLink) lessonsLink.classList.remove('active');
+          if (scheduleLink) scheduleLink.classList.remove('active');
         }
       }
     }
@@ -1066,6 +1096,27 @@
         } catch (err) {
           console.error('Błąd przełączania na Uczestnicy:', err);
           participantsListAll.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+        }
+      });
+    }
+
+    // Navigate to Trainers page
+    if (trainersLink) {
+      trainersLink.addEventListener('click', async (e) => {
+        try {
+          e.preventDefault();
+          groupsSection.style.display = 'none';
+          groupDetailsSection.style.display = 'none';
+          participantsSection.style.display = 'none';
+          if (lessonsSection) lessonsSection.style.display = 'none';
+          if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
+          scheduleSection.style.display = 'none';
+          if (trainersSection) trainersSection.style.display = 'block';
+          setActiveNav('trainers');
+          collapseSidebar();
+          await loadTrainers();
+        } catch (err) {
+          console.error('Błąd przełączania na Trenerzy:', err);
         }
       });
     }
@@ -2304,11 +2355,13 @@
       const participantsSectionEl = document.getElementById('participants-section');
       const lessonsSectionEl = document.getElementById('lessons-section');
       const scheduleSectionEl = document.getElementById('schedule-section');
+      const trainersSectionEl = document.getElementById('trainers-section');
       if (groupsSectionEl) groupsSectionEl.style.display = 'block';
       if (groupDetailsSectionEl) groupDetailsSectionEl.style.display = 'none';
       if (participantsSectionEl) participantsSectionEl.style.display = 'none';
       if (lessonsSectionEl) lessonsSectionEl.style.display = 'none';
       if (scheduleSectionEl) scheduleSectionEl.style.display = 'none';
+      if (trainersSectionEl) trainersSectionEl.style.display = 'none';
       await loadGroups();
     });
 
@@ -2369,6 +2422,133 @@
     if (createLessonBtn) createLessonBtn.addEventListener('click', () => { resetLessonForm(); openLessonModal(); });
     if (addLessonParticipantBtn) addLessonParticipantBtn.addEventListener('click', () => {
       if (lessonParticipantsContainer) lessonParticipantsContainer.appendChild(createLessonParticipantRow());
+    });
+
+    // Trainers Modal (create/edit)
+    const trainerModal = document.createElement('div');
+    trainerModal.className = 'modal';
+    trainerModal.id = 'trainer-modal';
+    trainerModal.innerHTML = `
+      <div class="modal-content">
+        <button class="modal-close" id="close-trainer-modal"><i class="fas fa-times"></i></button>
+        <div class="modal-header"><h3 id="trainer-modal-title">Dodaj trenera</h3></div>
+        <div class="form-group"><label>Imię</label><input type="text" id="trainer-first-name" class="form-control" placeholder="Imię"></div>
+        <div class="form-group"><label>Nazwisko</label><input type="text" id="trainer-last-name" class="form-control" placeholder="Nazwisko"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="trainer-email" class="form-control" placeholder="Email"></div>
+        <div class="form-actions" style="justify-content: flex-end;">
+          <button class="btn btn-outline" id="cancel-trainer-btn" type="button">Anuluj</button>
+          <button class="btn btn-primary" id="save-trainer-btn" type="button"><i class="fas fa-save"></i> Zapisz</button>
+        </div>
+      </div>`;
+    document.body.appendChild(trainerModal);
+    const addTrainerBtn = document.getElementById('add-trainer-btn');
+    const closeTrainerModalBtn = trainerModal.querySelector('#close-trainer-modal');
+    const cancelTrainerBtn = trainerModal.querySelector('#cancel-trainer-btn');
+    const saveTrainerBtn = trainerModal.querySelector('#save-trainer-btn');
+    const trainerFirstNameEl = trainerModal.querySelector('#trainer-first-name');
+    const trainerLastNameEl = trainerModal.querySelector('#trainer-last-name');
+    const trainerEmailEl = trainerModal.querySelector('#trainer-email');
+    const trainerModalTitle = trainerModal.querySelector('#trainer-modal-title');
+    let editingTrainerId = null;
+    function openTrainerModal() { trainerModal.classList.add('active'); }
+    function closeTrainerModal() { trainerModal.classList.remove('active'); editingTrainerId = null; trainerModalTitle.textContent = 'Dodaj trenera'; if (trainerFirstNameEl) trainerFirstNameEl.value=''; if (trainerLastNameEl) trainerLastNameEl.value=''; if (trainerEmailEl) trainerEmailEl.value=''; }
+    if (addTrainerBtn) addTrainerBtn.addEventListener('click', () => { editingTrainerId = null; trainerModalTitle.textContent = 'Dodaj trenera'; openTrainerModal(); });
+    closeTrainerModalBtn.addEventListener('click', closeTrainerModal);
+    cancelTrainerBtn.addEventListener('click', closeTrainerModal);
+
+    async function loadTrainers() {
+      const trainersList = document.getElementById('trainers-list');
+      if (!trainersList) return;
+      trainersList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie trenerów...</p></div>';
+      try {
+        const { data: trainers, error } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email, role')
+          .eq('role', 'trainer')
+          .order('last_name', { ascending: true });
+        if (error) throw error;
+        if (!trainers || trainers.length === 0) {
+          trainersList.innerHTML = '<div class="empty-state"><p>Brak trenerów</p></div>';
+          return;
+        }
+        const fragment = document.createDocumentFragment();
+        trainers.forEach((t, idx) => {
+          const card = document.createElement('div');
+          card.className = 'group-card';
+          card.innerHTML = `
+            <h4><span class="p-index">${idx + 1}</span>${t.first_name || ''} ${t.last_name || ''}</h4>
+            <div class="group-detail"><i class="fas fa-envelope"></i><span>${t.email || ''}</span></div>
+            <div class="group-actions">
+              <button class="btn btn-outline edit-trainer-btn" data-id="${t.id}"><i class="fas fa-edit"></i></button>
+              <button class="btn btn-outline delete-trainer-btn" data-id="${t.id}"><i class="fas fa-trash"></i></button>
+            </div>`;
+          fragment.appendChild(card);
+        });
+        trainersList.innerHTML = '';
+        trainersList.appendChild(fragment);
+      } catch (err) {
+        if (trainersList) trainersList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+      }
+    }
+
+    // Create/update trainer into profiles as role=trainer
+    if (saveTrainerBtn) saveTrainerBtn.addEventListener('click', async () => {
+      const first = (trainerFirstNameEl?.value || '').trim();
+      const last = (trainerLastNameEl?.value || '').trim();
+      const email = (trainerEmailEl?.value || '').trim();
+      if (!first || !last || !email) { alert('Wypełnij imię, nazwisko i email'); return; }
+      saveTrainerBtn.disabled = true; const original = saveTrainerBtn.innerHTML; saveTrainerBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
+      try {
+        if (editingTrainerId) {
+          const { error } = await supabase
+            .from('profiles')
+            .update({ first_name: first, last_name: last, email })
+            .eq('id', editingTrainerId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('profiles')
+            .insert([{ first_name: first, last_name: last, email, role: 'trainer' }]);
+          if (error) throw error;
+        }
+        closeTrainerModal();
+        await loadTrainers();
+      } catch (err) {
+        alert('Błąd zapisu trenera: ' + (err.message || 'Nieznany'));
+      } finally { saveTrainerBtn.disabled = false; saveTrainerBtn.innerHTML = original; }
+    });
+
+    // Trainers actions
+    const trainersListEl = document.getElementById('trainers-list');
+    if (trainersListEl) trainersListEl.addEventListener('click', async (e) => {
+      const editBtn = e.target.closest('.edit-trainer-btn');
+      const delBtn = e.target.closest('.delete-trainer-btn');
+      if (editBtn) {
+        const id = editBtn.dataset.id;
+        try {
+          const { data: t, error } = await supabase.from('profiles').select('id, first_name, last_name, email').eq('id', id).maybeSingle();
+          if (error) throw error;
+          editingTrainerId = t.id;
+          trainerModalTitle.textContent = 'Edytuj trenera';
+          if (trainerFirstNameEl) trainerFirstNameEl.value = t.first_name || '';
+          if (trainerLastNameEl) trainerLastNameEl.value = t.last_name || '';
+          if (trainerEmailEl) trainerEmailEl.value = t.email || '';
+          openTrainerModal();
+        } catch (err) {
+          alert('Błąd wczytania trenera: ' + (err.message || 'Nieznany'));
+        }
+      }
+      if (delBtn) {
+        const id = delBtn.dataset.id;
+        if (!confirm('Usunąć trenera?')) return;
+        try {
+          const { error } = await supabase.from('profiles').delete().eq('id', id);
+          if (error) throw error;
+          await loadTrainers();
+        } catch (err) {
+          alert('Błąd usuwania trenera: ' + (err.message || 'Nieznany'));
+        }
+      }
     });
 
     // Add Lesson Entry Modal
