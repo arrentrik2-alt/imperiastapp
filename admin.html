@@ -1812,7 +1812,7 @@
       try {
         const [{ data: participants, error: pErr }, { data: groups, error: gErr }, { data: allLinks } ] = await Promise.all([
           supabase.from('participants').select('*').order('last_name', { ascending: true }),
-          supabase.from('groups').select('id,name'),
+          supabase.from('groups').select('id,name,fee,multisport'),
           supabase.from('participant_groups').select('participant_id, group_id')
         ]);
         if (pErr) throw pErr;
@@ -1841,6 +1841,25 @@
           else agg.unpaid += Number(pay.amount || 0);
           payAgg.set(pay.participant_id, agg);
         });
+
+        // Compute expected unpaid for current month for groups
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const currentMonth = `${yyyy}-${mm}`;
+        const { data: paymentsMonth, error: payMonthErr } = await supabase
+          .from('payments')
+          .select('participant_id, amount, confirmed, month')
+          .in('participant_id', participantIds)
+          .eq('month', currentMonth);
+        if (payMonthErr) throw payMonthErr;
+        const paidMonth = new Map();
+        (paymentsMonth || []).forEach(p => {
+          const prev = paidMonth.get(p.participant_id) || 0;
+          const add = p.confirmed ? Number(p.amount || 0) : 0;
+          paidMonth.set(p.participant_id, prev + add);
+        });
+        const groupById = new Map((groups || []).map(g => [g.id, g]));
 
         // Lessons aggregation per participant (include both paid and unpaid)
         const { data: lpLinks, error: lpErr } = await supabase
@@ -1889,7 +1908,16 @@
         participants.forEach((p, idx) => {
           const gAgg = payAgg.get(p.id) || { paid: 0, unpaid: 0 };
           const lAgg = leAgg.get(p.id) || { paid: 0, unpaid: 0 };
-          const agg = { paid: (gAgg.paid + lAgg.paid), unpaid: (gAgg.unpaid + lAgg.unpaid) };
+          // Expected base for current month from group memberships
+          const gIds = linksByParticipant.get(p.id) || [];
+          const expectedBase = gIds.reduce((sum, gid) => {
+            const g = groupById.get(gid); if (!g) return sum;
+            const base = p.multisport ? Number(g.multisport || 0) : Number(g.fee || 0);
+            return sum + (isNaN(base) ? 0 : base);
+          }, 0);
+          const paidForMonth = paidMonth.get(p.id) || 0;
+          const unpaidExpectedMonth = Math.max(0, expectedBase - paidForMonth);
+          const agg = { paid: (gAgg.paid + lAgg.paid), unpaid: (gAgg.unpaid + lAgg.unpaid + unpaidExpectedMonth) };
           const card = document.createElement('div');
           card.className = 'group-card';
           const groupNames = (linksByParticipant.get(p.id) || []).map(id => groupIdToName.get(id) || '-');
@@ -2508,13 +2536,16 @@
         } finally { btn.disabled = false; btn.innerHTML = original; }
       }
       if (e.target.closest('.le-delete-btn')) {
-        if (!confirm('Usunąć płatność tej lekcji?')) return;
+        if (!confirm('Usunąć potwierdzenie tej płatności?')) return;
         try {
-          const { error } = await supabase.from('lesson_entries').delete().eq('id', entryId);
+          const { error } = await supabase
+            .from('lesson_entries')
+            .update({ confirmed: false, confirmed_at: null, method: '', comment: '' })
+            .eq('id', entryId);
           if (error) throw error;
           await renderLessonDetails();
         } catch (err3) {
-          alert('Błąd usuwania płatności: ' + (err3.message || 'Nieznany'));
+          alert('Błąd cofnięcia płatności: ' + (err3.message || 'Nieznany'));
         }
       }
     });
