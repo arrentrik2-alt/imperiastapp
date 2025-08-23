@@ -2169,6 +2169,40 @@
         if (gpErr) throw gpErr;
         const unpaidGroups = (gp || []).filter(p => !p.confirmed && Number(p.amount || 0) > 0);
 
+        // Expected unpaid for current month from group memberships
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const currentMonth = `${yyyy}-${mm}`;
+        const [{ data: participantRow }, { data: links }] = await Promise.all([
+          supabase.from('participants').select('id, multisport').eq('id', participantId).maybeSingle(),
+          supabase.from('participant_groups').select('group_id, effective_from_month, effective_to_month').eq('participant_id', participantId)
+        ]);
+        const activeGroupIds = (links || []).filter(l => {
+          const fromOk = !l.effective_from_month || l.effective_from_month <= currentMonth;
+          const toOk = !l.effective_to_month || l.effective_to_month > currentMonth;
+          return fromOk && toOk;
+        }).map(l => l.group_id);
+        let unpaidExpectedMonth = 0;
+        if (activeGroupIds.length) {
+          const { data: groupsRows } = await supabase
+            .from('groups')
+            .select('id, fee, multisport')
+            .in('id', activeGroupIds);
+          const isMulti = !!(participantRow && participantRow.multisport);
+          const expectedBase = (groupsRows || []).reduce((sum, g) => {
+            const base = isMulti ? Number(g.multisport || 0) : Number(g.fee || 0);
+            return sum + (isNaN(base) ? 0 : base);
+          }, 0);
+          const { data: paidMonthRows } = await supabase
+            .from('payments')
+            .select('amount, confirmed')
+            .eq('participant_id', participantId)
+            .eq('month', currentMonth);
+          const paidForMonth = (paidMonthRows || []).filter(p => p.confirmed).reduce((s,p) => s + Number(p.amount || 0), 0);
+          unpaidExpectedMonth = Math.max(0, expectedBase - paidForMonth);
+        }
+
         // Unpaid lessons (participant share)
         const { data: lpLinks, error: lpErr } = await supabase
           .from('lesson_participants')
@@ -2200,7 +2234,8 @@
           }).filter(e => e.share > 0);
         }
 
-        const groupList = unpaidGroups.map(p => `<li><strong>Grupa:</strong> ${p.month} — ${Number(p.amount||0).toFixed(2)} zł</li>`).join('');
+        const groupListUnpaid = unpaidGroups.map(p => `<li><strong>Grupa:</strong> ${p.month} — ${Number(p.amount||0).toFixed(2)} zł</li>`).join('');
+        const groupListExpected = unpaidExpectedMonth > 0 ? `<li><strong>Grupy:</strong> ${currentMonth} — ${unpaidExpectedMonth.toFixed(2)} zł</li>` : '';
         const lessonList = unpaidLessons.map(e => {
           const d = e.lesson_date ? String(e.lesson_date) : (e.month || '-');
           const time = e.lesson_time ? ` ${e.lesson_time}` : '';
@@ -2210,7 +2245,7 @@
           <div class="content-box" style="padding:12px;">
             <h4 style="margin-top:0;">Zaległości</h4>
             ${(!unpaidGroups.length && !unpaidLessons.length) ? '<div class="group-detail"><span>Brak zaległości</span></div>' : ''}
-            ${unpaidGroups.length ? `<div class="group-detail"><i class="fas fa-users"></i><span>Płatności grupowe</span></div><ul style="margin:8px 0 12px 18px;">${groupList}</ul>` : ''}
+            ${(unpaidGroups.length || unpaidExpectedMonth > 0) ? `<div class="group-detail"><i class="fas fa-users"></i><span>Płatności grupowe</span></div><ul style="margin:8px 0 12px 18px;">${groupListExpected}${groupListUnpaid}</ul>` : ''}
             ${unpaidLessons.length ? `<div class="group-detail"><i class="fas fa-book"></i><span>Lekcje prywatne</span></div><ul style="margin:8px 0 0 18px;">${lessonList}</ul>` : ''}
           </div>`;
         if (previewBody) previewBody.innerHTML = html;
