@@ -658,6 +658,16 @@
       </div>
     </div>
 
+    <!-- Archive Section -->
+    <div class="content-box" id="archive-section" style="display:none;">
+      <div class="content-header">
+        <h3>Archiwum uczestników</h3>
+      </div>
+      <div id="archive-list">
+        <div class="empty-state"><p>Archiwum jest puste</p></div>
+      </div>
+    </div>
+
     <!-- Edit Participant Modal -->
     <div class="modal" id="edit-participant-modal">
       <div class="modal-content">
@@ -1474,15 +1484,21 @@
       try {
         const { data: pgRows, error: pgErr } = await supabase
           .from('participant_groups')
-          .select('participant_id')
+          .select('participant_id, effective_from_month, effective_to_month')
           .eq('group_id', selectedGroup.id);
         if (pgErr) throw pgErr;
-        if (!pgRows || pgRows.length === 0) {
+        // Filter memberships active for selectedMonth: from <= month < to
+        const activeRows = (pgRows || []).filter(r => {
+          const fromOk = !r.effective_from_month || r.effective_from_month <= selectedMonth;
+          const toOk = !r.effective_to_month || r.effective_to_month > selectedMonth;
+          return fromOk && toOk;
+        });
+        if (!activeRows || activeRows.length === 0) {
           participantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników w tej grupie</p></div>';
           updateParticipantsSummary({ totalCount: 0, paidCount: 0, unpaidCount: 0, paidAmount: 0, unpaidAmount: 0, profit: 0 });
           return;
         }
-        const pIds = pgRows.map(r => r.participant_id);
+        const pIds = activeRows.map(r => r.participant_id);
         const { data: participants, error: participantsError } = await supabase
           .from('participants')
           .select('*')
@@ -1658,7 +1674,7 @@
         const newParticipant = insertRes.data;
         const linkRes = await supabase
           .from('participant_groups')
-          .insert([{ participant_id: newParticipant.id, group_id: selectedGroup.id }]);
+          .insert([{ participant_id: newParticipant.id, group_id: selectedGroup.id, effective_from_month: selectedMonth }]);
         if (linkRes.error) throw linkRes.error;
         addParticipantForm.style.display = 'none';
         participantFirstName.value = '';
@@ -1737,7 +1753,7 @@
         try {
           const { error: delLinkErr } = await supabase
             .from('participant_groups')
-            .delete()
+            .update({ effective_to_month: selectedMonth })
             .eq('participant_id', participantId)
             .eq('group_id', selectedGroup.id);
           if (delLinkErr) throw delLinkErr;
@@ -2369,9 +2385,13 @@
         const { data: lesson, error: lErr } = await supabase.from('lessons').select('id, trainer, created_at').eq('id', selectedLessonId).maybeSingle();
         if (lErr) throw lErr;
         if (lessonDetailsTitle) lessonDetailsTitle.textContent = `Szczegóły zajęć — ${lesson?.trainer || ''}`;
-        const { data: links, error: linkErr } = await supabase.from('lesson_participants').select('participant_id').eq('lesson_id', selectedLessonId);
+        const { data: links, error: linkErr } = await supabase.from('lesson_participants').select('participant_id, effective_from_month, effective_to_month, id').eq('lesson_id', selectedLessonId);
         if (linkErr) throw linkErr;
-        const pIds = (links || []).map(x => x.participant_id);
+        const pIds = (links || []).filter(l => {
+          const fromOk = !l.effective_from_month || l.effective_from_month <= selectedLessonMonth;
+          const toOk = !l.effective_to_month || l.effective_to_month > selectedLessonMonth;
+          return fromOk && toOk;
+        }).map(x => x.participant_id);
         let pMap = new Map();
         if (pIds.length) {
           const { data: parts, error: pErr } = await supabase.from('participants').select('id, first_name, last_name, phone').in('id', pIds);
@@ -2379,12 +2399,23 @@
           pMap = new Map(parts.map(p => [p.id, p]));
         }
         if (lessonParticipantsSummary) {
-          const names = pIds.map(id => (pMap.get(id)?.first_name || '').trim()).filter(Boolean);
-          const phones = pIds.map(id => pMap.get(id)?.phone || '').filter(Boolean);
+          const active = (links || []).filter(l => {
+            const fromOk = !l.effective_from_month || l.effective_from_month <= selectedLessonMonth;
+            const toOk = !l.effective_to_month || l.effective_to_month > selectedLessonMonth;
+            return fromOk && toOk;
+          });
+          const rows = active.map(l => {
+            const person = pMap.get(l.participant_id) || {};
+            const name = `${(person.first_name||'').trim()} ${(person.last_name||'').trim()}`.trim();
+            const phone = person.phone || '';
+            return `<div style="display:flex; gap:8px; align-items:center;">
+                      <div class="group-detail" style="flex:1 1 auto;"><i class="fas fa-user"></i><span>${name || '-'}</span> · <span style="color: var(--text-gray);">${phone}</span></div>
+                      <button class="btn btn-outline btn-sm remove-from-lesson-btn" data-link-id="${l.id}"><i class="fas fa-user-minus"></i> Usuń od tego miesiąca</button>
+                    </div>`;
+          }).join('');
           lessonParticipantsSummary.innerHTML = `
             <div class="content-box" style="padding:12px;">
-              <div class="group-detail"><i class="fas fa-users"></i><span>Uczestnicy: ${names.join(', ') || '-'}</span></div>
-              <div class="group-detail"><i class="fas fa-phone"></i><span>Telefony: ${phones.join(', ') || '-'}</span></div>
+              ${rows || '<div class="group-detail"><span>Brak uczestników</span></div>'}
             </div>`;
         }
         if (lessonEntriesList) {
@@ -2548,6 +2579,25 @@
         } catch (err3) {
           alert('Błąd cofnięcia płatności: ' + (err3.message || 'Nieznany'));
         }
+      }
+    });
+
+    // Remove participant from lesson since selectedMonth
+    if (lessonParticipantsSummary) lessonParticipantsSummary.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.remove-from-lesson-btn');
+      if (!btn) return;
+      const linkId = btn.dataset.linkId;
+      if (!linkId) return;
+      if (!confirm('Usunąć uczestnika z tych zajęć od wybranego miesiąca? Poprzednie miesiące pozostaną.')) return;
+      try {
+        const { error } = await supabase
+          .from('lesson_participants')
+          .update({ effective_to_month: selectedLessonMonth })
+          .eq('id', linkId);
+        if (error) throw error;
+        await renderLessonDetails();
+      } catch (err) {
+        alert('Błąd usuwania uczestnika z zajęć: ' + (err.message || 'Nieznany'));
       }
     });
 
