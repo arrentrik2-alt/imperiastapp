@@ -3953,7 +3953,7 @@
       return dates;
     }
 
-    function renderAttendanceDates() {
+    function renderAttendanceDates_inmem() {
       if (!attendanceDatesWrap || !selectedGroup) return;
       const dates = getSessionDatesForMonth(selectedGroup, selectedMonth);
       attendanceDatesWrap.innerHTML = '';
@@ -3964,15 +3964,15 @@
         btn.textContent = dateStr;
         btn.onclick = () => {
           attendanceSelectedDate = dateStr;
-          renderAttendanceList();
-          renderAttendanceDates();
+          renderAttendanceList_inmem();
+          renderAttendanceDates_inmem();
         };
         attendanceDatesWrap.appendChild(btn);
       });
       // Auto-select first date if none
       if (!attendanceSelectedDate && dates.length) {
         attendanceSelectedDate = dates[0];
-        renderAttendanceDates();
+        renderAttendanceDates_inmem();
       }
     }
 
@@ -4008,7 +4008,7 @@
       inMemoryAttendance.set(attendanceSelectedDate, set);
     }
 
-    async function renderAttendanceList() {
+    async function renderAttendanceList_inmem() {
       if (!attendanceList) return;
       if (!attendanceSelectedDate) {
         attendanceList.innerHTML = '<div class="empty-state"><p>Wybierz termin zajęć</p></div>';
@@ -4054,18 +4054,21 @@
       if (editAttendanceBtn) editAttendanceBtn.style.display = canEdit ? 'none' : '';
     }
 
+    // (legacy in-memory handlers kept renamed; currently unused)
     if (confirmAttendanceBtn) {
-      confirmAttendanceBtn.onclick = async () => {
+      const legacyConfirm = async () => {
         if (attendanceSelectedDate) lockedAttendanceDates.add(attendanceSelectedDate);
-        renderAttendanceList();
-        // TODO: persist to DB in the future (e.g., group_attendance table)
+        renderAttendanceList_inmem();
       };
+      // do not assign to onclick to avoid overriding DB handler
+      // confirmAttendanceBtn.addEventListener('click', legacyConfirm);
     }
     if (editAttendanceBtn) {
-      editAttendanceBtn.onclick = () => {
+      const legacyEdit = () => {
         if (attendanceSelectedDate) lockedAttendanceDates.delete(attendanceSelectedDate);
-        renderAttendanceList();
+        renderAttendanceList_inmem();
       };
+      // editAttendanceBtn.addEventListener('click', legacyEdit);
     }
     // ===== end Dziennik =====
 
