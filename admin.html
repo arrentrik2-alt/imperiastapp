@@ -4063,6 +4063,214 @@
       };
     }
     // ===== end Dziennik =====
+
+    // ===== Dziennik DB persistence (override with Supabase) =====
+    const sessionIdByDate = new Map(); // date => session_id
+
+    function getMonthBounds(monthValue) {
+      if (!monthValue) return { start: '', end: '' };
+      const [yyyy, mm] = monthValue.split('-').map(n => parseInt(n, 10));
+      const first = new Date(yyyy, mm - 1, 1);
+      const last = new Date(yyyy, mm, 0);
+      const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      return { start: fmt(first), end: fmt(last) };
+    }
+
+    async function fetchSessionsForMonth() {
+      try {
+        if (!selectedGroup || !selectedMonth) return;
+        const { start, end } = getMonthBounds(selectedMonth);
+        const { data, error } = await supabase
+          .from('group_sessions')
+          .select('id, session_date, locked')
+          .eq('group_id', selectedGroup.id)
+          .gte('session_date', start)
+          .lte('session_date', end);
+        if (error) throw error;
+        lockedAttendanceDates.clear();
+        sessionIdByDate.clear();
+        (data || []).forEach(s => {
+          sessionIdByDate.set(s.session_date, s.id);
+          if (s.locked) lockedAttendanceDates.add(s.session_date);
+        });
+      } catch (err) {
+        console.warn('fetchSessionsForMonth warn:', err);
+      }
+    }
+
+    async function ensureSession(dateStr) {
+      if (!selectedGroup) throw new Error('No group selected');
+      let id = sessionIdByDate.get(dateStr) || null;
+      let locked = lockedAttendanceDates.has(dateStr);
+      if (!id) {
+        try {
+          const sel = await supabase
+            .from('group_sessions')
+            .select('id, locked')
+            .eq('group_id', selectedGroup.id)
+            .eq('session_date', dateStr)
+            .maybeSingle();
+          if (sel.data) {
+            id = sel.data.id;
+            locked = !!sel.data.locked;
+          } else {
+            const ins = await supabase
+              .from('group_sessions')
+              .insert([{ group_id: selectedGroup.id, session_date: dateStr }])
+              .select('id, locked')
+              .single();
+            if (ins.error) throw ins.error;
+            id = ins.data.id;
+            locked = !!ins.data.locked;
+          }
+          sessionIdByDate.set(dateStr, id);
+          if (locked) lockedAttendanceDates.add(dateStr); else lockedAttendanceDates.delete(dateStr);
+        } catch (err) {
+          console.warn('ensureSession warn:', err);
+        }
+      }
+      return { id, locked };
+    }
+
+    async function loadAttendanceForSelectedDate() {
+      if (!attendanceSelectedDate) return;
+      try {
+        const { id, locked } = await ensureSession(attendanceSelectedDate);
+        const res = await supabase
+          .from('group_attendance')
+          .select('participant_id')
+          .eq('session_id', id);
+        const set = new Set((res.data || []).map(r => r.participant_id));
+        inMemoryAttendance.set(attendanceSelectedDate, set);
+        if (locked) lockedAttendanceDates.add(attendanceSelectedDate); else lockedAttendanceDates.delete(attendanceSelectedDate);
+      } catch (err) {
+        console.warn('loadAttendanceForSelectedDate warn:', err);
+      }
+    }
+
+    async function saveAttendanceForSelectedDate() {
+      if (!attendanceSelectedDate) return;
+      const presentSet = inMemoryAttendance.get(attendanceSelectedDate) || new Set();
+      try {
+        const { id } = await ensureSession(attendanceSelectedDate);
+        // Replace: delete all then insert present
+        const del = await supabase.from('group_attendance').delete().eq('session_id', id);
+        if (del.error) throw del.error;
+        const rows = Array.from(presentSet).map(pid => ({ session_id: id, participant_id: pid, present: true }));
+        if (rows.length) {
+          const ins = await supabase.from('group_attendance').insert(rows);
+          if (ins.error) throw ins.error;
+        }
+      } catch (err) {
+        console.error('saveAttendanceForSelectedDate error:', err);
+        throw err;
+      }
+    }
+
+    // Override: render dates with sessions and locked markers
+    async function renderAttendanceDates() {
+      if (!attendanceDatesWrap || !selectedGroup) return;
+      await fetchSessionsForMonth();
+      const dates = getSessionDatesForMonth(selectedGroup, selectedMonth);
+      attendanceDatesWrap.innerHTML = '';
+      dates.forEach(dateStr => {
+        const isSelected = attendanceSelectedDate === dateStr;
+        const isLocked = lockedAttendanceDates.has(dateStr);
+        const btn = document.createElement('button');
+        btn.className = isSelected ? 'btn btn-primary' : 'btn btn-outline';
+        btn.textContent = dateStr;
+        if (isLocked) btn.title = 'Zablokowane';
+        btn.onclick = async () => {
+          attendanceSelectedDate = dateStr;
+          await renderAttendanceList();
+          await renderAttendanceDates();
+        };
+        attendanceDatesWrap.appendChild(btn);
+      });
+      if (!attendanceSelectedDate && dates.length) {
+        attendanceSelectedDate = dates[0];
+        await renderAttendanceDates();
+      }
+    }
+
+    // Override: render list loads attendance from DB
+    async function renderAttendanceList() {
+      if (!attendanceList) return;
+      if (!attendanceSelectedDate) {
+        attendanceList.innerHTML = '<div class="empty-state"><p>Wybierz termin zajęć</p></div>';
+        if (confirmAttendanceBtn) confirmAttendanceBtn.style.display = 'none';
+        if (editAttendanceBtn) editAttendanceBtn.style.display = 'none';
+        return;
+      }
+      await loadAttendanceForSelectedDate();
+      const participants = await fetchActiveParticipantsForSelectedMonth();
+      if (!participants.length) {
+        attendanceList.innerHTML = '<div class="empty-state"><p>Brak uczestników</p></div>';
+        if (confirmAttendanceBtn) confirmAttendanceBtn.style.display = 'none';
+        if (editAttendanceBtn) editAttendanceBtn.style.display = 'none';
+        return;
+      }
+      const canEdit = !lockedAttendanceDates.has(attendanceSelectedDate);
+      const frag = document.createDocumentFragment();
+      participants.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'list-row';
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.justifyContent = 'space-between';
+        row.style.padding = '8px 12px';
+        const name = document.createElement('div');
+        name.textContent = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+        const right = document.createElement('div');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.style.width = 'auto';
+        checkbox.disabled = !canEdit;
+        checkbox.checked = isPresent(p.id);
+        checkbox.onchange = (ev) => {
+          togglePresence(p.id, ev.target.checked);
+        };
+        right.appendChild(checkbox);
+        row.appendChild(name);
+        row.appendChild(right);
+        frag.appendChild(row);
+      });
+      attendanceList.innerHTML = '';
+      attendanceList.appendChild(frag);
+      if (confirmAttendanceBtn) confirmAttendanceBtn.style.display = canEdit ? '' : 'none';
+      if (editAttendanceBtn) editAttendanceBtn.style.display = canEdit ? 'none' : '';
+    }
+
+    if (confirmAttendanceBtn) {
+      confirmAttendanceBtn.onclick = async () => {
+        try {
+          await saveAttendanceForSelectedDate();
+          const { id } = await ensureSession(attendanceSelectedDate);
+          const upd = await supabase.from('group_sessions').update({ locked: true }).eq('id', id);
+          if (upd.error) throw upd.error;
+          lockedAttendanceDates.add(attendanceSelectedDate);
+          await renderAttendanceList();
+          await renderAttendanceDates();
+        } catch (err) {
+          alert('Błąd zapisu obecności: ' + (err.message || 'Nieznany'));
+        }
+      };
+    }
+    if (editAttendanceBtn) {
+      editAttendanceBtn.onclick = async () => {
+        try {
+          const { id } = await ensureSession(attendanceSelectedDate);
+          const upd = await supabase.from('group_sessions').update({ locked: false }).eq('id', id);
+          if (upd.error) throw upd.error;
+          lockedAttendanceDates.delete(attendanceSelectedDate);
+          await renderAttendanceList();
+          await renderAttendanceDates();
+        } catch (err) {
+          alert('Błąd odblokowania: ' + (err.message || 'Nieznany'));
+        }
+      };
+    }
+    // ===== end Dziennik =====
   </script>
 </body>
 </html>
