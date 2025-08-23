@@ -590,6 +590,19 @@
       </div>
     </div>
 
+    <!-- Lesson Details Section -->
+    <div class="content-box" id="lesson-details-section" style="display:none;">
+      <div class="content-header">
+        <h3 id="lesson-details-title">Szczegóły zajęć</h3>
+        <div>
+          <button class="btn btn-primary" id="add-lesson-entry-btn"><i class="fas fa-plus"></i> Dodaj lekcję</button>
+        </div>
+      </div>
+      <div id="lesson-participants-summary"></div>
+      <div id="lesson-entries-list" style="margin-top:12px;"></div>
+      <div style="margin-top:12px; text-align:right; color: var(--gold); font-weight:600;" id="lesson-total"></div>
+    </div>
+
     <!-- Schedule Section -->
     <div class="content-box" id="schedule-section" style="display:none;">
       <div class="content-header">
@@ -823,6 +836,13 @@
     const lessonsSection = document.getElementById('lessons-section');
     const lessonsList = document.getElementById('lessons-list');
     const createLessonBtn = document.getElementById('create-lesson-btn');
+    const lessonDetailsSection = document.getElementById('lesson-details-section');
+    const lessonDetailsTitle = document.getElementById('lesson-details-title');
+    const addLessonEntryBtn = document.getElementById('add-lesson-entry-btn');
+    const lessonEntriesList = document.getElementById('lesson-entries-list');
+    const lessonParticipantsSummary = document.getElementById('lesson-participants-summary');
+    const lessonTotalEl = document.getElementById('lesson-total');
+    let selectedLessonId = null;
     const addGroupFromScheduleBtn = document.getElementById('add-group-from-schedule');
     const calendarEl = document.getElementById('calendar');
     let calendar;
@@ -995,6 +1015,7 @@
         participantsSection.style.display = 'none';
         scheduleSection.style.display = 'none';
         if (lessonsSection) lessonsSection.style.display = 'block';
+        if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
         setActiveNav('lessons');
         collapseSidebar();
         await loadLessons();
@@ -2080,6 +2101,87 @@
       if (lessonParticipantsContainer) lessonParticipantsContainer.appendChild(createLessonParticipantRow());
     });
 
+    // Add Lesson Entry Modal
+    const lessonEntryModal = document.createElement('div');
+    lessonEntryModal.className = 'modal';
+    lessonEntryModal.id = 'add-lesson-entry-modal';
+    lessonEntryModal.innerHTML = `
+      <div class="modal-content">
+        <button class="modal-close" id="close-lesson-entry-modal"><i class="fas fa-times"></i></button>
+        <div class="modal-header"><h3>Dodaj lekcję</h3></div>
+        <div class="form-group">
+          <label>Rodzaj lekcji</label>
+          <select id="le-type" class="form-control">
+            <option value="private">Lekcja prywatna</option>
+            <option value="first_dance">Pierwszy taniec</option>
+          </select>
+        </div>
+        <div class="form-group" id="le-package-toggle" style="display:none; align-items:center; gap:8px;">
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="le-use-package" style="width:auto;" /> Wybieram pakiet
+          </label>
+        </div>
+        <div class="form-group" id="le-package-select" style="display:none;">
+          <label>Pakiet</label>
+          <select id="le-package" class="form-control">
+            <option value="Express">Express</option>
+            <option value="Standard">Standard</option>
+            <option value="Full">Full</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Kwota (zł)</label>
+          <input type="number" id="le-amount" class="form-control" placeholder="0.00" step="0.01" />
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" id="cancel-lesson-entry">Anuluj</button>
+          <button class="btn btn-primary" id="save-lesson-entry"><i class="fas fa-save"></i> Zapisz</button>
+        </div>
+      </div>`;
+    document.body.appendChild(lessonEntryModal);
+    const openLessonEntryModal = () => lessonEntryModal.classList.add('active');
+    const closeLessonEntryModal = () => lessonEntryModal.classList.remove('active');
+    const closeLessonEntryBtn = lessonEntryModal.querySelector('#close-lesson-entry-modal');
+    const cancelLessonEntryBtn = lessonEntryModal.querySelector('#cancel-lesson-entry');
+    const saveLessonEntryBtn = lessonEntryModal.querySelector('#save-lesson-entry');
+    const leType = lessonEntryModal.querySelector('#le-type');
+    const leUsePackage = lessonEntryModal.querySelector('#le-use-package');
+    const lePackageToggle = lessonEntryModal.querySelector('#le-package-toggle');
+    const lePackageSelectWrap = lessonEntryModal.querySelector('#le-package-select');
+    const lePackage = lessonEntryModal.querySelector('#le-package');
+    const leAmount = lessonEntryModal.querySelector('#le-amount');
+    if (addLessonEntryBtn) addLessonEntryBtn.addEventListener('click', () => { if (!selectedLessonId) return; leType.value = 'private'; leUsePackage.checked = false; leAmount.value = ''; lePackageToggle.style.display = 'none'; lePackageSelectWrap.style.display = 'none'; openLessonEntryModal(); });
+    closeLessonEntryBtn.addEventListener('click', closeLessonEntryModal);
+    cancelLessonEntryBtn.addEventListener('click', closeLessonEntryModal);
+    leType.addEventListener('change', () => {
+      if (leType.value === 'first_dance') {
+        lePackageToggle.style.display = 'block';
+        if (!leUsePackage.checked) lePackageSelectWrap.style.display = 'none';
+      } else {
+        lePackageToggle.style.display = 'none';
+        lePackageSelectWrap.style.display = 'none';
+      }
+    });
+    leUsePackage.addEventListener('change', () => {
+      lePackageSelectWrap.style.display = leUsePackage.checked ? 'block' : 'none';
+    });
+    if (saveLessonEntryBtn) saveLessonEntryBtn.addEventListener('click', async () => {
+      if (!selectedLessonId) { alert('Brak wybranych zajęć'); return; }
+      const type = leType.value;
+      const amount = parseFloat(leAmount.value || '0');
+      const usePackage = !!leUsePackage.checked;
+      const pkg = usePackage ? lePackage.value : null;
+      if (!type || isNaN(amount) || amount < 0) { alert('Podaj poprawny typ i kwotę'); return; }
+      try {
+        const ins = await supabase.from('lesson_entries').insert([{ lesson_id: selectedLessonId, type, use_package: usePackage, package: pkg, amount }]);
+        if (ins.error) throw ins.error;
+        closeLessonEntryModal();
+        await renderLessonDetails();
+      } catch (err) {
+        alert('Błąd zapisu lekcji: ' + (err.message || 'Nieznany'));
+      }
+    });
+
     async function loadLessons() {
       if (!lessonsList) return;
       lessonsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie zajęć...</p></div>';
@@ -2126,11 +2228,77 @@
             <div class="group-detail"><i class="fas fa-calendar"></i><span>${new Date(l.created_at).toLocaleString('pl-PL')}</span></div>
           `;
           fragment.appendChild(card);
+          card.addEventListener('click', async () => { await openLessonDetails(l.id); });
         });
         lessonsList.innerHTML = '';
         lessonsList.appendChild(fragment);
       } catch (err) {
         lessonsList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+      }
+    }
+    
+    async function openLessonDetails(lessonId) {
+      selectedLessonId = lessonId;
+      if (lessonsSection) lessonsSection.style.display = 'none';
+      if (lessonDetailsSection) lessonDetailsSection.style.display = 'block';
+      await renderLessonDetails();
+    }
+    
+    async function renderLessonDetails() {
+      if (!selectedLessonId) return;
+      try {
+        const { data: lesson, error: lErr } = await supabase.from('lessons').select('id, trainer, created_at').eq('id', selectedLessonId).maybeSingle();
+        if (lErr) throw lErr;
+        if (lessonDetailsTitle) lessonDetailsTitle.textContent = `Szczegóły zajęć — ${lesson?.trainer || ''}`;
+        const { data: links, error: linkErr } = await supabase.from('lesson_participants').select('participant_id').eq('lesson_id', selectedLessonId);
+        if (linkErr) throw linkErr;
+        const pIds = (links || []).map(x => x.participant_id);
+        let pMap = new Map();
+        if (pIds.length) {
+          const { data: parts, error: pErr } = await supabase.from('participants').select('id, first_name, last_name, phone').in('id', pIds);
+          if (pErr) throw pErr;
+          pMap = new Map(parts.map(p => [p.id, p]));
+        }
+        if (lessonParticipantsSummary) {
+          const names = pIds.map(id => (pMap.get(id)?.first_name || '').trim()).filter(Boolean);
+          const phones = pIds.map(id => pMap.get(id)?.phone || '').filter(Boolean);
+          lessonParticipantsSummary.innerHTML = `
+            <div class="content-box" style="padding:12px;">
+              <div class="group-detail"><i class="fas fa-users"></i><span>Uczestnicy: ${names.join(', ') || '-'}</span></div>
+              <div class="group-detail"><i class="fas fa-phone"></i><span>Telefony: ${phones.join(', ') || '-'}</span></div>
+            </div>`;
+        }
+        if (lessonEntriesList) {
+          lessonEntriesList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie lekcji...</p></div>';
+          const { data: entries, error: eErr } = await supabase.from('lesson_entries').select('*').eq('lesson_id', selectedLessonId).order('created_at', { ascending: false });
+          if (eErr) throw eErr;
+          if (!entries || entries.length === 0) {
+            lessonEntriesList.innerHTML = '<div class="empty-state"><p>Brak lekcji</p></div>';
+            if (lessonTotalEl) lessonTotalEl.textContent = '';
+          } else {
+            const fragment = document.createDocumentFragment();
+            let total = 0;
+            entries.forEach(ent => {
+              total += Number(ent.amount || 0);
+              const box = document.createElement('div');
+              box.className = 'content-box';
+              box.style.marginBottom = '8px';
+              const typeLabel = ent.type === 'private' ? 'Lekcja prywatna' : 'Pierwszy taniec';
+              const pkg = ent.use_package && ent.package ? `, Pakiet: ${ent.package}` : '';
+              box.innerHTML = `
+                <div class="group-detail"><i class="fas fa-book"></i><span>${typeLabel}${pkg}</span></div>
+                <div class="group-detail"><i class="fas fa-money-bill"></i><span>${Number(ent.amount || 0).toFixed(2)} zł</span></div>
+                <div class="group-detail"><i class="fas fa-calendar"></i><span>${new Date(ent.created_at).toLocaleString('pl-PL')}</span></div>
+              `;
+              fragment.appendChild(box);
+            });
+            lessonEntriesList.innerHTML = '';
+            lessonEntriesList.appendChild(fragment);
+            if (lessonTotalEl) lessonTotalEl.textContent = `Suma: ${total.toFixed(2)} zł`;
+          }
+        }
+      } catch (err) {
+        if (lessonEntriesList) lessonEntriesList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
       }
     }
 
