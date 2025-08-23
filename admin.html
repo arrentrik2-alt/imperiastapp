@@ -1010,18 +1010,21 @@
           participantsLink.classList.remove('active');
           if (lessonsLink) lessonsLink.classList.remove('active');
           if (scheduleLink) scheduleLink.classList.remove('active');
+          if (firstDanceLink) firstDanceLink.classList.remove('active');
         } else if (section === 'participants') {
           participantsLink.classList.add('active');
           groupsLink.classList.remove('active');
           if (lessonsLink) lessonsLink.classList.remove('active');
           if (scheduleLink) scheduleLink.classList.remove('active');
           if (trainersLink) trainersLink.classList.remove('active');
+          if (firstDanceLink) firstDanceLink.classList.remove('active');
         } else if (section === 'lessons') {
           if (lessonsLink) lessonsLink.classList.add('active');
           groupsLink.classList.remove('active');
           participantsLink.classList.remove('active');
           if (scheduleLink) scheduleLink.classList.remove('active');
           if (trainersLink) trainersLink.classList.remove('active');
+          if (firstDanceLink) firstDanceLink.classList.remove('active');
         } else if (section === 'schedule') {
           if (scheduleLink) scheduleLink.classList.add('active');
           groupsLink.classList.remove('active');
@@ -1042,6 +1045,7 @@
           participantsLink.classList.remove('active');
           if (lessonsLink) lessonsLink.classList.remove('active');
           if (scheduleLink) scheduleLink.classList.remove('active');
+          if (firstDanceLink) firstDanceLink.classList.remove('active');
         }
       }
     }
@@ -3175,6 +3179,64 @@
       if (leParticipantsContainer) { leParticipantsContainer.innerHTML = ''; leParticipantsContainer.appendChild(createLessonParticipantRow()); }
       selectedLessonId = null;
       openLessonEntryModal();
+    });
+
+    // First dance actions (delegation)
+    const fdEntriesList = document.getElementById('fd-entries-list');
+    if (fdEntriesList) fdEntriesList.addEventListener('click', async (e) => {
+      const row = e.target.closest('.content-box.participant-row');
+      if (!row) return;
+      const entryId = row.dataset.entryId;
+      if (e.target.closest('.le-confirm-btn')) {
+        const amount = parseFloat(row.querySelector('.le-amount')?.value || '0');
+        const method = row.querySelector('.le-method')?.value || '';
+        const comment = row.querySelector('.le-comment')?.value?.trim() || '';
+        const dateVal = row.querySelector('.le-date')?.value || null;
+        const timeVal = row.querySelector('.le-time')?.value || null;
+        if (isNaN(amount) || amount < 0) { alert('Podaj poprawną kwotę'); return; }
+        if (!method) { alert('Wybierz metodę płatności'); return; }
+        const btn = e.target.closest('.le-confirm-btn');
+        const original = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="loading"></span>';
+        try {
+          const { error } = await supabase
+            .from('lesson_entries')
+            .update({ amount, method, comment, lesson_date: dateVal, lesson_time: timeVal, confirmed: true, confirmed_at: new Date().toISOString() })
+            .eq('id', entryId)
+            .eq('type', 'first_dance');
+          if (error) throw error;
+          await renderFirstDanceForMonth();
+        } catch (err2) {
+          alert('Błąd zapisu płatności: ' + (err2.message || 'Nieznany'));
+        } finally { btn.disabled = false; btn.innerHTML = original; }
+      }
+      if (e.target.closest('.le-delete-payment-btn')) {
+        if (!confirm('Usunąć dane płatności dla tej lekcji?')) return;
+        try {
+          const { error } = await supabase
+            .from('lesson_entries')
+            .update({ confirmed: false, confirmed_at: null, method: '', comment: '' })
+            .eq('id', entryId)
+            .eq('type', 'first_dance');
+          if (error) throw error;
+          await renderFirstDanceForMonth();
+        } catch (err4) {
+          alert('Błąd usuwania płatności: ' + (err4.message || 'Nieznany'));
+        }
+      }
+      if (e.target.closest('.le-delete-lesson-btn')) {
+        if (!confirm('Usunąć tę lekcję?')) return;
+        try {
+          const { error } = await supabase
+            .from('lesson_entries')
+            .delete()
+            .eq('id', entryId)
+            .eq('type', 'first_dance');
+          if (error) throw error;
+          await renderFirstDanceForMonth();
+        } catch (err3) {
+          alert('Błąd usuwania lekcji: ' + (err3.message || 'Nieznany'));
+        }
+      }
     });
 
     async function loadLessons() {
