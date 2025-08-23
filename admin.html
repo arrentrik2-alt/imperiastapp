@@ -449,6 +449,12 @@
         </a>
       </li>
       <li>
+        <a href="#" id="nav-lessons">
+          <i class="fas fa-chalkboard-teacher"></i>
+          <span class="link-text">Lekcje</span>
+        </a>
+      </li>
+      <li>
         <a href="#">
           <i class="fas fa-chart-line"></i>
           <span class="link-text">Płatności</span>
@@ -584,6 +590,21 @@
       </div>
     </div>
 
+    <!-- Lessons Section -->
+    <div class="content-box" id="lessons-section" style="display:none;">
+      <div class="content-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h3>Lekcje</h3>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+          <button class="btn btn-primary" id="add-lesson-btn"><i class="fas fa-plus"></i> Utwórz zajęcia</button>
+        </div>
+      </div>
+      <div id="lessons-list">
+        <div class="empty-state"><p>Brak utworzonych lekcji</p></div>
+      </div>
+    </div>
+
     <!-- Participants Section -->
     <div class="content-box" id="participants-section" style="display:none;">
       <div class="content-header">
@@ -715,6 +736,26 @@
         <button class="btn btn-primary" id="save-group-btn">
           <i class="fas fa-save"></i> Zapisz grupę
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Lesson Modal -->
+  <div class="modal" id="add-lesson-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-add-lesson-modal"><i class="fas fa-times"></i></button>
+      <div class="modal-header">
+        <h3>Utwórz zajęcia</h3>
+      </div>
+      <div id="lesson-rows">
+        <!-- dynamic participant rows go here -->
+      </div>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button class="btn btn-outline" id="add-lesson-participant">+ Dodaj innego uczestnika</button>
+      </div>
+      <div class="form-actions" style="margin-top:14px;">
+        <button class="btn btn-outline" id="cancel-add-lesson">Anuluj</button>
+        <button class="btn btn-primary" id="save-lesson-btn"><i class="fas fa-save"></i> Zapisz zajęcia</button>
       </div>
     </div>
   </div>
@@ -1928,6 +1969,123 @@
         return { ok: true, transport: 'no-cors-error', note: e?.message || 'network error' };
       }
     }
+
+    // -------- Lessons functionality --------
+    const lessonsLink = document.getElementById('nav-lessons');
+    const lessonsSection = document.getElementById('lessons-section');
+    const addLessonBtn = document.getElementById('add-lesson-btn');
+    const addLessonModal = document.getElementById('add-lesson-modal');
+    const closeAddLessonModal = document.getElementById('close-add-lesson-modal');
+    const cancelAddLessonBtn = document.getElementById('cancel-add-lesson');
+    const addLessonParticipantBtn = document.getElementById('add-lesson-participant');
+    const lessonRowsContainer = document.getElementById('lesson-rows');
+    const saveLessonBtn = document.getElementById('save-lesson-btn');
+
+    function setActiveLessonsNav() { if (lessonsLink && groupsLink && participantsLink) { lessonsLink.classList.add('active'); groupsLink.classList.remove('active'); participantsLink.classList.remove('active'); if (scheduleLink) scheduleLink.classList.remove('active'); } }
+
+    if (lessonsLink) {
+      lessonsLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        groupsSection.style.display = 'none';
+        groupDetailsSection.style.display = 'none';
+        participantsSection.style.display = 'none';
+        scheduleSection.style.display = 'none';
+        lessonsSection.style.display = 'block';
+        setActiveLessonsNav();
+        collapseSidebar();
+      });
+    }
+
+    function openAddLessonModal() {
+      lessonRowsContainer.innerHTML = '';
+      addParticipantRow();
+      addLessonModal.classList.add('active');
+    }
+    function closeAddLessonModalFunc() { addLessonModal.classList.remove('active'); }
+    if (addLessonBtn) addLessonBtn.addEventListener('click', openAddLessonModal);
+    if (closeAddLessonModal) closeAddLessonModal.addEventListener('click', closeAddLessonModalFunc);
+    if (cancelAddLessonBtn) cancelAddLessonBtn.addEventListener('click', closeAddLessonModalFunc);
+
+    function createParticipantRow() {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'content-box';
+      wrapper.style.marginBottom = '8px';
+      wrapper.innerHTML = `
+        <div class="form-group"><label>Imię</label><input type="text" class="form-control lesson-first-name" placeholder="Imię"></div>
+        <div class="form-group"><label>Nazwisko</label><input type="text" class="form-control lesson-last-name" placeholder="Nazwisko"></div>
+        <div class="form-group"><label>Telefon</label><input type="tel" class="form-control lesson-phone" placeholder="Telefon"></div>
+        <div style="display:flex; gap:8px; justify-content:flex-end;"><button class="btn btn-outline remove-lesson-participant">Usuń</button></div>
+      `;
+      return wrapper;
+    }
+
+    function addParticipantRow() {
+      const row = createParticipantRow();
+      lessonRowsContainer.appendChild(row);
+      row.querySelector('.remove-lesson-participant').addEventListener('click', () => { row.remove(); });
+    }
+
+    if (addLessonParticipantBtn) addLessonParticipantBtn.addEventListener('click', (e)=>{ e.preventDefault(); addParticipantRow(); });
+
+    async function loadLessons() {
+      const list = document.getElementById('lessons-list');
+      if (!list) return;
+      list.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie...</p></div>';
+      try {
+        const { data, error } = await supabase.from('groups').select('*').ilike('name', 'Lekcje%').order('id', { ascending: false });
+        if (error) throw error;
+        if (!data || !data.length) { list.innerHTML = '<div class="empty-state"><p>Brak utworzonych lekcji</p></div>'; return; }
+        const frag = document.createDocumentFragment();
+        data.forEach(g => {
+          const card = document.createElement('div'); card.className = 'group-card';
+          card.innerHTML = `<h4>${g.name}</h4><div class="group-detail"><i class="fas fa-calendar"></i><span>ID: ${g.id}</span></div>`;
+          frag.appendChild(card);
+        });
+        list.innerHTML = ''; list.appendChild(frag);
+      } catch (err) {
+        list.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+      }
+    }
+
+    // Save lesson: create a group record named "Lekcje + Imiona"; create participants (without group_id) and link via participant_groups
+    if (saveLessonBtn) saveLessonBtn.addEventListener('click', async () => {
+      const rows = Array.from(lessonRowsContainer.querySelectorAll('.content-box'));
+      if (!rows.length) { alert('Dodaj przynajmniej jednego uczestnika'); return; }
+      const participantsPayload = rows.map(r => ({ first_name: r.querySelector('.lesson-first-name').value.trim(), last_name: r.querySelector('.lesson-last-name').value.trim(), phone: r.querySelector('.lesson-phone').value.trim() }));
+      for (const p of participantsPayload) { if (!p.first_name || !p.last_name) { alert('Wypełnij imię i nazwisko dla wszystkich uczestników'); return; } }
+      const names = participantsPayload.map(p => p.first_name).slice(0,5).join(', ');
+      const lessonName = `Lekcje ${names}`;
+
+      saveLessonBtn.disabled = true; const orig = saveLessonBtn.innerHTML; saveLessonBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
+      try {
+        const { data: groupData, error: groupErr } = await supabase.from('groups').insert([{ name: lessonName, day: 'Lekcje', start_time: null, end_time: null, trainer: '', fee: 0, multisport: 0 }]).select().single();
+        if (groupErr) throw groupErr;
+        const groupId = groupData.id;
+
+        const participantsToInsert = participantsPayload.map(p => ({ first_name: p.first_name, last_name: p.last_name, phone: p.phone || null, multisport: false, consent_signed: false }));
+        const { data: createdParticipants, error: pErr } = await supabase.from('participants').insert(participantsToInsert).select();
+        if (pErr) throw pErr;
+
+        const pgInserts = (createdParticipants || []).map(cp => ({ participant_id: cp.id, group_id: groupId }));
+        if (pgInserts.length) {
+          const { error: pgErr } = await supabase.from('participant_groups').insert(pgInserts);
+          if (pgErr) console.warn('Warning creating participant_groups:', pgErr);
+        }
+
+        alert('Zajęcia utworzone pomyślnie');
+        closeAddLessonModalFunc();
+        await loadAllParticipants();
+        await loadLessons();
+      } catch (err) {
+        console.error('Błąd zapisu lekcji:', err);
+        alert('Błąd zapisu lekcji: ' + (err.message || 'Nieznany'));
+      } finally {
+        saveLessonBtn.disabled = false; saveLessonBtn.innerHTML = orig;
+      }
+    });
+
+    // Ensure lessons are loaded on init
+    document.addEventListener('DOMContentLoaded', () => { loadLessons(); });
   </script>
 </body>
 </html>
