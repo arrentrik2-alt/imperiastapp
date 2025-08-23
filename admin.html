@@ -1055,7 +1055,7 @@
       });
     }
 
-    // Navigate to Lessons page (show details view by default)
+    // Navigate to Lessons page (monthly view)
     if (lessonsLink) {
       lessonsLink.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -1065,11 +1065,13 @@
         scheduleSection.style.display = 'none';
         if (lessonsSection) lessonsSection.style.display = 'none';
         if (lessonDetailsSection) lessonDetailsSection.style.display = 'block';
+        if (lessonDetailsTitle) lessonDetailsTitle.textContent = 'Lekcje';
+        if (deleteLessonBtn) deleteLessonBtn.style.display = 'none';
+        if (lessonParticipantsSummary) lessonParticipantsSummary.style.display = 'none';
+        selectedLessonId = null;
         setActiveNav('lessons');
         collapseSidebar();
-        if (selectedLessonId) {
-          await renderLessonDetails();
-        }
+        await renderLessonsForMonth();
         try { await loadAllParticipants(); } catch {}
       });
     }
@@ -2235,26 +2237,6 @@
             <div style="margin-top: 8px;"><button class="btn btn-outline" id="le-add-participant-btn" type="button"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button></div>
           </div>
         </div>
-        <div class="form-group">
-          <label>Rodzaj lekcji</label>
-          <select id="le-type" class="form-control">
-            <option value="private">Lekcja prywatna</option>
-            <option value="first_dance">Pierwszy taniec</option>
-          </select>
-        </div>
-        <div class="form-group" id="le-package-toggle" style="display:none; align-items:center; gap:8px;">
-          <label style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="le-use-package" style="width:auto;" /> Wybieram pakiet
-          </label>
-        </div>
-        <div class="form-group" id="le-package-select" style="display:none;">
-          <label>Pakiet</label>
-          <select id="le-package" class="form-control">
-            <option value="Express">Express</option>
-            <option value="Standard">Standard</option>
-            <option value="Full">Full</option>
-          </select>
-        </div>
         <div class="form-group" style="display:flex; gap:8px; align-items:center;">
           <div style="flex:1 1 50%">
             <label>Dzień</label>
@@ -2280,11 +2262,6 @@
     const closeLessonEntryBtn = lessonEntryModal.querySelector('#close-lesson-entry-modal');
     const cancelLessonEntryBtn = lessonEntryModal.querySelector('#cancel-lesson-entry');
     const saveLessonEntryBtn = lessonEntryModal.querySelector('#save-lesson-entry');
-    const leType = lessonEntryModal.querySelector('#le-type');
-    const leUsePackage = lessonEntryModal.querySelector('#le-use-package');
-    const lePackageToggle = lessonEntryModal.querySelector('#le-package-toggle');
-    const lePackageSelectWrap = lessonEntryModal.querySelector('#le-package-select');
-    const lePackage = lessonEntryModal.querySelector('#le-package');
     const leAmount = lessonEntryModal.querySelector('#le-amount');
     const leDate = lessonEntryModal.querySelector('#le-date');
     const leTime = lessonEntryModal.querySelector('#le-time');
@@ -2296,45 +2273,23 @@
       if (leParticipantsContainer) leParticipantsContainer.appendChild(createLessonParticipantRow());
     });
     if (addLessonEntryBtn) addLessonEntryBtn.addEventListener('click', () => {
-      leType.value = 'private';
-      leUsePackage.checked = false;
       leAmount.value = '';
-      lePackageToggle.style.display = 'none';
-      lePackageSelectWrap.style.display = 'none';
       if (leNewLessonFields) {
-        if (selectedLessonId) {
-          leNewLessonFields.style.display = 'none';
-        } else {
-          leNewLessonFields.style.display = 'block';
-          if (leTrainerEl) leTrainerEl.value = '';
-          if (leParticipantsContainer) {
-            leParticipantsContainer.innerHTML = '';
-            leParticipantsContainer.appendChild(createLessonParticipantRow());
-          }
+        leNewLessonFields.style.display = 'block';
+        if (leTrainerEl) leTrainerEl.value = '';
+        if (leParticipantsContainer) {
+          leParticipantsContainer.innerHTML = '';
+          leParticipantsContainer.appendChild(createLessonParticipantRow());
         }
       }
+      selectedLessonId = null;
       openLessonEntryModal();
     });
     closeLessonEntryBtn.addEventListener('click', closeLessonEntryModal);
     cancelLessonEntryBtn.addEventListener('click', closeLessonEntryModal);
-    leType.addEventListener('change', () => {
-      if (leType.value === 'first_dance') {
-        lePackageToggle.style.display = 'block';
-        if (!leUsePackage.checked) lePackageSelectWrap.style.display = 'none';
-      } else {
-        lePackageToggle.style.display = 'none';
-        lePackageSelectWrap.style.display = 'none';
-      }
-    });
-    leUsePackage.addEventListener('change', () => {
-      lePackageSelectWrap.style.display = leUsePackage.checked ? 'block' : 'none';
-    });
     if (saveLessonEntryBtn) saveLessonEntryBtn.addEventListener('click', async () => {
-      const type = leType.value;
       const amount = parseFloat(leAmount.value || '0');
-      const usePackage = !!leUsePackage.checked;
-      const pkg = usePackage ? lePackage.value : null;
-      if (!type || isNaN(amount) || amount < 0) { alert('Podaj poprawny typ i kwotę'); return; }
+      if (isNaN(amount) || amount < 0) { alert('Podaj poprawną kwotę'); return; }
       if (!selectedLessonMonth) {
         const now = new Date(); const yyyy = now.getFullYear(); const mm = String(now.getMonth()+1).padStart(2,'0');
         selectedLessonMonth = `${yyyy}-${mm}`;
@@ -2382,19 +2337,148 @@
             const lpIns = await supabase.from('lesson_participants').insert([{ lesson_id: lessonIdToUse, participant_id: pid }]);
             if (lpIns.error) throw lpIns.error;
           }
-          selectedLessonId = lessonIdToUse;
         }
-        const payload = { lesson_id: lessonIdToUse, type, use_package: usePackage, package: pkg, amount, month: monthVal };
+        const payload = { lesson_id: lessonIdToUse, type: 'private', use_package: false, package: null, amount, month: monthVal };
         if (leDate && leDate.value) payload.lesson_date = leDate.value;
         if (leTime && leTime.value) payload.lesson_time = leTime.value;
         const ins = await supabase.from('lesson_entries').insert([payload]);
         if (ins.error) throw ins.error;
         closeLessonEntryModal();
-        await openLessonDetails(lessonIdToUse);
+        await renderLessonsForMonth();
       } catch (err) {
         alert('Błąd zapisu lekcji: ' + (err.message || 'Nieznany'));
       }
     });
+
+    // Monthly lessons view (all lessons for selected month)
+    async function renderLessonsForMonth() {
+      try {
+        if (!selectedLessonMonth) {
+          const now = new Date();
+          const yyyy = now.getFullYear();
+          const mm = String(now.getMonth() + 1).padStart(2, '0');
+          selectedLessonMonth = `${yyyy}-${mm}`;
+        }
+        if (lessonMonthSelect) {
+          lessonMonthSelect.innerHTML = '';
+          const opts = getLast12MonthsOptions();
+          opts.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o.value; opt.textContent = o.label;
+            lessonMonthSelect.appendChild(opt);
+          });
+          lessonMonthSelect.value = selectedLessonMonth;
+        }
+        if (lessonParticipantsSummary) {
+          lessonParticipantsSummary.style.display = 'none';
+          lessonParticipantsSummary.innerHTML = '';
+        }
+        if (lessonEntriesList) {
+          lessonEntriesList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie lekcji...</p></div>';
+        }
+        const { data: entries, error: eErr } = await supabase
+          .from('lesson_entries')
+          .select('*')
+          .eq('month', selectedLessonMonth)
+          .order('created_at', { ascending: false });
+        if (eErr) throw eErr;
+        if (!entries || entries.length === 0) {
+          if (lessonEntriesList) lessonEntriesList.innerHTML = '<div class="empty-state"><p>Brak lekcji</p></div>';
+          if (leSumCount) leSumCount.textContent = '0';
+          if (leSumPaidCount) leSumPaidCount.textContent = '0';
+          if (leSumUnpaidCount) leSumUnpaidCount.textContent = '0';
+          if (leSumPaidAmount) leSumPaidAmount.textContent = '0.00 zł';
+          if (leSumUnpaidAmount) leSumUnpaidAmount.textContent = '0.00 zł';
+          if (leSumProfit) leSumProfit.textContent = '0.00 zł';
+          if (leSumPotential) leSumPotential.textContent = '0.00 zł';
+          if (leSumPaidProgress) leSumPaidProgress.style.width = '0%';
+          return;
+        }
+        const lessonIds = Array.from(new Set(entries.map(e => e.lesson_id)));
+        const [{ data: links, error: linkErr }, { data: lessons, error: lErr }] = await Promise.all([
+          supabase.from('lesson_participants').select('lesson_id, participant_id, effective_from_month, effective_to_month').in('lesson_id', lessonIds),
+          supabase.from('lessons').select('id, trainer').in('id', lessonIds)
+        ]);
+        if (linkErr) throw linkErr;
+        if (lErr) throw lErr;
+        const activeLinksByLesson = new Map();
+        (links || []).forEach(l => {
+          const fromOk = !l.effective_from_month || l.effective_from_month <= selectedLessonMonth;
+          const toOk = !l.effective_to_month || l.effective_to_month > selectedLessonMonth;
+          if (!(fromOk && toOk)) return;
+          const arr = activeLinksByLesson.get(l.lesson_id) || [];
+          arr.push(l.participant_id);
+          activeLinksByLesson.set(l.lesson_id, arr);
+        });
+        const allPIds = Array.from(new Set((links || []).map(l => l.participant_id)));
+        const { data: parts, error: pErr } = allPIds.length ? await supabase.from('participants').select('id, first_name, last_name, phone').in('id', allPIds) : { data: [], error: null };
+        if (pErr) throw pErr;
+        const pMap = new Map((parts || []).map(p => [p.id, p]));
+        const trainerMap = new Map((lessons || []).map(l => [l.id, l.trainer || '']));
+        const fragment = document.createDocumentFragment();
+        let total = 0;
+        entries.forEach(ent => {
+          total += Number(ent.amount || 0);
+          const box = document.createElement('div');
+          box.className = 'content-box participant-row ' + (ent.confirmed ? 'paid' : 'unpaid');
+          box.style.marginBottom = '8px';
+          const pIds = activeLinksByLesson.get(ent.lesson_id) || [];
+          const names = pIds.map(id => {
+            const person = pMap.get(id) || {}; return `${(person.first_name||'').trim()} ${(person.last_name||'').trim()}`.trim();
+          }).filter(Boolean);
+          const trainerName = trainerMap.get(ent.lesson_id) || '';
+          const title = `Lekcja prywatna — ${names.length ? names.join(', ') : '(bez uczestników)'}`;
+          box.innerHTML = `
+            <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+              <div style="flex:1 1 220px; min-width:180px;">
+                <div class="group-detail"><i class="fas fa-book"></i><span>${title}</span>${trainerName ? ` <span style=\"color: var(--text-gray);\"> — ${trainerName}</span>` : ''}</div>
+              </div>
+              <div style="flex:0 0 140px; min-width:120px;">
+                <input title="Kwota (${selectedLessonMonth})" type="number" step="0.01" class="form-control small le-amount" value="${Number(ent.amount || 0).toFixed(2)}" />
+              </div>
+              <div style="flex:0 0 120px; min-width:110px;">
+                <select title="Metoda" class="form-control small le-method">
+                  <option value="">Metoda...</option>
+                  <option value="card" ${ent.method === 'card' ? 'selected' : ''}>Karta</option>
+                  <option value="transfer" ${ent.method === 'transfer' ? 'selected' : ''}>Przelew</option>
+                  <option value="cash" ${ent.method === 'cash' ? 'selected' : ''}>Gotówka</option>
+                </select>
+              </div>
+              <div style="flex:1 1 160px; min-width:140px;">
+                <input title="Komentarz" type="text" class="form-control small le-comment" placeholder="Komentarz" value="${(ent.comment || '').replace(/"/g, '&quot;')}" />
+              </div>
+              <div style="flex:0 0 auto; display:flex; gap:6px; align-items:center;">
+                <button class="btn btn-primary btn-sm le-confirm-btn">${ent.confirmed ? 'Zapisz' : 'OK'}</button>
+                ${ent.confirmed ? '<span class="status" style="color: var(--success); font-size:0.8rem; white-space:nowrap;">OK</span>' : '<span class="status" style="color: var(--text-gray); font-size:0.8rem; white-space:nowrap;">Brak</span>'}
+                <button class="btn btn-outline btn-sm le-delete-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>
+              </div>
+              <div style="flex:0 0 auto; display:flex; gap:6px; align-items:center;">
+                <input type="date" class="form-control small le-date" value="${ent.lesson_date ? String(ent.lesson_date).substring(0,10) : ''}" />
+                <input type="time" class="form-control small le-time" value="${ent.lesson_time ? ent.lesson_time : ''}" />
+              </div>
+            </div>
+          `;
+          box.dataset.entryId = ent.id;
+          fragment.appendChild(box);
+        });
+        const paidCount = entries.filter(e => e.confirmed).length;
+        const unpaidCount = entries.length - paidCount;
+        const paidAmount = entries.filter(e => e.confirmed).reduce((s,e)=> s + Number(e.amount || 0), 0);
+        const unpaidAmount = entries.filter(e => !e.confirmed).reduce((s,e)=> s + Number(e.amount || 0), 0);
+        if (leSumCount) leSumCount.textContent = String(entries.length);
+        if (leSumPaidCount) leSumPaidCount.textContent = String(paidCount);
+        if (leSumUnpaidCount) leSumUnpaidCount.textContent = String(unpaidCount);
+        if (leSumPaidAmount) { leSumPaidAmount.textContent = `${paidAmount.toFixed(2)} zł`; leSumPaidAmount.style.color = 'var(--success)'; }
+        if (leSumUnpaidAmount) { leSumUnpaidAmount.textContent = `${unpaidAmount.toFixed(2)} zł`; leSumUnpaidAmount.style.color = 'var(--error)'; }
+        if (leSumProfit) leSumProfit.textContent = `${paidAmount.toFixed(2)} zł`;
+        if (leSumPotential) leSumPotential.textContent = `${(paidAmount + unpaidAmount).toFixed(2)} zł`;
+        const percent = entries.length ? Math.round((paidCount / entries.length) * 100) : 0;
+        if (leSumPaidProgress) leSumPaidProgress.style.width = percent + '%';
+        if (lessonEntriesList) { lessonEntriesList.innerHTML = ''; lessonEntriesList.appendChild(fragment); }
+      } catch (err) {
+        if (lessonEntriesList) lessonEntriesList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+      }
+    }
 
     async function loadLessons() {
       if (!lessonsList) return;
@@ -2463,7 +2547,7 @@
       try {
         const { data: lesson, error: lErr } = await supabase.from('lessons').select('id, trainer, created_at').eq('id', selectedLessonId).maybeSingle();
         if (lErr) throw lErr;
-        if (lessonDetailsTitle) lessonDetailsTitle.textContent = `Szczegóły zajęć — ${lesson?.trainer || ''}`;
+        if (lessonDetailsTitle) lessonDetailsTitle.textContent = `Lekcje`;
         const { data: links, error: linkErr } = await supabase.from('lesson_participants').select('participant_id, effective_from_month, effective_to_month, id').eq('lesson_id', selectedLessonId);
         if (linkErr) throw linkErr;
         const pIds = (links || []).filter(l => {
@@ -2477,26 +2561,7 @@
           if (pErr) throw pErr;
           pMap = new Map(parts.map(p => [p.id, p]));
         }
-        if (lessonParticipantsSummary) {
-          const active = (links || []).filter(l => {
-            const fromOk = !l.effective_from_month || l.effective_from_month <= selectedLessonMonth;
-            const toOk = !l.effective_to_month || l.effective_to_month > selectedLessonMonth;
-            return fromOk && toOk;
-          });
-          const rows = active.map(l => {
-            const person = pMap.get(l.participant_id) || {};
-            const name = `${(person.first_name||'').trim()} ${(person.last_name||'').trim()}`.trim();
-            const phone = person.phone || '';
-            return `<div style="display:flex; gap:8px; align-items:center;">
-                      <div class="group-detail" style="flex:1 1 auto;"><i class="fas fa-user"></i><span>${name || '-'}</span> · <span style="color: var(--text-gray);">${phone}</span></div>
-                      <button class="btn btn-outline btn-sm remove-from-lesson-btn" data-link-id="${l.id}"><i class="fas fa-user-minus"></i> Usuń od tego miesiąca</button>
-                    </div>`;
-          }).join('');
-          lessonParticipantsSummary.innerHTML = `
-            <div class="content-box" style="padding:12px;">
-              ${rows || '<div class="group-detail"><span>Brak uczestników</span></div>'}
-            </div>`;
-        }
+        if (lessonParticipantsSummary) { lessonParticipantsSummary.style.display = 'none'; lessonParticipantsSummary.innerHTML = ''; }
         if (lessonEntriesList) {
           lessonEntriesList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie lekcji...</p></div>';
           // Ensure lesson month select is populated
@@ -2542,12 +2607,18 @@
               const box = document.createElement('div');
               box.className = 'content-box participant-row ' + (ent.confirmed ? 'paid' : 'unpaid');
               box.style.marginBottom = '8px';
-              const typeLabel = ent.type === 'private' ? 'Lekcja prywatna' : 'Pierwszy taniec';
-              const pkg = ent.use_package && ent.package ? `, Pakiet: ${ent.package}` : '';
+              const typeLabel = 'Lekcja prywatna';
+              const pkg = '';
+              const pIdsActive = (links || []).filter(l => {
+                const fromOk = !l.effective_from_month || l.effective_from_month <= selectedLessonMonth;
+                const toOk = !l.effective_to_month || l.effective_to_month > selectedLessonMonth;
+                return fromOk && toOk;
+              }).map(x => x.participant_id);
+              const names = pIdsActive.map(id => { const person = pMap.get(id) || {}; return `${(person.first_name||'').trim()} ${(person.last_name||'').trim()}`.trim(); }).filter(Boolean);
               box.innerHTML = `
                 <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
                   <div style="flex:1 1 160px; min-width:140px;">
-                    <div class="group-detail"><i class="fas fa-book"></i><span>${typeLabel}${pkg}</span></div>
+                    <div class="group-detail"><i class="fas fa-book"></i><span>${typeLabel}${pkg} — ${names.length ? names.join(', ') : '(bez uczestników)'} </span></div>
                   </div>
                   <div style="flex:0 0 140px; min-width:120px;">
                     <input title="Kwota (${selectedLessonMonth})" type="number" step="0.01" class="form-control small le-amount" value="${Number(ent.amount || 0).toFixed(2)}" />
@@ -2612,11 +2683,11 @@
         alert('Błąd usuwania zajęć: ' + (err.message || 'Nieznany'));
       }
     });
-    // Month change for lessons
+    // Month change for lessons (monthly view)
     if (lessonMonthSelect) {
       lessonMonthSelect.addEventListener('change', async () => {
         selectedLessonMonth = lessonMonthSelect.value;
-        await renderLessonDetails();
+        await renderLessonsForMonth();
       });
     }
 
@@ -2641,7 +2712,7 @@
             .update({ amount, method, comment, lesson_date: dateVal, lesson_time: timeVal, confirmed: true, confirmed_at: new Date().toISOString() })
             .eq('id', entryId);
           if (error) throw error;
-          await renderLessonDetails();
+          await renderLessonsForMonth();
         } catch (err2) {
           alert('Błąd zapisu płatności: ' + (err2.message || 'Nieznany'));
         } finally { btn.disabled = false; btn.innerHTML = original; }
@@ -2654,31 +2725,14 @@
             .update({ confirmed: false, confirmed_at: null, method: '', comment: '' })
             .eq('id', entryId);
           if (error) throw error;
-          await renderLessonDetails();
+          await renderLessonsForMonth();
         } catch (err3) {
           alert('Błąd cofnięcia płatności: ' + (err3.message || 'Nieznany'));
         }
       }
     });
 
-    // Remove participant from lesson since selectedMonth
-    if (lessonParticipantsSummary) lessonParticipantsSummary.addEventListener('click', async (e) => {
-      const btn = e.target.closest('.remove-from-lesson-btn');
-      if (!btn) return;
-      const linkId = btn.dataset.linkId;
-      if (!linkId) return;
-      if (!confirm('Usunąć uczestnika z tych zajęć od wybranego miesiąca? Poprzednie miesiące pozostaną.')) return;
-      try {
-        const { error } = await supabase
-          .from('lesson_participants')
-          .update({ effective_to_month: selectedLessonMonth })
-          .eq('id', linkId);
-        if (error) throw error;
-        await renderLessonDetails();
-      } catch (err) {
-        alert('Błąd usuwania uczestnika z zajęć: ' + (err.message || 'Nieznany'));
-      }
-    });
+    // Remove participant action no longer available in lessons view per new flow
 
     // Save lesson: ensure participants exist (by phone), else create; then insert lessons
     if (saveLessonBtn) saveLessonBtn.addEventListener('click', async () => {
