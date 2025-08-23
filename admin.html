@@ -2029,13 +2029,15 @@
       <div class="modal-content">
         <button class="modal-close" id="close-lesson-modal"><i class="fas fa-times"></i></button>
         <div class="modal-header"><h3>Utwórz zajęcia</h3></div>
-        <div class="form-group"><label>Imię</label><input type="text" id="lesson-first-name" class="form-control" placeholder="Imię"></div>
-        <div class="form-group"><label>Nazwisko</label><input type="text" id="lesson-last-name" class="form-control" placeholder="Nazwisko"></div>
-        <div class="form-group"><label>Telefon</label><input type="tel" id="lesson-phone" class="form-control" placeholder="Telefon"></div>
         <div class="form-group"><label>Trener</label><input type="text" id="lesson-trainer" class="form-control" placeholder="Imię i nazwisko trenera"></div>
-        <div class="form-actions">
-          <button class="btn btn-outline" id="cancel-lesson-btn">Anuluj</button>
-          <button class="btn btn-primary" id="save-lesson-btn"><i class="fas fa-save"></i> Zapisz</button>
+        <div class="form-group">
+          <label>Uczestnicy</label>
+          <div id="lesson-participants-container"></div>
+          <div style="margin-top: 8px;"><button class="btn btn-outline" id="add-lesson-participant-btn" type="button"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button></div>
+        </div>
+        <div class="form-actions" style="justify-content: flex-end;">
+          <button class="btn btn-outline" id="cancel-lesson-btn" type="button">Anuluj</button>
+          <button class="btn btn-primary" id="save-lesson-btn" type="button"><i class="fas fa-save"></i> Zapisz</button>
         </div>
       </div>`;
     document.body.appendChild(lessonModal);
@@ -2044,13 +2046,39 @@
     const closeLessonModalBtn = lessonModal.querySelector('#close-lesson-modal');
     const cancelLessonBtn = lessonModal.querySelector('#cancel-lesson-btn');
     const saveLessonBtn = lessonModal.querySelector('#save-lesson-btn');
-    const lessonFirstNameEl = lessonModal.querySelector('#lesson-first-name');
-    const lessonLastNameEl = lessonModal.querySelector('#lesson-last-name');
-    const lessonPhoneEl = lessonModal.querySelector('#lesson-phone');
     const lessonTrainerEl = lessonModal.querySelector('#lesson-trainer');
+    const lessonParticipantsContainer = lessonModal.querySelector('#lesson-participants-container');
+    const addLessonParticipantBtn = lessonModal.querySelector('#add-lesson-participant-btn');
+    function createLessonParticipantRow(first = '', last = '', phone = '') {
+      const row = document.createElement('div');
+      row.className = 'lesson-participant-row';
+      row.style.display = 'grid';
+      row.style.gridTemplateColumns = '1fr 1fr 1fr auto';
+      row.style.gap = '8px';
+      row.style.marginBottom = '8px';
+      row.innerHTML = `
+        <input type="text" class="form-control lp-first-name" placeholder="Imię" value="${first.replace(/"/g, '&quot;')}" />
+        <input type="text" class="form-control lp-last-name" placeholder="Nazwisko" value="${last.replace(/"/g, '&quot;')}" />
+        <input type="tel" class="form-control lp-phone" placeholder="Telefon" value="${phone.replace(/"/g, '&quot;')}" />
+        <button class="btn btn-outline btn-sm remove-lp-btn" type="button"><i class="fas fa-user-minus"></i></button>
+      `;
+      const removeBtn = row.querySelector('.remove-lp-btn');
+      removeBtn.addEventListener('click', () => { row.remove(); });
+      return row;
+    }
+    function resetLessonForm() {
+      if (lessonTrainerEl) lessonTrainerEl.value = '';
+      if (lessonParticipantsContainer) {
+        lessonParticipantsContainer.innerHTML = '';
+        lessonParticipantsContainer.appendChild(createLessonParticipantRow());
+      }
+    }
     closeLessonModalBtn.addEventListener('click', closeLessonModal);
     cancelLessonBtn.addEventListener('click', closeLessonModal);
-    if (createLessonBtn) createLessonBtn.addEventListener('click', openLessonModal);
+    if (createLessonBtn) createLessonBtn.addEventListener('click', () => { resetLessonForm(); openLessonModal(); });
+    if (addLessonParticipantBtn) addLessonParticipantBtn.addEventListener('click', () => {
+      if (lessonParticipantsContainer) lessonParticipantsContainer.appendChild(createLessonParticipantRow());
+    });
 
     async function loadLessons() {
       if (!lessonsList) return;
@@ -2098,48 +2126,46 @@
       }
     }
 
-    // Save lesson: ensure participant exists (by phone), else create; then insert lesson
+    // Save lesson: ensure participants exist (by phone), else create; then insert lessons
     if (saveLessonBtn) saveLessonBtn.addEventListener('click', async () => {
-      const fn = lessonFirstNameEl.value.trim();
-      const ln = lessonLastNameEl.value.trim();
-      const phone = lessonPhoneEl.value.trim();
       const trainer = lessonTrainerEl.value.trim();
-      if (!fn || !ln || !phone || !trainer) { alert('Uzupełnij wszystkie pola'); return; }
+      if (!trainer) { alert('Podaj trenera'); return; }
+      const rows = Array.from(lessonParticipantsContainer ? lessonParticipantsContainer.querySelectorAll('.lesson-participant-row') : []);
+      if (!rows.length) { alert('Dodaj co najmniej jednego uczestnika'); return; }
       saveLessonBtn.disabled = true; const original = saveLessonBtn.innerHTML; saveLessonBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
       try {
-        let participantId = null;
-        // Try find participant by phone
-        const { data: existing, error: selErr } = await supabase
-          .from('participants')
-          .select('id')
-          .eq('phone', phone)
-          .maybeSingle();
-        if (selErr) throw selErr;
-        if (existing) {
-          participantId = existing.id;
-          // Optionally update name if blank
-          await supabase.from('participants').update({ first_name: fn, last_name: ln }).eq('id', participantId);
-        } else {
-          const ins = await supabase
-            .from('participants')
-            .insert([{ first_name: fn, last_name: ln, phone, multisport: false, consent_signed: false }])
-            .select('id')
-            .single();
-          if (ins.error) throw ins.error;
-          participantId = ins.data.id;
+        const phoneToId = new Map();
+        for (const row of rows) {
+          const fn = (row.querySelector('.lp-first-name')?.value || '').trim();
+          const ln = (row.querySelector('.lp-last-name')?.value || '').trim();
+          const phone = (row.querySelector('.lp-phone')?.value || '').trim();
+          if (!fn || !ln || !phone) { throw new Error('Wypełnij imię, nazwisko i telefon dla każdego uczestnika'); }
+          let participantId = phoneToId.get(phone) || null;
+          if (!participantId) {
+            const found = await supabase.from('participants').select('id').eq('phone', phone).maybeSingle();
+            if (found.error) throw found.error;
+            if (found.data) {
+              participantId = found.data.id;
+              await supabase.from('participants').update({ first_name: fn, last_name: ln }).eq('id', participantId);
+            } else {
+              const ins = await supabase
+                .from('participants')
+                .insert([{ first_name: fn, last_name: ln, phone, multisport: false, consent_signed: false }])
+                .select('id')
+                .single();
+              if (ins.error) throw ins.error;
+              participantId = ins.data.id;
+            }
+            phoneToId.set(phone, participantId);
+          }
+          const lessonIns = await supabase.from('lessons').insert([{ participant_id: participantId, trainer }]);
+          if (lessonIns.error) throw lessonIns.error;
         }
-        // Create lesson
-        const lessonIns = await supabase
-          .from('lessons')
-          .insert([{ participant_id: participantId, trainer }]);
-        if (lessonIns.error) throw lessonIns.error;
         await loadLessons();
         try { await loadAllParticipants(); } catch {}
         closeLessonModal();
-        lessonFirstNameEl.value = '';
-        lessonLastNameEl.value = '';
-        lessonPhoneEl.value = '';
-        lessonTrainerEl.value = '';
+        if (lessonTrainerEl) lessonTrainerEl.value = '';
+        if (lessonParticipantsContainer) lessonParticipantsContainer.innerHTML = '';
       } catch (err) {
         alert('Błąd zapisu zajęć: ' + (err.message || 'Nieznany'));
       } finally {
