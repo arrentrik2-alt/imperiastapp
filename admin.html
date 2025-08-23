@@ -643,8 +643,8 @@
           <label for="edit-participant-multisport" style="margin:0;">Korzysta z Multisport</label>
         </div>
         <div class="form-group">
-          <label>Grupa</label>
-          <select id="edit-participant-group" class="form-control"></select>
+          <label>Grupy (możesz wybrać kilka)</label>
+          <select id="edit-participant-group" class="form-control" multiple></select>
         </div>
         <div class="form-actions">
           <button class="btn btn-outline" id="cancel-edit-participant">Anuluj</button>
@@ -1403,25 +1403,23 @@
       if (!selectedGroup || !selectedMonth) return;
       participantsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
       try {
+        const { data: pgRows, error: pgErr } = await supabase
+          .from('participant_groups')
+          .select('participant_id')
+          .eq('group_id', selectedGroup.id);
+        if (pgErr) throw pgErr;
+        if (!pgRows || pgRows.length === 0) {
+          participantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników w tej grupie</p></div>';
+          updateParticipantsSummary({ totalCount: 0, paidCount: 0, unpaidCount: 0, paidAmount: 0, unpaidAmount: 0, profit: 0 });
+          return;
+        }
+        const pIds = pgRows.map(r => r.participant_id);
         const { data: participants, error: participantsError } = await supabase
           .from('participants')
           .select('*')
-          .eq('group_id', selectedGroup.id)
+          .in('id', pIds)
           .order('last_name', { ascending: true });
         if (participantsError) throw participantsError;
-
-        if (!participants || participants.length === 0) {
-          participantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników w tej grupie</p></div>';
-          updateParticipantsSummary({
-            totalCount: 0,
-            paidCount: 0,
-            unpaidCount: 0,
-            paidAmount: 0,
-            unpaidAmount: 0,
-            profit: 0
-          });
-          return;
-        }
 
         const participantIds = participants.map(p => p.id);
         const { data: payments, error: paymentsError } = await supabase
@@ -1567,7 +1565,7 @@
       participantMultisport.checked = false;
     });
 
-    // Zapis nowego uczestnika
+    // Zapis nowego uczestnika (tworzy powiązanie w participant_groups)
     saveParticipantBtn.addEventListener('click', async () => {
       if (!selectedGroup) return;
       const fn = participantFirstName.value.trim();
@@ -1582,10 +1580,17 @@
       const original = saveParticipantBtn.innerHTML;
       saveParticipantBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
       try {
-        const { error } = await supabase
+        const insertRes = await supabase
           .from('participants')
-          .insert([{ group_id: selectedGroup.id, first_name: fn, last_name: ln, phone, multisport: multi, consent_signed: false }]);
-        if (error) throw error;
+          .insert([{ first_name: fn, last_name: ln, phone, multisport: multi, consent_signed: false }])
+          .select()
+          .single();
+        if (insertRes.error) throw insertRes.error;
+        const newParticipant = insertRes.data;
+        const linkRes = await supabase
+          .from('participant_groups')
+          .insert([{ participant_id: newParticipant.id, group_id: selectedGroup.id }]);
+        if (linkRes.error) throw linkRes.error;
         addParticipantForm.style.display = 'none';
         participantFirstName.value = '';
         participantLastName.value = '';
@@ -1657,15 +1662,30 @@
         }
       }
 
-      // Usuwanie uczestnika
+      // Usuwanie uczestnika: jeśli należy do wielu grup → usuń tylko powiązanie; jeśli do jednej → usuń całego uczestnika
       if (e.target.closest('.delete-participant-btn')) {
-        if (!confirm('Usunąć uczestnika z grupy?')) return;
+        if (!confirm('Usunąć uczestnika z tej grupy?')) return;
         try {
-          const { error } = await supabase
-            .from('participants')
-            .delete()
-            .eq('id', participantId);
-          if (error) throw error;
+          const { data: links, error: linksErr } = await supabase
+            .from('participant_groups')
+            .select('group_id')
+            .eq('participant_id', participantId);
+          if (linksErr) throw linksErr;
+          const linkCount = (links || []).length;
+          if (linkCount > 1) {
+            const { error: delLinkErr } = await supabase
+              .from('participant_groups')
+              .delete()
+              .eq('participant_id', participantId)
+              .eq('group_id', selectedGroup.id);
+            if (delLinkErr) throw delLinkErr;
+          } else {
+            const { error: delPErr } = await supabase
+              .from('participants')
+              .delete()
+              .eq('id', participantId);
+            if (delPErr) throw delPErr;
+          }
           await loadParticipantsAndPayments();
         } catch (err) {
           alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
@@ -1723,9 +1743,10 @@
     async function loadAllParticipants() {
       participantsListAll.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
       try {
-        const [{ data: participants, error: pErr }, { data: groups, error: gErr }] = await Promise.all([
+        const [{ data: participants, error: pErr }, { data: groups, error: gErr }, { data: allLinks } ] = await Promise.all([
           supabase.from('participants').select('*').order('last_name', { ascending: true }),
-          supabase.from('groups').select('id,name')
+          supabase.from('groups').select('id,name'),
+          supabase.from('participant_groups').select('participant_id, group_id')
         ]);
         if (pErr) throw pErr;
         if (gErr) throw gErr;
@@ -1734,6 +1755,12 @@
           return;
         }
         const groupIdToName = new Map(groups.map(g => [g.id, g.name]));
+        const linksByParticipant = new Map();
+        (allLinks || []).forEach(l => {
+          const arr = linksByParticipant.get(l.participant_id) || [];
+          arr.push(l.group_id);
+          linksByParticipant.set(l.participant_id, arr);
+        });
         const participantIds = participants.map(p => p.id);
         const { data: payments, error: payErr } = await supabase
           .from('payments')
@@ -1754,11 +1781,12 @@
           const agg = payAgg.get(p.id) || { paid: 0, unpaid: 0 };
           const card = document.createElement('div');
           card.className = 'group-card';
+          const groupNames = (linksByParticipant.get(p.id) || []).map(id => groupIdToName.get(id) || '-');
           card.innerHTML = `
             <h4><span class="p-index">${idx + 1}</span>${p.first_name || ''} ${p.last_name || ''}</h4>
             <div class="group-detail"><i class="fas fa-phone"></i><span>${p.phone || ''}</span></div>
             <div class="group-detail"><i class="fas fa-money-bill-wave"></i><span>Zapłacone: <span style=\"color: var(--success);\">${agg.paid.toFixed(2)} zł</span> · Niezapłacone: <span style=\"color: var(--error);\">${agg.unpaid.toFixed(2)} zł</span></span></div>
-            <div class="group-detail"><i class="fas fa-users"></i><span>Grupa: ${groupIdToName.get(p.group_id) || '-'}</span></div>
+            <div class="group-detail"><i class="fas fa-users"></i><span>Grupy: ${groupNames.length ? groupNames.join(', ') : '-'}</span></div>
             <div class="group-actions">
               <button class="btn btn-outline edit-participant-btn" data-id="${p.id}"><i class="fas fa-edit"></i></button>
               <button class="btn btn-outline delete-participant-global-btn" data-id="${p.id}"><i class="fas fa-trash"></i></button>
@@ -1810,6 +1838,9 @@
     const editPhoneEl = document.getElementById('edit-participant-phone');
     const editMultiEl = document.getElementById('edit-participant-multisport');
     const editGroupSelect = document.getElementById('edit-participant-group');
+    function getSelectedGroupIdsFromMulti() {
+      return Array.from(editGroupSelect ? editGroupSelect.selectedOptions : []).map(o => o.value);
+    }
     let editParticipantId = null;
     let isCreateParticipant = false;
 
@@ -1828,7 +1859,21 @@
         opt.textContent = g.name;
         editGroupSelect.appendChild(opt);
       });
-      if (p.group_id) editGroupSelect.value = p.group_id;
+      // preselect current groups of participant via join table
+      (async () => {
+        try {
+          const { data: links, error } = await supabase
+            .from('participant_groups')
+            .select('group_id')
+            .eq('participant_id', p.id);
+          if (!error && links && editGroupSelect) {
+            const ids = new Set(links.map(l => l.group_id));
+            Array.from(editGroupSelect.options).forEach(opt => {
+              opt.selected = ids.has(opt.value);
+            });
+          }
+        } catch {}
+      })();
       editParticipantModal.classList.add('active');
     }
     async function openCreateParticipantModal() {
@@ -1899,16 +1944,36 @@
         first_name: editFirstNameEl.value.trim(),
         last_name: editLastNameEl.value.trim(),
         phone: editPhoneEl.value.trim(),
-        multisport: !!editMultiEl.checked,
-        group_id: editGroupSelect.value || null
+        multisport: !!editMultiEl.checked
       };
+      const selectedGroupIds = getSelectedGroupIdsFromMulti();
       try {
+        let participantIdToUse = editParticipantId;
         if (isCreateParticipant || !editParticipantId) {
-          const { error } = await supabase.from('participants').insert([payload]);
-          if (error) throw error;
+          const ins = await supabase.from('participants').insert([payload]).select('id').single();
+          if (ins.error) throw ins.error;
+          participantIdToUse = ins.data.id;
         } else {
           const { error } = await supabase.from('participants').update(payload).eq('id', editParticipantId);
           if (error) throw error;
+        }
+        // sync participant_groups links
+        const { data: existingLinks, error: linksErr } = await supabase
+          .from('participant_groups')
+          .select('group_id')
+          .eq('participant_id', participantIdToUse);
+        if (linksErr) throw linksErr;
+        const existingIds = new Set((existingLinks || []).map(l => l.group_id));
+        const desiredIds = new Set(selectedGroupIds);
+        const toAdd = [...desiredIds].filter(id => !existingIds.has(id)).map(id => ({ participant_id: participantIdToUse, group_id: id }));
+        const toRemove = [...existingIds].filter(id => !desiredIds.has(id));
+        if (toAdd.length) {
+          const addRes = await supabase.from('participant_groups').insert(toAdd);
+          if (addRes.error) throw addRes.error;
+        }
+        if (toRemove.length) {
+          const delRes = await supabase.from('participant_groups').delete().in('group_id', toRemove).eq('participant_id', participantIdToUse);
+          if (delRes.error) throw delRes.error;
         }
         isCreateParticipant = false;
         closeEditParticipantModal();
