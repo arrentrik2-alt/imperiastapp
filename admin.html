@@ -2440,6 +2440,7 @@
                   <div style="flex:0 0 auto; display:flex; gap:6px; align-items:center;">
                     <button class="btn btn-primary btn-sm le-confirm-btn">${ent.confirmed ? 'Zapisz' : 'OK'}</button>
                     ${ent.confirmed ? '<span class="status" style="color: var(--success); font-size:0.8rem; white-space:nowrap;">OK</span>' : '<span class="status" style="color: var(--text-gray); font-size:0.8rem; white-space:nowrap;">Brak</span>'}
+                    <button class="btn btn-outline btn-sm le-delete-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>
                   </div>
                   <div style="flex:0 0 auto; display:flex; gap:6px; align-items:center;">
                     <input type="date" class="form-control small le-date" value="${ent.lesson_date ? String(ent.lesson_date).substring(0,10) : ''}" />
@@ -2505,6 +2506,16 @@
         } catch (err2) {
           alert('Błąd zapisu płatności: ' + (err2.message || 'Nieznany'));
         } finally { btn.disabled = false; btn.innerHTML = original; }
+      }
+      if (e.target.closest('.le-delete-btn')) {
+        if (!confirm('Usunąć płatność tej lekcji?')) return;
+        try {
+          const { error } = await supabase.from('lesson_entries').delete().eq('id', entryId);
+          if (error) throw error;
+          await renderLessonDetails();
+        } catch (err3) {
+          alert('Błąd usuwania płatności: ' + (err3.message || 'Nieznany'));
+        }
       }
     });
 
