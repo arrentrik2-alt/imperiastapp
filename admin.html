@@ -577,20 +577,6 @@
       </div>
     </div>
     
-    <!-- Participants Section -->
-    <div class="content-box" id="participants-section" style="display:none;">
-      <div class="content-header">
-        <h3>Uczestnicy</h3>
-        <div style="display:flex; gap:10px; align-items:center;">
-          <button class="btn btn-primary" id="add-participant-global"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button>
-          <input id="participants-search" class="form-control" placeholder="Szukaj (imię/nazwisko/telefon)" style="width:260px;" />
-        </div>
-      </div>
-      <div id="participants-list-all">
-        <div class="empty-state"><p>Brak uczestników</p></div>
-      </div>
-    </div>
-
     <!-- Schedule Section -->
     <div class="content-box" id="schedule-section" style="display:none;">
       <div class="content-header">
@@ -599,10 +585,8 @@
           <button class="btn btn-primary" id="add-group-from-schedule"><i class="fas fa-plus"></i> Dodaj grupę</button>
         </div>
       </div>
-      <div id="gcal-embed" style="margin-top:12px;" role="region">
-        <div id="calendar">
-          <iframe src="https://calendar.google.com/calendar/embed?src=imperia.studiotanca%40gmail.com&ctz=Europe%2FWarsaw" style="border:0; width:100%; height:600px;" frameborder="0" scrolling="no"></iframe>
-        </div>
+      <div id="gcal-embed" style="margin-top:12px;">
+        <iframe src="https://calendar.google.com/calendar/embed?src=imperia.studiotanca%40gmail.com&ctz=Europe%2FWarsaw" style="border:0; width:100%; height:600px;" frameborder="0" scrolling="no"></iframe>
       </div>
     </div>
 
@@ -895,8 +879,6 @@
       });
     }
     
-    // SafeDOM shim removed to avoid masking missing DOM issues – elements are re-queried in DOMContentLoaded
-    
     // Check if user is admin
     async function checkAdmin() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -927,32 +909,32 @@
     });
     
     // Modal functionality
-    let addGroupModal = document.getElementById('add-group-modal');
-    let addGroupBtn = document.getElementById('add-group-btn');
-    let addFirstGroupBtn = document.getElementById('add-first-group');
-    let closeModalBtn = document.getElementById('close-group-modal');
-    let cancelGroupBtn = document.getElementById('cancel-group-btn');
-    let saveGroupBtn = document.getElementById('save-group-btn');
-    let groupsList = document.getElementById('groups-list');
-    let emptyState = document.getElementById('emptyState');
+    const addGroupModal = document.getElementById('add-group-modal');
+    const addGroupBtn = document.getElementById('add-group-btn');
+    const addFirstGroupBtn = document.getElementById('add-first-group');
+    const closeModalBtn = document.getElementById('close-group-modal');
+    const cancelGroupBtn = document.getElementById('cancel-group-btn');
+    const saveGroupBtn = document.getElementById('save-group-btn');
+    const groupsList = document.getElementById('groups-list');
+    const emptyState = document.getElementById('emptyState');
     // Participants page refs (global)
-    let participantsSection = document.getElementById('participants-section');
-    let participantsListAll = document.getElementById('participants-list-all');
-    let participantsSearch = document.getElementById('participants-search');
+    const participantsSection = document.getElementById('participants-section');
+    const participantsListAll = document.getElementById('participants-list-all');
+    const participantsSearch = document.getElementById('participants-search');
     // Nav links
-    let groupsLink = document.getElementById('nav-groups');
-    let participantsLink = document.getElementById('nav-participants');
-    let scheduleLink = document.getElementById('nav-schedule');
-    let lessonsLink = document.getElementById('nav-lessons');
-    let scheduleSection = document.getElementById('schedule-section');
-    let lessonsSection = document.getElementById('lessons-section');
-    let addGroupFromScheduleBtn = document.getElementById('add-group-from-schedule');
-    let calendarEl = document.getElementById('calendar');
+    const groupsLink = document.getElementById('nav-groups');
+    const participantsLink = document.getElementById('nav-participants');
+    const scheduleLink = document.getElementById('nav-schedule');
+    const lessonsLink = document.getElementById('nav-lessons');
+    const scheduleSection = document.getElementById('schedule-section');
+    const lessonsSection = document.getElementById('lessons-section');
+    const addGroupFromScheduleBtn = document.getElementById('add-group-from-schedule');
+    const calendarEl = document.getElementById('calendar');
     let calendar;
     // Sidebar toggle
-    let sidebar = document.querySelector('.sidebar');
-    let mainContentEl = document.querySelector('.main-content');
-    let sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    const mainContentEl = document.querySelector('.main-content');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
     function collapseSidebar() {
       if (!sidebar || !mainContentEl) return;
       sidebar.classList.add('collapsed');
@@ -1316,8 +1298,6 @@
     
     // Wczytanie wszystkich grup
     async function loadGroups() {
-      // Defensive: ensure element exists
-      if (!groupsList) { console.error('loadGroups: groupsList not found'); return; }
       // Pokaż stan ładowania
       groupsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie grup...</p></div>';
       
@@ -1833,7 +1813,6 @@
     
     // -------- Participants page logic --------
     async function loadAllParticipants() {
-      if (!participantsListAll) { console.error('loadAllParticipants: participantsListAll not found'); return; }
       participantsListAll.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
       try {
         const [{ data: participants, error: pErr }, { data: groups, error: gErr }] = await Promise.all([
@@ -2043,33 +2022,9 @@
     try {
       document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', (ev)=>{ try { console.log('nav click', a.id); } catch(e){} }));
     } catch(e) {}
-    
+
     // Inicjalizacja
     document.addEventListener('DOMContentLoaded', async () => {
-      // Re-query global elements to ensure they're present
-      try { addGroupModal = addGroupModal || document.getElementById('add-group-modal'); } catch(e){}
-      try { addGroupBtn = addGroupBtn || document.getElementById('add-group-btn'); } catch(e){}
-      try { addFirstGroupBtn = addFirstGroupBtn || document.getElementById('add-first-group'); } catch(e){}
-      try { closeModalBtn = closeModalBtn || document.getElementById('close-group-modal'); } catch(e){}
-      try { cancelGroupBtn = cancelGroupBtn || document.getElementById('cancel-group-btn'); } catch(e){}
-      try { saveGroupBtn = saveGroupBtn || document.getElementById('save-group-btn'); } catch(e){}
-      try { groupsList = groupsList || document.getElementById('groups-list'); } catch(e){}
-      try { emptyState = emptyState || document.getElementById('emptyState'); } catch(e){}
-      try { participantsSection = participantsSection || document.getElementById('participants-section'); } catch(e){}
-      try { participantsListAll = participantsListAll || document.getElementById('participants-list-all'); } catch(e){}
-      try { participantsSearch = participantsSearch || document.getElementById('participants-search'); } catch(e){}
-      try { groupsLink = groupsLink || document.getElementById('nav-groups'); } catch(e){}
-      try { participantsLink = participantsLink || document.getElementById('nav-participants'); } catch(e){}
-      try { scheduleLink = scheduleLink || document.getElementById('nav-schedule'); } catch(e){}
-      try { lessonsLink = lessonsLink || document.getElementById('nav-lessons'); } catch(e){}
-      try { scheduleSection = scheduleSection || document.getElementById('schedule-section'); } catch(e){}
-      try { lessonsSection = lessonsSection || document.getElementById('lessons-section'); } catch(e){}
-      try { addGroupFromScheduleBtn = addGroupFromScheduleBtn || document.getElementById('add-group-from-schedule'); } catch(e){}
-      try { calendarEl = calendarEl || document.getElementById('calendar'); } catch(e){}
-      try { sidebar = sidebar || document.querySelector('.sidebar'); } catch(e){}
-      try { mainContentEl = mainContentEl || document.querySelector('.main-content'); } catch(e){}
-      try { sidebarToggle = sidebarToggle || document.getElementById('sidebar-toggle'); } catch(e){}
-
       await checkAdmin();
       setActiveNav('groups');
       // Ensure groups section visible on first paint
@@ -2124,7 +2079,7 @@
       }
     }
 
-    // Lessons nav elements are declared earlier and re-queried in DOMContentLoaded
+    // Lessons nav
     const addStudentModal = document.getElementById('add-student-modal');
     const addStudentBtn = document.getElementById('add-student-btn');
     const closeAddStudentModal = document.getElementById('close-add-student-modal');
@@ -2195,7 +2150,6 @@
     if (hasPartnerChk) hasPartnerChk.addEventListener('change', ()=>{ partnerFields.style.display = hasPartnerChk.checked ? 'block' : 'none'; });
 
     async function loadAllStudents() {
-      if (!studentsListAll) { console.error('loadAllStudents: studentsListAll not found'); return; }
       studentsListAll.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczniów...</p></div>';
       const { data, error } = await supabase.from('students').select('*').order('last_name', { ascending: true });
       if (error) {
@@ -2349,7 +2303,6 @@
 
     async function loadStudentLessonsAndPayments() {
       if (!selectedStudent) return;
-      if (!studentLessonsList) { console.error('loadStudentLessonsAndPayments: studentLessonsList not found'); return; }
       studentLessonsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie lekcji...</p></div>';
       const { data: lessons, error } = await supabase.from('lessons').select('*').eq('student_id', selectedStudent.id).order('created_at', { ascending: false });
       if (error) { studentLessonsList.innerHTML = '<div class="empty-state"><p>Błąd: '+error.message+'</p></div>'; return; }
