@@ -2353,7 +2353,6 @@
     // Helper: resort current DOM rows by inputs (date/time)
     function resortLessonRowsByInputs() {
       if (!lessonEntriesList) return;
-      const now = new Date();
       const rows = Array.from(lessonEntriesList.querySelectorAll('.content-box.participant-row'));
       const parseRowDate = (row) => {
         const d = row.querySelector('.le-date')?.value || '';
@@ -2367,17 +2366,7 @@
         const fallback = createdAt ? new Date(createdAt) : new Date();
         return fallback;
       };
-      rows.sort((ra, rb) => {
-        const da = parseRowDate(ra);
-        const db = parseRowDate(rb);
-        const ua = da >= now ? 1 : 0;
-        const ub = db >= now ? 1 : 0;
-        if (ua !== ub) return ub - ua; // upcoming first
-        const daDiff = Math.abs(da - now);
-        const dbDiff = Math.abs(db - now);
-        if (daDiff !== dbDiff) return daDiff - dbDiff; // closer first
-        return da - db; // tie-breaker
-      });
+      rows.sort((ra, rb) => parseRowDate(rb) - parseRowDate(ra));
       // Re-append in new order
       const frag = document.createDocumentFragment();
       rows.forEach(r => frag.appendChild(r));
@@ -2448,8 +2437,7 @@
         if (pErr) throw pErr;
         const pMap = new Map((parts || []).map(p => [p.id, p]));
         const trainerMap = new Map((lessons || []).map(l => [l.id, l.trainer || '']));
-        // Sort entries by nearest to now: upcoming (soonest first) then past (latest first)
-        const now = new Date();
+        // Sort entries by lesson date/time descending (newest/closest later first)
         const getEntryDate = (ent) => {
           if (ent.lesson_date) {
             const [y, m, d] = String(ent.lesson_date).split('-').map(n => parseInt(n, 10));
@@ -2462,12 +2450,7 @@
           }
           return new Date(ent.created_at);
         };
-        const upcoming = [];
-        const past = [];
-        (entries || []).forEach(ent => { (getEntryDate(ent) >= now ? upcoming : past).push(ent); });
-        upcoming.sort((a,b) => getEntryDate(a) - getEntryDate(b));
-        past.sort((a,b) => getEntryDate(b) - getEntryDate(a));
-        const sortedEntries = [...upcoming, ...past];
+        const sortedEntries = (entries || []).slice().sort((a,b) => getEntryDate(b) - getEntryDate(a));
 
         const fragment = document.createDocumentFragment();
         let total = 0;
