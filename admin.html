@@ -650,11 +650,26 @@
         </div>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
           <input id="participants-search" class="form-control" placeholder="Szukaj: imię/nazwisko/telefon" style="width:260px;" />
+          <label style="display:flex; align-items:center; gap:6px; color: var(--text-gray);"><input type="checkbox" id="filter-paid" style="width:auto;" /> Zapłacone</label>
+          <label style="display:flex; align-items:center; gap:6px; color: var(--text-gray);"><input type="checkbox" id="filter-unpaid" style="width:auto;" /> Niezapłacone</label>
           <button class="btn btn-primary" id="add-participant-global"><i class="fas fa-user-plus"></i> Dodaj uczestnika</button>
         </div>
       </div>
-      <div id="participants-list-all">
-        <div class="empty-state"><p>Brak uczestników</p></div>
+      <div class="content-box" style="margin-top:10px;">
+        <div class="content-header" style="margin-bottom:12px;">
+          <h3 style="font-size:1.1rem;">Aktywni</h3>
+        </div>
+        <div id="participants-list-all">
+          <div class="empty-state"><p>Brak uczestników</p></div>
+        </div>
+      </div>
+      <div class="content-box" style="margin-top:15px;">
+        <div class="content-header" style="margin-bottom:12px;">
+          <h3 style="font-size:1.1rem;">Nieaktywni</h3>
+        </div>
+        <div id="participants-list-inactive">
+          <div class="empty-state"><p>Brak nieaktywnych</p></div>
+        </div>
       </div>
     </div>
 
@@ -1816,6 +1831,8 @@
     // -------- Participants page logic --------
     async function loadAllParticipants() {
       participantsListAll.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
+      const inactiveContainer = document.getElementById('participants-list-inactive');
+      if (inactiveContainer) inactiveContainer.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie nieaktywnych...</p></div>';
       try {
         const [{ data: participants, error: pErr }, { data: groups, error: gErr }, { data: allLinks } ] = await Promise.all([
           supabase.from('participants').select('*').order('last_name', { ascending: true }),
@@ -1911,7 +1928,14 @@
         });
 
         // Render list with numbering
-        const fragment = document.createDocumentFragment();
+        const fragmentActive = document.createDocumentFragment();
+        const fragmentInactive = document.createDocumentFragment();
+        let activeCount = 0;
+        let inactiveCount = 0;
+        const paidFilter = document.getElementById('filter-paid');
+        const unpaidFilter = document.getElementById('filter-unpaid');
+        const paidEnabled = paidFilter ? paidFilter.checked : false;
+        const unpaidEnabled = unpaidFilter ? unpaidFilter.checked : false;
         participants.forEach((p, idx) => {
           const gAgg = payAgg.get(p.id) || { paid: 0, unpaid: 0 };
           const lAgg = leAgg.get(p.id) || { paid: 0, unpaid: 0 };
@@ -1938,13 +1962,39 @@
               <button class="btn btn-outline delete-participant-global-btn" data-id="${p.id}"><i class="fas fa-trash"></i></button>
             </div>
           `;
-          fragment.appendChild(card);
+          const hasAnyGroup = (linksByParticipant.get(p.id) || []).length > 0;
+          const hasAnyLesson = !!leAgg.get(p.id); // ma jakiekolwiek przypisanie do lekcji
+          const totalPaid = (gAgg.paid + lAgg.paid);
+          const totalUnpaid = (gAgg.unpaid + lAgg.unpaid + unpaidExpectedMonth);
+          // Apply multi-filter (both can be on): if both off => no filter; if one on => must match; if both on => always show
+          let matchPaidFilter = true;
+          if (paidEnabled && !unpaidEnabled) matchPaidFilter = totalPaid > 0;
+          if (!paidEnabled && unpaidEnabled) matchPaidFilter = totalUnpaid > 0;
+          // both enabled or both disabled => true
+          if (!matchPaidFilter) {
+            return; // skip rendering this participant in active list
+          }
+          if (hasAnyGroup || hasAnyLesson) {
+            fragmentActive.appendChild(card);
+            activeCount += 1;
+          } else {
+            fragmentInactive.appendChild(card);
+            inactiveCount += 1;
+          }
         });
+        // Active
         participantsListAll.innerHTML = '';
-        participantsListAll.appendChild(fragment);
+        if (activeCount) participantsListAll.appendChild(fragmentActive); else participantsListAll.innerHTML = '<div class="empty-state"><p>Brak uczestników</p></div>';
         renumberVisibleParticipants();
+        // Inactive
+        if (inactiveContainer) {
+          inactiveContainer.innerHTML = '';
+          if (inactiveCount) inactiveContainer.appendChild(fragmentInactive); else inactiveContainer.innerHTML = '<div class="empty-state"><p>Brak nieaktywnych</p></div>';
+        }
       } catch (err) {
         participantsListAll.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
+        const inactiveContainer = document.getElementById('participants-list-inactive');
+        if (inactiveContainer) inactiveContainer.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
       }
     }
 
@@ -1972,6 +2022,10 @@
         renumberVisibleParticipants();
       });
     }
+    const paidFilterCb = document.getElementById('filter-paid');
+    const unpaidFilterCb = document.getElementById('filter-unpaid');
+    if (paidFilterCb) paidFilterCb.addEventListener('change', () => { loadAllParticipants(); });
+    if (unpaidFilterCb) unpaidFilterCb.addEventListener('change', () => { loadAllParticipants(); });
 
     // Edit/Delete actions on participants page
     const editParticipantModal = document.getElementById('edit-participant-modal');
