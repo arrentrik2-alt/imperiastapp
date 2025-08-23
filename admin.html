@@ -879,35 +879,7 @@
       });
     }
     
-    // Safe DOM accessor shim: return a minimal dummy element when getElementById misses
-    (function(){
-      const _origGet = document.getElementById.bind(document);
-      document.getElementById = function(id) {
-        const el = _origGet(id);
-        if (el) return el;
-        // Return a lightweight stub that won't throw on common operations
-        console.warn('SafeDOM: missing element', id);
-        const stub = {
-          _id: id,
-          innerHTML: '',
-          style: { display: 'none' },
-          classList: { add: function(){}, remove: function(){}, contains: function(){ return false; } },
-          addEventListener: function(){},
-          removeEventListener: function(){},
-          querySelector: function(){ return null; },
-          querySelectorAll: function(){ return []; },
-          appendChild: function(){},
-          removeChild: function(){},
-          setAttribute: function(){},
-          getAttribute: function(){ return null; },
-          focus: function(){},
-          dataset: {},
-          value: '',
-          checked: false
-        };
-        return stub;
-      };
-    })();
+    // SafeDOM shim removed to avoid masking missing DOM issues – elements are re-queried in DOMContentLoaded
     
     // Check if user is admin
     async function checkAdmin() {
@@ -2136,7 +2108,7 @@
       }
     }
 
-    // Lessons nav
+    // Lessons nav elements are declared earlier and re-queried in DOMContentLoaded
     const addStudentModal = document.getElementById('add-student-modal');
     const addStudentBtn = document.getElementById('add-student-btn');
     const closeAddStudentModal = document.getElementById('close-add-student-modal');
