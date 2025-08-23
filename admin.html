@@ -822,8 +822,10 @@
       </div>
       
       <div class="form-group">
-        <label for="group-trainer">Trener</label>
-        <input type="text" id="group-trainer" class="form-control" placeholder="Imię i nazwisko trenera">
+        <label for="group-trainer-select">Trener</label>
+        <select id="group-trainer-select" class="form-control" required>
+          <option value="" disabled>Wybierz trenera...</option>
+        </select>
       </div>
       
       <div class="form-group">
@@ -1296,12 +1298,39 @@
     
     // Edit group modal helpers
     const groupModalTitle = document.getElementById('group-modal-title');
+    async function populateTrainerSelect(selectEl, preselectValue = '') {
+      try {
+        const { data: trainers } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'trainer');
+        if (!selectEl) return;
+        const displayNameOf = (t) => {
+          const full = `${(t.first_name||'').trim()} ${(t.last_name||'').trim()}`.trim();
+          return full || (t.full_name || t.name || t.username || t.email || '').trim();
+        };
+        const opts = (trainers || [])
+          .map(t => displayNameOf(t))
+          .filter(Boolean)
+          .sort((a,b)=>a.localeCompare(b));
+        const current = preselectValue ? String(preselectValue) : '';
+        const seen = new Set();
+        selectEl.innerHTML = '<option value="">Wybierz trenera...</option>';
+        opts.forEach(name => { if (!seen.has(name)) { seen.add(name); const o=document.createElement('option'); o.value=name; o.textContent=name; selectEl.appendChild(o);} });
+        if (current) {
+          if (!seen.has(current)) { const o=document.createElement('option'); o.value=current; o.textContent=current; selectEl.appendChild(o); }
+          selectEl.value = current;
+        }
+      } catch {}
+    }
+
     function fillGroupForm(g) {
       document.getElementById('group-name').value = g.name || '';
       document.getElementById('group-day').value = g.day || 'Poniedziałek';
       document.getElementById('group-start').value = g.start_time || '';
       document.getElementById('group-end').value = g.end_time || '';
-      document.getElementById('group-trainer').value = g.trainer || '';
+      const sel = document.getElementById('group-trainer-select');
+      if (sel) { populateTrainerSelect(sel, g.trainer || ''); }
       document.getElementById('group-fee').value = g.fee ?? '';
       document.getElementById('group-multisport').value = g.multisport ?? '';
       document.getElementById('group-months').value = g.months ?? '';
@@ -1321,7 +1350,8 @@
       document.getElementById('group-name').value = '';
       document.getElementById('group-start').value = '';
       document.getElementById('group-end').value = '';
-      document.getElementById('group-trainer').value = '';
+      const sel = document.getElementById('group-trainer-select');
+      if (sel) { populateTrainerSelect(sel, ''); }
       document.getElementById('group-fee').value = '';
       document.getElementById('group-multisport').value = '';
       document.getElementById('group-months').value = '';
@@ -1334,7 +1364,7 @@
       const day = document.getElementById('group-day').value;
       const start = document.getElementById('group-start').value;
       const end = document.getElementById('group-end').value;
-      const trainer = document.getElementById('group-trainer').value;
+      const trainer = (document.getElementById('group-trainer-select')?.value || '').trim();
       const fee = parseFloat(document.getElementById('group-fee').value);
       const multisport = parseFloat(document.getElementById('group-multisport').value);
       const monthsVal = parseInt(document.getElementById('group-months').value || '0', 10) || null;
@@ -2549,7 +2579,9 @@
       <div class="modal-content">
         <button class="modal-close" id="close-lesson-modal"><i class="fas fa-times"></i></button>
         <div class="modal-header"><h3>Utwórz zajęcia</h3></div>
-        <div class="form-group"><label>Trener</label><input type="text" id="lesson-trainer" class="form-control" placeholder="Imię i nazwisko trenera"></div>
+        <div class="form-group"><label>Trener</label>
+          <select id="lesson-trainer-select" class="form-control" required><option value="" disabled>Wybierz trenera...</option></select>
+        </div>
         <div class="form-group">
           <label>Uczestnicy</label>
           <div id="lesson-participants-container"></div>
@@ -2566,7 +2598,7 @@
     const closeLessonModalBtn = lessonModal.querySelector('#close-lesson-modal');
     const cancelLessonBtn = lessonModal.querySelector('#cancel-lesson-btn');
     const saveLessonBtn = lessonModal.querySelector('#save-lesson-btn');
-    const lessonTrainerEl = lessonModal.querySelector('#lesson-trainer');
+    const lessonTrainerSel = lessonModal.querySelector('#lesson-trainer-select');
     const lessonParticipantsContainer = lessonModal.querySelector('#lesson-participants-container');
     const addLessonParticipantBtn = lessonModal.querySelector('#add-lesson-participant-btn');
     function createLessonParticipantRow(first = '', last = '', phone = '') {
@@ -2587,7 +2619,7 @@
       return row;
     }
     function resetLessonForm() {
-      if (lessonTrainerEl) lessonTrainerEl.value = '';
+      if (lessonTrainerSel) populateTrainerSelect(lessonTrainerSel, '');
       if (lessonParticipantsContainer) {
         lessonParticipantsContainer.innerHTML = '';
         lessonParticipantsContainer.appendChild(createLessonParticipantRow());
@@ -2844,7 +2876,7 @@
       leAmount.value = '';
       if (leNewLessonFields) {
         leNewLessonFields.style.display = 'block';
-        if (leTrainerEl) leTrainerEl.value = '';
+        if (lessonTrainerSel) populateTrainerSelect(lessonTrainerSel, '');
         if (leParticipantsContainer) {
           leParticipantsContainer.innerHTML = '';
           leParticipantsContainer.appendChild(createLessonParticipantRow());
@@ -2867,7 +2899,7 @@
         let lessonIdToUse = selectedLessonId;
         // If no lesson selected, create lesson with trainer and participants first
         if (!lessonIdToUse) {
-          const trainerName = (leTrainerEl && leTrainerEl.value ? leTrainerEl.value.trim() : '');
+          const trainerName = (lessonTrainerSel && lessonTrainerSel.value ? lessonTrainerSel.value.trim() : '');
           if (!trainerName) { alert('Podaj trenera'); return; }
           const rows = Array.from(leParticipantsContainer ? leParticipantsContainer.querySelectorAll('.lesson-participant-row') : []);
           if (!rows.length) { alert('Dodaj co najmniej jednego uczestnika'); return; }
@@ -3270,11 +3302,11 @@
       // Reuse lesson entry modal
       const leAmount = document.querySelector('#le-amount');
       const leNewLessonFields = document.querySelector('#le-new-lesson-fields');
-      const leTrainerEl = document.querySelector('#le-trainer');
+      const leTrainerSel2 = document.querySelector('#lesson-trainer-select');
       const leParticipantsContainer = document.querySelector('#le-participants-container');
       if (leAmount) leAmount.value = '';
       if (leNewLessonFields) leNewLessonFields.style.display = 'block';
-      if (leTrainerEl) leTrainerEl.value = '';
+      if (leTrainerSel2) populateTrainerSelect(leTrainerSel2, '');
       if (leParticipantsContainer) { leParticipantsContainer.innerHTML = ''; leParticipantsContainer.appendChild(createLessonParticipantRow()); }
       selectedLessonId = null;
       openLessonEntryModal();
