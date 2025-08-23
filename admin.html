@@ -2350,6 +2350,40 @@
       }
     });
 
+    // Helper: resort current DOM rows by inputs (date/time)
+    function resortLessonRowsByInputs() {
+      if (!lessonEntriesList) return;
+      const now = new Date();
+      const rows = Array.from(lessonEntriesList.querySelectorAll('.content-box.participant-row'));
+      const parseRowDate = (row) => {
+        const d = row.querySelector('.le-date')?.value || '';
+        const t = row.querySelector('.le-time')?.value || '';
+        if (d) {
+          // Prefer input values
+          const base = new Date(d + 'T' + (t || '00:00'));
+          if (!isNaN(base.getTime())) return base;
+        }
+        const createdAt = row.dataset.createdAt || '';
+        const fallback = createdAt ? new Date(createdAt) : new Date();
+        return fallback;
+      };
+      rows.sort((ra, rb) => {
+        const da = parseRowDate(ra);
+        const db = parseRowDate(rb);
+        const ua = da >= now ? 1 : 0;
+        const ub = db >= now ? 1 : 0;
+        if (ua !== ub) return ub - ua; // upcoming first
+        const daDiff = Math.abs(da - now);
+        const dbDiff = Math.abs(db - now);
+        if (daDiff !== dbDiff) return daDiff - dbDiff; // closer first
+        return da - db; // tie-breaker
+      });
+      // Re-append in new order
+      const frag = document.createDocumentFragment();
+      rows.forEach(r => frag.appendChild(r));
+      lessonEntriesList.appendChild(frag);
+    }
+
     // Monthly lessons view (all lessons for selected month)
     async function renderLessonsForMonth() {
       try {
@@ -2419,10 +2453,10 @@
         const getEntryDate = (ent) => {
           if (ent.lesson_date) {
             const [y, m, d] = String(ent.lesson_date).split('-').map(n => parseInt(n, 10));
-            const date = new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
+            const date = new Date(Date.UTC(y, (m || 1) - 1, d || 1, 0, 0, 0));
             if (ent.lesson_time) {
               const [hh, mm] = String(ent.lesson_time).split(':').map(n => parseInt(n, 10) || 0);
-              date.setHours(hh, mm, 0, 0);
+              date.setUTCHours(hh, mm, 0, 0);
             }
             return date;
           }
@@ -2442,6 +2476,7 @@
           const box = document.createElement('div');
           box.className = 'content-box participant-row ' + (ent.confirmed ? 'paid' : 'unpaid');
           box.style.marginBottom = '8px';
+          box.dataset.createdAt = ent.created_at || '';
           const pIds = activeLinksByLesson.get(ent.lesson_id) || [];
           const names = pIds.map(id => {
             const person = pMap.get(id) || {}; return `${(person.first_name||'').trim()} ${(person.last_name||'').trim()}`.trim();
@@ -2470,7 +2505,8 @@
               <div style="flex:0 0 auto; display:flex; gap:6px; align-items:center;">
                 <button class="btn btn-primary btn-sm le-confirm-btn">${ent.confirmed ? 'Zapisz' : 'OK'}</button>
                 ${ent.confirmed ? '<span class="status" style="color: var(--success); font-size:0.8rem; white-space:nowrap;">OK</span>' : '<span class="status" style="color: var(--text-gray); font-size:0.8rem; white-space:nowrap;">Brak</span>'}
-                <button class="btn btn-outline btn-sm le-delete-btn" title="Usuń lekcję"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-outline btn-sm le-delete-payment-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>
+                <button class="btn btn-outline btn-sm le-delete-lesson-btn" title="Usuń lekcję"><i class="fas fa-trash"></i></button>
               </div>
               <div style="flex:0 0 auto; display:flex; gap:6px; align-items:center;">
                 <input type="date" class="form-control small le-date" value="${ent.lesson_date ? String(ent.lesson_date).substring(0,10) : ''}" />
@@ -2494,7 +2530,25 @@
         if (leSumPotential) leSumPotential.textContent = `${(paidAmount + unpaidAmount).toFixed(2)} zł`;
         const percent = entries.length ? Math.round((paidCount / entries.length) * 100) : 0;
         if (leSumPaidProgress) leSumPaidProgress.style.width = percent + '%';
-        if (lessonEntriesList) { lessonEntriesList.innerHTML = ''; lessonEntriesList.appendChild(fragment); }
+        if (lessonEntriesList) {
+          lessonEntriesList.innerHTML = '';
+          lessonEntriesList.appendChild(fragment);
+          // Attach one-time listeners to auto resort on date/time change
+          if (!lessonEntriesList.dataset.sortHandlersAttached) {
+            const shouldResort = (ev) => {
+              const el = ev.target;
+              if (!el) return;
+              if (el.classList && (el.classList.contains('le-date') || el.classList.contains('le-time'))) {
+                resortLessonRowsByInputs();
+              }
+            };
+            lessonEntriesList.addEventListener('change', shouldResort);
+            lessonEntriesList.addEventListener('input', shouldResort);
+            lessonEntriesList.dataset.sortHandlersAttached = '1';
+          }
+          // Initial resort after render to ensure tie-breaking is consistent
+          resortLessonRowsByInputs();
+        }
       } catch (err) {
         if (lessonEntriesList) lessonEntriesList.innerHTML = '<div class="empty-state"><p>Błąd: ' + (err.message || 'Nieznany') + '</p></div>';
       }
@@ -2737,7 +2791,7 @@
           alert('Błąd zapisu płatności: ' + (err2.message || 'Nieznany'));
         } finally { btn.disabled = false; btn.innerHTML = original; }
       }
-      if (e.target.closest('.le-delete-btn')) {
+      if (e.target.closest('.le-delete-lesson-btn')) {
         if (!confirm('Usunąć tę lekcję?')) return;
         try {
           const { error } = await supabase
@@ -2748,6 +2802,19 @@
           await renderLessonsForMonth();
         } catch (err3) {
           alert('Błąd usuwania lekcji: ' + (err3.message || 'Nieznany'));
+        }
+      }
+      if (e.target.closest('.le-delete-payment-btn')) {
+        if (!confirm('Usunąć dane płatności dla tej lekcji?')) return;
+        try {
+          const { error } = await supabase
+            .from('lesson_entries')
+            .update({ confirmed: false, confirmed_at: null, method: '', comment: '' })
+            .eq('id', entryId);
+          if (error) throw error;
+          await renderLessonsForMonth();
+        } catch (err4) {
+          alert('Błąd usuwania płatności: ' + (err4.message || 'Nieznany'));
         }
       }
     });
