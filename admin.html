@@ -2873,7 +2873,8 @@
         const { data: entries, error: eErr } = await supabase
           .from('lesson_entries')
           .select('*')
-          .eq('month', selectedLessonMonth);
+          .eq('month', selectedLessonMonth)
+          .eq('type', 'private');
         if (eErr) throw eErr;
         if (!entries || entries.length === 0) {
           if (lessonEntriesList) lessonEntriesList.innerHTML = '<div class="empty-state"><p>Brak lekcji</p></div>';
@@ -3482,7 +3483,8 @@
           const { error } = await supabase
             .from('lesson_entries')
             .delete()
-            .eq('id', entryId);
+            .eq('id', entryId)
+            .eq('type', 'private');
           if (error) throw error;
           await renderLessonsForMonth();
         } catch (err3) {
