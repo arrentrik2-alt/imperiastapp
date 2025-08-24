@@ -818,10 +818,6 @@
             <h4 style="margin-top:0; font-size:1rem;">Metody płatności</h4>
             <ul id="fin-groups-methods" style="margin:8px 0 0 18px;"></ul>
           </div>
-          <div class="content-box" style="flex:2 1 420px;">
-            <h4 style="margin-top:0; font-size:1rem;">Płatności (lista)</h4>
-            <div id="fin-groups-list"><div class="empty-state"><p>Brak płatności</p></div></div>
-          </div>
         </div>
       </div>
       <div class="content-box" style="margin-bottom:12px; padding:12px;">
@@ -835,10 +831,6 @@
             <h4 style="margin-top:0; font-size:1rem;">Metody płatności</h4>
             <ul id="fin-lessons-methods" style="margin:8px 0 0 18px;"></ul>
           </div>
-          <div class="content-box" style="flex:2 1 420px;">
-            <h4 style="margin-top:0; font-size:1rem;">Wpisy lekcji (lista)</h4>
-            <div id="fin-lessons-list"><div class="empty-state"><p>Brak lekcji</p></div></div>
-          </div>
         </div>
       </div>
       <div class="content-box" style="margin-bottom:12px; padding:12px;">
@@ -851,10 +843,6 @@
           <div class="content-box" style="flex:1 1 260px;">
             <h4 style="margin-top:0; font-size:1rem;">Metody płatności</h4>
             <ul id="fin-fd-methods" style="margin:8px 0 0 18px;"></ul>
-          </div>
-          <div class="content-box" style="flex:2 1 420px;">
-            <h4 style="margin-top:0; font-size:1rem;">Wpisy (lista)</h4>
-            <div id="fin-fd-list"><div class="empty-state"><p>Brak wpisów</p></div></div>
           </div>
         </div>
       </div>
@@ -1337,31 +1325,7 @@
         fillUl(lMethods, lM);
         fillUl(fdMethods, fdM);
 
-        // Lists
-        const finGroupsList = document.getElementById('fin-groups-list');
-        if (finGroupsList) {
-          if (!pays || !pays.length) finGroupsList.innerHTML = '<div class="empty-state"><p>Brak płatności</p></div>'; else {
-            const ul = document.createElement('ul'); ul.style.margin = '8px 0 0 18px';
-            pays.forEach(p=>{ const li=document.createElement('li'); li.textContent = `${p.month} — ${Number(p.amount||0).toFixed(2)} zł · ${p.method||'-'} · ${p.confirmed?'OK':'Brak'}`; ul.appendChild(li); });
-            finGroupsList.innerHTML = ''; finGroupsList.appendChild(ul);
-          }
-        }
-        const finLessonsList = document.getElementById('fin-lessons-list');
-        if (finLessonsList) {
-          if (!lPriv || !lPriv.length) finLessonsList.innerHTML = '<div class="empty-state"><p>Brak lekcji</p></div>'; else {
-            const ul = document.createElement('ul'); ul.style.margin = '8px 0 0 18px';
-            lPriv.forEach(e=>{ const li=document.createElement('li'); const d=e.lesson_date?String(e.lesson_date):monthVal; const t=e.lesson_time?` ${e.lesson_time}`:''; li.textContent = `${d}${t} — ${Number(e.amount||0).toFixed(2)} zł · ${e.method||'-'} · ${e.confirmed?'OK':'Brak'}`; ul.appendChild(li); });
-            finLessonsList.innerHTML = ''; finLessonsList.appendChild(ul);
-          }
-        }
-        const finFdList = document.getElementById('fin-fd-list');
-        if (finFdList) {
-          if (!lFd || !lFd.length) finFdList.innerHTML = '<div class="empty-state"><p>Brak wpisów</p></div>'; else {
-            const ul = document.createElement('ul'); ul.style.margin = '8px 0 0 18px';
-            lFd.forEach(e=>{ const li=document.createElement('li'); const d=e.lesson_date?String(e.lesson_date):monthVal; const t=e.lesson_time?` ${e.lesson_time}`:''; li.textContent = `${d}${t} — ${Number(e.amount||0).toFixed(2)} zł · ${e.method||'-'} · ${e.confirmed?'OK':'Brak'}`; ul.appendChild(li); });
-            finFdList.innerHTML = ''; finFdList.appendChild(ul);
-          }
-        }
+        // No lists in finance view
       }
       await loadFor(finMonth.value);
       finMonth.onchange = async () => { await loadFor(finMonth.value); };
