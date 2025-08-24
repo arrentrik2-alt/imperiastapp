@@ -1395,13 +1395,15 @@
 
       // Cash balance (all-time cash income minus all expenses)
       try {
-        const [{ data: paysAll }, { data: expRows }] = await Promise.all([
+        const [{ data: paysAll }, { data: leAll }, { data: expRows }] = await Promise.all([
           supabase.from('payments').select('amount, confirmed, method'),
+          supabase.from('lesson_entries').select('amount, confirmed, method'),
           supabase.from('expenses').select('amount')
         ]);
-        const cashIncome = (paysAll||[]).filter(p=>p.confirmed && p.method==='cash').reduce((s,p)=> s + Number(p.amount||0), 0);
+        const cashIncomeGroups = (paysAll||[]).filter(p=>p.confirmed && p.method==='cash').reduce((s,p)=> s + Number(p.amount||0), 0);
+        const cashIncomeLessons = (leAll||[]).filter(e=>e.confirmed && e.method==='cash').reduce((s,e)=> s + Number(e.amount||0), 0);
         const totalExpenses = (expRows||[]).reduce((s,e)=> s + Number(e.amount||0), 0);
-        const balance = cashIncome - totalExpenses;
+        const balance = (cashIncomeGroups + cashIncomeLessons) - totalExpenses;
         if (finCashBalanceEl) finCashBalanceEl.textContent = `${balance.toFixed(2)} zł`;
       } catch {}
 
@@ -1858,12 +1860,16 @@
     
     // Edit group modal helpers
     const groupModalTitle = document.getElementById('group-modal-title');
+    const trainerCache = { list: null, ts: 0 };
     async function populateTrainerSelect(selectEl, preselectValue = '') {
       try {
-        const { data: trainers } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'trainer');
+        let trainers = trainerCache.list;
+        const nowTs = Date.now();
+        if (!trainers || (nowTs - trainerCache.ts) > 60000) { // cache 60s
+          const q = await supabase.from('profiles').select('*').eq('role', 'trainer');
+          trainers = q.data || [];
+          trainerCache.list = trainers; trainerCache.ts = nowTs;
+        }
         if (!selectEl) return;
         const displayNameOf = (t) => {
           const full = `${(t.first_name||'').trim()} ${(t.last_name||'').trim()}`.trim();
@@ -2202,6 +2208,10 @@
       renderAttendanceDates();
       renderAttendanceList();
     }
+    function maybeRefreshFinance() {
+      const fs = document.getElementById('finance-section');
+      if (fs && fs.style.display === 'block') { renderFinance(); }
+    }
 
     function updateParticipantsSummary({ totalCount, paidCount, unpaidCount, paidAmount, unpaidAmount, profit }) {
       if (!sumCountEl) return;
@@ -2520,6 +2530,7 @@
             if (insErr) throw insErr;
           }
           await loadParticipantsAndPayments();
+          maybeRefreshFinance();
         } catch (err) {
           alert('Błąd zapisu płatności: ' + (err.message || 'Nieznany'));
         } finally {
@@ -3957,6 +3968,7 @@
             .eq('type', 'first_dance');
           if (error) throw error;
           await renderFirstDanceForMonth();
+          maybeRefreshFinance();
         } catch (err2) {
           alert('Błąd zapisu płatności: ' + (err2.message || 'Nieznany'));
         } finally { btn.disabled = false; btn.innerHTML = original; }
@@ -3971,6 +3983,7 @@
             .eq('type', 'first_dance');
           if (error) throw error;
           await renderFirstDanceForMonth();
+          maybeRefreshFinance();
         } catch (err4) {
           alert('Błąd usuwania płatności: ' + (err4.message || 'Nieznany'));
         }
