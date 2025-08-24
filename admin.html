@@ -2627,7 +2627,7 @@
         const [{ data: participants, error: pErr }, { data: groups, error: gErr }, { data: allLinks } ] = await Promise.all([
           supabase.from('participants').select('*').order('last_name', { ascending: true }),
           supabase.from('groups').select('id,name,fee,multisport'),
-          supabase.from('participant_groups').select('participant_id, group_id')
+          supabase.from('participant_groups').select('participant_id, group_id, effective_from_month, effective_to_month')
         ]);
         if (pErr) throw pErr;
         if (gErr) throw gErr;
@@ -2636,8 +2636,17 @@
           return;
         }
         const groupIdToName = new Map(groups.map(g => [g.id, g.name]));
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const currentMonth = `${yyyy}-${mm}`;
+        const activeLinks = (allLinks || []).filter(l => {
+          const fromOk = !l.effective_from_month || l.effective_from_month <= currentMonth;
+          const toOk = !l.effective_to_month || l.effective_to_month > currentMonth;
+          return fromOk && toOk;
+        });
         const linksByParticipant = new Map();
-        (allLinks || []).forEach(l => {
+        activeLinks.forEach(l => {
           const arr = linksByParticipant.get(l.participant_id) || [];
           arr.push(l.group_id);
           linksByParticipant.set(l.participant_id, arr);
@@ -2647,10 +2656,7 @@
         // payAgg wypełnimy poniżej na bazie lekcji/przydziałów
 
         // Compute expected unpaid for current month for groups
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const currentMonth = `${yyyy}-${mm}`;
+        // currentMonth computed above
         const paidMonth = new Map();
         const groupById = new Map((groups || []).map(g => [g.id, g]));
 
@@ -2658,15 +2664,22 @@
         const participantIds = participants.map(p => p.id);
         const { data: lpLinks, error: lpErr } = await supabase
           .from('lesson_participants')
-          .select('lesson_id, participant_id')
+          .select('lesson_id, participant_id, effective_from_month, effective_to_month')
           .in('participant_id', participantIds);
         if (lpErr) throw lpErr;
-        const lessonIds = Array.from(new Set((lpLinks || []).map(l => l.lesson_id)));
+        const lpActive = (lpLinks || []).filter(l => {
+          const fromOk = !l.effective_from_month || l.effective_from_month <= currentMonth;
+          const toOk = !l.effective_to_month || l.effective_to_month > currentMonth;
+          return fromOk && toOk;
+        });
+        const activeLessonPids = new Set(lpActive.map(l => l.participant_id));
+        const lessonIds = Array.from(new Set(lpActive.map(l => l.lesson_id)));
         let leEntries = [];
         if (lessonIds.length) {
           const { data: le, error: leErr } = await supabase
             .from('lesson_entries')
             .select('lesson_id, amount, confirmed')
+            .eq('month', currentMonth)
             .in('lesson_id', lessonIds);
           if (leErr) throw leErr;
           leEntries = le || [];
@@ -2734,7 +2747,7 @@
             </div>
           `;
           const hasAnyGroup = (linksByParticipant.get(p.id) || []).length > 0;
-          const hasAnyLesson = !!leAgg.get(p.id); // ma jakiekolwiek przypisanie do lekcji
+          const hasAnyLesson = activeLessonPids.has(p.id);
           const totalPaid = (gAgg.paid + lAgg.paid);
           const totalUnpaid = (gAgg.unpaid + lAgg.unpaid + unpaidExpectedMonth);
           // Apply multi-filter (both can be on): if both off => no filter; if one on => must match; if both on => always show
