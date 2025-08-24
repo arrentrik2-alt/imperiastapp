@@ -2019,17 +2019,120 @@
       }
     });
     
+    // Helpers: groups monthly snapshot toolbar
+    let groupsViewMonth = '';
+    async function ensureGroupsMonthToolbar() {
+      try {
+        const toolbarId = 'groups-month-toolbar';
+        let toolbar = document.getElementById(toolbarId);
+        if (!toolbar) {
+          const host = document.getElementById('groups-section');
+          if (host) {
+            toolbar = document.createElement('div');
+            toolbar.id = toolbarId;
+            toolbar.className = 'content-header';
+            toolbar.innerHTML = `
+              <h3 style="margin:0;">Grupy — widok miesiąca</h3>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <select id="groups-month-select" class="form-control" style="width:200px;"></select>
+                <button id="create-month-btn" class="btn btn-outline" type="button"><i class="fas fa-clone"></i> Utwórz nowy miesiąc</button>
+              </div>
+            `;
+            host.insertBefore(toolbar, host.firstChild);
+          }
+        }
+        // Populate months
+        const sel = document.getElementById('groups-month-select');
+        if (sel && !sel.dataset.bound) {
+          sel.dataset.bound = '1';
+          sel.addEventListener('change', async () => {
+            groupsViewMonth = sel.value;
+            await loadGroups();
+          });
+        }
+        const btn = document.getElementById('create-month-btn');
+        if (btn && !btn.dataset.bound) {
+          btn.dataset.bound = '1';
+          btn.addEventListener('click', async () => {
+            try {
+              const now = new Date();
+              const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+              const yyyy = next.getFullYear();
+              const mm = String(next.getMonth() + 1).padStart(2, '0');
+              const suggested = `${yyyy}-${mm}`;
+              const m = prompt('Podaj miesiąc (YYYY-MM) do utworzenia snapshotu', suggested);
+              if (!m || !/^\d{4}-\d{2}$/.test(m)) return;
+              const res = await supabase.rpc('create_groups_month_snapshot', { new_month: m });
+              if (res.error) throw res.error;
+              alert('Snapshot utworzony: ' + m);
+              // Reload months and switch to new
+              await populateGroupsMonthSelect(m);
+              await loadGroups();
+            } catch (err) {
+              alert('Błąd tworzenia miesiąca: ' + (err.message || 'Nieznany'));
+            }
+          });
+        }
+        await populateGroupsMonthSelect(groupsViewMonth);
+      } catch {}
+    }
+    async function populateGroupsMonthSelect(preselect) {
+      const sel = document.getElementById('groups-month-select');
+      if (!sel) return;
+      try {
+        const { data: rows } = await supabase
+          .from('groups_month')
+          .select('month')
+          .order('month', { ascending: false });
+        const uniq = Array.from(new Set((rows || []).map(r => r.month))).filter(Boolean);
+        const current = preselect || sel.value || '';
+        sel.innerHTML = '';
+        const optLive = document.createElement('option'); optLive.value = ''; optLive.textContent = 'LIVE (bieżące)'; sel.appendChild(optLive);
+        uniq.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o); });
+        sel.value = current && (current === '' || uniq.includes(current)) ? current : '';
+        groupsViewMonth = sel.value;
+      } catch {}
+    }
+
     // Wczytanie wszystkich grup
     async function loadGroups() {
       // Pokaż stan ładowania
       groupsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie grup...</p></div>';
       
       try {
-        const { data, error } = await supabase
-          .from('groups')
-          .select('*')
-          .order('day', { ascending: true })
-          .order('start_time', { ascending: true });
+        await ensureGroupsMonthToolbar();
+        const viewMonth = groupsViewMonth;
+        let data = [];
+        let error = null;
+        if (viewMonth) {
+          // Load from snapshot
+          const q = await supabase
+            .from('groups_month')
+            .select('source_group_id, name, day, start_time, end_time, trainer, fee, multisport, color')
+            .eq('month', viewMonth)
+            .order('day', { ascending: true })
+            .order('start_time', { ascending: true });
+          error = q.error;
+          const rows = q.data || [];
+          data = rows.map(r => ({
+            id: r.source_group_id,
+            name: r.name,
+            day: r.day,
+            start_time: r.start_time,
+            end_time: r.end_time,
+            trainer: r.trainer,
+            fee: r.fee,
+            multisport: r.multisport,
+            color: r.color
+          }));
+        } else {
+          const q = await supabase
+            .from('groups')
+            .select('*')
+            .order('day', { ascending: true })
+            .order('start_time', { ascending: true });
+          error = q.error; data = q.data || [];
+        }
           
         if (error) {
           console.error('Błąd wczytywania grup:', error);
