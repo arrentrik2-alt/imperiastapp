@@ -2265,9 +2265,8 @@
         const fragment = document.createDocumentFragment();
         const filterValue = (participantsFilter && participantsFilter.value) ? participantsFilter.value : 'all';
         const listToRender = participants.filter(p => {
-          const pay = paymentByParticipant.get(p.id) || null;
-          if (filterValue === 'paid') return !!(pay && pay.confirmed);
-          if (filterValue === 'unpaid') return !(pay && pay.confirmed);
+          if (filterValue === 'paid') return !!(groupEntry && groupEntry.confirmed);
+          if (filterValue === 'unpaid') return !(groupEntry && groupEntry.confirmed);
           return true;
         });
 
@@ -2309,7 +2308,7 @@
           row.className = 'content-box participant-row';
           row.style.marginBottom = '10px';
           row.dataset.participantId = p.id;
-          if (pay && pay.confirmed) {
+          if (groupEntry && groupEntry.confirmed) {
             row.classList.add('paid');
           } else {
             row.classList.add('unpaid');
