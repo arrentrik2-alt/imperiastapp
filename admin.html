@@ -800,10 +800,30 @@
         </div>
       </div>
       <div class="content-box" style="margin-bottom:12px; padding:12px;">
+        <h4 style="margin:0 0 8px 0;">Kasa (gotówka łącznie)</h4>
+        <div class="summary-grid">
+          <div class="summary-card"><div class="label">Saldo gotówki (wszystkie miesiące)</div><div class="value" id="fin-cash-balance">0.00 zł</div></div>
+        </div>
+      </div>
+      <div class="content-box" style="margin-bottom:12px; padding:12px;">
         <div class="summary-grid">
           <div class="summary-card"><div class="label">Zapłacone (ogółem)</div><div class="value" id="fin-paid-total">0.00 zł</div></div>
           <div class="summary-card"><div class="label">Niezapłacone (ogółem)</div><div class="value" id="fin-unpaid-total">0.00 zł</div></div>
           <div class="summary-card"><div class="label">Razem</div><div class="value" id="fin-total">0.00 zł</div></div>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="summary-card" style="display:inline-block; min-width:240px;">
+            <div class="label">Karta</div>
+            <div class="value" id="fin-method-card">0.00 zł</div>
+          </div>
+          <div class="summary-card" style="display:inline-block; min-width:240px;">
+            <div class="label">Przelew</div>
+            <div class="value" id="fin-method-transfer">0.00 zł</div>
+          </div>
+          <div class="summary-card" style="display:inline-block; min-width:240px;">
+            <div class="label">Gotówka</div>
+            <div class="value" id="fin-method-cash">0.00 zł</div>
+          </div>
         </div>
       </div>
       <div class="content-box" style="margin-bottom:12px; padding:12px;">
@@ -847,6 +867,15 @@
             <ul id="fin-fd-methods" style="margin:8px 0 0 18px;"></ul>
           </div>
         </div>
+      </div>
+      <div class="content-box" style="margin-bottom:12px; padding:12px;">
+        <h4 style="margin:0 0 10px 0;">Wydatki</h4>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+          <input id="fin-expense-name" class="form-control" placeholder="Nazwa wydatku" style="flex:1 1 260px;" />
+          <input id="fin-expense-amount" class="form-control" type="number" step="0.01" placeholder="Kwota" style="width:160px;" />
+          <button class="btn btn-primary" id="fin-expense-add"><i class="fas fa-plus"></i> Dodaj</button>
+        </div>
+        <div id="fin-expense-list"><div class="empty-state"><p>Brak wydatków</p></div></div>
       </div>
     </div>
 
@@ -1247,6 +1276,10 @@
       const gMethods = document.getElementById('fin-groups-methods');
       const lMethods = document.getElementById('fin-lessons-methods');
       const fdMethods = document.getElementById('fin-fd-methods');
+      const finCashBalanceEl = document.getElementById('fin-cash-balance');
+      const finMethodCardEl = document.getElementById('fin-method-card');
+      const finMethodTransferEl = document.getElementById('fin-method-transfer');
+      const finMethodCashEl = document.getElementById('fin-method-cash');
       if (!finMonth) return;
       finMonth.innerHTML = '';
       getLast12MonthsOptions().forEach(o => { const opt = document.createElement('option'); opt.value = o.value; opt.textContent = o.label; finMonth.appendChild(opt); });
@@ -1335,10 +1368,95 @@
         fillUl(lMethods, lM);
         fillUl(fdMethods, fdM);
 
+        // Overall methods for month
+        const monthCard = (gM['Karta']||0) + (lM['Karta']||0) + (fdM['Karta']||0);
+        const monthTransfer = (gM['Przelew']||0) + (lM['Przelew']||0) + (fdM['Przelew']||0);
+        const monthCash = (gM['Gotówka']||0) + (lM['Gotówka']||0) + (fdM['Gotówka']||0);
+        if (finMethodCardEl) finMethodCardEl.textContent = `${monthCard.toFixed(2)} zł`;
+        if (finMethodTransferEl) finMethodTransferEl.textContent = `${monthTransfer.toFixed(2)} zł`;
+        if (finMethodCashEl) finMethodCashEl.textContent = `${monthCash.toFixed(2)} zł`;
+
         // No lists in finance view
       }
       await loadFor(finMonth.value);
       finMonth.onchange = async () => { await loadFor(finMonth.value); };
+
+      // Cash balance (all-time cash income minus all expenses)
+      try {
+        const [{ data: paysAll }, { data: expRows }] = await Promise.all([
+          supabase.from('payments').select('amount, confirmed, method'),
+          supabase.from('expenses').select('amount')
+        ]);
+        const cashIncome = (paysAll||[]).filter(p=>p.confirmed && p.method==='cash').reduce((s,p)=> s + Number(p.amount||0), 0);
+        const totalExpenses = (expRows||[]).reduce((s,e)=> s + Number(e.amount||0), 0);
+        const balance = cashIncome - totalExpenses;
+        if (finCashBalanceEl) finCashBalanceEl.textContent = `${balance.toFixed(2)} zł`;
+      } catch {}
+
+      // Expenses UI
+      const expNameEl = document.getElementById('fin-expense-name');
+      const expAmountEl = document.getElementById('fin-expense-amount');
+      const expAddBtn = document.getElementById('fin-expense-add');
+      const expListEl = document.getElementById('fin-expense-list');
+      async function loadExpensesFor(monthVal) {
+        if (!expListEl) return;
+        const { data: rows } = await supabase.from('expenses').select('id, name, amount, month').eq('month', monthVal).order('id', { ascending: false });
+        if (!rows || !rows.length) { expListEl.innerHTML = '<div class="empty-state"><p>Brak wydatków</p></div>'; return; }
+        const ul = document.createElement('ul'); ul.style.margin = '8px 0 0 18px';
+        rows.forEach(r => {
+          const li = document.createElement('li');
+          li.innerHTML = `${r.name || '(bez nazwy)'} — ${Number(r.amount||0).toFixed(2)} zł <button class="btn btn-outline btn-sm fin-expense-del" data-id="${r.id}" style="margin-left:8px;"><i class="fas fa-trash"></i></button>`;
+          ul.appendChild(li);
+        });
+        expListEl.innerHTML = ''; expListEl.appendChild(ul);
+      }
+      await loadExpensesFor(finMonth.value);
+      if (expAddBtn) expAddBtn.addEventListener('click', async () => {
+        const name = (expNameEl?.value || '').trim();
+        const amount = parseFloat(expAmountEl?.value || '0');
+        if (isNaN(amount) || amount <= 0) { alert('Podaj prawidłową kwotę'); return; }
+        const monthVal = (document.getElementById('finance-month-select')?.value || '').trim();
+        try {
+          const { error } = await supabase.from('expenses').insert([{ name, amount, month: monthVal }]);
+          if (error) throw error;
+          if (expNameEl) expNameEl.value = '';
+          if (expAmountEl) expAmountEl.value = '';
+          await loadExpensesFor(monthVal);
+          // refresh cash balance
+          try {
+            const [{ data: paysAll }, { data: expRows }] = await Promise.all([
+              supabase.from('payments').select('amount, confirmed, method'),
+              supabase.from('expenses').select('amount')
+            ]);
+            const cashIncome = (paysAll||[]).filter(p=>p.confirmed && p.method==='cash').reduce((s,p)=> s + Number(p.amount||0), 0);
+            const totalExpenses = (expRows||[]).reduce((s,e)=> s + Number(e.amount||0), 0);
+            const balance = cashIncome - totalExpenses;
+            if (finCashBalanceEl) finCashBalanceEl.textContent = `${balance.toFixed(2)} zł`;
+          } catch {}
+        } catch (err) { alert('Błąd dodawania wydatku: ' + (err.message || 'Nieznany')); }
+      });
+      if (expListEl) expListEl.addEventListener('click', async (e) => {
+        const del = e.target.closest('.fin-expense-del');
+        if (!del) return;
+        const id = del.dataset.id;
+        if (!confirm('Usunąć wydatek?')) return;
+        try {
+          const { error } = await supabase.from('expenses').delete().eq('id', id);
+          if (error) throw error;
+          await loadExpensesFor(finMonth.value);
+          // refresh cash balance
+          try {
+            const [{ data: paysAll }, { data: expRows }] = await Promise.all([
+              supabase.from('payments').select('amount, confirmed, method'),
+              supabase.from('expenses').select('amount')
+            ]);
+            const cashIncome = (paysAll||[]).filter(p=>p.confirmed && p.method==='cash').reduce((s,p)=> s + Number(p.amount||0), 0);
+            const totalExpenses = (expRows||[]).reduce((s,e)=> s + Number(e.amount||0), 0);
+            const balance = cashIncome - totalExpenses;
+            if (finCashBalanceEl) finCashBalanceEl.textContent = `${balance.toFixed(2)} zł`;
+          } catch {}
+        } catch (err) { alert('Błąd usuwania wydatku: ' + (err.message || 'Nieznany')); }
+      });
     }
     function setActiveNav(section) {
       if (groupsLink && participantsLink) {
