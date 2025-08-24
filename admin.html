@@ -2382,10 +2382,12 @@
       if (!input) return;
       const row = e.target.closest('[data-participant-id]');
       if (!row) return;
-      const participantId = row.dataset.participantId;
       const newAmount = parseFloat(input.value);
       if (isNaN(newAmount) || newAmount < 0) { alert('Podaj poprawną kwotę'); input.value = input.dataset.initial || '0'; return; }
       try {
+        // Sum all row amounts for the month
+        const allInputs = participantsList.querySelectorAll('.payment-amount');
+        let total = 0; allInputs.forEach(el => { const v = parseFloat(el.value || '0'); if (!isNaN(v)) total += v; });
         const { data: existing } = await supabase
           .from('group_entries')
           .select('id')
@@ -2395,17 +2397,20 @@
         if (existing) {
           const { error } = await supabase
             .from('group_entries')
-            .update({ amount: newAmount, confirmed: false })
+            .update({ amount: total, confirmed: false })
             .eq('id', existing.id);
           if (error) throw error;
         } else {
           const { error } = await supabase
             .from('group_entries')
-            .insert([{ group_id: selectedGroup.id, month: selectedMonth, amount: newAmount, confirmed: false }]);
+            .insert([{ group_id: selectedGroup.id, month: selectedMonth, amount: total, confirmed: false }]);
           if (error) throw error;
         }
         input.dataset.initial = String(newAmount);
         await loadParticipantsAndPayments();
+        try { await loadAllParticipants(); } catch {}
+        window.dispatchEvent(new Event('finance:refresh'));
+        maybeRefreshFinance();
       } catch (err) {
         alert('Błąd zapisu kwoty: ' + (err.message || 'Nieznany'));
       }
@@ -2484,16 +2489,12 @@
 
       // Potwierdzenie/Zapis płatności
       if (e.target.closest('.confirm-payment-btn')) {
-        const amountInput = row.querySelector('.payment-amount');
-        const amount = parseFloat(amountInput.value);
+        const amountInputs = participantsList.querySelectorAll('.payment-amount');
+        let total = 0; amountInputs.forEach(el => { const v = parseFloat(el.value || '0'); if (!isNaN(v)) total += v; });
         const methodInput = row.querySelector('.payment-method');
         const commentInput = row.querySelector('.payment-comment');
         const method = methodInput ? methodInput.value : '';
         const comment = commentInput ? commentInput.value.trim() : '';
-        if (isNaN(amount) || amount < 0) {
-          alert('Podaj poprawną kwotę');
-          return;
-        }
         if (!method) {
           alert('Wybierz metodę płatności');
           return;
@@ -2503,7 +2504,6 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="loading"></span>';
         try {
-          // Upsert pojedynczego wpisu grupowego dla tej grupy i miesiąca
           const { data: existing, error: selErr } = await supabase
             .from('group_entries')
             .select('id')
@@ -2514,16 +2514,17 @@
           if (existing) {
             const { error: updErr } = await supabase
               .from('group_entries')
-              .update({ amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() })
+              .update({ amount: total, method, comment, confirmed: true, confirmed_at: new Date().toISOString() })
               .eq('id', existing.id);
             if (updErr) throw updErr;
           } else {
             const { error: insErr } = await supabase
               .from('group_entries')
-              .insert([{ group_id: selectedGroup.id, month: selectedMonth, amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() }]);
+              .insert([{ group_id: selectedGroup.id, month: selectedMonth, amount: total, method, comment, confirmed: true, confirmed_at: new Date().toISOString() }]);
             if (insErr) throw insErr;
           }
           await loadParticipantsAndPayments();
+          try { await loadAllParticipants(); } catch {}
           window.dispatchEvent(new Event('finance:refresh'));
           maybeRefreshFinance();
         } catch (err) {
@@ -2597,7 +2598,7 @@
         const [{ data: participants, error: pErr }, { data: groups, error: gErr }, { data: allLinks } ] = await Promise.all([
           supabase.from('participants').select('*').order('last_name', { ascending: true }),
           supabase.from('groups').select('id,name,fee,multisport'),
-          supabase.from('participant_groups').select('participant_id, group_id')
+          supabase.from('participant_groups').select('participant_id, group_id, effective_from_month, effective_to_month')
         ]);
         if (pErr) throw pErr;
         if (gErr) throw gErr;
@@ -3116,13 +3117,22 @@
         const desiredIds = new Set(selectedGroupIds);
         const toAdd = [...desiredIds].filter(id => !existingIds.has(id)).map(id => ({ participant_id: participantIdToUse, group_id: id }));
         const toRemove = [...existingIds].filter(id => !desiredIds.has(id));
+        const now2 = new Date();
+        const yyyy2 = now2.getFullYear();
+        const mm2 = String(now2.getMonth() + 1).padStart(2, '0');
+        const currentMonth2 = `${yyyy2}-${mm2}`;
         if (toAdd.length) {
-          const addRes = await supabase.from('participant_groups').insert(toAdd);
+          const addRows = toAdd.map(r => ({ ...r, effective_from_month: currentMonth2 }));
+          const addRes = await supabase.from('participant_groups').insert(addRows);
           if (addRes.error) throw addRes.error;
         }
         if (toRemove.length) {
-          const delRes = await supabase.from('participant_groups').delete().in('group_id', toRemove).eq('participant_id', participantIdToUse);
-          if (delRes.error) throw delRes.error;
+          const updRes = await supabase
+            .from('participant_groups')
+            .update({ effective_to_month: currentMonth2 })
+            .in('group_id', toRemove)
+            .eq('participant_id', participantIdToUse);
+          if (updRes.error) throw updRes.error;
         }
         isCreateParticipant = false;
         closeEditParticipantModal();
