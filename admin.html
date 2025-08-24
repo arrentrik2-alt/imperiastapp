@@ -498,7 +498,7 @@
       <li>
         <a href="#" id="nav-finance">
           <i class="fas fa-chart-line"></i>
-          <span class="link-text">Płatności</span>
+          <span class="link-text">Finanse</span>
         </a>
       </li>
       <li>
@@ -1275,9 +1275,9 @@
         const { data: les } = await supabase.from('lesson_entries').select('id, amount, confirmed, method, type, lesson_date, lesson_time').eq('month', monthVal);
         const lPriv = (les||[]).filter(e=>e.type==='private');
         const lFd = (les||[]).filter(e=>e.type==='first_dance');
-        const lPaid = lPriv.filter(e=>e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
+        const lPaid = lPriv.filter(e=>!!e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
         const lUnpaid = lPriv.filter(e=>!e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
-        const fdPaid = lFd.filter(e=>e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
+        const fdPaid = lFd.filter(e=>!!e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
         const fdUnpaid = lFd.filter(e=>!e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
         const totalPaid = gPaid + lPaid + fdPaid;
         const totalUnpaid = gUnpaid + lUnpaid + fdUnpaid;
@@ -2973,21 +2973,25 @@
     // Inicjalizacja
     async function initAdmin() {
       try { await checkAdmin(); } catch {}
-      setActiveNav('groups');
-      // Ensure groups section visible on first paint
+      setActiveNav('dashboard');
+      // Default: show dashboard, hide others
       const groupsSectionEl = document.getElementById('groups-section');
       const groupDetailsSectionEl = document.getElementById('group-details-section');
       const participantsSectionEl = document.getElementById('participants-section');
       const lessonsSectionEl = document.getElementById('lessons-section');
       const scheduleSectionEl = document.getElementById('schedule-section');
       const trainersSectionEl = document.getElementById('trainers-section');
-      if (groupsSectionEl) groupsSectionEl.style.display = 'block';
+      const dashboardSectionEl = document.getElementById('dashboard-section');
+      const financeSectionEl = document.getElementById('finance-section');
+      if (groupsSectionEl) groupsSectionEl.style.display = 'none';
       if (groupDetailsSectionEl) groupDetailsSectionEl.style.display = 'none';
       if (participantsSectionEl) participantsSectionEl.style.display = 'none';
       if (lessonsSectionEl) lessonsSectionEl.style.display = 'none';
       if (scheduleSectionEl) scheduleSectionEl.style.display = 'none';
       if (trainersSectionEl) trainersSectionEl.style.display = 'none';
-      await loadGroups();
+      if (financeSectionEl) financeSectionEl.style.display = 'none';
+      if (dashboardSectionEl) dashboardSectionEl.style.display = 'block';
+      await renderDashboard();
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initAdmin);
@@ -3251,7 +3255,7 @@
         <div id="le-new-lesson-fields" style="display:none;">
           <div class="form-group">
             <label>Trener</label>
-            <input type="text" id="le-trainer" class="form-control" placeholder="Imię i nazwisko trenera" />
+            <select id="le-trainer-select" class="form-control" required><option value="" disabled>Wybierz trenera...</option></select>
           </div>
           <div class="form-group">
             <label>Uczestnicy</label>
@@ -3288,7 +3292,7 @@
     const leDate = lessonEntryModal.querySelector('#le-date');
     const leTime = lessonEntryModal.querySelector('#le-time');
     const leNewLessonFields = lessonEntryModal.querySelector('#le-new-lesson-fields');
-    const leTrainerEl = lessonEntryModal.querySelector('#le-trainer');
+    const lessonTrainerSel2 = document.querySelector('#le-trainer-select');
     const leParticipantsContainer = lessonEntryModal.querySelector('#le-participants-container');
     const leAddParticipantBtn = lessonEntryModal.querySelector('#le-add-participant-btn');
     let entryTypeContext = 'private';
@@ -3301,6 +3305,7 @@
       if (leNewLessonFields) {
         leNewLessonFields.style.display = 'block';
         if (lessonTrainerSel) populateTrainerSelect(lessonTrainerSel, '');
+        if (lessonTrainerSel2) populateTrainerSelect(lessonTrainerSel2, '');
         if (leParticipantsContainer) {
           leParticipantsContainer.innerHTML = '';
           leParticipantsContainer.appendChild(createLessonParticipantRow());
@@ -3323,7 +3328,7 @@
         let lessonIdToUse = selectedLessonId;
         // If no lesson selected, create lesson with trainer and participants first
         if (!lessonIdToUse) {
-          const trainerName = (lessonTrainerSel && lessonTrainerSel.value ? lessonTrainerSel.value.trim() : '');
+          const trainerName = (lessonTrainerSel2 && lessonTrainerSel2.value ? lessonTrainerSel2.value.trim() : (lessonTrainerSel && lessonTrainerSel.value ? lessonTrainerSel.value.trim() : ''));
           if (!trainerName) { alert('Podaj trenera'); return; }
           const rows = Array.from(leParticipantsContainer ? leParticipantsContainer.querySelectorAll('.lesson-participant-row') : []);
           if (!rows.length) { alert('Dodaj co najmniej jednego uczestnika'); return; }
