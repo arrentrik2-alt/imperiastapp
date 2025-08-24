@@ -2573,6 +2573,14 @@
             .eq('participant_id', participantId)
             .eq('group_id', selectedGroup.id);
           if (delLinkErr) throw delLinkErr;
+          // Usuń płatność tego uczestnika za bieżący miesiąc w tej grupie
+          const { error: delCurrPayErr } = await supabase
+            .from('group_entries')
+            .delete()
+            .eq('group_id', selectedGroup.id)
+            .eq('month', selectedMonth)
+            .eq('participant_id', participantId);
+          if (delCurrPayErr) throw delCurrPayErr;
           await loadParticipantsAndPayments();
         } catch (err) {
           alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
