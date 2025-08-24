@@ -916,7 +916,11 @@
     document.getElementById('groups-month-select').addEventListener('change', loadGroups);
 
     const participantsMonthSelect = document.getElementById('participants-month-select');
-    participantsMonthSelect.addEventListener('change', loadGroupParticipants);
+    participantsMonthSelect.addEventListener('change', () => {
+      if (currentGroupId) {
+        loadGroupParticipants(currentGroupId);
+      }
+    });
 
     // Modal functionality for groups
     const addGroupModal = document.getElementById('add-group-modal');
@@ -1089,6 +1093,11 @@
     let currentGroupId = null; // Store current group ID for adding participants
 
     function openGroupParticipantsPage(group) {
+      if (!group || !group.id) {
+        console.error('Nieprawidłowy obiekt grupy:', group);
+        return;
+      }
+      
       currentGroupId = group.id; // Store group ID
       groupParticipantsName.textContent = group.name;
       loadGroupParticipants(group.id);
@@ -1180,6 +1189,11 @@
     });
 
     async function loadGroupParticipants(groupId) {
+      if (!groupId) {
+        console.error('Brak ID grupy');
+        return;
+      }
+      
       const selectedMonth = document.getElementById('participants-month-select').value;
       groupParticipantsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
       
