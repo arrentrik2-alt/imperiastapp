@@ -2617,6 +2617,7 @@
         const groupById = new Map((groups || []).map(g => [g.id, g]));
 
         // Lessons aggregation per participant (include both paid and unpaid)
+        const participantIds = participants.map(p => p.id);
         const { data: lpLinks, error: lpErr } = await supabase
           .from('lesson_participants')
           .select('lesson_id, participant_id')
