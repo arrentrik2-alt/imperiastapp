@@ -720,6 +720,7 @@
     backToGroupsBtn.addEventListener('click', (e) => {
       e.preventDefault();
       setActiveNav('groups');
+      currentGroupId = null; // Reset current group ID
     });
     
     document.getElementById('go-to-groups-btn').addEventListener('click', (e) => {
@@ -1195,6 +1196,8 @@
       }
       
       const selectedMonth = document.getElementById('participants-month-select').value;
+      console.log('Ładowanie uczestników dla grupy:', groupId, 'miesiąc:', selectedMonth);
+      
       groupParticipantsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
       
       try {
@@ -1209,6 +1212,8 @@
           .eq('group_id', groupId);
 
         if (participantsError) throw participantsError;
+        
+        console.log('Znaleziono uczestników:', participants);
 
         // Get payments for these participants
         const participantIds = participants.map(p => p.participant_id);
@@ -1220,6 +1225,8 @@
           .in('participant_id', participantIds);
 
         if (paymentsError) throw paymentsError;
+        
+        console.log('Znaleziono płatności:', payments);
 
         // Create payment lookup
         const paymentLookup = {};
