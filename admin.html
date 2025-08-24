@@ -703,8 +703,7 @@
         homeSection.style.display = 'none';
         groupsSection.style.display = 'none';
         groupParticipantsSection.style.display = 'block';
-        // Reset to current month when switching to participants
-        document.getElementById('participants-month-select').value = getCurrentMonth();
+        // Don't reset month selector for participants - keep the current selection
         // No specific data loading needed here, as it's a new section
       }
       
@@ -1134,6 +1133,12 @@
       currentGroupName = group.name; // Store group name
       console.log('Ustawiono currentGroupId:', currentGroupId, 'currentGroupName:', currentGroupName);
       groupParticipantsName.textContent = group.name;
+      
+      // Set participants month selector to match groups month selector
+      const groupsMonth = document.getElementById('groups-month-select').value;
+      document.getElementById('participants-month-select').value = groupsMonth;
+      
+      // Load participants for the current group and month
       loadGroupParticipants(group.id);
     }
 
@@ -1229,7 +1234,7 @@
       }
       
       const selectedMonth = document.getElementById('participants-month-select').value;
-      console.log('Ładowanie uczestników dla grupy:', groupId, 'miesiąc:', selectedMonth);
+      console.log('Ładowanie uczestników dla grupy:', groupId, 'miesiąc:', selectedMonth, 'currentGroupName:', currentGroupName);
       
       groupParticipantsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
       
@@ -1268,7 +1273,7 @@
         });
 
         if (!participants || participants.length === 0) {
-          groupParticipantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników dla tej grupy.</p></div>';
+          groupParticipantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników dla tej grupy w miesiącu ' + selectedMonth + '.</p></div>';
           return;
         }
         
