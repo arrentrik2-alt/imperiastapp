@@ -2294,6 +2294,9 @@
     function openGroupDetails(group) {
       selectedGroup = group;
       groupDetailsTitle.textContent = `${group.name}`;
+      if (typeof groupsViewMonth !== 'undefined' && groupsViewMonth) {
+        selectedMonth = groupsViewMonth;
+      }
       populateMonthSelect(selectedMonth);
       showGroupDetailsSection();
       loadParticipantsAndPayments();
@@ -2331,17 +2334,27 @@
       if (!selectedGroup || !selectedMonth) return;
       participantsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie uczestników...</p></div>';
       try {
-        const { data: pgRows, error: pgErr } = await supabase
-          .from('participant_groups')
-          .select('participant_id, effective_from_month, effective_to_month')
-          .eq('group_id', selectedGroup.id);
-        if (pgErr) throw pgErr;
-        // Filter memberships active for selectedMonth: from <= month < to
-        const activeRows = (pgRows || []).filter(r => {
-          const fromOk = !r.effective_from_month || r.effective_from_month <= selectedMonth;
-          const toOk = !r.effective_to_month || r.effective_to_month > selectedMonth;
-          return fromOk && toOk;
-        });
+        let activeRows = [];
+        if (typeof groupsViewMonth !== 'undefined' && groupsViewMonth) {
+          const { data: pgmRows, error: pgmErr } = await supabase
+            .from('participant_groups_month')
+            .select('participant_id')
+            .eq('group_id', selectedGroup.id)
+            .eq('month', selectedMonth);
+          if (pgmErr) throw pgmErr;
+          activeRows = (pgmRows || []).map(r => ({ participant_id: r.participant_id }));
+        } else {
+          const { data: pgRows, error: pgErr } = await supabase
+            .from('participant_groups')
+            .select('participant_id, effective_from_month, effective_to_month')
+            .eq('group_id', selectedGroup.id);
+          if (pgErr) throw pgErr;
+          activeRows = (pgRows || []).filter(r => {
+            const fromOk = !r.effective_from_month || r.effective_from_month <= selectedMonth;
+            const toOk = !r.effective_to_month || r.effective_to_month > selectedMonth;
+            return fromOk && toOk;
+          });
+        }
         if (!activeRows || activeRows.length === 0) {
           participantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników w tej grupie</p></div>';
           updateParticipantsSummary({ totalCount: 0, paidCount: 0, unpaidCount: 0, paidAmount: 0, unpaidAmount: 0, profit: 0 });
@@ -2628,10 +2641,26 @@
           .single();
         if (insertRes.error) throw insertRes.error;
         const newParticipant = insertRes.data;
-        const linkRes = await supabase
-          .from('participant_groups')
-          .insert([{ participant_id: newParticipant.id, group_id: selectedGroup.id, effective_from_month: selectedMonth }]);
-        if (linkRes.error) throw linkRes.error;
+        if (typeof groupsViewMonth !== 'undefined' && groupsViewMonth) {
+          const gmSel = await supabase
+            .from('groups_month')
+            .select('id')
+            .eq('month', selectedMonth)
+            .eq('source_group_id', selectedGroup.id)
+            .maybeSingle();
+          if (gmSel.error) throw gmSel.error;
+          const gmId = gmSel.data?.id;
+          if (!gmId) throw new Error('Brak snapshotu grupy dla wybranego miesiąca');
+          const linkRes = await supabase
+            .from('participant_groups_month')
+            .insert([{ month: selectedMonth, group_month_id: gmId, group_id: selectedGroup.id, participant_id: newParticipant.id }]);
+          if (linkRes.error) throw linkRes.error;
+        } else {
+          const linkRes = await supabase
+            .from('participant_groups')
+            .insert([{ participant_id: newParticipant.id, group_id: selectedGroup.id, effective_from_month: selectedMonth }]);
+          if (linkRes.error) throw linkRes.error;
+        }
         // Create default unconfirmed group entry for current month
         try {
           const baseAmount = (multi ? Number(selectedGroup.multisport || 0) : Number(selectedGroup.fee || 0)) || 0;
