@@ -1347,8 +1347,8 @@
         } catch {}
         const totalPaid = Math.max(0, (gPaid + lPaid + fdPaid) - monthExpenses);
         const totalUnpaid = gUnpaid + lUnpaid + fdUnpaid;
-        if (paidTotalEl) paidTotalEl.textContent = `${totalPaid.toFixed(2)} zł`;
-        if (unpaidTotalEl) unpaidTotalEl.textContent = `${totalUnpaid.toFixed(2)} zł`;
+        if (paidTotalEl) { paidTotalEl.textContent = `${totalPaid.toFixed(2)} zł`; paidTotalEl.style.color = 'var(--success)'; }
+        if (unpaidTotalEl) { unpaidTotalEl.textContent = `${totalUnpaid.toFixed(2)} zł`; unpaidTotalEl.style.color = 'var(--error)'; }
         if (totalEl) totalEl.textContent = `${(totalPaid+totalUnpaid).toFixed(2)} zł`;
         if (gPaidEl) { gPaidEl.textContent = `${gPaid.toFixed(2)} zł`; gPaidEl.style.color = 'var(--success)'; }
         if (gUnpaidEl) { gUnpaidEl.textContent = `${gUnpaid.toFixed(2)} zł`; gUnpaidEl.style.color = 'var(--error)'; }
