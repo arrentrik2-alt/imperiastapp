@@ -1244,10 +1244,10 @@
         if (pInactiveEl) pInactiveEl.textContent = String(Math.max(0, inactiveCount));
         if (groupsCountEl) groupsCountEl.textContent = String((groups || []).length);
 
-        // Payments summary for month
-        const { data: pays } = await supabase.from('payments').select('amount, confirmed').eq('month', monthVal);
-        const paid = (pays || []).filter(p => p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
-        const unpaid = (pays || []).filter(p => !p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
+        // Payments summary for month (groups via group_entries)
+        const { data: geDash } = await supabase.from('group_entries').select('amount, confirmed').eq('month', monthVal);
+        const paid = (geDash || []).filter(p => p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
+        const unpaid = (geDash || []).filter(p => !p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
         const total = paid + unpaid;
         if (paidEl) { paidEl.textContent = `${paid.toFixed(2)} zł`; paidEl.style.color = 'var(--success)'; }
         if (unpaidEl) { unpaidEl.textContent = `${unpaid.toFixed(2)} zł`; unpaidEl.style.color = 'var(--error)'; }
@@ -1405,12 +1405,12 @@
 
       async function recalcCashBalance() {
         try {
-          const [{ data: paysAll }, { data: leAll }, { data: expRows }] = await Promise.all([
-            supabase.from('payments').select('amount, confirmed, method'),
+          const [{ data: geAll }, { data: leAll }, { data: expRows }] = await Promise.all([
+            supabase.from('group_entries').select('amount, confirmed, method'),
             supabase.from('lesson_entries').select('amount, confirmed, method'),
             supabase.from('expenses').select('amount')
           ]);
-          const cashIncomeGroups = (paysAll||[]).filter(p=>p.confirmed && p.method==='cash').reduce((s,p)=> s + Number(p.amount||0), 0);
+          const cashIncomeGroups = (geAll||[]).filter(p=>p.confirmed && p.method==='cash').reduce((s,p)=> s + Number(p.amount||0), 0);
           const cashIncomeLessons = (leAll||[]).filter(e=>e.confirmed && e.method==='cash').reduce((s,e)=> s + Number(e.amount||0), 0);
           const totalExpenses = (expRows||[]).reduce((s,e)=> s + Number(e.amount||0), 0);
           const balance = (cashIncomeGroups + cashIncomeLessons) - totalExpenses;
@@ -2379,21 +2379,21 @@
       if (isNaN(newAmount) || newAmount < 0) { alert('Podaj poprawną kwotę'); input.value = input.dataset.initial || '0'; return; }
       try {
         const { data: existing } = await supabase
-          .from('payments')
+          .from('group_entries')
           .select('id')
-          .eq('participant_id', participantId)
+          .eq('group_id', selectedGroup.id)
           .eq('month', selectedMonth)
           .maybeSingle();
         if (existing) {
           const { error } = await supabase
-            .from('payments')
-            .update({ amount: newAmount })
+            .from('group_entries')
+            .update({ amount: newAmount, confirmed: false })
             .eq('id', existing.id);
           if (error) throw error;
         } else {
           const { error } = await supabase
-            .from('payments')
-            .insert([{ participant_id: participantId, month: selectedMonth, amount: newAmount, confirmed: false }]);
+            .from('group_entries')
+            .insert([{ group_id: selectedGroup.id, month: selectedMonth, amount: newAmount, confirmed: false }]);
           if (error) throw error;
         }
         input.dataset.initial = String(newAmount);
@@ -2604,37 +2604,16 @@
           arr.push(l.group_id);
           linksByParticipant.set(l.participant_id, arr);
         });
-        const participantIds = participants.map(p => p.id);
-        const { data: payments, error: payErr } = await supabase
-          .from('payments')
-          .select('participant_id, amount, confirmed')
-          .in('participant_id', participantIds);
-        if (payErr) throw payErr;
+        // Aggregate paid/unpaid from lessons entries per participant
         const payAgg = new Map();
-        (payments || []).forEach(pay => {
-          const agg = payAgg.get(pay.participant_id) || { paid: 0, unpaid: 0 };
-          if (pay.confirmed) agg.paid += Number(pay.amount || 0);
-          else agg.unpaid += Number(pay.amount || 0);
-          payAgg.set(pay.participant_id, agg);
-        });
+        // payAgg wypełnimy poniżej na bazie lekcji/przydziałów
 
         // Compute expected unpaid for current month for groups
         const now = new Date();
         const yyyy = now.getFullYear();
         const mm = String(now.getMonth() + 1).padStart(2, '0');
         const currentMonth = `${yyyy}-${mm}`;
-        const { data: paymentsMonth, error: payMonthErr } = await supabase
-          .from('payments')
-          .select('participant_id, amount, confirmed, month')
-          .in('participant_id', participantIds)
-          .eq('month', currentMonth);
-        if (payMonthErr) throw payMonthErr;
         const paidMonth = new Map();
-        (paymentsMonth || []).forEach(p => {
-          const prev = paidMonth.get(p.participant_id) || 0;
-          const add = p.confirmed ? Number(p.amount || 0) : 0;
-          paidMonth.set(p.participant_id, prev + add);
-        });
         const groupById = new Map((groups || []).map(g => [g.id, g]));
 
         // Lessons aggregation per participant (include both paid and unpaid)
@@ -2783,14 +2762,8 @@
       openPreviewModal();
       if (previewBody) previewBody.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie...</p></div>';
       try {
-        // Unpaid group payments (all months)
-        const { data: gp, error: gpErr } = await supabase
-          .from('payments')
-          .select('month, amount, confirmed, method, comment')
-          .eq('participant_id', participantId)
-          .order('month', { ascending: false });
-        if (gpErr) throw gpErr;
-        const unpaidGroups = (gp || []).filter(p => !p.confirmed && Number(p.amount || 0) > 0);
+        // Unpaid group entries (all months) — replaced model: show unpaid per group via expected base minus paid
+        const unpaidGroups = [];
 
         // Expected unpaid for current month from group memberships
         const now = new Date();
@@ -2823,13 +2796,14 @@
             const base = isMulti ? Number(g.multisport || 0) : Number(g.fee || 0);
             return sum + (isNaN(base) ? 0 : base);
           }, 0);
-          const { data: paidMonthRows } = await supabase
-            .from('payments')
+          // Use group_entries for the group (any confirmed for month means paid)
+          const { data: geMonth } = await supabase
+            .from('group_entries')
             .select('amount, confirmed')
-            .eq('participant_id', participantId)
-            .eq('month', currentMonth);
-          const paidForMonth = (paidMonthRows || []).filter(p => p.confirmed).reduce((s,p) => s + Number(p.amount || 0), 0);
-          const hasAnyPaymentRow = (paidMonthRows || []).length > 0;
+            .eq('month', currentMonth)
+            .in('group_id', activeGroupIds);
+          const paidForMonth = (geMonth || []).filter(x => x.confirmed).reduce((s,x)=> s + Number(x.amount||0), 0);
+          const hasAnyPaymentRow = (geMonth || []).length > 0;
           unpaidExpectedMonth = hasAnyPaymentRow ? 0 : Math.max(0, expectedBase - paidForMonth);
         }
 
