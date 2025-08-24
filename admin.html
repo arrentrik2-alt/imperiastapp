@@ -1395,9 +1395,26 @@
         // No lists in finance view
       }
       await loadFor(finMonth.value);
-      finMonth.onchange = async () => { await loadFor(finMonth.value); };
+      finMonth.onchange = async () => { await loadFor(finMonth.value); await loadExpensesFor(finMonth.value); };
       // Live refresh when data changes elsewhere
-      window.addEventListener('finance:refresh', () => { loadFor(finMonth.value); }, { once: false });
+      window.addEventListener('finance:refresh', async () => {
+        const mv = finMonth.value;
+        await loadFor(mv);
+        // Refresh cash balance quickly
+        try {
+          const [{ data: paysAll }, { data: leAll }, { data: expRows }] = await Promise.all([
+            supabase.from('payments').select('amount, confirmed, method'),
+            supabase.from('lesson_entries').select('amount, confirmed, method'),
+            supabase.from('expenses').select('amount')
+          ]);
+          const cashIncomeGroups = (paysAll||[]).filter(p=>p.confirmed && p.method==='cash').reduce((s,p)=> s + Number(p.amount||0), 0);
+          const cashIncomeLessons = (leAll||[]).filter(e=>e.confirmed && e.method==='cash').reduce((s,e)=> s + Number(e.amount||0), 0);
+          const totalExpenses = (expRows||[]).reduce((s,e)=> s + Number(e.amount||0), 0);
+          const balance = (cashIncomeGroups + cashIncomeLessons) - totalExpenses;
+          const finCashBalanceEl2 = document.getElementById('fin-cash-balance');
+          if (finCashBalanceEl2) finCashBalanceEl2.textContent = `${balance.toFixed(2)} zł`;
+        } catch {}
+      }, { once: false });
 
       // Cash balance (all-time cash income minus all expenses)
       try {
