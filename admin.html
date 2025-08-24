@@ -801,6 +801,7 @@
       </div>
       <div class="content-box" style="margin-bottom:12px; padding:12px;">
         <div class="summary-card" style="display:inline-block;">
+          <div class="label">Kasa</div>
           <div class="value" id="fin-cash-balance">0.00 zł</div>
         </div>
       </div>
@@ -810,6 +811,7 @@
           <div class="summary-card"><div class="label">Niezapłacone (ogółem)</div><div class="value" id="fin-unpaid-total">0.00 zł</div></div>
           <div class="summary-card"><div class="label">Razem</div><div class="value" id="fin-total">0.00 zł</div></div>
         </div>
+        <div class="progress" style="margin-top:8px;"><div class="progress-bar" id="fin-total-progress" style="width:0%"></div></div>
         <div style="margin-top:10px;">
           <div class="summary-card" style="display:inline-block; min-width:240px;">
             <div class="label">Karta</div>
@@ -1337,7 +1339,13 @@
         const lUnpaid = lPriv.filter(e=>!e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
         const fdPaid = lFd.filter(e=>!!e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
         const fdUnpaid = lFd.filter(e=>!e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
-        const totalPaid = gPaid + lPaid + fdPaid;
+        // Subtract monthly expenses from paid total
+        let monthExpenses = 0;
+        try {
+          const { data: exRows } = await supabase.from('expenses').select('amount').eq('month', monthVal);
+          monthExpenses = (exRows||[]).reduce((s,e)=> s + Number(e.amount||0), 0);
+        } catch {}
+        const totalPaid = Math.max(0, (gPaid + lPaid + fdPaid) - monthExpenses);
         const totalUnpaid = gUnpaid + lUnpaid + fdUnpaid;
         if (paidTotalEl) paidTotalEl.textContent = `${totalPaid.toFixed(2)} zł`;
         if (unpaidTotalEl) unpaidTotalEl.textContent = `${totalUnpaid.toFixed(2)} zł`;
@@ -1356,6 +1364,8 @@
         setProgress(finGroupsProgress, gPaid, gUnpaid);
         setProgress(finLessonsProgress, lPaid, lUnpaid);
         setProgress(finFdProgress, fdPaid, fdUnpaid);
+        const finTotalProgress = document.getElementById('fin-total-progress');
+        setProgress(finTotalProgress, totalPaid, totalUnpaid);
         // Methods breakdown
         const methodLabel = (m) => ({ card: 'Karta', transfer: 'Przelew', cash: 'Gotówka' }[m] || 'Inne');
         const mapCount = (rows) => rows.reduce((m,r)=>{ const k=methodLabel(r.method||''); m[k]=(m[k]||0)+Number(r.amount||0); return m; },{});
