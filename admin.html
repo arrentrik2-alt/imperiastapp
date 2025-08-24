@@ -880,8 +880,16 @@
         });
         
         if (copyError) throw copyError;
+
+        // 3. Copy participants and their payments from previous month
+        const { error: copyParticipantsError } = await supabase.rpc('copy_participants_month', {
+          p_from_month: monthInput,
+          p_to_month: monthInput
+        });
+
+        if (copyParticipantsError) throw copyParticipantsError;
         
-        alert(`Miesiąc ${monthInput} został utworzony z grupami z poprzedniego miesiąca!`);
+        alert(`Miesiąc ${monthInput} został utworzony z grupami i uczestnikami z poprzedniego miesiąca!`);
         closeCreateMonthModal();
         
         // Refresh month selectors
