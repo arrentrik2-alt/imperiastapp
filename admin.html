@@ -2142,9 +2142,8 @@
         
         if (!data || data.length === 0) {
           // Pokaż stan pustej listy
-          emptyState.style.display = 'block';
-          groupsList.innerHTML = '';
-          groupsList.appendChild(emptyState);
+          const monthInfo = (typeof groupsViewMonth !== 'undefined' && groupsViewMonth) ? `Snapshot ${groupsViewMonth}` : 'LIVE';
+          groupsList.innerHTML = `<div class="empty-state"><p>Brak grup (${monthInfo}).</p></div>`;
           return;
         }
         
@@ -2642,6 +2641,7 @@
         if (insertRes.error) throw insertRes.error;
         const newParticipant = insertRes.data;
         if (typeof groupsViewMonth !== 'undefined' && groupsViewMonth) {
+          let gmId = null;
           const gmSel = await supabase
             .from('groups_month')
             .select('id')
@@ -2649,8 +2649,24 @@
             .eq('source_group_id', selectedGroup.id)
             .maybeSingle();
           if (gmSel.error) throw gmSel.error;
-          const gmId = gmSel.data?.id;
-          if (!gmId) throw new Error('Brak snapshotu grupy dla wybranego miesiąca');
+          gmId = gmSel.data?.id || null;
+          if (!gmId) {
+            // Utwórz brakujący snapshot tej grupy na wybrany miesiąc (kopiuj z live groups)
+            const gLive = await supabase
+              .from('groups')
+              .select('id,name,day,start_time,end_time,trainer,fee,multisport,color')
+              .eq('id', selectedGroup.id)
+              .maybeSingle();
+            if (gLive.error) throw gLive.error;
+            if (!gLive.data) throw new Error('Brak grupy źródłowej do snapshotu');
+            const insGm = await supabase
+              .from('groups_month')
+              .insert([{ month: selectedMonth, source_group_id: selectedGroup.id, name: gLive.data.name, day: gLive.data.day, start_time: gLive.data.start_time, end_time: gLive.data.end_time, trainer: gLive.data.trainer, fee: gLive.data.fee, multisport: gLive.data.multisport, color: gLive.data.color }])
+              .select('id')
+              .single();
+            if (insGm.error) throw insGm.error;
+            gmId = insGm.data.id;
+          }
           const linkRes = await supabase
             .from('participant_groups_month')
             .insert([{ month: selectedMonth, group_month_id: gmId, group_id: selectedGroup.id, participant_id: newParticipant.id }]);
