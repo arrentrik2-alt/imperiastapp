@@ -810,6 +810,7 @@
           <div class="summary-card"><div class="label">Zapłacone (ogółem)</div><div class="value" id="fin-paid-total">0.00 zł</div></div>
           <div class="summary-card"><div class="label">Niezapłacone (ogółem)</div><div class="value" id="fin-unpaid-total">0.00 zł</div></div>
           <div class="summary-card"><div class="label">Razem</div><div class="value" id="fin-total">0.00 zł</div></div>
+          <div class="summary-card"><div class="label">Zysk</div><div class="value" id="fin-profit" style="color:#1e90ff;">0.00 zł</div></div>
         </div>
         <div class="progress" style="margin-top:8px;"><div class="progress-bar" id="fin-total-progress" style="width:0%"></div></div>
         <div style="margin-top:10px;">
@@ -1350,9 +1351,12 @@
         } catch {}
         const totalPaid = Math.max(0, (gPaid + lPaid + fdPaid) - monthExpenses);
         const totalUnpaid = gUnpaid + lUnpaid + fdUnpaid;
+        const profit = Math.max(0, (gPaid + lPaid + fdPaid) - monthExpenses);
         if (paidTotalEl) { paidTotalEl.textContent = `${totalPaid.toFixed(2)} zł`; paidTotalEl.style.color = 'var(--success)'; }
         if (unpaidTotalEl) { unpaidTotalEl.textContent = `${totalUnpaid.toFixed(2)} zł`; unpaidTotalEl.style.color = 'var(--error)'; }
         if (totalEl) totalEl.textContent = `${(totalPaid+totalUnpaid).toFixed(2)} zł`;
+        const finProfitEl = document.getElementById('fin-profit');
+        if (finProfitEl) finProfitEl.textContent = `${profit.toFixed(2)} zł`;
         if (gPaidEl) { gPaidEl.textContent = `${gPaid.toFixed(2)} zł`; gPaidEl.style.color = 'var(--success)'; }
         if (gUnpaidEl) { gUnpaidEl.textContent = `${gUnpaid.toFixed(2)} zł`; gUnpaidEl.style.color = 'var(--error)'; }
         if (lPaidEl) { lPaidEl.textContent = `${lPaid.toFixed(2)} zł`; lPaidEl.style.color = 'var(--success)'; }
@@ -1392,6 +1396,8 @@
       }
       await loadFor(finMonth.value);
       finMonth.onchange = async () => { await loadFor(finMonth.value); };
+      // Live refresh when data changes elsewhere
+      window.addEventListener('finance:refresh', () => { loadFor(finMonth.value); }, { once: false });
 
       // Cash balance (all-time cash income minus all expenses)
       try {
@@ -1683,6 +1689,7 @@
           if (lessonsSection) lessonsSection.style.display = 'none';
           if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
           scheduleSection.style.display = 'none';
+          if (firstDanceSection) firstDanceSection.style.display = 'none';
           if (dashboardSection) dashboardSection.style.display = 'none';
           if (financeSection) financeSection.style.display = 'none';
           if (trainersSection) trainersSection.style.display = 'block';
@@ -2530,6 +2537,7 @@
             if (insErr) throw insErr;
           }
           await loadParticipantsAndPayments();
+          window.dispatchEvent(new Event('finance:refresh'));
           maybeRefreshFinance();
         } catch (err) {
           alert('Błąd zapisu płatności: ' + (err.message || 'Nieznany'));
@@ -3968,6 +3976,7 @@
             .eq('type', 'first_dance');
           if (error) throw error;
           await renderFirstDanceForMonth();
+          window.dispatchEvent(new Event('finance:refresh'));
           maybeRefreshFinance();
         } catch (err2) {
           alert('Błąd zapisu płatności: ' + (err2.message || 'Nieznany'));
@@ -3983,6 +3992,7 @@
             .eq('type', 'first_dance');
           if (error) throw error;
           await renderFirstDanceForMonth();
+          window.dispatchEvent(new Event('finance:refresh'));
           maybeRefreshFinance();
         } catch (err4) {
           alert('Błąd usuwania płatności: ' + (err4.message || 'Nieznany'));
