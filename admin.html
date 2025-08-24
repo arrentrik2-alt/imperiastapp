@@ -374,6 +374,10 @@
     .summary-card .sub { color: var(--text-light); font-weight: 600; font-size: 0.95rem; }
     .progress { width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; border: 1px solid var(--border-dark); }
     .progress-bar { height: 100%; background: var(--gold); width: 0%; transition: width 0.3s ease; }
+    /* Simple donut chart colors */
+    .donut-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 16; }
+    .donut-paid { fill: none; stroke: var(--success); stroke-width: 16; transform-origin: 50% 50%; transform: rotate(-90deg); }
+    .donut-unpaid { fill: none; stroke: var(--error); stroke-width: 16; transform-origin: 50% 50%; transform: rotate(-90deg); }
     /* Compact controls inside rows */
     .form-control.small { padding: 6px 8px; font-size: 0.9rem; }
     .participant-row { padding: 10px; }
@@ -456,6 +460,12 @@
     
     <ul class="nav-links">
       <li>
+        <a href="#" id="nav-dashboard">
+          <i class="fas fa-home"></i>
+          <span class="link-text">Dashboard</span>
+        </a>
+      </li>
+      <li>
         <a href="#" id="nav-participants">
           <i class="fas fa-address-book"></i>
           <span class="link-text">Uczestnicy</span>
@@ -486,7 +496,7 @@
         </a>
       </li>
       <li>
-        <a href="#">
+        <a href="#" id="nav-finance">
           <i class="fas fa-chart-line"></i>
           <span class="link-text">Płatności</span>
         </a>
@@ -515,6 +525,45 @@
         <button class="btn btn-outline" id="logoutBtn">
           <i class="fas fa-sign-out-alt"></i> Wyloguj
         </button>
+      </div>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div class="content-box" id="dashboard-section" style="display:none;">
+      <div class="content-header">
+        <h3>Witaj w panelu</h3>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(2, minmax(240px,1fr)); gap:12px;">
+        <div class="summary-card">
+          <div class="label">Uczestnicy</div>
+          <div class="value"><span id="dash-participants-active">0</span> aktywnych · <span id="dash-participants-inactive">0</span> nieaktywnych</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Grupy</div>
+          <div class="value" id="dash-groups-count">0</div>
+        </div>
+      </div>
+      <div class="content-box" style="margin-top:12px;">
+        <div class="content-header" style="margin-bottom:8px; display:flex; align-items:center; gap:10px;">
+          <h3 style="font-size:1.1rem;">Płatności w miesiącu</h3>
+          <select id="dash-month-select" class="form-control" style="width:220px;"></select>
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(2, minmax(260px,1fr)); gap:12px; align-items:center;">
+          <div>
+            <svg id="dash-donut" viewBox="0 0 120 120" width="260" height="260">
+              <circle class="donut-bg" cx="60" cy="60" r="44"></circle>
+              <circle class="donut-paid" id="dash-donut-paid" cx="60" cy="60" r="44" stroke-dasharray="0 276"></circle>
+              <circle class="donut-unpaid" id="dash-donut-unpaid" cx="60" cy="60" r="44" stroke-dasharray="0 276"></circle>
+            </svg>
+          </div>
+          <div>
+            <div class="summary-grid">
+              <div class="summary-card"><div class="label">Zapłacone</div><div class="value" id="dash-paid-amount">0.00 zł</div></div>
+              <div class="summary-card"><div class="label">Niezapłacone</div><div class="value" id="dash-unpaid-amount">0.00 zł</div></div>
+              <div class="summary-card"><div class="label">Razem</div><div class="value" id="dash-total-amount">0.00 zł</div></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -739,6 +788,63 @@
       </div>
       <div id="gcal-embed" style="margin-top:12px;">
         <iframe src="https://calendar.google.com/calendar/embed?src=imperia.studiotanca%40gmail.com&ctz=Europe%2FWarsaw" style="border:0; width:100%; height:600px;" frameborder="0" scrolling="no"></iframe>
+      </div>
+    </div>
+
+    <!-- Finance Section -->
+    <div class="content-box" id="finance-section" style="display:none;">
+      <div class="content-header">
+        <h3>Finanse</h3>
+        <div>
+          <label for="finance-month-select" style="color: var(--text-gray);">Miesiąc</label>
+          <select id="finance-month-select" class="form-control" style="width:220px;"></select>
+        </div>
+      </div>
+      <div class="content-box" style="margin-bottom:12px; padding:12px;">
+        <div class="summary-grid">
+          <div class="summary-card"><div class="label">Zapłacone (ogółem)</div><div class="value" id="fin-paid-total">0.00 zł</div></div>
+          <div class="summary-card"><div class="label">Niezapłacone (ogółem)</div><div class="value" id="fin-unpaid-total">0.00 zł</div></div>
+          <div class="summary-card"><div class="label">Razem</div><div class="value" id="fin-total">0.00 zł</div></div>
+        </div>
+      </div>
+      <div class="content-box" style="margin-bottom:12px; padding:12px;">
+        <h4 style="margin:0 0 10px 0;">Grupy</h4>
+        <div class="summary-grid">
+          <div class="summary-card"><div class="label">Zapłacone</div><div class="value" id="fin-groups-paid">0.00 zł</div></div>
+          <div class="summary-card"><div class="label">Niezapłacone</div><div class="value" id="fin-groups-unpaid">0.00 zł</div></div>
+        </div>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:10px;">
+          <div class="content-box" style="flex:1 1 260px;">
+            <h4 style="margin-top:0; font-size:1rem;">Metody płatności</h4>
+            <ul id="fin-groups-methods" style="margin:8px 0 0 18px;"></ul>
+          </div>
+        </div>
+      </div>
+      <div class="content-box" style="margin-bottom:12px; padding:12px;">
+        <h4 style="margin:0 0 10px 0;">Lekcje prywatne</h4>
+        <div class="summary-grid">
+          <div class="summary-card"><div class="label">Zapłacone</div><div class="value" id="fin-lessons-paid">0.00 zł</div></div>
+          <div class="summary-card"><div class="label">Niezapłacone</div><div class="value" id="fin-lessons-unpaid">0.00 zł</div></div>
+        </div>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:10px;">
+          <div class="content-box" style="flex:1 1 260px;">
+            <h4 style="margin-top:0; font-size:1rem;">Metody płatności</h4>
+            <ul id="fin-lessons-methods" style="margin:8px 0 0 18px;"></ul>
+          </div>
+        </div>
+      </div>
+      <div class="content-box" style="margin-bottom:12px; padding:12px;">
+        <h4 style="margin:0 0 10px 0;">Pierwszy taniec</h4>
+        <div class="summary-grid">
+          <div class="summary-card"><div class="label">Zapłacone</div><div class="value" id="fin-fd-paid">0.00 zł</div></div>
+          <div class="summary-card"><div class="label">Niezapłacone</div><div class="value" id="fin-fd-unpaid">0.00 zł</div></div>
+        </div>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:10px;">
+          <div class="content-box" style="flex:1 1 260px;">
+            <h4 style="margin-top:0; font-size:1rem;">Metody płatności</h4>
+            <ul id="fin-fd-methods" style="margin:8px 0 0 18px;"></ul>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1000,7 +1106,11 @@
     const firstDanceLink = document.getElementById('nav-first-dance');
     const scheduleLink = document.getElementById('nav-schedule');
     const trainersLink = document.getElementById('nav-trainers');
+    const dashboardLink = document.getElementById('nav-dashboard');
+    const financeLink = document.getElementById('nav-finance');
     const scheduleSection = document.getElementById('schedule-section');
+    const dashboardSection = document.getElementById('dashboard-section');
+    const financeSection = document.getElementById('finance-section');
     const trainersSection = document.getElementById('trainers-section');
     const lessonsSection = document.getElementById('lessons-section');
     const lessonsList = document.getElementById('lessons-list');
@@ -1056,6 +1166,131 @@
       });
     }
 
+    async function renderDashboard() {
+      try {
+        const dashMonthSelect = document.getElementById('dash-month-select');
+        const paidEl = document.getElementById('dash-paid-amount');
+        const unpaidEl = document.getElementById('dash-unpaid-amount');
+        const totalEl = document.getElementById('dash-total-amount');
+        const pActiveEl = document.getElementById('dash-participants-active');
+        const pInactiveEl = document.getElementById('dash-participants-inactive');
+        const groupsCountEl = document.getElementById('dash-groups-count');
+        const donutPaid = document.getElementById('dash-donut-paid');
+        const donutUnpaid = document.getElementById('dash-donut-unpaid');
+        if (!dashMonthSelect) return;
+        dashMonthSelect.innerHTML = '';
+        const opts = getLast12MonthsOptions();
+        opts.forEach(o => { const opt = document.createElement('option'); opt.value = o.value; opt.textContent = o.label; dashMonthSelect.appendChild(opt); });
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const monthVal = `${yyyy}-${mm}`;
+        dashMonthSelect.value = monthVal;
+
+        // Counts
+        const [{ data: participants }, { data: groups }] = await Promise.all([
+          supabase.from('participants').select('id, active').order('last_name', { ascending: true }),
+          supabase.from('groups').select('id')
+        ]);
+        const activeCount = (participants || []).filter(p => p.active !== false).length;
+        const inactiveCount = (participants || []).length - activeCount;
+        if (pActiveEl) pActiveEl.textContent = String(activeCount);
+        if (pInactiveEl) pInactiveEl.textContent = String(Math.max(0, inactiveCount));
+        if (groupsCountEl) groupsCountEl.textContent = String((groups || []).length);
+
+        // Payments summary for month
+        const { data: pays } = await supabase.from('payments').select('amount, confirmed').eq('month', monthVal);
+        const paid = (pays || []).filter(p => p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
+        const unpaid = (pays || []).filter(p => !p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
+        const total = paid + unpaid;
+        if (paidEl) paidEl.textContent = `${paid.toFixed(2)} zł`;
+        if (unpaidEl) unpaidEl.textContent = `${unpaid.toFixed(2)} zł`;
+        if (totalEl) totalEl.textContent = `${total.toFixed(2)} zł`;
+        const circ = 2 * Math.PI * 44; // ~276.46
+        const paidLen = total > 0 ? (paid / total) * circ : 0;
+        const unpaidLen = total > 0 ? (unpaid / total) * circ : 0;
+        if (donutPaid) donutPaid.setAttribute('stroke-dasharray', `${paidLen} ${circ - paidLen}`);
+        if (donutUnpaid) donutUnpaid.setAttribute('stroke-dasharray', `${unpaidLen} ${circ - unpaidLen}`);
+        // Offset unpaid to start where paid ends
+        if (donutUnpaid) donutUnpaid.style.strokeDashoffset = String(-paidLen);
+
+        dashMonthSelect.onchange = async () => {
+          const m = dashMonthSelect.value;
+          const { data: pays2 } = await supabase.from('payments').select('amount, confirmed').eq('month', m);
+          const paid2 = (pays2 || []).filter(p => p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
+          const unpaid2 = (pays2 || []).filter(p => !p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
+          const total2 = paid2 + unpaid2;
+          if (paidEl) paidEl.textContent = `${paid2.toFixed(2)} zł`;
+          if (unpaidEl) unpaidEl.textContent = `${unpaid2.toFixed(2)} zł`;
+          if (totalEl) totalEl.textContent = `${total2.toFixed(2)} zł`;
+          const paidLen2 = total2 > 0 ? (paid2 / total2) * circ : 0;
+          const unpaidLen2 = total2 > 0 ? (unpaid2 / total2) * circ : 0;
+          if (donutPaid) donutPaid.setAttribute('stroke-dasharray', `${paidLen2} ${circ - paidLen2}`);
+          if (donutUnpaid) donutUnpaid.setAttribute('stroke-dasharray', `${unpaidLen2} ${circ - unpaidLen2}`);
+          if (donutUnpaid) donutUnpaid.style.strokeDashoffset = String(-paidLen2);
+        };
+      } catch {}
+    }
+
+    async function renderFinance() {
+      const finMonth = document.getElementById('finance-month-select');
+      const paidTotalEl = document.getElementById('fin-paid-total');
+      const unpaidTotalEl = document.getElementById('fin-unpaid-total');
+      const totalEl = document.getElementById('fin-total');
+      const gPaidEl = document.getElementById('fin-groups-paid');
+      const gUnpaidEl = document.getElementById('fin-groups-unpaid');
+      const lPaidEl = document.getElementById('fin-lessons-paid');
+      const lUnpaidEl = document.getElementById('fin-lessons-unpaid');
+      const fdPaidEl = document.getElementById('fin-fd-paid');
+      const fdUnpaidEl = document.getElementById('fin-fd-unpaid');
+      const gMethods = document.getElementById('fin-groups-methods');
+      const lMethods = document.getElementById('fin-lessons-methods');
+      const fdMethods = document.getElementById('fin-fd-methods');
+      if (!finMonth) return;
+      finMonth.innerHTML = '';
+      getLast12MonthsOptions().forEach(o => { const opt = document.createElement('option'); opt.value = o.value; opt.textContent = o.label; finMonth.appendChild(opt); });
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      finMonth.value = `${yyyy}-${mm}`;
+
+      async function loadFor(monthVal) {
+        // Groups payments are in 'payments'
+        const { data: pays } = await supabase.from('payments').select('amount, confirmed, method').eq('month', monthVal);
+        const gPaid = (pays||[]).filter(p=>p.confirmed).reduce((s,p)=> s+Number(p.amount||0),0);
+        const gUnpaid = (pays||[]).filter(p=>!p.confirmed).reduce((s,p)=> s+Number(p.amount||0),0);
+        // Lessons private
+        const { data: les } = await supabase.from('lesson_entries').select('amount, confirmed, method, type').eq('month', monthVal);
+        const lPriv = (les||[]).filter(e=>e.type==='private');
+        const lFd = (les||[]).filter(e=>e.type==='first_dance');
+        const lPaid = lPriv.filter(e=>e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
+        const lUnpaid = lPriv.filter(e=>!e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
+        const fdPaid = lFd.filter(e=>e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
+        const fdUnpaid = lFd.filter(e=>!e.confirmed).reduce((s,e)=> s+Number(e.amount||0),0);
+        const totalPaid = gPaid + lPaid + fdPaid;
+        const totalUnpaid = gUnpaid + lUnpaid + fdUnpaid;
+        if (paidTotalEl) paidTotalEl.textContent = `${totalPaid.toFixed(2)} zł`;
+        if (unpaidTotalEl) unpaidTotalEl.textContent = `${totalUnpaid.toFixed(2)} zł`;
+        if (totalEl) totalEl.textContent = `${(totalPaid+totalUnpaid).toFixed(2)} zł`;
+        if (gPaidEl) gPaidEl.textContent = `${gPaid.toFixed(2)} zł`;
+        if (gUnpaidEl) gUnpaidEl.textContent = `${gUnpaid.toFixed(2)} zł`;
+        if (lPaidEl) lPaidEl.textContent = `${lPaid.toFixed(2)} zł`;
+        if (lUnpaidEl) lUnpaidEl.textContent = `${lUnpaid.toFixed(2)} zł`;
+        if (fdPaidEl) fdPaidEl.textContent = `${fdPaid.toFixed(2)} zł`;
+        if (fdUnpaidEl) fdUnpaidEl.textContent = `${fdUnpaid.toFixed(2)} zł`;
+        // Methods breakdown
+        const mapCount = (rows) => rows.reduce((m,r)=>{ const k=r.method||'inne'; m[k]=(m[k]||0)+Number(r.amount||0); return m; },{});
+        const gM = mapCount((pays||[]).filter(p=>p.confirmed));
+        const lM = mapCount(lPriv.filter(e=>e.confirmed));
+        const fdM = mapCount(lFd.filter(e=>e.confirmed));
+        const fillUl = (ul, obj) => { if (!ul) return; ul.innerHTML=''; const keys=Object.keys(obj); if (!keys.length) { ul.innerHTML='<li>Brak</li>'; return; } keys.forEach(k=>{ const li=document.createElement('li'); li.textContent=`${k}: ${obj[k].toFixed(2)} zł`; ul.appendChild(li); }); };
+        fillUl(gMethods, gM);
+        fillUl(lMethods, lM);
+        fillUl(fdMethods, fdM);
+      }
+      await loadFor(finMonth.value);
+      finMonth.onchange = async () => { await loadFor(finMonth.value); };
+    }
     function setActiveNav(section) {
       if (groupsLink && participantsLink) {
         if (section === 'groups') {
@@ -1065,6 +1300,8 @@
           if (scheduleLink) scheduleLink.classList.remove('active');
           if (trainersLink) trainersLink.classList.remove('active');
           if (firstDanceLink) firstDanceLink.classList.remove('active');
+          if (dashboardLink) dashboardLink.classList.remove('active');
+          if (financeLink) financeLink.classList.remove('active');
         } else if (section === 'participants') {
           participantsLink.classList.add('active');
           groupsLink.classList.remove('active');
@@ -1072,6 +1309,8 @@
           if (scheduleLink) scheduleLink.classList.remove('active');
           if (trainersLink) trainersLink.classList.remove('active');
           if (firstDanceLink) firstDanceLink.classList.remove('active');
+          if (dashboardLink) dashboardLink.classList.remove('active');
+          if (financeLink) financeLink.classList.remove('active');
         } else if (section === 'lessons') {
           if (lessonsLink) lessonsLink.classList.add('active');
           groupsLink.classList.remove('active');
@@ -1079,6 +1318,8 @@
           if (scheduleLink) scheduleLink.classList.remove('active');
           if (trainersLink) trainersLink.classList.remove('active');
           if (firstDanceLink) firstDanceLink.classList.remove('active');
+          if (dashboardLink) dashboardLink.classList.remove('active');
+          if (financeLink) financeLink.classList.remove('active');
         } else if (section === 'schedule') {
           if (scheduleLink) scheduleLink.classList.add('active');
           groupsLink.classList.remove('active');
@@ -1086,6 +1327,8 @@
           if (lessonsLink) lessonsLink.classList.remove('active');
           if (firstDanceLink) firstDanceLink.classList.remove('active');
           if (trainersLink) trainersLink.classList.remove('active');
+          if (dashboardLink) dashboardLink.classList.remove('active');
+          if (financeLink) financeLink.classList.remove('active');
         } else if (section === 'first_dance') {
           if (firstDanceLink) firstDanceLink.classList.add('active');
           groupsLink.classList.remove('active');
@@ -1093,12 +1336,34 @@
           if (lessonsLink) lessonsLink.classList.remove('active');
           if (scheduleLink) scheduleLink.classList.remove('active');
           if (trainersLink) trainersLink.classList.remove('active');
+          if (dashboardLink) dashboardLink.classList.remove('active');
+          if (financeLink) financeLink.classList.remove('active');
         } else if (section === 'trainers') {
           if (trainersLink) trainersLink.classList.add('active');
           groupsLink.classList.remove('active');
           participantsLink.classList.remove('active');
           if (lessonsLink) lessonsLink.classList.remove('active');
           if (scheduleLink) scheduleLink.classList.remove('active');
+          if (firstDanceLink) firstDanceLink.classList.remove('active');
+          if (dashboardLink) dashboardLink.classList.remove('active');
+          if (financeLink) financeLink.classList.remove('active');
+        } else if (section === 'dashboard') {
+          if (dashboardLink) dashboardLink.classList.add('active');
+          if (financeLink) financeLink.classList.remove('active');
+          groupsLink.classList.remove('active');
+          participantsLink.classList.remove('active');
+          if (lessonsLink) lessonsLink.classList.remove('active');
+          if (scheduleLink) scheduleLink.classList.remove('active');
+          if (trainersLink) trainersLink.classList.remove('active');
+          if (firstDanceLink) firstDanceLink.classList.remove('active');
+        } else if (section === 'finance') {
+          if (financeLink) financeLink.classList.add('active');
+          if (dashboardLink) dashboardLink.classList.remove('active');
+          groupsLink.classList.remove('active');
+          participantsLink.classList.remove('active');
+          if (lessonsLink) lessonsLink.classList.remove('active');
+          if (scheduleLink) scheduleLink.classList.remove('active');
+          if (trainersLink) trainersLink.classList.remove('active');
           if (firstDanceLink) firstDanceLink.classList.remove('active');
         }
       }
@@ -1152,6 +1417,8 @@
       groupsSection.style.display = 'none';
       groupDetailsSection.style.display = 'block';
       if (trainersSection) trainersSection.style.display = 'none';
+      if (dashboardSection) dashboardSection.style.display = 'none';
+      if (financeSection) financeSection.style.display = 'none';
       setActiveNav('groups');
       collapseSidebar();
     }
@@ -1163,6 +1430,8 @@
       scheduleSection.style.display = 'none';
       if (trainersSection) trainersSection.style.display = 'none';
       if (firstDanceSection) firstDanceSection.style.display = 'none';
+      if (dashboardSection) dashboardSection.style.display = 'none';
+      if (financeSection) financeSection.style.display = 'none';
       setActiveNav('groups');
       collapseSidebar();
       // reset
@@ -1273,6 +1542,8 @@
         if (firstDanceSection) firstDanceSection.style.display = 'none';
         if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
         if (trainersSection) trainersSection.style.display = 'none';
+        if (dashboardSection) dashboardSection.style.display = 'none';
+        if (financeSection) financeSection.style.display = 'none';
         scheduleSection.style.display = 'block';
         setActiveNav('schedule');
         collapseSidebar();
@@ -1291,10 +1562,52 @@
         if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
         scheduleSection.style.display = 'none';
         if (trainersSection) trainersSection.style.display = 'none';
+        if (dashboardSection) dashboardSection.style.display = 'none';
+        if (financeSection) financeSection.style.display = 'none';
         if (firstDanceSection) firstDanceSection.style.display = 'block';
         setActiveNav('first_dance');
         collapseSidebar();
         await renderFirstDanceForMonth();
+      });
+    }
+
+    // Navigate to Dashboard
+    if (dashboardLink) {
+      dashboardLink.addEventListener('click', async (e) => {
+        e.preventDefault();
+        groupsSection.style.display = 'none';
+        groupDetailsSection.style.display = 'none';
+        participantsSection.style.display = 'none';
+        scheduleSection.style.display = 'none';
+        if (trainersSection) trainersSection.style.display = 'none';
+        if (lessonsSection) lessonsSection.style.display = 'none';
+        if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
+        if (firstDanceSection) firstDanceSection.style.display = 'none';
+        if (financeSection) financeSection.style.display = 'none';
+        if (dashboardSection) dashboardSection.style.display = 'block';
+        setActiveNav('dashboard');
+        collapseSidebar();
+        await renderDashboard();
+      });
+    }
+
+    // Navigate to Finance
+    if (financeLink) {
+      financeLink.addEventListener('click', async (e) => {
+        e.preventDefault();
+        groupsSection.style.display = 'none';
+        groupDetailsSection.style.display = 'none';
+        participantsSection.style.display = 'none';
+        scheduleSection.style.display = 'none';
+        if (trainersSection) trainersSection.style.display = 'none';
+        if (lessonsSection) lessonsSection.style.display = 'none';
+        if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
+        if (firstDanceSection) firstDanceSection.style.display = 'none';
+        if (dashboardSection) dashboardSection.style.display = 'none';
+        if (financeSection) financeSection.style.display = 'block';
+        setActiveNav('finance');
+        collapseSidebar();
+        await renderFinance();
       });
     }
 
