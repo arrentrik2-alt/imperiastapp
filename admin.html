@@ -677,6 +677,8 @@
     const groupParticipantsSection = document.getElementById('group-participants-section');
     
     function setActiveNav(section) {
+      console.log('setActiveNav wywołane z sekcją:', section, 'currentGroupId przed:', currentGroupId);
+      
       if (section === 'home') {
         homeLink.classList.add('active');
         groupsLink.classList.remove('active');
@@ -691,6 +693,7 @@
         homeLink.classList.remove('active');
         homeSection.style.display = 'none';
         groupsSection.style.display = 'block';
+        groupParticipantsSection.style.display = 'none'; // Hide participants section
         // Reset to current month when switching to groups
         document.getElementById('groups-month-select').value = getCurrentMonth();
         loadGroups();
@@ -704,6 +707,8 @@
         document.getElementById('participants-month-select').value = getCurrentMonth();
         // No specific data loading needed here, as it's a new section
       }
+      
+      console.log('setActiveNav zakończone, currentGroupId po:', currentGroupId);
     }
     
     homeLink.addEventListener('click', (e) => {
@@ -719,8 +724,10 @@
     const backToGroupsBtn = document.getElementById('back-to-groups-btn');
     backToGroupsBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      console.log('Powrót do grup, resetowanie currentGroupId z:', currentGroupId);
       setActiveNav('groups');
       currentGroupId = null; // Reset current group ID
+      console.log('currentGroupId po resecie:', currentGroupId);
     });
     
     document.getElementById('go-to-groups-btn').addEventListener('click', (e) => {
@@ -773,6 +780,8 @@
       const options = await getAvailableMonths();
       const currentMonth = getCurrentMonth();
       
+      console.log('Populowanie selektorów miesięcy, currentGroupId:', currentGroupId);
+      
       // Home page selector
       const homeSelector = document.getElementById('current-month-select');
       homeSelector.innerHTML = '';
@@ -794,7 +803,7 @@
         groupsSelector.appendChild(opt);
       });
       groupsSelector.value = currentMonth;
-
+      
       // Participants page selector
       const participantsSelector = document.getElementById('participants-month-select');
       participantsSelector.innerHTML = '';
@@ -805,6 +814,8 @@
         participantsSelector.appendChild(opt);
       });
       participantsSelector.value = currentMonth;
+      
+      console.log('Selektory miesięcy zaktualizowane');
     }
     
     // Load home page data
@@ -899,6 +910,9 @@
         // Update current selections to new month
         document.getElementById('current-month-select').value = monthInput;
         document.getElementById('groups-month-select').value = monthInput;
+        document.getElementById('participants-month-select').value = monthInput;
+        
+        console.log('Po utworzeniu miesiąca - currentGroupId:', currentGroupId);
         
         // Reload data
         await loadHomeData();
@@ -918,8 +932,12 @@
 
     const participantsMonthSelect = document.getElementById('participants-month-select');
     participantsMonthSelect.addEventListener('change', () => {
+      console.log('Zmiana miesiąca w uczestnikach, currentGroupId:', currentGroupId);
       if (currentGroupId) {
         loadGroupParticipants(currentGroupId);
+      } else {
+        console.error('Brak currentGroupId przy zmianie miesiąca');
+        groupParticipantsList.innerHTML = '<div class="empty-state"><p>Błąd: Brak ID grupy</p></div>';
       }
     });
 
@@ -1099,7 +1117,9 @@
         return;
       }
       
+      console.log('Otwieranie strony uczestników dla grupy:', group.id, group.name);
       currentGroupId = group.id; // Store group ID
+      console.log('Ustawiono currentGroupId:', currentGroupId);
       groupParticipantsName.textContent = group.name;
       loadGroupParticipants(group.id);
     }
