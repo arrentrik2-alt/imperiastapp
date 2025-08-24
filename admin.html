@@ -1291,10 +1291,12 @@
       finMonth.value = `${yyyy}-${mm}`;
 
       async function loadFor(monthVal) {
-        // Groups payments are in 'payments'
+        // Groups: use group_entries for paid/unpaid aggregation
         const { data: ge } = await supabase.from('group_entries').select('amount, confirmed, method, group_id, month').eq('month', monthVal);
         const gPaid = (ge||[]).filter(p=>p.confirmed).reduce((s,p)=> s+Number(p.amount||0),0);
-        // Expected unpaid for groups this month (even if no payment row exists)
+        // Map of group_id -> entry row for quick checks
+        const geByGroup = new Map((ge||[]).map(r => [r.group_id, r]));
+        // Expected unpaid for groups this month
         let gUnpaid = 0;
         try {
           const { data: pgRows } = await supabase
@@ -1305,37 +1307,43 @@
             const toOk = !l.effective_to_month || l.effective_to_month > monthVal;
             return fromOk && toOk;
           });
+          // Build maps: group -> participantIds
+          const groupToPids = new Map();
+          activeLinks.forEach(l => {
+            const arr = groupToPids.get(l.group_id) || [];
+            arr.push(l.participant_id);
+            groupToPids.set(l.group_id, arr);
+          });
+          const gIds = Array.from(groupToPids.keys());
           const pIds = Array.from(new Set(activeLinks.map(l => l.participant_id)));
-          const gIds = Array.from(new Set(activeLinks.map(l => l.group_id)));
           const [{ data: parts }, { data: groups }] = await Promise.all([
             pIds.length ? supabase.from('participants').select('id, multisport').in('id', pIds) : { data: [] },
             gIds.length ? supabase.from('groups').select('id, fee, multisport').in('id', gIds) : { data: [] }
           ]);
           const pMap = new Map((parts||[]).map(p => [p.id, p]));
           const gMap = new Map((groups||[]).map(g => [g.id, g]));
-          const linksByP = new Map();
-          activeLinks.forEach(l => { const arr = linksByP.get(l.participant_id) || []; arr.push(l.group_id); linksByP.set(l.participant_id, arr); });
-          const paidByP = new Map();
-          (pays||[]).filter(p=>p.confirmed).forEach(p => { paidByP.set(p.participant_id, (paidByP.get(p.participant_id)||0) + Number(p.amount||0)); });
-          const unconfirmedByP = new Map();
-          (pays||[]).filter(p=>!p.confirmed).forEach(p => { unconfirmedByP.set(p.participant_id, Number(p.amount||0)); });
-          let sumUnpaid = 0;
-          linksByP.forEach((gids, pid) => {
-            const person = pMap.get(pid);
-            const isMulti = !!(person && person.multisport);
-            const expectedBase = gids.reduce((acc, gid) => {
-              const g = gMap.get(gid); if (!g) return acc;
-              const base = isMulti ? Number(g.multisport||0) : Number(g.fee||0);
-              return acc + (isNaN(base) ? 0 : base);
+          // For each group active this month, compute unpaid
+          gIds.forEach(gid => {
+            const entry = geByGroup.get(gid);
+            if (entry) {
+              // If entry exists: confirmed -> 0, otherwise use edited amount
+              if (!entry.confirmed) gUnpaid += Number(entry.amount || 0);
+              return;
+            }
+            // No entry row: estimate base from active members
+            const g = gMap.get(gid);
+            if (!g) return;
+            const pids = groupToPids.get(gid) || [];
+            const baseSum = pids.reduce((sum, pid) => {
+              const person = pMap.get(pid);
+              const useMulti = !!(person && person.multisport);
+              const base = useMulti ? Number(g.multisport || 0) : Number(g.fee || 0);
+              return sum + (isNaN(base) ? 0 : base);
             }, 0);
-            const paid = paidByP.get(pid) || 0;
-            const overrideUnpaid = unconfirmedByP.get(pid);
-            const unpaid = (typeof overrideUnpaid === 'number') ? Math.max(0, overrideUnpaid) : Math.max(0, expectedBase - paid);
-            sumUnpaid += unpaid;
+            gUnpaid += baseSum;
           });
-          gUnpaid = sumUnpaid;
         } catch {}
-        // Lessons private
+        // Lessons private and First dance
         const { data: les } = await supabase.from('lesson_entries').select('id, amount, confirmed, method, type, lesson_date, lesson_time').eq('month', monthVal);
         const lPriv = (les||[]).filter(e=>e.type==='private');
         const lFd = (les||[]).filter(e=>e.type==='first_dance');
@@ -1371,8 +1379,6 @@
         setProgress(finGroupsProgress, gPaid, gUnpaid);
         setProgress(finLessonsProgress, lPaid, lUnpaid);
         setProgress(finFdProgress, fdPaid, fdUnpaid);
-        const finTotalProgress = document.getElementById('fin-total-progress');
-        setProgress(finTotalProgress, totalPaid, totalUnpaid);
         // Methods breakdown
         const methodLabel = (m) => ({ card: 'Karta', transfer: 'Przelew', cash: 'Gotówka' }[m] || 'Inne');
         const mapCount = (rows) => rows.reduce((m,r)=>{ const k=methodLabel(r.method||''); m[k]=(m[k]||0)+Number(r.amount||0); return m; },{});
