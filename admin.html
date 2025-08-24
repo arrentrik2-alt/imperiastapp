@@ -2391,7 +2391,7 @@
         if (existing) {
           const { error } = await supabase
             .from('group_entries')
-            .update({ amount: newAmount, confirmed: null })
+            .update({ amount: newAmount, confirmed: false })
             .eq('id', existing.id);
           if (error) throw error;
         } else {
@@ -2406,13 +2406,13 @@
           if (legacy) {
             const { error } = await supabase
               .from('group_entries')
-              .update({ participant_id: participantId, amount: newAmount, method: null, comment: null, confirmed: null })
+              .update({ participant_id: participantId, amount: newAmount, method: null, comment: null, confirmed: false })
               .eq('id', legacy.id);
             if (error) throw error;
           } else {
             const { error } = await supabase
               .from('group_entries')
-              .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount: newAmount, method: null, comment: null, confirmed: null }]);
+              .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount: newAmount, method: null, comment: null, confirmed: false }]);
             if (error) throw error;
           }
         }
@@ -2448,7 +2448,7 @@
         if (existing) {
           const { error } = await supabase
             .from('group_entries')
-            .update({ amount: isNaN(newAmount) ? 0 : newAmount, method: (method || null), comment: (comment || null), confirmed: null })
+            .update({ amount: isNaN(newAmount) ? 0 : newAmount, method: (method || null), comment: (comment || null), confirmed: false })
             .eq('id', existing.id);
           if (error) throw error;
         } else {
@@ -2462,13 +2462,13 @@
           if (legacy) {
             const { error } = await supabase
               .from('group_entries')
-              .update({ participant_id: participantId, amount: isNaN(newAmount) ? 0 : newAmount, method: (method || null), comment: (comment || null), confirmed: null })
+              .update({ participant_id: participantId, amount: isNaN(newAmount) ? 0 : newAmount, method: (method || null), comment: (comment || null), confirmed: false })
               .eq('id', legacy.id);
             if (error) throw error;
           } else {
             const { error } = await supabase
               .from('group_entries')
-              .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount: isNaN(newAmount) ? 0 : newAmount, method: (method || null), comment: (comment || null), confirmed: null }]);
+              .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount: isNaN(newAmount) ? 0 : newAmount, method: (method || null), comment: (comment || null), confirmed: false }]);
             if (error) throw error;
           }
         }
@@ -2542,7 +2542,7 @@
           if (!existingGe) {
             await supabase
               .from('group_entries')
-              .insert([{ group_id: selectedGroup.id, participant_id: newParticipant.id, month: selectedMonth, amount: baseAmount, method: null, comment: null, confirmed: null }]);
+              .insert([{ group_id: selectedGroup.id, participant_id: newParticipant.id, month: selectedMonth, amount: baseAmount, method: null, comment: null, confirmed: false }]);
           }
         } catch {}
         addParticipantForm.style.display = 'none';
@@ -3310,7 +3310,7 @@
                 const baseAmount = g ? (isMulti ? Number(g.multisport || 0) : Number(g.fee || 0)) : 0;
                 await supabase
                   .from('group_entries')
-                  .insert([{ group_id: gid, participant_id: participantIdToUse, month: currentMonth, amount: baseAmount, method: null, comment: null, confirmed: null }]);
+                  .insert([{ group_id: gid, participant_id: participantIdToUse, month: currentMonth, amount: baseAmount, method: null, comment: null, confirmed: false }]);
               }
             }
           }
