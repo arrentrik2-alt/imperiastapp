@@ -2391,7 +2391,7 @@
         if (existing) {
           const { error } = await supabase
             .from('group_entries')
-            .update({ amount: newAmount, confirmed: false })
+            .update({ amount: newAmount, confirmed: null })
             .eq('id', existing.id);
           if (error) throw error;
         } else {
@@ -2406,13 +2406,13 @@
           if (legacy) {
             const { error } = await supabase
               .from('group_entries')
-              .update({ participant_id: participantId, amount: newAmount, confirmed: false })
+              .update({ participant_id: participantId, amount: newAmount, method: null, comment: null, confirmed: null })
               .eq('id', legacy.id);
             if (error) throw error;
           } else {
             const { error } = await supabase
               .from('group_entries')
-              .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount: newAmount, confirmed: false }]);
+              .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount: newAmount, method: null, comment: null, confirmed: null }]);
             if (error) throw error;
           }
         }
@@ -2448,7 +2448,7 @@
         if (existing) {
           const { error } = await supabase
             .from('group_entries')
-            .update({ amount: isNaN(newAmount) ? 0 : newAmount, method, comment, confirmed: false })
+            .update({ amount: isNaN(newAmount) ? 0 : newAmount, method: (method || null), comment: (comment || null), confirmed: null })
             .eq('id', existing.id);
           if (error) throw error;
         } else {
@@ -2462,13 +2462,13 @@
           if (legacy) {
             const { error } = await supabase
               .from('group_entries')
-              .update({ participant_id: participantId, amount: isNaN(newAmount) ? 0 : newAmount, method, comment, confirmed: false })
+              .update({ participant_id: participantId, amount: isNaN(newAmount) ? 0 : newAmount, method: (method || null), comment: (comment || null), confirmed: null })
               .eq('id', legacy.id);
             if (error) throw error;
           } else {
             const { error } = await supabase
               .from('group_entries')
-              .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount: isNaN(newAmount) ? 0 : newAmount, method, comment, confirmed: false }]);
+              .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount: isNaN(newAmount) ? 0 : newAmount, method: (method || null), comment: (comment || null), confirmed: null }]);
             if (error) throw error;
           }
         }
@@ -2529,6 +2529,22 @@
           .from('participant_groups')
           .insert([{ participant_id: newParticipant.id, group_id: selectedGroup.id, effective_from_month: selectedMonth }]);
         if (linkRes.error) throw linkRes.error;
+        // Create default unconfirmed group entry for current month
+        try {
+          const baseAmount = (multi ? Number(selectedGroup.multisport || 0) : Number(selectedGroup.fee || 0)) || 0;
+          const { data: existingGe } = await supabase
+            .from('group_entries')
+            .select('id')
+            .eq('group_id', selectedGroup.id)
+            .eq('participant_id', newParticipant.id)
+            .eq('month', selectedMonth)
+            .maybeSingle();
+          if (!existingGe) {
+            await supabase
+              .from('group_entries')
+              .insert([{ group_id: selectedGroup.id, participant_id: newParticipant.id, month: selectedMonth, amount: baseAmount, method: null, comment: null, confirmed: null }]);
+          }
+        } catch {}
         addParticipantForm.style.display = 'none';
         participantFirstName.value = '';
         participantLastName.value = '';
@@ -2582,7 +2598,7 @@
           if (existing) {
             const { error: updErr } = await supabase
               .from('group_entries')
-              .update({ amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() })
+              .update({ amount, method: (method || null), comment: (comment || null), confirmed: true, confirmed_at: new Date().toISOString() })
               .eq('id', existing.id);
             if (updErr) throw updErr;
           } else {
@@ -2597,13 +2613,13 @@
             if (legacy) {
               const { error: updLegacyErr } = await supabase
                 .from('group_entries')
-                .update({ participant_id: participantId, amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() })
+                .update({ participant_id: participantId, amount, method: (method || null), comment: (comment || null), confirmed: true, confirmed_at: new Date().toISOString() })
                 .eq('id', legacy.id);
               if (updLegacyErr) throw updLegacyErr;
             } else {
               const { error: insErr } = await supabase
                 .from('group_entries')
-                .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() }]);
+                .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount, method: (method || null), comment: (comment || null), confirmed: true, confirmed_at: new Date().toISOString() }]);
               if (insErr) throw insErr;
             }
           }
@@ -3268,6 +3284,37 @@
             .in('group_id', toRemove);
           if (delRes.error) throw delRes.error;
         }
+        // Ensure default unconfirmed group_entries exist for newly added or reactivated groups in current month
+        try {
+          const idsNeedingEntry = Array.from(new Set([
+            ...toAdd.map(o => o.group_id),
+            ...closedToReactivate
+          ]));
+          if (idsNeedingEntry.length) {
+            const { data: groupsRows } = await supabase
+              .from('groups')
+              .select('id, fee, multisport')
+              .in('id', idsNeedingEntry);
+            const groupsById = new Map((groupsRows || []).map(g => [g.id, g]));
+            const isMulti = !!editMultiEl.checked;
+            for (const gid of idsNeedingEntry) {
+              const { data: exists } = await supabase
+                .from('group_entries')
+                .select('id')
+                .eq('group_id', gid)
+                .eq('participant_id', participantIdToUse)
+                .eq('month', currentMonth)
+                .maybeSingle();
+              if (!exists) {
+                const g = groupsById.get(gid);
+                const baseAmount = g ? (isMulti ? Number(g.multisport || 0) : Number(g.fee || 0)) : 0;
+                await supabase
+                  .from('group_entries')
+                  .insert([{ group_id: gid, participant_id: participantIdToUse, month: currentMonth, amount: baseAmount, method: null, comment: null, confirmed: null }]);
+              }
+            }
+          }
+        } catch {}
         isCreateParticipant = false;
         closeEditParticipantModal();
         await loadAllParticipants();
