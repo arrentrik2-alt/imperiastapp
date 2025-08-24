@@ -2423,6 +2423,61 @@
       }
     });
 
+    // Auto-save method/comment edits (unconfirmed) on group participants list
+    if (participantsList) participantsList.addEventListener('change', async (e) => {
+      const methodEl = e.target.closest('.payment-method');
+      const commentEl = e.target.closest('.payment-comment');
+      if (!methodEl && !commentEl) return;
+      const row = e.target.closest('[data-participant-id]');
+      if (!row) return;
+      const participantId = row.dataset.participantId;
+      const amountInput = row.querySelector('.payment-amount');
+      const methodInput = row.querySelector('.payment-method');
+      const commentInput = row.querySelector('.payment-comment');
+      const newAmount = parseFloat(amountInput?.value || '0');
+      const method = methodInput ? methodInput.value : '';
+      const comment = commentInput ? commentInput.value.trim() : '';
+      try {
+        const { data: existing } = await supabase
+          .from('group_entries')
+          .select('id')
+          .eq('group_id', selectedGroup.id)
+          .eq('month', selectedMonth)
+          .eq('participant_id', participantId)
+          .maybeSingle();
+        if (existing) {
+          const { error } = await supabase
+            .from('group_entries')
+            .update({ amount: isNaN(newAmount) ? 0 : newAmount, method, comment, confirmed: false })
+            .eq('id', existing.id);
+          if (error) throw error;
+        } else {
+          const { data: legacy } = await supabase
+            .from('group_entries')
+            .select('id')
+            .eq('group_id', selectedGroup.id)
+            .eq('month', selectedMonth)
+            .is('participant_id', null)
+            .maybeSingle();
+          if (legacy) {
+            const { error } = await supabase
+              .from('group_entries')
+              .update({ participant_id: participantId, amount: isNaN(newAmount) ? 0 : newAmount, method, comment, confirmed: false })
+              .eq('id', legacy.id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabase
+              .from('group_entries')
+              .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount: isNaN(newAmount) ? 0 : newAmount, method, comment, confirmed: false }]);
+            if (error) throw error;
+          }
+        }
+        await loadParticipantsAndPayments();
+      } catch (err) {
+        alert('Błąd zapisu metody/komentarza: ' + (err.message || 'Nieznany'));
+      }
+    });
+
     // Zmiana miesiąca
     monthSelect.addEventListener('change', () => {
       selectedMonth = monthSelect.value;
