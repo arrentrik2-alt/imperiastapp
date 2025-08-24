@@ -2667,11 +2667,10 @@
         // currentMonth computed above
         const paidMonth = new Map();
         const groupById = new Map((groups || []).map(g => [g.id, g]));
-        // Group payments aggregation for current month (per participant)
+        // Group payments aggregation across ALL months (per participant)
         const { data: geRows, error: geErr } = await supabase
           .from('group_entries')
-          .select('participant_id, group_id, amount, confirmed')
-          .eq('month', currentMonth);
+          .select('participant_id, amount, confirmed');
         if (geErr) throw geErr;
         const groupPaidByP = new Map();
         const unconfirmedByP = new Map();
@@ -2755,28 +2754,16 @@
         participants.forEach((p, idx) => {
           const gAgg = payAgg.get(p.id) || { paid: 0, unpaid: 0 };
           const lAgg = leAgg.get(p.id) || { paid: 0, unpaid: 0 };
-          // Expected base for current month from group memberships
-          const gIds = linksByParticipant.get(p.id) || [];
-          const expectedBase = gIds.reduce((sum, gid) => {
-            const g = groupById.get(gid); if (!g) return sum;
-            const base = p.multisport ? Number(g.multisport || 0) : Number(g.fee || 0);
-            return sum + (isNaN(base) ? 0 : base);
-          }, 0);
-          const paidForMonth = paidMonth.get(p.id) || 0;
-          const overrideUnpaid = (typeof unconfirmedByP !== 'undefined') ? unconfirmedByP.get(p.id) : undefined;
-          const unpaidExpectedMonth = (typeof overrideUnpaid === 'number')
-            ? Math.max(0, overrideUnpaid)
-            : Math.max(0, expectedBase - paidForMonth);
-          const groupUnpaidPortion = (typeof overrideUnpaid === 'number') ? 0 : (gAgg.unpaid || 0);
-          const agg = { paid: (gAgg.paid + lAgg.paid), unpaid: (groupUnpaidPortion + lAgg.unpaid + unpaidExpectedMonth) };
+          const unpaidTotal = Math.max(0, (gAgg.unpaid || 0) + (lAgg.unpaid || 0));
           const card = document.createElement('div');
           card.className = 'group-card';
           card.dataset.pid = p.id;
           const groupNames = (linksByParticipant.get(p.id) || []).map(id => groupIdToName.get(id) || '-');
+          const unpaidColor = unpaidTotal > 0 ? 'var(--error)' : 'var(--success)';
           card.innerHTML = `
             <h4><span class="p-index">${idx + 1}</span>${p.first_name || ''} ${p.last_name || ''}</h4>
             <div class="group-detail"><i class="fas fa-phone"></i><span>${p.phone || ''}</span></div>
-            <div class="group-detail"><i class="fas fa-money-bill-wave"></i><span>Zapłacone: <span style=\"color: var(--success);\">${agg.paid.toFixed(2)} zł</span> · Niezapłacone: <span style=\"color: var(--error);\">${agg.unpaid.toFixed(2)} zł</span></span></div>
+            <div class="group-detail"><i class="fas fa-money-bill-wave"></i><span>Zaległość: <span style=\"color: ${unpaidColor};\">${unpaidTotal.toFixed(2)} zł</span></span></div>
             <div class="group-detail"><i class="fas fa-users"></i><span>Grupy: ${groupNames.length ? groupNames.join(', ') : '-'}</span></div>
             <div class="group-actions">
               <button class="btn btn-outline edit-participant-btn" data-id="${p.id}"><i class="fas fa-edit"></i></button>
@@ -2786,10 +2773,10 @@
           const hasAnyGroup = (linksByParticipant.get(p.id) || []).length > 0;
           const hasAnyLesson = activeLessonPids.has(p.id);
           const totalPaid = (gAgg.paid + lAgg.paid);
-          const totalUnpaid = (gAgg.unpaid + lAgg.unpaid + unpaidExpectedMonth);
+          const totalUnpaid = unpaidTotal;
           // Apply multi-filter (both can be on): if both off => no filter; if one on => must match; if both on => always show
           let matchPaidFilter = true;
-          if (paidEnabled && !unpaidEnabled) matchPaidFilter = totalPaid > 0;
+          if (paidEnabled && !unpaidEnabled) matchPaidFilter = totalUnpaid === 0;
           if (!paidEnabled && unpaidEnabled) matchPaidFilter = totalUnpaid > 0;
           // both enabled or both disabled => true
           if (!matchPaidFilter) {
