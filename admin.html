@@ -2999,12 +2999,21 @@
       // preselect current groups of participant via join table
       (async () => {
         try {
+          const now = new Date();
+          const yyyy = now.getFullYear();
+          const mm = String(now.getMonth() + 1).padStart(2, '0');
+          const currentMonth = `${yyyy}-${mm}`;
           const { data: links, error } = await supabase
             .from('participant_groups')
-            .select('group_id')
+            .select('group_id, effective_from_month, effective_to_month')
             .eq('participant_id', p.id);
           if (!error && links && editGroupsContainer) {
-            const ids = new Set(links.map(l => l.group_id));
+            const active = (links || []).filter(l => {
+              const fromOk = !l.effective_from_month || l.effective_from_month <= currentMonth;
+              const toOk = !l.effective_to_month || l.effective_to_month > currentMonth;
+              return fromOk && toOk;
+            });
+            const ids = new Set(active.map(l => l.group_id));
             Array.from(editGroupsContainer.querySelectorAll('input[type="checkbox"][data-group-id]')).forEach(cb => {
               cb.checked = ids.has(cb.dataset.groupId);
             });
@@ -3144,19 +3153,48 @@
         // sync participant_groups links
         const { data: existingLinks, error: linksErr } = await supabase
           .from('participant_groups')
-          .select('group_id')
+          .select('group_id, effective_from_month, effective_to_month')
           .eq('participant_id', participantIdToUse);
         if (linksErr) throw linksErr;
-        const existingIds = new Set((existingLinks || []).map(l => l.group_id));
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const currentMonth = `${yyyy}-${mm}`;
         const desiredIds = new Set(selectedGroupIds);
-        const toAdd = [...desiredIds].filter(id => !existingIds.has(id)).map(id => ({ participant_id: participantIdToUse, group_id: id }));
-        const toRemove = [...existingIds].filter(id => !desiredIds.has(id));
+        // Active links this month
+        const active = (existingLinks || []).filter(l => {
+          const fromOk = !l.effective_from_month || l.effective_from_month <= currentMonth;
+          const toOk = !l.effective_to_month || l.effective_to_month > currentMonth;
+          return fromOk && toOk;
+        });
+        const activeIds = new Set(active.map(l => l.group_id));
+        // Reactivate links that exist but were closed before (set effective_to_month = null)
+        const closedToReactivate = (existingLinks || [])
+          .filter(l => !!l.effective_to_month && desiredIds.has(l.group_id))
+          .map(l => l.group_id);
+        const toAdd = [...desiredIds]
+          .filter(id => !activeIds.has(id) && !closedToReactivate.includes(id))
+          .map(id => ({ participant_id: participantIdToUse, group_id: id, effective_from_month: currentMonth }));
+        const toRemove = [...activeIds].filter(id => !desiredIds.has(id));
         if (toAdd.length) {
           const addRes = await supabase.from('participant_groups').insert(toAdd);
           if (addRes.error) throw addRes.error;
         }
+        if (closedToReactivate.length) {
+          const reactRes = await supabase
+            .from('participant_groups')
+            .update({ effective_to_month: null })
+            .eq('participant_id', participantIdToUse)
+            .in('group_id', closedToReactivate);
+          if (reactRes.error) throw reactRes.error;
+        }
         if (toRemove.length) {
-          const delRes = await supabase.from('participant_groups').delete().in('group_id', toRemove).eq('participant_id', participantIdToUse);
+          // Soft-close by setting effective_to_month for removed groups
+          const delRes = await supabase
+            .from('participant_groups')
+            .update({ effective_to_month: currentMonth })
+            .eq('participant_id', participantIdToUse)
+            .in('group_id', toRemove);
           if (delRes.error) throw delRes.error;
         }
         isCreateParticipant = false;
