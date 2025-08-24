@@ -1184,15 +1184,30 @@
         const mm = String(now.getMonth() + 1).padStart(2, '0');
         const monthVal = `${yyyy}-${mm}`;
 
-        // Counts (active if participant has any group or any lesson link)
-        const [{ data: participants }, { data: groups }, { data: pgl }, { data: lpl }] = await Promise.all([
+        // Counts (active for current month: active group membership OR lesson entry in current month)
+        const [{ data: participants }, { data: groups }, { data: pgAll }, { data: leIdsData }] = await Promise.all([
           supabase.from('participants').select('id').order('last_name', { ascending: true }),
           supabase.from('groups').select('id'),
-          supabase.from('participant_groups').select('participant_id'),
-          supabase.from('lesson_participants').select('participant_id')
+          supabase.from('participant_groups').select('participant_id, effective_from_month, effective_to_month'),
+          supabase.from('lesson_entries').select('lesson_id').eq('month', monthVal)
         ]);
-        const linkedP = new Set([...(pgl||[]).map(r=>r.participant_id), ...(lpl||[]).map(r=>r.participant_id)]);
-        const activeCount = (participants || []).filter(p => linkedP.has(p.id)).length;
+        const activeGroupPids = new Set((pgAll||[]).filter(l => {
+          const fromOk = !l.effective_from_month || l.effective_from_month <= monthVal;
+          const toOk = !l.effective_to_month || l.effective_to_month > monthVal;
+          return fromOk && toOk;
+        }).map(l => l.participant_id));
+        const leIds = Array.from(new Set((leIdsData||[]).map(r => r.lesson_id)));
+        let activeLessonPids = new Set();
+        if (leIds.length) {
+          const { data: lpAll } = await supabase.from('lesson_participants').select('lesson_id, participant_id, effective_from_month, effective_to_month').in('lesson_id', leIds);
+          activeLessonPids = new Set((lpAll||[]).filter(l => {
+            const fromOk = !l.effective_from_month || l.effective_from_month <= monthVal;
+            const toOk = !l.effective_to_month || l.effective_to_month > monthVal;
+            return fromOk && toOk;
+          }).map(l => l.participant_id));
+        }
+        const activeSet = new Set([...(activeGroupPids||[]), ...(activeLessonPids||[])]);
+        const activeCount = (participants || []).filter(p => activeSet.has(p.id)).length;
         const inactiveCount = Math.max(0, (participants || []).length - activeCount);
         if (pActiveEl) pActiveEl.textContent = String(activeCount);
         if (pInactiveEl) pInactiveEl.textContent = String(Math.max(0, inactiveCount));
@@ -1203,8 +1218,8 @@
         const paid = (pays || []).filter(p => p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
         const unpaid = (pays || []).filter(p => !p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
         const total = paid + unpaid;
-        if (paidEl) paidEl.textContent = `${paid.toFixed(2)} zł`;
-        if (unpaidEl) unpaidEl.textContent = `${unpaid.toFixed(2)} zł`;
+        if (paidEl) { paidEl.textContent = `${paid.toFixed(2)} zł`; paidEl.style.color = 'var(--success)'; }
+        if (unpaidEl) { unpaidEl.textContent = `${unpaid.toFixed(2)} zł`; unpaidEl.style.color = 'var(--error)'; }
         if (totalEl) totalEl.textContent = `${total.toFixed(2)} zł`;
         const circ = 2 * Math.PI * 44; // ~276.46
         const paidLen = total > 0 ? (paid / total) * circ : 0;
@@ -1295,12 +1310,12 @@
         if (paidTotalEl) paidTotalEl.textContent = `${totalPaid.toFixed(2)} zł`;
         if (unpaidTotalEl) unpaidTotalEl.textContent = `${totalUnpaid.toFixed(2)} zł`;
         if (totalEl) totalEl.textContent = `${(totalPaid+totalUnpaid).toFixed(2)} zł`;
-        if (gPaidEl) gPaidEl.textContent = `${gPaid.toFixed(2)} zł`;
-        if (gUnpaidEl) gUnpaidEl.textContent = `${gUnpaid.toFixed(2)} zł`;
-        if (lPaidEl) lPaidEl.textContent = `${lPaid.toFixed(2)} zł`;
-        if (lUnpaidEl) lUnpaidEl.textContent = `${lUnpaid.toFixed(2)} zł`;
-        if (fdPaidEl) fdPaidEl.textContent = `${fdPaid.toFixed(2)} zł`;
-        if (fdUnpaidEl) fdUnpaidEl.textContent = `${fdUnpaid.toFixed(2)} zł`;
+        if (gPaidEl) { gPaidEl.textContent = `${gPaid.toFixed(2)} zł`; gPaidEl.style.color = 'var(--success)'; }
+        if (gUnpaidEl) { gUnpaidEl.textContent = `${gUnpaid.toFixed(2)} zł`; gUnpaidEl.style.color = 'var(--error)'; }
+        if (lPaidEl) { lPaidEl.textContent = `${lPaid.toFixed(2)} zł`; lPaidEl.style.color = 'var(--success)'; }
+        if (lUnpaidEl) { lUnpaidEl.textContent = `${lUnpaid.toFixed(2)} zł`; lUnpaidEl.style.color = 'var(--error)'; }
+        if (fdPaidEl) { fdPaidEl.textContent = `${fdPaid.toFixed(2)} zł`; fdPaidEl.style.color = 'var(--success)'; }
+        if (fdUnpaidEl) { fdUnpaidEl.textContent = `${fdUnpaid.toFixed(2)} zł`; fdUnpaidEl.style.color = 'var(--error)'; }
         // Progress bars
         const finGroupsProgress = document.getElementById('fin-groups-progress');
         const finLessonsProgress = document.getElementById('fin-lessons-progress');
