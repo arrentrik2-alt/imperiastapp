@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Admina - Grupy</title>
+  <title>Panel Admina - Studio Tańca</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
@@ -329,6 +329,18 @@
       to { transform: rotate(360deg); }
     }
     
+    /* Month selector */
+    .month-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .month-selector select {
+      min-width: 200px;
+    }
+    
     /* Responsive */
     @media (max-width: 992px) {
       .sidebar {
@@ -383,7 +395,13 @@
     
     <ul class="nav-links">
       <li>
-        <a href="#" id="nav-groups" class="active">
+        <a href="#" id="nav-home" class="active">
+          <i class="fas fa-home"></i>
+          <span class="link-text">Strona główna</span>
+        </a>
+      </li>
+      <li>
+        <a href="#" id="nav-groups">
           <i class="fas fa-users"></i>
           <span class="link-text">Grupy</span>
         </a>
@@ -400,18 +418,71 @@
   <!-- Main Content -->
   <main class="main-content">
     <div class="header">
-      <h2>Zarządzanie grupami</h2>
+      <h2>Panel Administracyjny</h2>
       <div class="user-info">
         <span>Witaj, Admin!</span>
       </div>
     </div>
 
-    <div class="content-box" id="groups-section">
+    <!-- Home Section -->
+    <div class="content-box" id="home-section">
+      <div class="content-header">
+        <h3>Witaj w panelu administracyjnym</h3>
+      </div>
+      
+      <div class="month-selector">
+        <label for="current-month-select">Wybierz miesiąc:</label>
+        <select id="current-month-select" class="form-control">
+          <!-- Will be populated with last 12 months -->
+        </select>
+        <button class="btn btn-primary" id="create-new-month-btn">
+          <i class="fas fa-plus"></i> Utwórz nowy miesiąc
+        </button>
+      </div>
+      
+      <div class="content-box">
+        <h4 style="margin-bottom: 15px; color: var(--gold);">Podsumowanie dla wybranego miesiąca:</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
+            <div style="color: var(--text-gray); font-size: 0.9rem;">Liczba grup</div>
+            <div style="color: var(--gold); font-size: 1.5rem; font-weight: bold;" id="groups-count">0</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
+            <div style="color: var(--text-gray); font-size: 0.9rem;">Liczba uczestników</div>
+            <div style="color: var(--gold); font-size: 1.5rem; font-weight: bold;" id="participants-count">0</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
+            <div style="color: var(--text-gray); font-size: 0.9rem;">Zapłacone</div>
+            <div style="color: var(--success); font-size: 1.5rem; font-weight: bold;" id="paid-amount">0.00 zł</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
+            <div style="color: var(--text-gray); font-size: 0.9rem;">Niezapłacone</div>
+            <div style="color: var(--error); font-size: 1.5rem; font-weight: bold;" id="unpaid-amount">0.00 zł</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-top: 20px;">
+        <button class="btn btn-primary" id="go-to-groups-btn">
+          <i class="fas fa-users"></i> Przejdź do zarządzania grupami
+        </button>
+      </div>
+    </div>
+
+    <!-- Groups Section -->
+    <div class="content-box" id="groups-section" style="display:none;">
       <div class="content-header">
         <h3>Lista grup treningowych</h3>
         <button class="btn btn-primary" id="add-group-btn">
           <i class="fas fa-plus"></i> Dodaj grupę
         </button>
+      </div>
+
+      <div class="month-selector">
+        <label for="groups-month-select">Miesiąc:</label>
+        <select id="groups-month-select" class="form-control">
+          <!-- Will be populated with last 12 months -->
+        </select>
       </div>
 
       <div id="groups-list">
@@ -474,6 +545,31 @@
     </div>
   </div>
 
+  <!-- Create New Month Modal -->
+  <div class="modal" id="create-month-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-create-month-modal">
+        <i class="fas fa-times"></i>
+      </button>
+      
+      <div class="modal-header">
+        <h3>Utwórz nowy miesiąc</h3>
+      </div>
+      
+      <div class="form-group">
+        <label for="new-month-input">Miesiąc (YYYY-MM)</label>
+        <input type="text" id="new-month-input" class="form-control" placeholder="np. 2024-12">
+      </div>
+      
+      <div class="form-actions">
+        <button class="btn btn-outline" id="cancel-create-month-btn">Anuluj</button>
+        <button class="btn btn-primary" id="save-create-month-btn">
+          <i class="fas fa-save"></i> Utwórz miesiąc
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { supabase } from './supabaseClient.js';
     
@@ -506,7 +602,184 @@
       window.location.href = "login.html";
     });
     
-    // Modal functionality
+    // Navigation
+    const homeLink = document.getElementById('nav-home');
+    const groupsLink = document.getElementById('nav-groups');
+    const homeSection = document.getElementById('home-section');
+    const groupsSection = document.getElementById('groups-section');
+    
+    function setActiveNav(section) {
+      if (section === 'home') {
+        homeLink.classList.add('active');
+        groupsLink.classList.remove('active');
+        homeSection.style.display = 'block';
+        groupsSection.style.display = 'none';
+      } else if (section === 'groups') {
+        groupsLink.classList.add('active');
+        homeLink.classList.remove('active');
+        homeSection.style.display = 'none';
+        groupsSection.style.display = 'block';
+      }
+    }
+    
+    homeLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('home');
+      loadHomeData();
+    });
+    
+    groupsLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('groups');
+      loadGroups();
+    });
+    
+    document.getElementById('go-to-groups-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('groups');
+      loadGroups();
+    });
+    
+    // Helper function to get current month in YYYY-MM format
+    function getCurrentMonth() {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      return `${yyyy}-${mm}`;
+    }
+    
+    // Helper function to get last 12 months options
+    function getLast12MonthsOptions() {
+      const formatter = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' });
+      const options = [];
+      const now = new Date();
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const value = `${yyyy}-${mm}`;
+        const label = formatter.format(d);
+        options.push({ value, label });
+      }
+      return options;
+    }
+    
+    // Populate month selectors
+    function populateMonthSelectors() {
+      const options = getLast12MonthsOptions();
+      const currentMonth = getCurrentMonth();
+      
+      // Home page selector
+      const homeSelector = document.getElementById('current-month-select');
+      homeSelector.innerHTML = '';
+      options.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        homeSelector.appendChild(opt);
+      });
+      homeSelector.value = currentMonth;
+      
+      // Groups page selector
+      const groupsSelector = document.getElementById('groups-month-select');
+      groupsSelector.innerHTML = '';
+      options.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        groupsSelector.appendChild(opt);
+      });
+      groupsSelector.value = currentMonth;
+    }
+    
+    // Load home page data
+    async function loadHomeData() {
+      const selectedMonth = document.getElementById('current-month-select').value;
+      
+      try {
+        // Load groups count
+        const { data: groups, error: groupsError } = await supabase.rpc('list_groups_month', { p_month: selectedMonth });
+        if (!groupsError) {
+          document.getElementById('groups-count').textContent = (groups || []).length;
+        }
+        
+        // TODO: Load participants count, paid/unpaid amounts when we add those features
+        document.getElementById('participants-count').textContent = '0';
+        document.getElementById('paid-amount').textContent = '0.00 zł';
+        document.getElementById('unpaid-amount').textContent = '0.00 zł';
+        
+      } catch (err) {
+        console.error('Błąd ładowania danych:', err);
+      }
+    }
+    
+    // Create new month functionality
+    const createMonthModal = document.getElementById('create-month-modal');
+    const createMonthBtn = document.getElementById('create-new-month-btn');
+    const closeCreateMonthBtn = document.getElementById('close-create-month-modal');
+    const cancelCreateMonthBtn = document.getElementById('cancel-create-month-btn');
+    const saveCreateMonthBtn = document.getElementById('save-create-month-btn');
+    
+    function openCreateMonthModal() {
+      createMonthModal.classList.add('active');
+      // Set default value to next month
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const yyyy = next.getFullYear();
+      const mm = String(next.getMonth() + 1).padStart(2, '0');
+      document.getElementById('new-month-input').value = `${yyyy}-${mm}`;
+    }
+    
+    function closeCreateMonthModal() {
+      createMonthModal.classList.remove('active');
+      document.getElementById('new-month-input').value = '';
+    }
+    
+    createMonthBtn.addEventListener('click', openCreateMonthModal);
+    closeCreateMonthBtn.addEventListener('click', closeCreateMonthModal);
+    cancelCreateMonthBtn.addEventListener('click', closeCreateMonthModal);
+    
+    saveCreateMonthBtn.addEventListener('click', async () => {
+      const monthInput = document.getElementById('new-month-input').value.trim();
+      
+      if (!monthInput || !/^\d{4}-\d{2}$/.test(monthInput)) {
+        alert('Podaj prawidłowy format miesiąca (YYYY-MM)');
+        return;
+      }
+      
+      const originalText = saveCreateMonthBtn.innerHTML;
+      saveCreateMonthBtn.innerHTML = '<span class="loading"></span> Tworzenie...';
+      saveCreateMonthBtn.disabled = true;
+      
+      try {
+        // For now, just create an empty month (we'll add groups later)
+        // This could be expanded to copy groups from previous month
+        alert(`Miesiąc ${monthInput} został utworzony!`);
+        closeCreateMonthModal();
+        
+        // Refresh month selectors
+        populateMonthSelectors();
+        
+        // Update current selections to new month
+        document.getElementById('current-month-select').value = monthInput;
+        document.getElementById('groups-month-select').value = monthInput;
+        
+        // Reload data
+        loadHomeData();
+        
+      } catch (err) {
+        alert('Błąd tworzenia miesiąca: ' + (err.message || 'Nieznany'));
+      } finally {
+        saveCreateMonthBtn.disabled = false;
+        saveCreateMonthBtn.innerHTML = originalText;
+      }
+    });
+    
+    // Month selector change handlers
+    document.getElementById('current-month-select').addEventListener('change', loadHomeData);
+    document.getElementById('groups-month-select').addEventListener('change', loadGroups);
+    
+    // Modal functionality for groups
     const addGroupModal = document.getElementById('add-group-modal');
     const addGroupBtn = document.getElementById('add-group-btn');
     const addFirstGroupBtn = document.getElementById('add-first-group');
@@ -545,13 +818,15 @@
         return; 
       }
       
+      const selectedMonth = document.getElementById('groups-month-select').value;
+      
       const originalText = saveGroupBtn.innerHTML;
       saveGroupBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
       saveGroupBtn.disabled = true;
       
       try {
         const resp = await supabase.rpc('insert_group_month', {
-          p_month: getCurrentMonth(),
+          p_month: selectedMonth,
           p_name: name,
           p_day: day,
           p_start_time: start,
@@ -562,6 +837,7 @@
         
         closeModal();
         await loadGroups();
+        await loadHomeData(); // Refresh home page data too
         alert('Grupa została dodana pomyślnie!');
       } catch (err) {
         alert('Błąd dodawania grupy: ' + (err.message || 'Nieznany'));
@@ -571,21 +847,13 @@
       }
     });
 
-    // Helper function to get current month in YYYY-MM format
-    function getCurrentMonth() {
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      return `${yyyy}-${mm}`;
-    }
-
-    // Load groups for current month
+    // Load groups for selected month
     async function loadGroups() {
       groupsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie grup...</p></div>';
       
       try {
-        const currentMonth = getCurrentMonth();
-        const { data, error } = await supabase.rpc('list_groups_month', { p_month: currentMonth });
+        const selectedMonth = document.getElementById('groups-month-select').value;
+        const { data, error } = await supabase.rpc('list_groups_month', { p_month: selectedMonth });
         
         if (error) {
           console.error('Błąd wczytywania grup:', error);
@@ -594,7 +862,7 @@
         }
         
         if (!data || data.length === 0) {
-          groupsList.innerHTML = `<div class="empty-state"><p>Brak grup dla miesiąca ${currentMonth}.</p></div>`;
+          groupsList.innerHTML = `<div class="empty-state"><p>Brak grup dla miesiąca ${selectedMonth}.</p></div>`;
           return;
         }
         
@@ -643,6 +911,7 @@
               const { error } = await supabase.rpc('delete_group_month', { p_id: group.id });
               if (error) throw error;
               await loadGroups();
+              await loadHomeData(); // Refresh home page data too
               alert('Grupa została usunięta');
             } catch (err) {
               alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany'));
@@ -659,7 +928,8 @@
 
     // Initialize
     checkAdmin().then(() => {
-      loadGroups();
+      populateMonthSelectors();
+      loadHomeData();
     });
   </script>
 </body>
