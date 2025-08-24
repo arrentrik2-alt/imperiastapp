@@ -1270,7 +1270,44 @@
         // Groups payments are in 'payments'
         const { data: pays } = await supabase.from('payments').select('amount, confirmed, method, participant_id, month').eq('month', monthVal);
         const gPaid = (pays||[]).filter(p=>p.confirmed).reduce((s,p)=> s+Number(p.amount||0),0);
-        const gUnpaid = (pays||[]).filter(p=>!p.confirmed).reduce((s,p)=> s+Number(p.amount||0),0);
+        // Expected unpaid for groups this month (even if no payment row exists)
+        let gUnpaid = 0;
+        try {
+          const { data: pgRows } = await supabase
+            .from('participant_groups')
+            .select('participant_id, group_id, effective_from_month, effective_to_month');
+          const activeLinks = (pgRows||[]).filter(l => {
+            const fromOk = !l.effective_from_month || l.effective_from_month <= monthVal;
+            const toOk = !l.effective_to_month || l.effective_to_month > monthVal;
+            return fromOk && toOk;
+          });
+          const pIds = Array.from(new Set(activeLinks.map(l => l.participant_id)));
+          const gIds = Array.from(new Set(activeLinks.map(l => l.group_id)));
+          const [{ data: parts }, { data: groups }] = await Promise.all([
+            pIds.length ? supabase.from('participants').select('id, multisport').in('id', pIds) : { data: [] },
+            gIds.length ? supabase.from('groups').select('id, fee, multisport').in('id', gIds) : { data: [] }
+          ]);
+          const pMap = new Map((parts||[]).map(p => [p.id, p]));
+          const gMap = new Map((groups||[]).map(g => [g.id, g]));
+          const linksByP = new Map();
+          activeLinks.forEach(l => { const arr = linksByP.get(l.participant_id) || []; arr.push(l.group_id); linksByP.set(l.participant_id, arr); });
+          const paidByP = new Map();
+          (pays||[]).filter(p=>p.confirmed).forEach(p => { paidByP.set(p.participant_id, (paidByP.get(p.participant_id)||0) + Number(p.amount||0)); });
+          let sumUnpaid = 0;
+          linksByP.forEach((gids, pid) => {
+            const person = pMap.get(pid);
+            const isMulti = !!(person && person.multisport);
+            const expectedBase = gids.reduce((acc, gid) => {
+              const g = gMap.get(gid); if (!g) return acc;
+              const base = isMulti ? Number(g.multisport||0) : Number(g.fee||0);
+              return acc + (isNaN(base) ? 0 : base);
+            }, 0);
+            const paid = paidByP.get(pid) || 0;
+            const unpaid = Math.max(0, expectedBase - paid);
+            sumUnpaid += unpaid;
+          });
+          gUnpaid = sumUnpaid;
+        } catch {}
         // Lessons private
         const { data: les } = await supabase.from('lesson_entries').select('id, amount, confirmed, method, type, lesson_date, lesson_time').eq('month', monthVal);
         const lPriv = (les||[]).filter(e=>e.type==='private');
@@ -1492,6 +1529,8 @@
           if (firstDanceSection) firstDanceSection.style.display = 'none';
           scheduleSection.style.display = 'none';
           if (trainersSection) trainersSection.style.display = 'none';
+          if (dashboardSection) dashboardSection.style.display = 'none';
+          if (financeSection) financeSection.style.display = 'none';
           groupsSection.style.display = 'block';
           setActiveNav('groups');
           collapseSidebar();
@@ -1514,6 +1553,8 @@
           if (firstDanceSection) firstDanceSection.style.display = 'none';
           scheduleSection.style.display = 'none';
           if (trainersSection) trainersSection.style.display = 'none';
+          if (dashboardSection) dashboardSection.style.display = 'none';
+          if (financeSection) financeSection.style.display = 'none';
           participantsSection.style.display = 'block';
           setActiveNav('participants');
           collapseSidebar();
@@ -1536,6 +1577,8 @@
           if (lessonsSection) lessonsSection.style.display = 'none';
           if (lessonDetailsSection) lessonDetailsSection.style.display = 'none';
           scheduleSection.style.display = 'none';
+          if (dashboardSection) dashboardSection.style.display = 'none';
+          if (financeSection) financeSection.style.display = 'none';
           if (trainersSection) trainersSection.style.display = 'block';
           setActiveNav('trainers');
           collapseSidebar();
@@ -3666,7 +3709,7 @@
             const person = pMap.get(id) || {}; return `${(person.first_name||'').trim()} ${(person.last_name||'').trim()}`.trim();
           }).filter(Boolean);
           const trainerName = trainerMap.get(ent.lesson_id) || '';
-          const title = `Lekcja prywatna — ${names.length ? names.join(', ') : '(bez uczestników)'}`;
+          const title = `Pierwszy taniec — ${names.length ? names.join(', ') : '(bez uczestników)'}`;
           box.innerHTML = `
             <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
               <div style="flex:1 1 220px; min-width:180px;">
