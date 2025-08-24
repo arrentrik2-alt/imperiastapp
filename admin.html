@@ -1448,17 +1448,7 @@
           if (expNameEl) expNameEl.value = '';
           if (expAmountEl) expAmountEl.value = '';
           await loadExpensesFor(monthVal);
-          // refresh cash balance
-          try {
-            const [{ data: paysAll }, { data: expRows }] = await Promise.all([
-              supabase.from('payments').select('amount, confirmed, method'),
-              supabase.from('expenses').select('amount')
-            ]);
-            const cashIncome = (paysAll||[]).filter(p=>p.confirmed && p.method==='cash').reduce((s,p)=> s + Number(p.amount||0), 0);
-            const totalExpenses = (expRows||[]).reduce((s,e)=> s + Number(e.amount||0), 0);
-            const balance = cashIncome - totalExpenses;
-            if (finCashBalanceEl) finCashBalanceEl.textContent = `${balance.toFixed(2)} zł`;
-          } catch {}
+          await recalcCashBalance();
         } catch (err) { alert('Błąd dodawania wydatku: ' + (err.message || 'Nieznany')); }
       }); }
       if (expListEl && !expListEl.dataset.bound) { expListEl.dataset.bound = '1'; expListEl.addEventListener('click', async (e) => {
@@ -1470,17 +1460,7 @@
           const { error } = await supabase.from('expenses').delete().eq('id', id);
           if (error) throw error;
           await loadExpensesFor(finMonth.value);
-          // refresh cash balance
-          try {
-            const [{ data: paysAll }, { data: expRows }] = await Promise.all([
-              supabase.from('payments').select('amount, confirmed, method'),
-              supabase.from('expenses').select('amount')
-            ]);
-            const cashIncome = (paysAll||[]).filter(p=>p.confirmed && p.method==='cash').reduce((s,p)=> s + Number(p.amount||0), 0);
-            const totalExpenses = (expRows||[]).reduce((s,e)=> s + Number(e.amount||0), 0);
-            const balance = cashIncome - totalExpenses;
-            if (finCashBalanceEl) finCashBalanceEl.textContent = `${balance.toFixed(2)} zł`;
-          } catch {}
+          await recalcCashBalance();
         } catch (err) { alert('Błąd usuwania wydatku: ' + (err.message || 'Nieznany')); }
       }); }
     }
