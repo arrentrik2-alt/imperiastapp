@@ -1454,6 +1454,7 @@
           if (expNameEl) expNameEl.value = '';
           if (expAmountEl) expAmountEl.value = '';
           await loadExpensesFor(monthVal);
+          await loadFor(monthVal);
           await recalcCashBalance();
         } catch (err) { alert('Błąd dodawania wydatku: ' + (err.message || 'Nieznany')); }
       }); }
@@ -1466,6 +1467,7 @@
           const { error } = await supabase.from('expenses').delete().eq('id', id);
           if (error) throw error;
           await loadExpensesFor(finMonth.value);
+          await loadFor(finMonth.value);
           await recalcCashBalance();
         } catch (err) { alert('Błąd usuwania wydatku: ' + (err.message || 'Nieznany')); }
       }); }
