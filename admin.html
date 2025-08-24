@@ -1,963 +1,198 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Admina - Studio Tańca</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    :root {
-      --primary-bg: #121212;
-      --secondary-bg: #1e1e1e;
-      --gold: #d4af37;
-      --gold-light: #f1e5b9;
-      --text-light: #f5f5f5;
-      --text-gray: #b0b0b0;
-      --border-dark: #333;
-      --success: #28a745;
-      --error: #dc3545;
-    }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    
-    body {
-      background-color: var(--primary-bg);
-      color: var(--text-light);
-      min-height: 100vh;
-      display: flex;
-    }
-    
-    /* Sidebar */
-    .sidebar {
-      width: 250px;
-      background-color: var(--secondary-bg);
-      height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-      padding: 20px 0;
-      border-right: 1px solid var(--border-dark);
-      transition: all 0.3s ease;
-      z-index: 1000;
-    }
-    
-    .logo {
-      text-align: center;
-      padding: 0 20px 20px;
-      border-bottom: 1px solid var(--border-dark);
-      margin-bottom: 20px;
-    }
-    
-    .logo h1 {
-      color: var(--gold);
-      font-size: 1.5rem;
-      font-weight: bold;
-    }
-    
-    .nav-links {
-      list-style: none;
-      padding: 0 15px;
-    }
-    
-    .nav-links li {
-      margin-bottom: 5px;
-    }
-    
-    .nav-links a {
-      display: flex;
-      align-items: center;
-      padding: 12px 15px;
-      text-decoration: none;
-      color: var(--text-gray);
-      border-radius: 5px;
-      transition: all 0.3s ease;
-    }
-    
-    .nav-links a:hover, .nav-links a.active {
-      background-color: rgba(212, 175, 55, 0.1);
-      color: var(--gold);
-    }
-    
-    .nav-links a i {
-      margin-right: 10px;
-      font-size: 1.1rem;
-    }
-    
-    /* Main Content */
-    .main-content {
-      flex: 1;
-      margin-left: 250px;
-      padding: 20px;
-    }
-    
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid var(--border-dark);
-    }
-    
-    .header h2 {
-      color: var(--gold);
-      font-size: 1.8rem;
-    }
-    
-    .user-info {
-      display: flex;
-      align-items: center;
-    }
-    
-    .user-info span {
-      margin-right: 15px;
-      color: var(--text-gray);
-    }
-    
-    .btn {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-    }
-    
-    .btn i {
-      margin-right: 5px;
-    }
-    
-    .btn-primary {
-      background-color: var(--gold);
-      color: var(--primary-bg);
-    }
-    
-    .btn-primary:hover {
-      background-color: #c19b2e;
-    }
-    
-    .btn-outline {
-      background-color: transparent;
-      border: 1px solid var(--gold);
-      color: var(--gold);
-    }
-    
-    .btn-outline:hover {
-      background-color: rgba(212, 175, 55, 0.1);
-    }
-    
-    /* Content Box */
-    .content-box {
-      background-color: var(--secondary-bg);
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
-      border: 1px solid var(--border-dark);
-    }
-    
-    .content-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    
-    .content-header h3 {
-      color: var(--gold);
-      font-size: 1.3rem;
-    }
-    
-    /* Groups List */
-    .group-card {
-      background-color: rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      padding: 15px;
-      border: 1px solid var(--border-dark);
-      transition: all 0.3s ease;
-      margin-bottom: 12px;
-    }
-    
-    .group-card:hover {
-      border-color: var(--gold);
-      transform: translateY(-2px);
-    }
-    
-    .group-card h4 {
-      color: var(--gold);
-      margin-bottom: 10px;
-      font-size: 1.1rem;
-    }
-    
-    .group-detail {
-      display: flex;
-      margin-bottom: 8px;
-      color: var(--text-gray);
-      font-size: 0.9rem;
-    }
-    
-    .group-detail i {
-      margin-right: 8px;
-      color: var(--gold);
-      width: 16px;
-    }
-    
-    .group-actions {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 15px;
-      gap: 10px;
-    }
+-- Nowa struktura bazy danych dla systemu miesięcznych snapshotów
+-- Wklej ten kod do Supabase SQL Editor
 
-    /* Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-    }
-    
-    .modal.active {
-      display: flex;
-    }
-    
-    .modal-content {
-      background: var(--secondary-bg);
-      border: 1px solid var(--border-dark);
-      border-radius: 8px;
-      max-width: 500px;
-      width: 100%;
-      max-height: 80vh;
-      overflow: auto;
-      padding: 25px;
-      position: relative;
-    }
-    
-    .modal-close {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      background: none;
-      border: none;
-      color: var(--text-gray);
-      font-size: 1.5rem;
-      cursor: pointer;
-    }
-    
-    .modal-close:hover {
-      color: var(--text-light);
-    }
-    
-    .modal-header {
-      margin-bottom: 20px;
-      padding-right: 30px;
-    }
-    
-    .modal-header h3 {
-      color: var(--gold);
-    }
-    
-    .form-group {
-      margin-bottom: 15px;
-    }
-    
-    .form-group label {
-      display: block;
-      margin-bottom: 5px;
-      color: var(--text-gray);
-    }
-    
-    .form-control {
-      width: 100%;
-      padding: 10px;
-      background-color: rgba(255, 255, 255, 0.07);
-      border: 1px solid var(--border-dark);
-      border-radius: 4px;
-      color: var(--text-light);
-    }
-    
-    .form-control:focus {
-      outline: none;
-      border-color: var(--gold);
-    }
-    
-    .form-actions {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 20px;
-      gap: 10px;
-    }
-    
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text-gray);
-    }
-    
-    .empty-state i {
-      font-size: 3rem;
-      color: var(--gold);
-      margin-bottom: 15px;
-    }
-    
-    .empty-state p {
-      margin-bottom: 20px;
-    }
-    
-    /* Loading spinner */
-    .loading {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(255,255,255,.3);
-      border-radius: 50%;
-      border-top-color: var(--gold);
-      animation: spin 1s ease-in-out infinite;
-    }
-    
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    
-    /* Month selector */
-    .month-selector {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    
-    .month-selector select {
-      min-width: 200px;
-    }
-    
-    /* Responsive */
-    @media (max-width: 992px) {
-      .sidebar {
-        width: 70px;
-      }
-      
-      .sidebar .logo-text, .sidebar .link-text {
-        display: none;
-      }
-      
-      .sidebar .logo {
-        padding: 10px;
-      }
-      
-      .nav-links {
-        padding: 0 10px;
-      }
-      
-      .nav-links a {
-        justify-content: center;
-        padding: 15px 10px;
-      }
-      
-      .nav-links a i {
-        margin-right: 0;
-        font-size: 1.3rem;
-      }
-      
-      .main-content {
-        margin-left: 70px;
-      }
-    }
-    
-    @media (max-width: 576px) {
-      .sidebar {
-        width: 0;
-        overflow: hidden;
-      }
-      
-      .main-content {
-        margin-left: 0;
-      }
-    }
-  </style>
-</head>
-<body>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="logo">
-      <h1><span class="logo-text">Studio Tańca Imperia</span></h1>
-    </div>
-    
-    <ul class="nav-links">
-      <li>
-        <a href="#" id="nav-home" class="active">
-          <i class="fas fa-home"></i>
-          <span class="link-text">Strona główna</span>
-        </a>
-      </li>
-      <li>
-        <a href="#" id="nav-groups">
-          <i class="fas fa-users"></i>
-          <span class="link-text">Grupy</span>
-        </a>
-      </li>
-      <li>
-        <a href="#" id="logoutBtn">
-          <i class="fas fa-sign-out-alt"></i>
-          <span class="link-text">Wyloguj</span>
-        </a>
-      </li>
-    </ul>
-  </aside>
+-- 1. Tabela śledząca utworzone miesiące
+CREATE TABLE IF NOT EXISTS public.created_months (
+  month TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
-  <!-- Main Content -->
-  <main class="main-content">
-    <div class="header">
-      <h2>Panel Administracyjny</h2>
-      <div class="user-info">
-        <span>Witaj, Admin!</span>
-      </div>
-    </div>
+-- 2. Tabela uczestników miesięczna
+CREATE TABLE IF NOT EXISTS public.participants_month (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  month TEXT NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
-    <!-- Home Section -->
-    <div class="content-box" id="home-section">
-      <div class="content-header">
-        <h3>Witaj w panelu administracyjnym</h3>
-      </div>
-      
-      <div class="month-selector">
-        <label for="current-month-select">Wybierz miesiąc:</label>
-        <select id="current-month-select" class="form-control">
-          <!-- Will be populated with last 12 months -->
-        </select>
-        <button class="btn btn-primary" id="create-new-month-btn">
-          <i class="fas fa-plus"></i> Utwórz nowy miesiąc
-        </button>
-      </div>
-      
-      <div class="content-box">
-        <h4 style="margin-bottom: 15px; color: var(--gold);">Podsumowanie dla wybranego miesiąca:</h4>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
-            <div style="color: var(--text-gray); font-size: 0.9rem;">Liczba grup</div>
-            <div style="color: var(--gold); font-size: 1.5rem; font-weight: bold;" id="groups-count">0</div>
-          </div>
-          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
-            <div style="color: var(--text-gray); font-size: 0.9rem;">Liczba uczestników</div>
-            <div style="color: var(--gold); font-size: 1.5rem; font-weight: bold;" id="participants-count">0</div>
-          </div>
-          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
-            <div style="color: var(--text-gray); font-size: 0.9rem;">Zapłacone</div>
-            <div style="color: var(--success); font-size: 1.5rem; font-weight: bold;" id="paid-amount">0.00 zł</div>
-          </div>
-          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
-            <div style="color: var(--text-gray); font-size: 0.9rem;">Niezapłacone</div>
-            <div style="color: var(--error); font-size: 1.5rem; font-weight: bold;" id="unpaid-amount">0.00 zł</div>
-          </div>
-        </div>
-      </div>
-      
-      <div style="margin-top: 20px;">
-        <button class="btn btn-primary" id="go-to-groups-btn">
-          <i class="fas fa-users"></i> Przejdź do zarządzania grupami
-        </button>
-      </div>
-    </div>
+-- 3. Tabela powiązań uczestnik-grupa miesięczna
+CREATE TABLE IF NOT EXISTS public.participant_groups_month (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  month TEXT NOT NULL,
+  participant_id UUID REFERENCES participants_month(id) ON DELETE CASCADE,
+  group_id UUID REFERENCES groups_month(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
-    <!-- Groups Section -->
-    <div class="content-box" id="groups-section" style="display:none;">
-      <div class="content-header">
-        <h3>Lista grup treningowych</h3>
-        <button class="btn btn-primary" id="add-group-btn">
-          <i class="fas fa-plus"></i> Dodaj grupę
-        </button>
-      </div>
+-- 4. Tabela płatności miesięczna
+CREATE TABLE IF NOT EXISTS public.payments_month (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  month TEXT NOT NULL,
+  participant_id UUID REFERENCES participants_month(id) ON DELETE CASCADE,
+  group_id UUID REFERENCES groups_month(id) ON DELETE CASCADE,
+  amount DECIMAL(10,2) NOT NULL,
+  payment_method TEXT,
+  confirmed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
-      <div class="month-selector">
-        <label for="groups-month-select">Miesiąc:</label>
-        <select id="groups-month-select" class="form-control">
-          <!-- Will be populated with last 12 months -->
-        </select>
-      </div>
+-- Indeksy dla lepszej wydajności
+CREATE INDEX IF NOT EXISTS idx_participants_month_month ON participants_month(month);
+CREATE INDEX IF NOT EXISTS idx_participant_groups_month_month ON participant_groups_month(month);
+CREATE INDEX IF NOT EXISTS idx_payments_month_month ON payments_month(month);
 
-      <div id="groups-list">
-        <!-- Groups will be loaded here dynamically -->
-        <div class="empty-state" id="emptyState">
-          <i class="fas fa-users"></i>
-          <p>Brak grup do wyświetlenia</p>
-          <button class="btn btn-primary" id="add-first-group">
-            <i class="fas fa-plus"></i> Dodaj pierwszą grupę
-          </button>
-        </div>
-      </div>
-    </div>
+-- 5. Funkcja do kopiowania grup z poprzedniego miesiąca
+CREATE OR REPLACE FUNCTION copy_groups_month(p_from_month TEXT, p_to_month TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Znajdź poprzedni miesiąc (najnowszy przed p_to_month)
+  DECLARE
+    prev_month TEXT;
+  BEGIN
+    SELECT month INTO prev_month
+    FROM groups_month 
+    WHERE month < p_to_month 
+    ORDER BY month DESC 
+    LIMIT 1;
+    
+    -- Jeśli nie ma poprzedniego miesiąca, nie rób nic
+    IF prev_month IS NULL THEN
+      RETURN;
+    END IF;
+    
+    -- Skopiuj grupy z poprzedniego miesiąca
+    INSERT INTO groups_month (month, name, day, start_time, trainer)
+    SELECT p_to_month, name, day, start_time, trainer
+    FROM groups_month 
+    WHERE month = prev_month;
+  END;
+END;
+$$;
 
-  <!-- Add Group Modal -->
-  <div class="modal" id="add-group-modal">
-    <div class="modal-content">
-      <button class="modal-close" id="close-group-modal">
-        <i class="fas fa-times"></i>
-      </button>
-      
-      <div class="modal-header">
-        <h3 id="group-modal-title">Dodaj nową grupę</h3>
-      </div>
-      
-      <div class="form-group">
-        <label for="group-name">Nazwa grupy</label>
-        <input type="text" id="group-name" class="form-control" placeholder="Nazwa grupy">
-      </div>
-      
-      <div class="form-group">
-        <label for="group-day">Dzień tygodnia</label>
-        <select id="group-day" class="form-control">
-          <option value="Poniedziałek">Poniedziałek</option>
-          <option value="Wtorek">Wtorek</option>
-          <option value="Środa">Środa</option>
-          <option value="Czwartek">Czwartek</option>
-          <option value="Piątek">Piątek</option>
-          <option value="Sobota">Sobota</option>
-          <option value="Niedziela">Niedziela</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label for="group-start">Godzina rozpoczęcia</label>
-        <input type="time" id="group-start" class="form-control">
-      </div>
-      
-      <div class="form-group">
-        <label for="group-trainer">Trener</label>
-        <input type="text" id="group-trainer" class="form-control" placeholder="Imię i nazwisko trenera">
-      </div>
-      
-      <div class="form-actions">
-        <button class="btn btn-outline" id="cancel-group-btn">Anuluj</button>
-        <button class="btn btn-primary" id="save-group-btn">
-          <i class="fas fa-save"></i> Zapisz grupę
-        </button>
-      </div>
-    </div>
-  </div>
+-- 6. Funkcja do dodawania uczestnika
+CREATE OR REPLACE FUNCTION insert_participant_month(
+  p_month TEXT,
+  p_name TEXT,
+  p_email TEXT DEFAULT NULL,
+  p_phone TEXT DEFAULT NULL
+) RETURNS UUID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  new_id UUID;
+BEGIN
+  INSERT INTO participants_month (month, name, email, phone)
+  VALUES (p_month, p_name, p_email, p_phone)
+  RETURNING id INTO new_id;
+  RETURN new_id;
+END;
+$$;
 
-  <!-- Create New Month Modal -->
-  <div class="modal" id="create-month-modal">
-    <div class="modal-content">
-      <button class="modal-close" id="close-create-month-modal">
-        <i class="fas fa-times"></i>
-      </button>
-      
-      <div class="modal-header">
-        <h3>Utwórz nowy miesiąc</h3>
-      </div>
-      
-      <div class="form-group">
-        <label for="new-month-input">Miesiąc (YYYY-MM)</label>
-        <input type="text" id="new-month-input" class="form-control" placeholder="np. 2024-12">
-      </div>
-      
-      <div class="form-actions">
-        <button class="btn btn-outline" id="cancel-create-month-btn">Anuluj</button>
-        <button class="btn btn-primary" id="save-create-month-btn">
-          <i class="fas fa-save"></i> Utwórz miesiąc
-        </button>
-      </div>
-    </div>
-  </div>
+-- 7. Funkcja do listowania uczestników w miesiącu
+CREATE OR REPLACE FUNCTION list_participants_month(p_month TEXT)
+RETURNS TABLE (id UUID, name TEXT, email TEXT, phone TEXT)
+LANGUAGE sql
+AS $$
+  SELECT id, name, email, phone
+  FROM participants_month
+  WHERE month = p_month
+  ORDER BY name;
+$$;
 
-  <script type="module">
-    import { supabase } from './supabaseClient.js';
-    
-    // Check if user is admin
-    async function checkAdmin() {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        alert("Nie jesteś zalogowany");
-        window.location.href = "login.html";
-        return;
-      }
-      
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-        
-      if (error || !profile || profile.role !== "admin") {
-        alert("Nie masz uprawnień administratora");
-        window.location.href = "login.html";
-        return;
-      }
-    }
-    
-    // Logout function
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      window.location.href = "login.html";
-    });
-    
-    // Navigation
-    const homeLink = document.getElementById('nav-home');
-    const groupsLink = document.getElementById('nav-groups');
-    const homeSection = document.getElementById('home-section');
-    const groupsSection = document.getElementById('groups-section');
-    
-    function setActiveNav(section) {
-      if (section === 'home') {
-        homeLink.classList.add('active');
-        groupsLink.classList.remove('active');
-        homeSection.style.display = 'block';
-        groupsSection.style.display = 'none';
-      } else if (section === 'groups') {
-        groupsLink.classList.add('active');
-        homeLink.classList.remove('active');
-        homeSection.style.display = 'none';
-        groupsSection.style.display = 'block';
-      }
-    }
-    
-    homeLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      setActiveNav('home');
-      loadHomeData();
-    });
-    
-    groupsLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      setActiveNav('groups');
-      loadGroups();
-    });
-    
-    document.getElementById('go-to-groups-btn').addEventListener('click', (e) => {
-      e.preventDefault();
-      setActiveNav('groups');
-      loadGroups();
-    });
-    
-    // Helper function to get current month in YYYY-MM format
-    function getCurrentMonth() {
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      return `${yyyy}-${mm}`;
-    }
-    
-    // Helper function to get available months (current + created)
-    async function getAvailableMonths() {
-      const formatter = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' });
-      const options = [];
-      
-      // Always include current month
-      const currentMonth = getCurrentMonth();
-      const currentLabel = formatter.format(new Date(currentMonth + '-01'));
-      options.push({ value: currentMonth, label: currentLabel });
-      
-      try {
-        // Get months that have groups (created months)
-        const { data: groups, error } = await supabase
-          .from('groups_month')
-          .select('month')
-          .order('month', { ascending: false });
-        
-        if (!error && groups) {
-          const createdMonths = Array.from(new Set(groups.map(g => g.month)))
-            .filter(month => month !== currentMonth); // Don't duplicate current month
-          
-          createdMonths.forEach(month => {
-            const label = formatter.format(new Date(month + '-01'));
-            options.push({ value: month, label: label });
-          });
-        }
-      } catch (err) {
-        console.error('Błąd pobierania miesięcy:', err);
-      }
-      
-      return options;
-    }
-    
-    // Populate month selectors
-    async function populateMonthSelectors() {
-      const options = await getAvailableMonths();
-      const currentMonth = getCurrentMonth();
-      
-      // Home page selector
-      const homeSelector = document.getElementById('current-month-select');
-      homeSelector.innerHTML = '';
-      options.forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o.value;
-        opt.textContent = o.label;
-        homeSelector.appendChild(opt);
-      });
-      homeSelector.value = currentMonth;
-      
-      // Groups page selector
-      const groupsSelector = document.getElementById('groups-month-select');
-      groupsSelector.innerHTML = '';
-      options.forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o.value;
-        opt.textContent = o.label;
-        groupsSelector.appendChild(opt);
-      });
-      groupsSelector.value = currentMonth;
-    }
-    
-    // Load home page data
-    async function loadHomeData() {
-      const selectedMonth = document.getElementById('current-month-select').value;
-      
-      try {
-        // Load groups count
-        const { data: groups, error: groupsError } = await supabase.rpc('list_groups_month', { p_month: selectedMonth });
-        if (!groupsError) {
-          document.getElementById('groups-count').textContent = (groups || []).length;
-        }
-        
-        // TODO: Load participants count, paid/unpaid amounts when we add those features
-        document.getElementById('participants-count').textContent = '0';
-        document.getElementById('paid-amount').textContent = '0.00 zł';
-        document.getElementById('unpaid-amount').textContent = '0.00 zł';
-        
-      } catch (err) {
-        console.error('Błąd ładowania danych:', err);
-      }
-    }
-    
-    // Create new month functionality
-    const createMonthModal = document.getElementById('create-month-modal');
-    const createMonthBtn = document.getElementById('create-new-month-btn');
-    const closeCreateMonthBtn = document.getElementById('close-create-month-modal');
-    const cancelCreateMonthBtn = document.getElementById('cancel-create-month-btn');
-    const saveCreateMonthBtn = document.getElementById('save-create-month-btn');
-    
-    function openCreateMonthModal() {
-      createMonthModal.classList.add('active');
-      // Set default value to next month
-      const now = new Date();
-      const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      const yyyy = next.getFullYear();
-      const mm = String(next.getMonth() + 1).padStart(2, '0');
-      document.getElementById('new-month-input').value = `${yyyy}-${mm}`;
-    }
-    
-    function closeCreateMonthModal() {
-      createMonthModal.classList.remove('active');
-      document.getElementById('new-month-input').value = '';
-    }
-    
-    createMonthBtn.addEventListener('click', openCreateMonthModal);
-    closeCreateMonthBtn.addEventListener('click', closeCreateMonthModal);
-    cancelCreateMonthBtn.addEventListener('click', closeCreateMonthModal);
-    
-    saveCreateMonthBtn.addEventListener('click', async () => {
-      const monthInput = document.getElementById('new-month-input').value.trim();
-      
-      if (!monthInput || !/^\d{4}-\d{2}$/.test(monthInput)) {
-        alert('Podaj prawidłowy format miesiąca (YYYY-MM)');
-        return;
-      }
-      
-      const originalText = saveCreateMonthBtn.innerHTML;
-      saveCreateMonthBtn.innerHTML = '<span class="loading"></span> Tworzenie...';
-      saveCreateMonthBtn.disabled = true;
-      
-      try {
-        // Create a placeholder group for the new month so it appears in selectors
-        const resp = await supabase.rpc('insert_group_month', {
-          p_month: monthInput,
-          p_name: 'Nowy miesiąc',
-          p_day: 'Poniedziałek',
-          p_start_time: '18:00',
-          p_trainer: 'Do uzupełnienia'
-        });
-        
-        if (resp.error) throw resp.error;
-        
-        alert(`Miesiąc ${monthInput} został utworzony!`);
-        closeCreateMonthModal();
-        
-        // Refresh month selectors
-        await populateMonthSelectors();
-        
-        // Update current selections to new month
-        document.getElementById('current-month-select').value = monthInput;
-        document.getElementById('groups-month-select').value = monthInput;
-        
-        // Reload data
-        await loadHomeData();
-        await loadGroups();
-        
-      } catch (err) {
-        alert('Błąd tworzenia miesiąca: ' + (err.message || 'Nieznany'));
-      } finally {
-        saveCreateMonthBtn.disabled = false;
-        saveCreateMonthBtn.innerHTML = originalText;
-      }
-    });
-    
-    // Month selector change handlers
-    document.getElementById('current-month-select').addEventListener('change', loadHomeData);
-    document.getElementById('groups-month-select').addEventListener('change', loadGroups);
-    
-    // Modal functionality for groups
-    const addGroupModal = document.getElementById('add-group-modal');
-    const addGroupBtn = document.getElementById('add-group-btn');
-    const addFirstGroupBtn = document.getElementById('add-first-group');
-    const closeModalBtn = document.getElementById('close-group-modal');
-    const cancelGroupBtn = document.getElementById('cancel-group-btn');
-    const saveGroupBtn = document.getElementById('save-group-btn');
-    const groupsList = document.getElementById('groups-list');
-    const emptyState = document.getElementById('emptyState');
-    
-    function openModal() {
-      addGroupModal.classList.add('active');
-    }
-    
-    function closeModal() {
-      addGroupModal.classList.remove('active');
-      // Reset form
-      document.getElementById('group-name').value = '';
-      document.getElementById('group-start').value = '';
-      document.getElementById('group-trainer').value = '';
-    }
-    
-    addGroupBtn.addEventListener('click', openModal);
-    addFirstGroupBtn.addEventListener('click', openModal);
-    closeModalBtn.addEventListener('click', closeModal);
-    cancelGroupBtn.addEventListener('click', closeModal);
+-- 8. Funkcja do dodawania uczestnika do grupy
+CREATE OR REPLACE FUNCTION add_participant_to_group_month(
+  p_month TEXT,
+  p_participant_id UUID,
+  p_group_id UUID
+) RETURNS UUID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  new_id UUID;
+BEGIN
+  INSERT INTO participant_groups_month (month, participant_id, group_id)
+  VALUES (p_month, p_participant_id, p_group_id)
+  RETURNING id INTO new_id;
+  RETURN new_id;
+END;
+$$;
 
-    // Save group function (add new group for selected month via RPC)
-    saveGroupBtn.addEventListener('click', async () => {
-      const name = document.getElementById('group-name').value.trim();
-      const day = document.getElementById('group-day').value;
-      const start = document.getElementById('group-start').value;
-      const trainer = document.getElementById('group-trainer').value.trim();
-      
-      if (!name || !day || !start || !trainer) { 
-        alert('Podaj nazwę, dzień, godzinę startu i trenera'); 
-        return; 
-      }
-      
-      const selectedMonth = document.getElementById('groups-month-select').value;
-      
-      const originalText = saveGroupBtn.innerHTML;
-      saveGroupBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
-      saveGroupBtn.disabled = true;
-      
-      try {
-        const resp = await supabase.rpc('insert_group_month', {
-          p_month: selectedMonth,
-          p_name: name,
-          p_day: day,
-          p_start_time: start,
-          p_trainer: trainer
-        });
-        
-        if (resp.error) throw resp.error;
-        
-        closeModal();
-        await loadGroups();
-        await loadHomeData(); // Refresh home page data too
-        alert('Grupa została dodana pomyślnie!');
-      } catch (err) {
-        alert('Błąd dodawania grupy: ' + (err.message || 'Nieznany'));
-      } finally {
-        saveGroupBtn.disabled = false;
-        saveGroupBtn.innerHTML = originalText;
-      }
-    });
+-- 9. Funkcja do dodawania płatności
+CREATE OR REPLACE FUNCTION insert_payment_month(
+  p_month TEXT,
+  p_participant_id UUID,
+  p_group_id UUID,
+  p_amount DECIMAL(10,2),
+  p_payment_method TEXT DEFAULT NULL
+) RETURNS UUID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  new_id UUID;
+BEGIN
+  INSERT INTO payments_month (month, participant_id, group_id, amount, payment_method)
+  VALUES (p_month, p_participant_id, p_group_id, p_amount, p_payment_method)
+  RETURNING id INTO new_id;
+  RETURN new_id;
+END;
+$$;
 
-    // Load groups for selected month
-    async function loadGroups() {
-      groupsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie grup...</p></div>';
-      
-      try {
-        const selectedMonth = document.getElementById('groups-month-select').value;
-        const { data, error } = await supabase.rpc('list_groups_month', { p_month: selectedMonth });
-        
-        if (error) {
-          console.error('Błąd wczytywania grup:', error);
-          groupsList.innerHTML = '<div class="empty-state"><p>Błąd wczytywania grup: ' + error.message + '</p></div>';
-          return;
-        }
-        
-        if (!data || data.length === 0) {
-          groupsList.innerHTML = `<div class="empty-state"><p>Brak grup dla miesiąca ${selectedMonth}.</p></div>`;
-          return;
-        }
-        
-        // Hide empty state
-        emptyState.style.display = 'none';
-        
-        // Clear and render groups
-        groupsList.innerHTML = '';
-        
-        data.forEach(group => {
-          const groupCard = document.createElement('div');
-          groupCard.className = 'group-card';
-          
-          groupCard.innerHTML = `
-            <h4>${group.name}</h4>
-            <div class="group-detail">
-              <i class="fas fa-calendar-day"></i>
-              <span>${group.day}, ${group.start_time}</span>
-            </div>
-            <div class="group-detail">
-              <i class="fas fa-user-tie"></i>
-              <span>${group.trainer}</span>
-            </div>
-            <div class="group-actions">
-              <button class="btn btn-outline edit-btn" data-id="${group.id}">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn btn-outline delete-btn" data-id="${group.id}">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          `;
-          
-          // Add event listeners
-          groupCard.querySelector('.edit-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            // TODO: Implement edit functionality
-            alert('Funkcja edycji będzie dostępna wkrótce');
-          });
-          
-          groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (!confirm('Usunąć grupę?')) return;
-            
-            try {
-              const { error } = await supabase.rpc('delete_group_month', { p_id: group.id });
-              if (error) throw error;
-              await loadGroups();
-              await loadHomeData(); // Refresh home page data too
-              alert('Grupa została usunięta');
-            } catch (err) {
-              alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany'));
-            }
-          });
-          
-          groupsList.appendChild(groupCard);
-        });
-      } catch (err) {
-        console.error('Nieoczekiwany błąd:', err);
-        groupsList.innerHTML = '<div class="empty-state"><p>Wystąpił nieoczekiwany błąd: ' + err.message + '</p></div>';
-      }
-    }
+-- 10. Funkcja do potwierdzania płatności
+CREATE OR REPLACE FUNCTION confirm_payment_month(p_payment_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE payments_month 
+  SET confirmed = TRUE 
+  WHERE id = p_payment_id;
+END;
+$$;
 
-    // Initialize
-    checkAdmin().then(async () => {
-      await populateMonthSelectors();
-      await loadHomeData();
-    });
-  </script>
-</body>
-</html>
+-- 11. Funkcja do usuwania uczestnika z grupy
+CREATE OR REPLACE FUNCTION remove_participant_from_group_month(
+  p_month TEXT,
+  p_participant_id UUID,
+  p_group_id UUID
+) RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  DELETE FROM participant_groups_month 
+  WHERE month = p_month 
+    AND participant_id = p_participant_id 
+    AND group_id = p_group_id;
+    
+  -- Usuń też płatności dla tego uczestnika w tej grupie w tym miesiącu
+  DELETE FROM payments_month 
+  WHERE month = p_month 
+    AND participant_id = p_participant_id 
+    AND group_id = p_group_id;
+END;
+$$;
+
+-- 12. Funkcja do usuwania uczestnika całkowicie z miesiąca
+CREATE OR REPLACE FUNCTION delete_participant_month(
+  p_month TEXT,
+  p_participant_id UUID
+) RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Usuń wszystkie płatności uczestnika w tym miesiącu
+  DELETE FROM payments_month 
+  WHERE month = p_month AND participant_id = p_participant_id;
+  
+  -- Usuń wszystkie powiązania uczestnik-grupa w tym miesiącu
+  DELETE FROM participant_groups_month 
+  WHERE month = p_month AND participant_id = p_participant_id;
+  
+  -- Usuń uczestnika
+  DELETE FROM participants_month 
+  WHERE month = p_month AND id = p_participant_id;
+END;
+$$;
