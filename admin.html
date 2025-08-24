@@ -813,6 +813,7 @@
           <div class="summary-card"><div class="label">Zapłacone</div><div class="value" id="fin-groups-paid">0.00 zł</div></div>
           <div class="summary-card"><div class="label">Niezapłacone</div><div class="value" id="fin-groups-unpaid">0.00 zł</div></div>
         </div>
+        <div class="progress" style="margin-top:8px;"><div class="progress-bar" id="fin-groups-progress" style="width:0%"></div></div>
         <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:10px;">
           <div class="content-box" style="flex:1 1 260px;">
             <h4 style="margin-top:0; font-size:1rem;">Metody płatności</h4>
@@ -826,6 +827,7 @@
           <div class="summary-card"><div class="label">Zapłacone</div><div class="value" id="fin-lessons-paid">0.00 zł</div></div>
           <div class="summary-card"><div class="label">Niezapłacone</div><div class="value" id="fin-lessons-unpaid">0.00 zł</div></div>
         </div>
+        <div class="progress" style="margin-top:8px;"><div class="progress-bar" id="fin-lessons-progress" style="width:0%"></div></div>
         <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:10px;">
           <div class="content-box" style="flex:1 1 260px;">
             <h4 style="margin-top:0; font-size:1rem;">Metody płatności</h4>
@@ -839,6 +841,7 @@
           <div class="summary-card"><div class="label">Zapłacone</div><div class="value" id="fin-fd-paid">0.00 zł</div></div>
           <div class="summary-card"><div class="label">Niezapłacone</div><div class="value" id="fin-fd-unpaid">0.00 zł</div></div>
         </div>
+        <div class="progress" style="margin-top:8px;"><div class="progress-bar" id="fin-fd-progress" style="width:0%"></div></div>
         <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:10px;">
           <div class="content-box" style="flex:1 1 260px;">
             <h4 style="margin-top:0; font-size:1rem;">Metody płatności</h4>
@@ -1315,6 +1318,14 @@
         if (lUnpaidEl) lUnpaidEl.textContent = `${lUnpaid.toFixed(2)} zł`;
         if (fdPaidEl) fdPaidEl.textContent = `${fdPaid.toFixed(2)} zł`;
         if (fdUnpaidEl) fdUnpaidEl.textContent = `${fdUnpaid.toFixed(2)} zł`;
+        // Progress bars
+        const finGroupsProgress = document.getElementById('fin-groups-progress');
+        const finLessonsProgress = document.getElementById('fin-lessons-progress');
+        const finFdProgress = document.getElementById('fin-fd-progress');
+        const setProgress = (el, paid, unpaid) => { if (!el) return; const total = Math.max(1, paid + unpaid); el.style.width = `${Math.round((paid/total)*100)}%`; };
+        setProgress(finGroupsProgress, gPaid, gUnpaid);
+        setProgress(finLessonsProgress, lPaid, lUnpaid);
+        setProgress(finFdProgress, fdPaid, fdUnpaid);
         // Methods breakdown
         const mapCount = (rows) => rows.reduce((m,r)=>{ const k=r.method||'inne'; m[k]=(m[k]||0)+Number(r.amount||0); return m; },{});
         const gM = mapCount((pays||[]).filter(p=>p.confirmed));
