@@ -1316,6 +1316,8 @@
           activeLinks.forEach(l => { const arr = linksByP.get(l.participant_id) || []; arr.push(l.group_id); linksByP.set(l.participant_id, arr); });
           const paidByP = new Map();
           (pays||[]).filter(p=>p.confirmed).forEach(p => { paidByP.set(p.participant_id, (paidByP.get(p.participant_id)||0) + Number(p.amount||0)); });
+          const unconfirmedByP = new Map();
+          (pays||[]).filter(p=>!p.confirmed).forEach(p => { unconfirmedByP.set(p.participant_id, Number(p.amount||0)); });
           let sumUnpaid = 0;
           linksByP.forEach((gids, pid) => {
             const person = pMap.get(pid);
@@ -1326,7 +1328,8 @@
               return acc + (isNaN(base) ? 0 : base);
             }, 0);
             const paid = paidByP.get(pid) || 0;
-            const unpaid = Math.max(0, expectedBase - paid);
+            const overrideUnpaid = unconfirmedByP.get(pid);
+            const unpaid = (typeof overrideUnpaid === 'number') ? Math.max(0, overrideUnpaid) : Math.max(0, expectedBase - paid);
             sumUnpaid += unpaid;
           });
           gUnpaid = sumUnpaid;
@@ -1420,7 +1423,7 @@
         expListEl.innerHTML = ''; expListEl.appendChild(ul);
       }
       await loadExpensesFor(finMonth.value);
-      if (expAddBtn) expAddBtn.addEventListener('click', async () => {
+      if (expAddBtn && !expAddBtn.dataset.bound) { expAddBtn.dataset.bound = '1'; expAddBtn.addEventListener('click', async () => {
         const name = (expNameEl?.value || '').trim();
         const amount = parseFloat(expAmountEl?.value || '0');
         if (isNaN(amount) || amount <= 0) { alert('Podaj prawidłową kwotę'); return; }
@@ -1443,8 +1446,8 @@
             if (finCashBalanceEl) finCashBalanceEl.textContent = `${balance.toFixed(2)} zł`;
           } catch {}
         } catch (err) { alert('Błąd dodawania wydatku: ' + (err.message || 'Nieznany')); }
-      });
-      if (expListEl) expListEl.addEventListener('click', async (e) => {
+      }); }
+      if (expListEl && !expListEl.dataset.bound) { expListEl.dataset.bound = '1'; expListEl.addEventListener('click', async (e) => {
         const del = e.target.closest('.fin-expense-del');
         if (!del) return;
         const id = del.dataset.id;
@@ -1465,7 +1468,7 @@
             if (finCashBalanceEl) finCashBalanceEl.textContent = `${balance.toFixed(2)} zł`;
           } catch {}
         } catch (err) { alert('Błąd usuwania wydatku: ' + (err.message || 'Nieznany')); }
-      });
+      }); }
     }
     function setActiveNav(section) {
       if (groupsLink && participantsLink) {
