@@ -2252,21 +2252,23 @@
           .order('last_name', { ascending: true });
         if (participantsError) throw participantsError;
 
-        // Load group entry for this month (single per group)
-        const { data: groupEntry, error: geErr } = await supabase
+        // Load group entries for this month per participant
+        const { data: geRows, error: geErr } = await supabase
           .from('group_entries')
           .select('*')
           .eq('group_id', selectedGroup.id)
-          .eq('month', selectedMonth)
-          .maybeSingle();
-        if (geErr && geErr.code !== 'PGRST116') throw geErr;
+          .eq('month', selectedMonth);
+        if (geErr) throw geErr;
+        const entriesByPid = new Map();
+        (geRows || []).forEach(r => { if (r.participant_id) entriesByPid.set(r.participant_id, r); });
 
         // Renderuj
         const fragment = document.createDocumentFragment();
         const filterValue = (participantsFilter && participantsFilter.value) ? participantsFilter.value : 'all';
         const listToRender = participants.filter(p => {
-          if (filterValue === 'paid') return !!(groupEntry && groupEntry.confirmed);
-          if (filterValue === 'unpaid') return !(groupEntry && groupEntry.confirmed);
+          const entry = entriesByPid.get(p.id);
+          if (filterValue === 'paid') return !!(entry && entry.confirmed);
+          if (filterValue === 'unpaid') return !(entry && entry.confirmed);
           return true;
         });
 
@@ -2290,17 +2292,18 @@
         let unpaidAmount = 0;
 
         listToRender.forEach((p, index) => {
+          const entry = entriesByPid.get(p.id) || null;
           const baseAmount = p.multisport ? Number(selectedGroup.multisport || 0) : Number(selectedGroup.fee || 0);
-          const amountToShow = (groupEntry && typeof groupEntry.amount === 'number') ? groupEntry.amount : baseAmount;
-          const selectedMethod = groupEntry && typeof groupEntry.method === 'string' ? groupEntry.method : '';
-          const comment = groupEntry && typeof groupEntry.comment === 'string' ? groupEntry.comment : '';
+          const amountToShow = (entry && typeof entry.amount === 'number') ? entry.amount : baseAmount;
+          const selectedMethod = entry && typeof entry.method === 'string' ? entry.method : '';
+          const comment = entry && typeof entry.comment === 'string' ? entry.comment : '';
 
-          if (groupEntry && groupEntry.confirmed) {
+          if (entry && entry.confirmed) {
             paidCount += 1;
-            paidAmount += Number(groupEntry.amount || 0);
+            paidAmount += Number(entry.amount || 0);
           } else {
             unpaidCount += 1;
-            const unpaidVal = (groupEntry && typeof groupEntry.amount === 'number') ? Number(groupEntry.amount) : Number(baseAmount);
+            const unpaidVal = (entry && typeof entry.amount === 'number') ? Number(entry.amount) : Number(baseAmount);
             unpaidAmount += unpaidVal;
           }
 
@@ -2308,7 +2311,7 @@
           row.className = 'content-box participant-row';
           row.style.marginBottom = '10px';
           row.dataset.participantId = p.id;
-          if (groupEntry && groupEntry.confirmed) {
+          if (entry && entry.confirmed) {
             row.classList.add('paid');
           } else {
             row.classList.add('unpaid');
@@ -2335,9 +2338,9 @@
                 <input title="Komentarz" type="text" class="form-control small payment-comment" placeholder="Komentarz" value="${comment.replace(/"/g, '&quot;')}" />
               </div>
               <div style="flex: 0 0 auto; display:flex; gap:6px; align-items:center;">
-                <button class="btn btn-primary btn-sm confirm-payment-btn">${groupEntry && groupEntry.confirmed ? 'Zapisz' : 'OK'}</button>
-                ${groupEntry ? '<button class="btn btn-outline btn-sm delete-payment-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>' : ''}
-                <span class="status" style="color:${groupEntry && groupEntry.confirmed ? 'var(--success)' : 'var(--text-gray)'}; font-size:0.8rem; white-space:nowrap;">${groupEntry && groupEntry.confirmed ? 'OK' : 'Brak'}</span>
+                <button class="btn btn-primary btn-sm confirm-payment-btn">${entry && entry.confirmed ? 'Zapisz' : 'OK'}</button>
+                ${entry ? '<button class="btn btn-outline btn-sm delete-payment-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>' : ''}
+                <span class="status" style="color:${entry && entry.confirmed ? 'var(--success)' : 'var(--text-gray)'}; font-size:0.8rem; white-space:nowrap;">${entry && entry.confirmed ? 'OK' : 'Brak'}</span>
               </div>
               <div style="flex: 1 1 100px; min-width: 100px; display:flex; gap:6px; align-items:center; justify-content:flex-end;">
                 <label style="display:flex; align-items:center; gap:6px; color: var(--text-gray); font-size:0.8rem;">
@@ -2383,6 +2386,7 @@
           .select('id')
           .eq('group_id', selectedGroup.id)
           .eq('month', selectedMonth)
+          .eq('participant_id', participantId)
           .maybeSingle();
         if (existing) {
           const { error } = await supabase
@@ -2391,10 +2395,26 @@
             .eq('id', existing.id);
           if (error) throw error;
         } else {
-          const { error } = await supabase
+          // Try to re-use legacy null-participant row if present
+          const { data: legacy } = await supabase
             .from('group_entries')
-            .insert([{ group_id: selectedGroup.id, month: selectedMonth, amount: newAmount, confirmed: false }]);
-          if (error) throw error;
+            .select('id')
+            .eq('group_id', selectedGroup.id)
+            .eq('month', selectedMonth)
+            .is('participant_id', null)
+            .maybeSingle();
+          if (legacy) {
+            const { error } = await supabase
+              .from('group_entries')
+              .update({ participant_id: participantId, amount: newAmount, confirmed: false })
+              .eq('id', legacy.id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabase
+              .from('group_entries')
+              .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount: newAmount, confirmed: false }]);
+            if (error) throw error;
+          }
         }
         input.dataset.initial = String(newAmount);
         await loadParticipantsAndPayments();
@@ -2495,12 +2515,13 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="loading"></span>';
         try {
-          // Upsert pojedynczego wpisu grupowego dla tej grupy i miesiąca
+          // Upsert wpisu płatności per uczestnik na dany miesiąc
           const { data: existing, error: selErr } = await supabase
             .from('group_entries')
             .select('id')
             .eq('group_id', selectedGroup.id)
             .eq('month', selectedMonth)
+            .eq('participant_id', participantId)
             .maybeSingle();
           if (selErr && selErr.code !== 'PGRST116') throw selErr;
           if (existing) {
@@ -2510,10 +2531,26 @@
               .eq('id', existing.id);
             if (updErr) throw updErr;
           } else {
-            const { error: insErr } = await supabase
+            // Try reusing legacy row without participant_id
+            const { data: legacy } = await supabase
               .from('group_entries')
-              .insert([{ group_id: selectedGroup.id, month: selectedMonth, amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() }]);
-            if (insErr) throw insErr;
+              .select('id')
+              .eq('group_id', selectedGroup.id)
+              .eq('month', selectedMonth)
+              .is('participant_id', null)
+              .maybeSingle();
+            if (legacy) {
+              const { error: updLegacyErr } = await supabase
+                .from('group_entries')
+                .update({ participant_id: participantId, amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() })
+                .eq('id', legacy.id);
+              if (updLegacyErr) throw updLegacyErr;
+            } else {
+              const { error: insErr } = await supabase
+                .from('group_entries')
+                .insert([{ group_id: selectedGroup.id, participant_id: participantId, month: selectedMonth, amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() }]);
+              if (insErr) throw insErr;
+            }
           }
           await loadParticipantsAndPayments();
           window.dispatchEvent(new Event('finance:refresh'));
@@ -2550,7 +2587,8 @@
             .from('group_entries')
             .delete()
             .eq('group_id', selectedGroup.id)
-            .eq('month', selectedMonth);
+            .eq('month', selectedMonth)
+            .eq('participant_id', participantId);
           if (delErr) throw delErr;
           await loadParticipantsAndPayments();
         } catch (err) {
