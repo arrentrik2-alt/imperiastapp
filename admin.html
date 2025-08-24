@@ -1292,8 +1292,8 @@
 
       async function loadFor(monthVal) {
         // Groups payments are in 'payments'
-        const { data: pays } = await supabase.from('payments').select('amount, confirmed, method, participant_id, month').eq('month', monthVal);
-        const gPaid = (pays||[]).filter(p=>p.confirmed).reduce((s,p)=> s+Number(p.amount||0),0);
+        const { data: ge } = await supabase.from('group_entries').select('amount, confirmed, method, group_id, month').eq('month', monthVal);
+        const gPaid = (ge||[]).filter(p=>p.confirmed).reduce((s,p)=> s+Number(p.amount||0),0);
         // Expected unpaid for groups this month (even if no payment row exists)
         let gUnpaid = 0;
         try {
@@ -1376,7 +1376,7 @@
         // Methods breakdown
         const methodLabel = (m) => ({ card: 'Karta', transfer: 'Przelew', cash: 'Gotówka' }[m] || 'Inne');
         const mapCount = (rows) => rows.reduce((m,r)=>{ const k=methodLabel(r.method||''); m[k]=(m[k]||0)+Number(r.amount||0); return m; },{});
-        const gM = mapCount((pays||[]).filter(p=>p.confirmed));
+        const gM = mapCount((ge||[]).filter(p=>p.confirmed));
         const lM = mapCount(lPriv.filter(e=>e.confirmed));
         const fdM = mapCount(lFd.filter(e=>e.confirmed));
         const fillUl = (ul, obj) => { if (!ul) return; ul.innerHTML=''; const keys=Object.keys(obj); if (!keys.length) { ul.innerHTML='<li>Brak</li>'; return; } keys.forEach(k=>{ const li=document.createElement('li'); li.textContent=`${k}: ${obj[k].toFixed(2)} zł`; ul.appendChild(li); }); };
@@ -2252,16 +2252,14 @@
           .order('last_name', { ascending: true });
         if (participantsError) throw participantsError;
 
-        const participantIds = participants.map(p => p.id);
-        const { data: payments, error: paymentsError } = await supabase
-          .from('payments')
+        // Load group entry for this month (single per group)
+        const { data: groupEntry, error: geErr } = await supabase
+          .from('group_entries')
           .select('*')
-          .in('participant_id', participantIds)
-          .eq('month', selectedMonth);
-        if (paymentsError) throw paymentsError;
-
-        const paymentByParticipant = new Map();
-        (payments || []).forEach(pay => paymentByParticipant.set(pay.participant_id, pay));
+          .eq('group_id', selectedGroup.id)
+          .eq('month', selectedMonth)
+          .maybeSingle();
+        if (geErr && geErr.code !== 'PGRST116') throw geErr;
 
         // Renderuj
         const fragment = document.createDocumentFragment();
@@ -2293,20 +2291,17 @@
         let unpaidAmount = 0;
 
         listToRender.forEach((p, index) => {
-          const pay = paymentByParticipant.get(p.id) || null;
           const baseAmount = p.multisport ? Number(selectedGroup.multisport || 0) : Number(selectedGroup.fee || 0);
-          const amountToShow = pay && typeof pay.amount === 'number' ? pay.amount : baseAmount;
-          const selectedMethod = pay && typeof pay.method === 'string' ? pay.method : '';
-          const comment = pay && typeof pay.comment === 'string' ? pay.comment : '';
+          const amountToShow = (groupEntry && typeof groupEntry.amount === 'number') ? groupEntry.amount : baseAmount;
+          const selectedMethod = groupEntry && typeof groupEntry.method === 'string' ? groupEntry.method : '';
+          const comment = groupEntry && typeof groupEntry.comment === 'string' ? groupEntry.comment : '';
 
-          if (pay && pay.confirmed) {
+          if (groupEntry && groupEntry.confirmed) {
             paidCount += 1;
-            paidAmount += Number(pay.amount || 0);
+            paidAmount += Number(groupEntry.amount || 0);
           } else {
             unpaidCount += 1;
-            // Jeśli mamy niepotwierdzony wpis płatności z edytowaną kwotą, uwzględnij tę kwotę;
-            // w przeciwnym razie użyj kwoty bazowej z grupy
-            const unpaidVal = (pay && typeof pay.amount === 'number') ? Number(pay.amount) : Number(baseAmount);
+            const unpaidVal = (groupEntry && typeof groupEntry.amount === 'number') ? Number(groupEntry.amount) : Number(baseAmount);
             unpaidAmount += unpaidVal;
           }
 
@@ -2341,9 +2336,9 @@
                 <input title="Komentarz" type="text" class="form-control small payment-comment" placeholder="Komentarz" value="${comment.replace(/"/g, '&quot;')}" />
               </div>
               <div style="flex: 0 0 auto; display:flex; gap:6px; align-items:center;">
-                <button class="btn btn-primary btn-sm confirm-payment-btn">${pay && pay.confirmed ? 'Zapisz' : 'OK'}</button>
-                ${pay ? '<button class="btn btn-outline btn-sm delete-payment-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>' : ''}
-                <span class="status" style="color:${pay && pay.confirmed ? 'var(--success)' : 'var(--text-gray)'}; font-size:0.8rem; white-space:nowrap;">${pay && pay.confirmed ? 'OK' : 'Brak'}</span>
+                <button class="btn btn-primary btn-sm confirm-payment-btn">${groupEntry && groupEntry.confirmed ? 'Zapisz' : 'OK'}</button>
+                ${groupEntry ? '<button class="btn btn-outline btn-sm delete-payment-btn" title="Usuń płatność"><i class="fas fa-xmark"></i></button>' : ''}
+                <span class="status" style="color:${groupEntry && groupEntry.confirmed ? 'var(--success)' : 'var(--text-gray)'}; font-size:0.8rem; white-space:nowrap;">${groupEntry && groupEntry.confirmed ? 'OK' : 'Brak'}</span>
               </div>
               <div style="flex: 1 1 100px; min-width: 100px; display:flex; gap:6px; align-items:center; justify-content:flex-end;">
                 <label style="display:flex; align-items:center; gap:6px; color: var(--text-gray); font-size:0.8rem;">
@@ -2501,25 +2496,24 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="loading"></span>';
         try {
-          // Spróbuj znaleźć istniejącą płatność
+          // Upsert pojedynczego wpisu grupowego dla tej grupy i miesiąca
           const { data: existing, error: selErr } = await supabase
-            .from('payments')
+            .from('group_entries')
             .select('id')
-            .eq('participant_id', participantId)
+            .eq('group_id', selectedGroup.id)
             .eq('month', selectedMonth)
-            .limit(1)
             .maybeSingle();
-          if (selErr) throw selErr;
+          if (selErr && selErr.code !== 'PGRST116') throw selErr;
           if (existing) {
             const { error: updErr } = await supabase
-              .from('payments')
+              .from('group_entries')
               .update({ amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() })
               .eq('id', existing.id);
             if (updErr) throw updErr;
           } else {
             const { error: insErr } = await supabase
-              .from('payments')
-              .insert([{ participant_id: participantId, month: selectedMonth, amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() }]);
+              .from('group_entries')
+              .insert([{ group_id: selectedGroup.id, month: selectedMonth, amount, method, comment, confirmed: true, confirmed_at: new Date().toISOString() }]);
             if (insErr) throw insErr;
           }
           await loadParticipantsAndPayments();
@@ -2553,21 +2547,12 @@
       if (e.target.closest('.delete-payment-btn')) {
         if (!confirm('Usunąć płatność dla tego miesiąca?')) return;
         try {
-          const { data: existing, error: selErr } = await supabase
-            .from('payments')
-            .select('id')
-            .eq('participant_id', participantId)
-            .eq('month', selectedMonth)
-            .limit(1)
-            .maybeSingle();
-          if (selErr) throw selErr;
-          if (existing) {
-            const { error: delErr } = await supabase
-              .from('payments')
-              .delete()
-              .eq('id', existing.id);
-            if (delErr) throw delErr;
-          }
+          const { error: delErr } = await supabase
+            .from('group_entries')
+            .delete()
+            .eq('group_id', selectedGroup.id)
+            .eq('month', selectedMonth);
+          if (delErr) throw delErr;
           await loadParticipantsAndPayments();
         } catch (err) {
           alert('Błąd usuwania płatności: ' + (err.message || 'Nieznany'));
