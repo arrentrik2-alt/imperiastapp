@@ -545,8 +545,7 @@
       </div>
       <div class="content-box" style="margin-top:12px;">
         <div class="content-header" style="margin-bottom:8px; display:flex; align-items:center; gap:10px;">
-          <h3 style="font-size:1.1rem;">Płatności w miesiącu</h3>
-          <select id="dash-month-select" class="form-control" style="width:220px;"></select>
+          <h3 style="font-size:1.1rem;">Płatności (bieżący miesiąc)</h3>
         </div>
         <div style="display:grid; grid-template-columns: repeat(2, minmax(260px,1fr)); gap:12px; align-items:center;">
           <div>
@@ -1171,7 +1170,7 @@
 
     async function renderDashboard() {
       try {
-        const dashMonthSelect = document.getElementById('dash-month-select');
+        // Current month only
         const paidEl = document.getElementById('dash-paid-amount');
         const unpaidEl = document.getElementById('dash-unpaid-amount');
         const totalEl = document.getElementById('dash-total-amount');
@@ -1180,23 +1179,21 @@
         const groupsCountEl = document.getElementById('dash-groups-count');
         const donutPaid = document.getElementById('dash-donut-paid');
         const donutUnpaid = document.getElementById('dash-donut-unpaid');
-        if (!dashMonthSelect) return;
-        dashMonthSelect.innerHTML = '';
-        const opts = getLast12MonthsOptions();
-        opts.forEach(o => { const opt = document.createElement('option'); opt.value = o.value; opt.textContent = o.label; dashMonthSelect.appendChild(opt); });
         const now = new Date();
         const yyyy = now.getFullYear();
         const mm = String(now.getMonth() + 1).padStart(2, '0');
         const monthVal = `${yyyy}-${mm}`;
-        dashMonthSelect.value = monthVal;
 
-        // Counts
-        const [{ data: participants }, { data: groups }] = await Promise.all([
-          supabase.from('participants').select('id, active').order('last_name', { ascending: true }),
-          supabase.from('groups').select('id')
+        // Counts (active if participant has any group or any lesson link)
+        const [{ data: participants }, { data: groups }, { data: pgl }, { data: lpl }] = await Promise.all([
+          supabase.from('participants').select('id').order('last_name', { ascending: true }),
+          supabase.from('groups').select('id'),
+          supabase.from('participant_groups').select('participant_id'),
+          supabase.from('lesson_participants').select('participant_id')
         ]);
-        const activeCount = (participants || []).filter(p => p.active !== false).length;
-        const inactiveCount = (participants || []).length - activeCount;
+        const linkedP = new Set([...(pgl||[]).map(r=>r.participant_id), ...(lpl||[]).map(r=>r.participant_id)]);
+        const activeCount = (participants || []).filter(p => linkedP.has(p.id)).length;
+        const inactiveCount = Math.max(0, (participants || []).length - activeCount);
         if (pActiveEl) pActiveEl.textContent = String(activeCount);
         if (pInactiveEl) pInactiveEl.textContent = String(Math.max(0, inactiveCount));
         if (groupsCountEl) groupsCountEl.textContent = String((groups || []).length);
@@ -1217,21 +1214,7 @@
         // Offset unpaid to start where paid ends
         if (donutUnpaid) donutUnpaid.style.strokeDashoffset = String(-paidLen);
 
-        dashMonthSelect.onchange = async () => {
-          const m = dashMonthSelect.value;
-          const { data: pays2 } = await supabase.from('payments').select('amount, confirmed').eq('month', m);
-          const paid2 = (pays2 || []).filter(p => p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
-          const unpaid2 = (pays2 || []).filter(p => !p.confirmed).reduce((s,p)=> s + Number(p.amount||0), 0);
-          const total2 = paid2 + unpaid2;
-          if (paidEl) paidEl.textContent = `${paid2.toFixed(2)} zł`;
-          if (unpaidEl) unpaidEl.textContent = `${unpaid2.toFixed(2)} zł`;
-          if (totalEl) totalEl.textContent = `${total2.toFixed(2)} zł`;
-          const paidLen2 = total2 > 0 ? (paid2 / total2) * circ : 0;
-          const unpaidLen2 = total2 > 0 ? (unpaid2 / total2) * circ : 0;
-          if (donutPaid) donutPaid.setAttribute('stroke-dasharray', `${paidLen2} ${circ - paidLen2}`);
-          if (donutUnpaid) donutUnpaid.setAttribute('stroke-dasharray', `${unpaidLen2} ${circ - unpaidLen2}`);
-          if (donutUnpaid) donutUnpaid.style.strokeDashoffset = String(-paidLen2);
-        };
+        // no month select on dashboard
       } catch {}
     }
 
@@ -1327,7 +1310,8 @@
         setProgress(finLessonsProgress, lPaid, lUnpaid);
         setProgress(finFdProgress, fdPaid, fdUnpaid);
         // Methods breakdown
-        const mapCount = (rows) => rows.reduce((m,r)=>{ const k=r.method||'inne'; m[k]=(m[k]||0)+Number(r.amount||0); return m; },{});
+        const methodLabel = (m) => ({ card: 'Karta', transfer: 'Przelew', cash: 'Gotówka' }[m] || 'Inne');
+        const mapCount = (rows) => rows.reduce((m,r)=>{ const k=methodLabel(r.method||''); m[k]=(m[k]||0)+Number(r.amount||0); return m; },{});
         const gM = mapCount((pays||[]).filter(p=>p.confirmed));
         const lM = mapCount(lPriv.filter(e=>e.confirmed));
         const fdM = mapCount(lFd.filter(e=>e.confirmed));
@@ -2938,7 +2922,34 @@
       const editBtn = e.target.closest('.edit-participant-btn');
       const delBtn = e.target.closest('.delete-participant-global-btn');
       const cardEl = e.target.closest('.group-card');
-      if (cardEl && !editBtn && !delBtn) {
+      if (editBtn) {
+        const pid = editBtn.dataset.id;
+        try {
+          const [{ data: p, error: pErr }, { data: groups, error: gErr }] = await Promise.all([
+            supabase.from('participants').select('*').eq('id', pid).maybeSingle(),
+            supabase.from('groups').select('id,name').order('name', { ascending: true })
+          ]);
+          if (pErr) throw pErr;
+          if (gErr) throw gErr;
+          openEditParticipantModal(p, groups || []);
+        } catch (err) {
+          alert('Błąd wczytania uczestnika: ' + (err.message || 'Nieznany'));
+        }
+        return;
+      }
+      if (delBtn) {
+        const pid = delBtn.dataset.id;
+        if (!confirm('Usunąć uczestnika?')) return;
+        try {
+          const { error } = await supabase.from('participants').delete().eq('id', pid);
+          if (error) throw error;
+          await loadAllParticipants();
+        } catch (err) {
+          alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
+        }
+        return;
+      }
+      if (cardEl) {
         const pid = cardEl.dataset.pid;
         if (pid) { await showParticipantUnpaidPreview(pid); }
       }
