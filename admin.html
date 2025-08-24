@@ -724,10 +724,11 @@
     const backToGroupsBtn = document.getElementById('back-to-groups-btn');
     backToGroupsBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      console.log('Powrót do grup, resetowanie currentGroupId z:', currentGroupId);
+      console.log('Powrót do grup, resetowanie currentGroupId z:', currentGroupId, 'currentGroupName z:', currentGroupName);
       setActiveNav('groups');
       currentGroupId = null; // Reset current group ID
-      console.log('currentGroupId po resecie:', currentGroupId);
+      currentGroupName = null; // Reset current group name
+      console.log('currentGroupId po resecie:', currentGroupId, 'currentGroupName po resecie:', currentGroupName);
     });
     
     document.getElementById('go-to-groups-btn').addEventListener('click', (e) => {
@@ -931,13 +932,24 @@
     document.getElementById('groups-month-select').addEventListener('change', loadGroups);
 
     const participantsMonthSelect = document.getElementById('participants-month-select');
-    participantsMonthSelect.addEventListener('change', () => {
-      console.log('Zmiana miesiąca w uczestnikach, currentGroupId:', currentGroupId);
-      if (currentGroupId) {
-        loadGroupParticipants(currentGroupId);
+    participantsMonthSelect.addEventListener('change', async () => {
+      console.log('Zmiana miesiąca w uczestnikach, currentGroupId:', currentGroupId, 'currentGroupName:', currentGroupName);
+      
+      if (currentGroupName) {
+        const selectedMonth = document.getElementById('participants-month-select').value;
+        const newGroupId = await getCurrentGroupId(currentGroupName, selectedMonth);
+        
+        if (newGroupId) {
+          console.log('Znaleziono nowe ID grupy dla miesiąca', selectedMonth, ':', newGroupId);
+          currentGroupId = newGroupId;
+          loadGroupParticipants(newGroupId);
+        } else {
+          console.error('Nie znaleziono grupy o nazwie', currentGroupName, 'w miesiącu', selectedMonth);
+          groupParticipantsList.innerHTML = '<div class="empty-state"><p>Grupa nie istnieje w tym miesiącu</p></div>';
+        }
       } else {
-        console.error('Brak currentGroupId przy zmianie miesiąca');
-        groupParticipantsList.innerHTML = '<div class="empty-state"><p>Błąd: Brak ID grupy</p></div>';
+        console.error('Brak currentGroupName przy zmianie miesiąca');
+        groupParticipantsList.innerHTML = '<div class="empty-state"><p>Błąd: Brak nazwy grupy</p></div>';
       }
     });
 
@@ -1119,7 +1131,8 @@
       
       console.log('Otwieranie strony uczestników dla grupy:', group.id, group.name);
       currentGroupId = group.id; // Store group ID
-      console.log('Ustawiono currentGroupId:', currentGroupId);
+      currentGroupName = group.name; // Store group name
+      console.log('Ustawiono currentGroupId:', currentGroupId, 'currentGroupName:', currentGroupName);
       groupParticipantsName.textContent = group.name;
       loadGroupParticipants(group.id);
     }
@@ -1322,6 +1335,31 @@
         groupParticipantsList.innerHTML = '<div class="empty-state"><p>Wystąpił nieoczekiwany błąd: ' + err.message + '</p></div>';
       }
     }
+
+    // Function to get current group ID based on group name and month
+    async function getCurrentGroupId(groupName, month) {
+      try {
+        const { data, error } = await supabase
+          .from('groups_month')
+          .select('id')
+          .eq('month', month)
+          .eq('name', groupName)
+          .single();
+        
+        if (error) {
+          console.error('Błąd pobierania ID grupy:', error);
+          return null;
+        }
+        
+        return data ? data.id : null;
+      } catch (err) {
+        console.error('Błąd w getCurrentGroupId:', err);
+        return null;
+      }
+    }
+
+    // Store current group name for reference
+    let currentGroupName = null;
 
     // Initialize
     checkAdmin().then(async () => {
