@@ -2667,6 +2667,31 @@
         // currentMonth computed above
         const paidMonth = new Map();
         const groupById = new Map((groups || []).map(g => [g.id, g]));
+        // Group payments aggregation for current month (per participant)
+        const { data: geRows, error: geErr } = await supabase
+          .from('group_entries')
+          .select('participant_id, group_id, amount, confirmed')
+          .eq('month', currentMonth);
+        if (geErr) throw geErr;
+        const groupPaidByP = new Map();
+        const unconfirmedByP = new Map();
+        (geRows || []).forEach(r => {
+          const pid = r.participant_id;
+          if (!pid) return;
+          const amt = Number(r.amount || 0);
+          if (r.confirmed) {
+            groupPaidByP.set(pid, (groupPaidByP.get(pid) || 0) + amt);
+          } else {
+            unconfirmedByP.set(pid, (unconfirmedByP.get(pid) || 0) + amt);
+          }
+        });
+        groupPaidByP.forEach((val, pid) => paidMonth.set(pid, val));
+        // Seed payAgg with group payments
+        (participants || []).forEach(p => {
+          const paid = groupPaidByP.get(p.id) || 0;
+          const unpaid = unconfirmedByP.get(p.id) || 0;
+          payAgg.set(p.id, { paid, unpaid });
+        });
 
         // Lessons aggregation per participant (include both paid and unpaid)
         const participantIds = participants.map(p => p.id);
@@ -2738,8 +2763,12 @@
             return sum + (isNaN(base) ? 0 : base);
           }, 0);
           const paidForMonth = paidMonth.get(p.id) || 0;
-          const unpaidExpectedMonth = Math.max(0, expectedBase - paidForMonth);
-          const agg = { paid: (gAgg.paid + lAgg.paid), unpaid: (gAgg.unpaid + lAgg.unpaid + unpaidExpectedMonth) };
+          const overrideUnpaid = (typeof unconfirmedByP !== 'undefined') ? unconfirmedByP.get(p.id) : undefined;
+          const unpaidExpectedMonth = (typeof overrideUnpaid === 'number')
+            ? Math.max(0, overrideUnpaid)
+            : Math.max(0, expectedBase - paidForMonth);
+          const groupUnpaidPortion = (typeof overrideUnpaid === 'number') ? 0 : (gAgg.unpaid || 0);
+          const agg = { paid: (gAgg.paid + lAgg.paid), unpaid: (groupUnpaidPortion + lAgg.unpaid + unpaidExpectedMonth) };
           const card = document.createElement('div');
           card.className = 'group-card';
           card.dataset.pid = p.id;
