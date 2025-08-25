@@ -815,7 +815,19 @@
         const current = getCurrentMonth();
         await populateMonthSelectors();
         ensureAndSelect('participants-month-select', current);
-        if (currentGroupId) await loadGroupParticipants(currentGroupId);
+        if (currentGroupName) {
+          const newId = await getCurrentGroupId(currentGroupName, current);
+          if (newId) {
+            currentGroupId = newId;
+            await loadGroupParticipants(newId);
+          } else {
+            // show empty state if group doesn't exist in current month
+            const list = document.getElementById('participants-list');
+            if (list) list.innerHTML = '<div class="empty-state"><p>Brak uczestników dla tej grupy w tym miesiącu.</p></div>';
+          }
+        } else if (currentGroupId) {
+          await loadGroupParticipants(currentGroupId);
+        }
       });
     })();
     
@@ -1132,19 +1144,22 @@
             });
           
             groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
-              e.stopPropagation();
-            if (!confirm('Usunąć grupę?')) return;
-            
-            try {
-              const { error } = await supabase.rpc('delete_group_month', { p_id: group.id });
-                if (error) throw error;
-                await loadGroups();
+            e.stopPropagation();
+          if (!confirm('Usunąć grupę?')) return;
+          
+          try {
+              // Delete group record for this month
+              const { error } = await supabase
+                .from('groups_month')
+                .delete()
+                .eq('id', group.id);
+              if (error) throw error;
+              await loadGroups();
               await loadHomeData(); // Refresh home page data too
-              alert('Grupa została usunięta');
-              } catch (err) {
-                alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany'));
-              }
-            });
+            } catch (err) {
+              alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany'));
+            }
+          });
           
           groupsList.appendChild(groupCard);
         });
@@ -1398,15 +1413,23 @@
             if (!confirm('Usunąć uczestnika z grupy?')) return;
             
             try {
-              const { error } = await supabase.rpc('remove_participant_from_group_month', {
-                p_month: selectedMonth,
-                p_participant_id: participant.participant_id,
-                p_group_id: groupId
-              });
-              
-        if (error) throw error;
+              // Remove payments for this participant in this group for the selected month
+              const { error: payErr } = await supabase
+                .from('payments_month')
+                .delete()
+                .match({ month: selectedMonth, participant_id: participant.participant_id, group_id: groupId });
+              if (payErr) throw payErr;
+
+              // Remove participant-group association for this month
+              const { error: pgErr } = await supabase
+                .from('participant_groups_month')
+                .delete()
+                .match({ month: selectedMonth, participant_id: participant.participant_id, group_id: groupId });
+              if (pgErr) throw pgErr;
+
               await loadGroupParticipants(groupId);
-      } catch (err) {
+              await loadHomeData(); // refresh counts on home
+            } catch (err) {
               alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
             }
           });
