@@ -2141,12 +2141,12 @@
 
       if (!day || !start) { alert('Uzupełnij dzień i godzinę'); return; }
 
-      // helper to build title
-      const buildTitle = (trainerName, participantsArr, dayVal, startVal) => {
+      // helper to build title: "Lekcja [trainer] - [participants]" (no day/time)
+      const buildTitle = (trainerName, participantsArr) => {
         const parts = [];
         if (trainerName) parts.push(trainerName);
         if (participantsArr && participantsArr.length) parts.push(participantsArr.join(', '));
-        return `Lekcja ${parts.join(' - ')} • ${dayVal} ${startVal}`;
+        return `Lekcja ${parts.join(' - ')}`;
       };
 
       try {
@@ -2154,7 +2154,7 @@
           // on edit, fetch participants to construct title
           const { data: partsExisting } = await supabase.from('participants_lessons_month').select('participants_month(name)').eq('month', month).eq('lesson_id', currentEditingLessonId);
           const names = (partsExisting || []).map(x => x.participants_month?.name).filter(Boolean);
-          const titleGen = buildTitle(trainer, names, day, start);
+          const titleGen = buildTitle(trainer, names);
 
           const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, start_time: start, trainer: trainer, amount: amount }).match({ id: currentEditingLessonId, month: month });
           if (updErr) throw updErr;
@@ -2179,12 +2179,11 @@
           return;
         }
 
-        // create new lesson: build title from trainer and provided participant names
+        // create new lesson: build title from trainer and participant names (do NOT duplicate trainer)
         const participantsForTitle = [];
-        if (trainer) participantsForTitle.push(trainer);
         if (p1name) participantsForTitle.push(p1name);
         if (p2name) participantsForTitle.push(p2name);
-        const titleGen = buildTitle(trainer, participantsForTitle, day, start);
+        const titleGen = buildTitle(trainer, participantsForTitle);
 
         const { data: lessonId, error: lessonErr } = await supabase.rpc('insert_lesson_month', { p_month: month, p_title: titleGen, p_day: day, p_start_time: start, p_trainer: trainer, p_amount: amount });
         if (lessonErr) throw lessonErr;
@@ -2389,7 +2388,7 @@
                 </div>
               `;
 
-              // amount change -> update payment amount and recompute lesson total
+              // amount change -> update payment amount and recompute lesson total, update header in-place with a short fade
               row.querySelector('.lesson-amount-input').addEventListener('change', async (e) => {
                 const newAmount = parseFloat(e.target.value) || 0;
                 const pid = e.target.dataset.participantId;
@@ -2403,9 +2402,18 @@
                     const sum = (allPays || []).reduce((s,p) => s + parseFloat(p.amount || 0), 0);
                     const { error: updLessonErr } = await supabase.from('lessons_month').update({ amount: sum }).match({ id: lid, month: month });
                     if (updLessonErr) console.warn('Error updating lesson total:', updLessonErr);
+                    // update header value in DOM without reloading everything
+                    const headerSpan = document.querySelector('.lesson-total[data-lesson-id="' + lid + '"]');
+                    if (headerSpan) {
+                      headerSpan.textContent = sum.toFixed(2) + ' zł';
+                      const card = headerSpan.closest('.group-card');
+                      if (card) {
+                        card.style.transition = 'opacity 0.12s ease';
+                        card.style.opacity = '0.5';
+                        setTimeout(() => { card.style.opacity = '1'; }, 140);
+                      }
+                    }
                   }
-                  // reload lessons to reflect header change
-                  await loadLessons();
                 } catch (err) { alert('Błąd aktualizacji kwoty: ' + (err.message || 'Nieznany')); }
               });
 
