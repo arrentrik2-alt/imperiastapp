@@ -786,7 +786,7 @@
         </div>
         <!-- new participant container -->
         <div id="participant1-new-container">
-          <label for="participant1-name">Imię i nazwisko</label>
+          <label for="participant1-name">Imię i nazwisko <span id="participant1-badge" style="display:none; margin-left:8px; color:var(--success); font-weight:600; font-size:0.9rem;">Istniejący</span></label>
           <input type="text" id="participant1-name" class="form-control">
           <label for="participant1-phone" style="margin-top:8px;">Telefon</label>
           <input type="tel" id="participant1-phone" class="form-control">
@@ -809,7 +809,7 @@
         </div>
         <!-- new participant container -->
         <div id="participant2-new-container">
-          <label for="participant2-name">Imię i nazwisko (partner)</label>
+          <label for="participant2-name">Imię i nazwisko (partner) <span id="participant2-badge" style="display:none; margin-left:8px; color:var(--success); font-weight:600; font-size:0.9rem;">Istniejący</span></label>
           <input type="text" id="participant2-name" class="form-control">
           <label for="participant2-phone" style="margin-top:8px;">Telefon (partner)</label>
           <input type="tel" id="participant2-phone" class="form-control">
@@ -2183,6 +2183,7 @@
           document.getElementById('participant1-phone').value = r.phone || '';
           p1results.innerHTML = '';
           p1search.value = '';
+          document.getElementById('participant1-badge').style.display = 'inline';
         });
         p1results.appendChild(div);
       });
@@ -2203,6 +2204,7 @@
           document.getElementById('participant2-phone').value = r.phone || '';
           p2results.innerHTML = '';
           p2search.value = '';
+          document.getElementById('participant2-badge').style.display = 'inline';
         });
         p2results.appendChild(div);
       });
@@ -2292,34 +2294,122 @@
         }
         if (!lessonId) throw new Error('Nie udało się utworzyć lekcji');
 
-        // create participants and payments as before
+        // create participants and payments respecting selected existing IDs
         let primaryParticipantId = null;
         let partnerParticipantId = null;
-        if (p1name) {
-          const { data: createdPid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
-          if (e1) console.warn('Error creating participant1:', e1);
-          else {
-            primaryParticipantId = createdPid1;
-            await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
-            await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+        const sel1 = document.getElementById('participant1-selected-id').value || null;
+        const sel2 = document.getElementById('participant2-selected-id').value || null;
+
+        // Primary: use selected id if present, otherwise create if name provided
+        if (sel1) {
+          primaryParticipantId = sel1;
+          await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
+          await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+        } else if (p1name) {
+          // try to find existing participant by name (case-insensitive) to avoid duplicates
+          try {
+            const { data: existing, error: existErr } = await supabase.from('participants_month').select('id,name,phone').eq('month', month).ilike('name', p1name).limit(1).single();
+            if (!existErr && existing && existing.id) {
+              primaryParticipantId = existing.id;
+              document.getElementById('participant1-selected-id').value = primaryParticipantId;
+              document.getElementById('participant1-badge').style.display = 'inline';
+              // link and create payment for existing participant
+              await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
+              await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+            } else {
+              const { data: createdPid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
+              if (e1) console.warn('Error creating participant1:', e1);
+              else {
+                primaryParticipantId = createdPid1;
+                await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
+                await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+              }
+            }
+          } catch (e) {
+            console.warn('Error checking existing participant1:', e);
+            const { data: createdPid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
+            if (e1) console.warn('Error creating participant1 fallback:', e1);
+            else {
+              primaryParticipantId = createdPid1;
+              await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
+              await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+            }
           }
         }
-        if (p2name) {
-          const { data: createdPid2, error: e2 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
-          if (e2) console.warn('Error creating participant2:', e2);
-          else {
-            partnerParticipantId = createdPid2;
-            await supabase.from('participants_lessons_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, role: 'partner' });
-            const half = parseFloat((amount / 2).toFixed(2));
-            if (primaryParticipantId) {
-              const { error: updErr } = await supabase
-                .from('lesson_payments_month')
-                .update({ amount: half })
-                .match({ month: month, lesson_id: lessonId, participant_id: primaryParticipantId });
-              if (updErr) console.warn('Error updating primary payment to half:', updErr);
-              await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: half, confirmed: false });
+
+        // Partner: use selected id if present, otherwise create if name provided
+        if (sel2) {
+          partnerParticipantId = sel2;
+          await supabase.from('participants_lessons_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, role: 'partner' });
+          // split amounts
+          const half = parseFloat((amount / 2).toFixed(2));
+          if (primaryParticipantId) {
+            const { error: updErr } = await supabase
+              .from('lesson_payments_month')
+              .update({ amount: half })
+              .match({ month: month, lesson_id: lessonId, participant_id: primaryParticipantId });
+            if (updErr) console.warn('Error updating primary payment to half:', updErr);
+            await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: half, confirmed: false });
+          } else {
+            await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+          }
+        } else if (p2name) {
+          // try to find existing partner by name
+          try {
+            const { data: existing2, error: existErr2 } = await supabase.from('participants_month').select('id,name,phone').eq('month', month).ilike('name', p2name).limit(1).single();
+            if (!existErr2 && existing2 && existing2.id) {
+              partnerParticipantId = existing2.id;
+              document.getElementById('participant2-selected-id').value = partnerParticipantId;
+              document.getElementById('participant2-badge').style.display = 'inline';
+              await supabase.from('participants_lessons_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, role: 'partner' });
+              const half2 = parseFloat((amount / 2).toFixed(2));
+              if (primaryParticipantId) {
+                const { error: updErr } = await supabase
+                  .from('lesson_payments_month')
+                  .update({ amount: half2 })
+                  .match({ month: month, lesson_id: lessonId, participant_id: primaryParticipantId });
+                if (updErr) console.warn('Error updating primary payment to half:', updErr);
+                await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: half2, confirmed: false });
+              } else {
+                await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+              }
             } else {
-              await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+              const { data: createdPid2, error: e2 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
+              if (e2) console.warn('Error creating participant2:', e2);
+              else {
+                partnerParticipantId = createdPid2;
+                await supabase.from('participants_lessons_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, role: 'partner' });
+                const half = parseFloat((amount / 2).toFixed(2));
+                if (primaryParticipantId) {
+                  const { error: updErr } = await supabase
+                    .from('lesson_payments_month')
+                    .update({ amount: half })
+                    .match({ month: month, lesson_id: lessonId, participant_id: primaryParticipantId });
+                  if (updErr) console.warn('Error updating primary payment to half:', updErr);
+                  await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: half, confirmed: false });
+                } else {
+                  await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('Error checking existing participant2:', e);
+            const { data: createdPid2, error: e2 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
+            if (e2) console.warn('Error creating participant2 fallback:', e2);
+            else {
+              partnerParticipantId = createdPid2;
+              await supabase.from('participants_lessons_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, role: 'partner' });
+              const half = parseFloat((amount / 2).toFixed(2));
+              if (primaryParticipantId) {
+                const { error: updErr } = await supabase
+                  .from('lesson_payments_month')
+                  .update({ amount: half })
+                  .match({ month: month, lesson_id: lessonId, participant_id: primaryParticipantId });
+                if (updErr) console.warn('Error updating primary payment to half:', updErr);
+                await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: half, confirmed: false });
+              } else {
+                await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+              }
             }
           }
         }
@@ -2624,24 +2714,28 @@
       document.getElementById('participant1-new-container').style.display = 'block';
       document.getElementById('participant1-existing-container').style.display = 'none';
       document.getElementById('participant1-selected-id').value = '';
+      document.getElementById('participant1-badge').style.display = 'none';
     });
     document.getElementById('participant1-mode-existing').addEventListener('click', () => {
       document.getElementById('participant1-new-container').style.display = 'none';
       document.getElementById('participant1-existing-container').style.display = 'block';
       document.getElementById('participant1-name').value = '';
       document.getElementById('participant1-phone').value = '';
+      document.getElementById('participant1-badge').style.display = 'none';
     });
 
     document.getElementById('participant2-mode-new').addEventListener('click', () => {
       document.getElementById('participant2-new-container').style.display = 'block';
       document.getElementById('participant2-existing-container').style.display = 'none';
       document.getElementById('participant2-selected-id').value = '';
+      document.getElementById('participant2-badge').style.display = 'none';
     });
     document.getElementById('participant2-mode-existing').addEventListener('click', () => {
       document.getElementById('participant2-new-container').style.display = 'none';
       document.getElementById('participant2-existing-container').style.display = 'block';
       document.getElementById('participant2-name').value = '';
       document.getElementById('participant2-phone').value = '';
+      document.getElementById('participant2-badge').style.display = 'none';
     });
   </script>
 </body>
