@@ -756,74 +756,102 @@
     async function getAvailableMonths() {
       const formatter = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' });
       const options = [];
-      
-      // Always include current month
-      const currentMonth = getCurrentMonth();
-      const currentLabel = formatter.format(new Date(currentMonth + '-01'));
-      options.push({ value: currentMonth, label: currentLabel });
-      
+
       try {
-        // Get created months from created_months table (order by creation time newest first)
+        // Get created months from created_months table ordered by creation time (newest first)
         const { data: months, error } = await supabase
           .from('created_months')
-          .select('month')
+          .select('month, created_at')
           .order('created_at', { ascending: false });
-        
+
         if (!error && months) {
           months.forEach(m => {
-            if (m.month !== currentMonth) {
-              const label = formatter.format(new Date(m.month + '-01'));
-              options.push({ value: m.month, label: label });
-            }
+            const label = formatter.format(new Date(m.month + '-01'));
+            options.push({ value: m.month, label: label });
           });
         }
       } catch (err) {
         console.error('Błąd pobierania miesięcy:', err);
       }
-      
-      return options;
+
+      return options; // newest created first
     }
+
+    // Attach return-to-current-month button handlers (create option if missing)
+    (function attachReturnMonthButtons(){
+      const ensureAndSelect = (selectId, value) => {
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        const exists = Array.from(sel.options).some(o => o.value === value);
+        if (!exists) {
+          const formatter = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' });
+          const label = formatter.format(new Date(value + '-01'));
+          const opt = document.createElement('option');
+          opt.value = value;
+          opt.textContent = label;
+          sel.insertBefore(opt, sel.firstChild);
+        }
+        sel.value = value;
+      };
+
+      const btnHome = document.getElementById('return-current-month-home');
+      if (btnHome) btnHome.addEventListener('click', async () => {
+        const current = getCurrentMonth();
+        await populateMonthSelectors();
+        ensureAndSelect('current-month-select', current);
+        loadHomeData();
+      });
+
+      const btnGroups = document.getElementById('return-current-month-groups');
+      if (btnGroups) btnGroups.addEventListener('click', async () => {
+        const current = getCurrentMonth();
+        await populateMonthSelectors();
+        ensureAndSelect('groups-month-select', current);
+        loadGroups();
+      });
+
+      const btnParticipants = document.getElementById('return-current-month-participants');
+      if (btnParticipants) btnParticipants.addEventListener('click', async () => {
+        const current = getCurrentMonth();
+        await populateMonthSelectors();
+        ensureAndSelect('participants-month-select', current);
+        if (currentGroupId) await loadGroupParticipants(currentGroupId);
+      });
+    })();
     
     // Populate month selectors
     async function populateMonthSelectors() {
-      const options = await getAvailableMonths();
+      const months = await getAvailableMonths();
       const currentMonth = getCurrentMonth();
-      
+
       console.log('Populowanie selektorów miesięcy, currentGroupId:', currentGroupId);
-      
-      // Home page selector
-      const homeSelector = document.getElementById('current-month-select');
-      homeSelector.innerHTML = '';
-      options.forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o.value;
-        opt.textContent = o.label;
-        homeSelector.appendChild(opt);
-      });
-      homeSelector.value = currentMonth;
-      
-      // Groups page selector
-      const groupsSelector = document.getElementById('groups-month-select');
-      groupsSelector.innerHTML = '';
-      options.forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o.value;
-        opt.textContent = o.label;
-        groupsSelector.appendChild(opt);
-      });
-      groupsSelector.value = currentMonth;
-      
-      // Participants page selector
-      const participantsSelector = document.getElementById('participants-month-select');
-      participantsSelector.innerHTML = '';
-      options.forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o.value;
-        opt.textContent = o.label;
-        participantsSelector.appendChild(opt);
-      });
-      participantsSelector.value = currentMonth;
-      
+
+      const render = (selectorId) => {
+        const sel = document.getElementById(selectorId);
+        if (!sel) return;
+        sel.innerHTML = '';
+        months.forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o.value;
+          opt.textContent = o.label;
+          sel.appendChild(opt);
+        });
+        // If current month not present among created months, add it at the end
+        if (!Array.from(sel.options).some(x => x.value === currentMonth)) {
+          const formatter = new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' });
+          const opt = document.createElement('option');
+          opt.value = currentMonth;
+          opt.textContent = formatter.format(new Date(currentMonth + '-01'));
+          sel.appendChild(opt);
+        }
+        // Keep default selection on current month (as before)
+        sel.value = currentMonth;
+      };
+
+      render('current-month-select');
+      render('groups-month-select');
+      render('participants-month-select');
+
       console.log('Selektory miesięcy zaktualizowane');
     }
     
