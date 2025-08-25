@@ -1839,7 +1839,7 @@
           participantCard.style.cursor = 'default'; // No pointer for participant cards
           
           participantCard.innerHTML = `
-            <div class="participant-row" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px; ${payment.confirmed ? 'background: rgba(0,255,0,0.1); border: 1px solid #00ff00;' : 'background: rgba(255,0,0,0.1); border: 1px solid #ff0000;'}">
+            <div class="participant-row" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
               <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
               <div class="participant-info" style="flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;">
                 <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
@@ -2019,22 +2019,17 @@
             }
           });
 
-          // Add payment confirmation event listener (in-place, guarded)
+          // Add payment confirmation event listener (call reload of participants to ensure handlers)
           const confirmPaymentBtn = participantCard.querySelector('.confirm-payment-btn');
           if (confirmPaymentBtn) {
-            const confHandler = async (e) => {
+            confirmPaymentBtn.addEventListener('click', async (e) => {
               e.stopPropagation();
-              const btn = e.currentTarget;
-              if (!btn) return;
-              const participantId = btn.dataset.participantId;
-              const groupId = btn.dataset.groupId;
-              const paymentMethodSelect = participantCard.querySelector('.payment-method-select');
-              const paymentMethod = paymentMethodSelect ? paymentMethodSelect.value : '';
-              const commentInput = participantCard.querySelector('.payment-comment');
-              const comment = commentInput ? commentInput.value : null;
+              const participantId = e.currentTarget.dataset.participantId;
+              const groupId = e.currentTarget.dataset.groupId;
+              const paymentMethod = participantCard.querySelector('.payment-method-select')?.value || '';
+              const comment = participantCard.querySelector('.payment-comment')?.value || null;
               if (!paymentMethod) { alert('Wybierz sposób płatności'); return; }
               try {
-                btn.disabled = true;
                 const { error } = await supabase.rpc('update_payment_confirmation', {
                   p_month: selectedMonth,
                   p_participant_id: participantId,
@@ -2042,82 +2037,35 @@
                   p_payment_method: paymentMethod,
                   p_comment: comment || null
                 });
-        if (error) throw error;
-                // update UI in-place
-                try { setParticipantConfirmedState(participantCard, true); } catch(_){}
-                // convert button to delete button
-                btn.disabled = false;
-                btn.classList.remove('confirm-payment-btn'); btn.classList.remove('btn-primary');
-                btn.classList.add('delete-payment-btn'); btn.classList.add('btn-outline');
-                btn.innerHTML = '<i class="fas fa-times"></i>';
-                // detach this handler and attach delete handler
-                btn.removeEventListener('click', confHandler);
-                const delHandler = async (ev) => {
-                  ev.stopPropagation();
-                  try {
-                    btn.disabled = true;
-                    const { error } = await supabase.rpc('remove_payment_confirmation', {
-                      p_month: selectedMonth,
-                      p_participant_id: participantId,
-                      p_group_id: groupId
-                    });
-                    if (error) throw error;
-                    // revert UI
-                    try { setParticipantConfirmedState(participantCard, false); } catch(_){}
-                    btn.disabled = false;
-                    btn.classList.remove('delete-payment-btn'); btn.classList.remove('btn-outline');
-                    btn.classList.add('confirm-payment-btn'); btn.classList.add('btn-primary');
-                    btn.innerHTML = '<i class="fas fa-check"></i>';
-                    // reattach confirm handler
-                    btn.removeEventListener('click', delHandler);
-                    btn.addEventListener('click', confHandler);
-                    // refresh summary
-                    await refreshGroupSummaryInPlace(groupId);
-                  } catch (err) { btn.disabled = false; alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany')); }
-                };
-                btn.addEventListener('click', delHandler);
-                // refresh summary
+                if (error) throw error;
+                // reload participants for consistent handlers and UI
+                await loadGroupParticipants(groupId);
                 await refreshGroupSummaryInPlace(groupId);
               } catch (err) {
-                btn.disabled = false;
                 console.error('Error confirming payment:', err);
                 alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany'));
               }
-            };
-            confirmPaymentBtn.addEventListener('click', confHandler);
+            });
           }
 
           // Add payment deletion event listener (in-place, guarded)
           const deletePaymentBtn = participantCard.querySelector('.delete-payment-btn');
           if (deletePaymentBtn) {
-            const delInitHandler = async (e) => {
+            deletePaymentBtn.addEventListener('click', async (e) => {
               e.stopPropagation();
-              const btn = e.currentTarget;
-              if (!btn) return;
-              const participantId = btn.dataset.participantId;
-              const groupId = btn.dataset.groupId;
+              const participantId = e.currentTarget.dataset.participantId;
+              const groupId = e.currentTarget.dataset.groupId;
               try {
-                btn.disabled = true;
                 const { error } = await supabase.rpc('remove_payment_confirmation', {
                   p_month: selectedMonth,
                   p_participant_id: participantId,
                   p_group_id: groupId
                 });
-        if (error) throw error;
-                // revert UI
-                try { setParticipantConfirmedState(participantCard, false); } catch(_){}
-                btn.disabled = false;
-                btn.classList.remove('delete-payment-btn'); btn.classList.remove('btn-outline');
-                btn.classList.add('confirm-payment-btn'); btn.classList.add('btn-primary');
-                btn.innerHTML = '<i class="fas fa-check"></i>';
-                // attach confirm handler
-                // re-use above: find newly added confirm button and attach handler
-                btn.removeEventListener('click', delInitHandler);
-                // refresh summary
+                if (error) throw error;
+                await loadGroupParticipants(groupId);
                 await refreshGroupSummaryInPlace(groupId);
-              } catch (err) { btn.disabled = false; alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany')); }
-            };
-            deletePaymentBtn.addEventListener('click', delInitHandler);
+              } catch (err) { console.error('Error removing payment confirmation:', err); alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany')); }
+            });
           }
 
           groupParticipantsList.appendChild(participantCard);
@@ -2294,32 +2242,25 @@
       ctx.fillText(`${(paid+unpaid).toFixed(2)} zł`, cx, cy + 12);
     }
 
-    // Helper: set participant card confirmed/unconfirmed state consistently
+    // Helper: set participant card confirmed/unconfirmed state consistently (only inner row)
     function setParticipantConfirmedState(participantCard, confirmed) {
       try {
         const innerRow = participantCard.querySelector('.participant-row');
+        if (!innerRow) return;
         if (confirmed) {
-          participantCard.style.transition = 'background 0.18s ease, border 0.18s ease, opacity 0.12s';
-          participantCard.style.background = 'rgba(0,255,0,0.1)';
-          participantCard.style.border = '1px solid rgba(0,255,0,0.2)';
-          if (innerRow) {
-            innerRow.style.background = 'rgba(0,255,0,0.06)';
-            innerRow.style.border = '1px solid rgba(0,255,0,0.2)';
-          }
-          const sel = participantCard.querySelector('.payment-method-select'); if (sel) sel.disabled = true;
-          const amtInput = participantCard.querySelector('.amount-input'); if (amtInput) amtInput.disabled = true;
-          const commentInput = participantCard.querySelector('.payment-comment'); if (commentInput) commentInput.disabled = true;
+          innerRow.style.transition = 'background 0.18s ease, border 0.18s ease, opacity 0.12s';
+          innerRow.style.background = 'rgba(0,255,0,0.06)';
+          innerRow.style.border = '1px solid rgba(0,255,0,0.2)';
+          const sel = innerRow.querySelector('.payment-method-select'); if (sel) sel.disabled = true;
+          const amtInput = innerRow.querySelector('.amount-input'); if (amtInput) amtInput.disabled = true;
+          const commentInput = innerRow.querySelector('.payment-comment'); if (commentInput) commentInput.disabled = true;
         } else {
-          participantCard.style.transition = 'background 0.18s ease, border 0.18s ease, opacity 0.12s';
-          participantCard.style.background = 'rgba(255,0,0,0.1)';
-          participantCard.style.border = '1px solid rgba(255,0,0,0.2)';
-          if (innerRow) {
-            innerRow.style.background = 'rgba(255,0,0,0.1)';
-            innerRow.style.border = '1px solid rgba(255,0,0,0.2)';
-          }
-          const sel = participantCard.querySelector('.payment-method-select'); if (sel) sel.disabled = false;
-          const amtInput = participantCard.querySelector('.amount-input'); if (amtInput) amtInput.disabled = false;
-          const commentInput = participantCard.querySelector('.payment-comment'); if (commentInput) commentInput.disabled = false;
+          innerRow.style.transition = 'background 0.18s ease, border 0.18s ease, opacity 0.12s';
+          innerRow.style.background = 'rgba(255,0,0,0.06)';
+          innerRow.style.border = '1px solid rgba(255,0,0,0.2)';
+          const sel = innerRow.querySelector('.payment-method-select'); if (sel) sel.disabled = false;
+          const amtInput = innerRow.querySelector('.amount-input'); if (amtInput) amtInput.disabled = false;
+          const commentInput = innerRow.querySelector('.payment-comment'); if (commentInput) commentInput.disabled = false;
         }
       } catch (e) { console.warn('setParticipantConfirmedState error', e); }
     }
