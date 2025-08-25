@@ -773,7 +773,13 @@
       <hr>
       <h4>Uczestnik główny</h4>
       <div class="form-group">
-        <label for="participant1-name">Imię i nazwisko</label>
+        <label for="participant1-search">Wyszukaj istniejącego uczestnika (opcjonalnie)</label>
+        <input type="text" id="participant1-search" class="form-control" placeholder="Wpisz imię, aby wyszukać...">
+        <div id="participant1-search-results" style="background:var(--secondary-bg);border:1px solid var(--border-dark);max-height:160px;overflow:auto;margin-top:6px;border-radius:4px;"></div>
+        <input type="hidden" id="participant1-selected-id">
+      </div>
+      <div class="form-group">
+        <label for="participant1-name">Imię i nazwisko (nowy)</label>
         <input type="text" id="participant1-name" class="form-control">
       </div>
       <div class="form-group">
@@ -784,7 +790,13 @@
       <hr>
       <h4>Partner (opcjonalnie)</h4>
       <div class="form-group">
-        <label for="participant2-name">Imię i nazwisko (partner)</label>
+        <label for="participant2-search">Wyszukaj istniejącego uczestnika (opcjonalnie)</label>
+        <input type="text" id="participant2-search" class="form-control" placeholder="Wpisz imię, aby wyszukać...">
+        <div id="participant2-search-results" style="background:var(--secondary-bg);border:1px solid var(--border-dark);max-height:160px;overflow:auto;margin-top:6px;border-radius:4px;"></div>
+        <input type="hidden" id="participant2-selected-id">
+      </div>
+      <div class="form-group">
+        <label for="participant2-name">Imię i nazwisko (partner - nowy)</label>
         <input type="text" id="participant2-name" class="form-control">
       </div>
       <div class="form-group">
@@ -2132,6 +2144,57 @@
       ensureAndSelect('lessons-month-select', current);
       loadLessons();
     });
+
+    // helper: debounce
+    function debounce(fn, delay){ let t; return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn(...args), delay); }; }
+
+    async function searchParticipants(month, q) {
+      if (!q || q.length < 2) return [];
+      const { data, error } = await supabase.from('participants_month').select('id,name,phone').eq('month', month).ilike('name', `%${q}%`).limit(12);
+      if (error) { console.warn('Search error', error); return []; }
+      return data || [];
+    }
+
+    // attach search handlers
+    const p1search = document.getElementById('participant1-search');
+    const p1results = document.getElementById('participant1-search-results');
+    p1search.addEventListener('input', debounce(async (e)=>{
+      const q = e.target.value.trim();
+      p1results.innerHTML = '';
+      const month = document.getElementById('lessons-month-select').value;
+      const rows = await searchParticipants(month, q);
+      rows.forEach(r=>{
+        const div = document.createElement('div'); div.style.padding='6px'; div.style.cursor='pointer'; div.textContent = `${r.name} ${r.phone ? '• '+r.phone : ''}`;
+        div.addEventListener('click', ()=>{
+          document.getElementById('participant1-selected-id').value = r.id;
+          document.getElementById('participant1-name').value = r.name;
+          document.getElementById('participant1-phone').value = r.phone || '';
+          p1results.innerHTML = '';
+          p1search.value = '';
+        });
+        p1results.appendChild(div);
+      });
+    }, 300));
+
+    const p2search = document.getElementById('participant2-search');
+    const p2results = document.getElementById('participant2-search-results');
+    p2search.addEventListener('input', debounce(async (e)=>{
+      const q = e.target.value.trim();
+      p2results.innerHTML = '';
+      const month = document.getElementById('lessons-month-select').value;
+      const rows = await searchParticipants(month, q);
+      rows.forEach(r=>{
+        const div = document.createElement('div'); div.style.padding='6px'; div.style.cursor='pointer'; div.textContent = `${r.name} ${r.phone ? '• '+r.phone : ''}`;
+        div.addEventListener('click', ()=>{
+          document.getElementById('participant2-selected-id').value = r.id;
+          document.getElementById('participant2-name').value = r.name;
+          document.getElementById('participant2-phone').value = r.phone || '';
+          p2results.innerHTML = '';
+          p2search.value = '';
+        });
+        p2results.appendChild(div);
+      });
+    }, 300));
 
     // save lesson
     saveCreateLessonBtn.addEventListener('click', async () => {
