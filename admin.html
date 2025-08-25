@@ -2125,33 +2125,44 @@
         const { data: lessonId, error: lessonErr } = await supabase.rpc('insert_lesson_month', { p_month: month, p_title: title, p_day: day, p_start_time: start, p_trainer: trainer, p_amount: amount });
         if (lessonErr) throw lessonErr;
 
-        // create participants for p1 and p2 in participants_month
+        // keep participant IDs in outer scope so both blocks can see them
+        let primaryParticipantId = null;
+        let partnerParticipantId = null;
+
+        // create main participant
         if (p1name) {
-          const { data: pid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone, p_email: null, p_rodo: false });
+          const { data: createdPid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
           if (e1) console.warn('Error creating participant1:', e1);
           else {
-            // link to lesson
-            await supabase.from('participants_lessons_month').insert({ month: month, participant_id: pid1, lesson_id: lessonId, role: 'primary' });
-            // payment for lesson: if partner will be added, split amount later; for now insert full amount, will adjust after partner
-            await supabase.from('lesson_payments_month').insert({ month: month, participant_id: pid1, lesson_id: lessonId, amount: amount, confirmed: false });
+            primaryParticipantId = createdPid1;
+            await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
+            // default: insert full payment, will split if partner is added
+            await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
           }
         }
 
+        // create partner participant (if any)
         if (p2name) {
-          const { data: pid2, error: e2 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone, p_email: null, p_rodo: false });
+          const { data: createdPid2, error: e2 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
           if (e2) console.warn('Error creating participant2:', e2);
           else {
-            await supabase.from('participants_lessons_month').insert({ month: month, participant_id: pid2, lesson_id: lessonId, role: 'partner' });
-            // split amount equally between primary and partner
+            partnerParticipantId = createdPid2;
+            await supabase.from('participants_lessons_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, role: 'partner' });
+
+            // split amount equally if primary exists; otherwise give partner full amount
             const half = parseFloat((amount / 2).toFixed(2));
-            // update primary payment to half
-            const { error: updErr } = await supabase
-              .from('lesson_payments_month')
-              .update({ amount: half })
-              .match({ month: month, lesson_id: lessonId, participant_id: pid1 });
-            if (updErr) console.warn('Error updating primary payment to half:', updErr);
-            // create partner payment with half amount
-            await supabase.from('lesson_payments_month').insert({ month: month, participant_id: pid2, lesson_id: lessonId, amount: half, confirmed: false });
+            if (primaryParticipantId) {
+              const { error: updErr } = await supabase
+                .from('lesson_payments_month')
+                .update({ amount: half })
+                .match({ month: month, lesson_id: lessonId, participant_id: primaryParticipantId });
+              if (updErr) console.warn('Error updating primary payment to half:', updErr);
+              // partner gets half
+              await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: half, confirmed: false });
+            } else {
+              // no primary participant created — give partner full amount
+              await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+            }
           }
         }
 
