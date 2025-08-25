@@ -1901,6 +1901,76 @@
         }
       });
     });
+
+    // Helper to save RODO and log
+    async function saveRodo(participantId, checked, el) {
+      try {
+        console.log('Saving RODO for', participantId, checked);
+        if (el) el.disabled = true;
+        const selectedMonth = document.getElementById('participants-month-select').value;
+        const { error } = await supabase
+          .from('participants_month')
+          .update({ rodo: checked })
+          .match({ month: selectedMonth, id: participantId });
+        if (error) {
+          console.error('Error saving RODO:', error);
+          if (el) el.checked = !checked;
+          alert('Błąd zapisu RODO: ' + (error.message || 'Nieznany'));
+        } else {
+          console.log('RODO saved successfully for', participantId);
+          if (el) {
+            el.classList.add('rodo-saved');
+            setTimeout(() => el.classList.remove('rodo-saved'), 700);
+          }
+        }
+      } catch (err) {
+        console.error('Exception saving RODO:', err);
+        if (el) el.checked = !checked;
+      } finally {
+        if (el) el.disabled = false;
+      }
+    }
+
+    // Delegated handler for RODO checkboxes to ensure they always trigger
+    (function attachDelegatedRodoHandler(){
+      const list = document.getElementById('participants-list');
+      if (!list) return;
+      list.addEventListener('change', async (e) => {
+        if (!e.target || !e.target.classList) return;
+        if (!e.target.classList.contains('rodo-checkbox')) return;
+        const pid = e.target.dataset.participantId;
+        const checked = e.target.checked;
+        console.log('RODO checkbox clicked (delegated):', pid, checked);
+        e.target.disabled = true;
+        await saveRodo(pid, checked, e.target);
+      });
+    })();
+
+    // Fallback: document-level click listener to catch cases where change doesn't fire
+    document.addEventListener('click', async (e) => {
+      const target = e.target;
+      if (!target) return;
+      // if clicked on input.rodo-checkbox or its label
+      const cb = target.closest && (target.closest('.rodo-checkbox') || (target.classList && target.classList.contains('rodo-checkbox') ? target : null));
+      if (cb && cb.dataset && cb.dataset.participantId) {
+        // small timeout to allow checkbox state to update
+        setTimeout(() => saveRodo(cb.dataset.participantId, cb.checked, cb), 10);
+      }
+    });
+
+    // Debug: log number of rodo checkboxes after render (for troubleshooting)
+    function logRodoCount() {
+      const n = document.querySelectorAll('#participants-list .rodo-checkbox').length;
+      console.log('RODO checkboxes on page:', n);
+    }
+
+    // Call logRodoCount after initial render and also after group participants load
+    setTimeout(logRodoCount, 1000);
+    const _origLoadGroupParticipants = loadGroupParticipants;
+    loadGroupParticipants = async function(groupId) {
+      await _origLoadGroupParticipants(groupId);
+      setTimeout(logRodoCount, 200);
+    };
   </script>
 </body>
 </html>
