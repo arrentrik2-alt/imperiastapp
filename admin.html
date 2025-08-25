@@ -2187,7 +2187,7 @@
 
     // extend setActiveNav to handle lessons
     const _origSetActive = setActiveNav;
-    function setActiveNav(section) {
+    setActiveNav = function(section) {
       _origSetActive(section);
       if (section === 'lessons') {
         document.getElementById('lessons-section').style.display = 'block';
@@ -2199,7 +2199,7 @@
       } else {
         document.getElementById('lessons-section').style.display = 'none';
       }
-    }
+    };
   </script>
 </body>
 </html>
