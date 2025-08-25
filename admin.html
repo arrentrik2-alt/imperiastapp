@@ -346,9 +346,11 @@
     
     .participant-row {
       display: flex;
-      flex-wrap: wrap; /* allow wrapping on small screens to prevent horizontal scroll */
+      flex-wrap: nowrap; /* force single line */
       align-items: center;
       gap: 6px; /* tighter gap */
+      white-space: nowrap;
+      overflow: hidden;
     }
     
     /* Allow inner divs to shrink to avoid forcing horizontal scroll */
@@ -1403,6 +1405,17 @@
 
         if (participantError) throw participantError;
 
+        // Ensure RODO persisted even if RPC signature mismatch: update directly
+        try {
+          const { error: rodoErr } = await supabase
+            .from('participants_month')
+            .update({ rodo: rodoValue })
+            .eq('id', participantId);
+          if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
+        } catch (e) {
+          console.warn('RODO update exception:', e);
+        }
+
         // 2. Add participant to group
         const { error: groupError } = await supabase.rpc('add_participant_to_group_month', {
           p_month: selectedMonth,
@@ -1531,7 +1544,7 @@
           participantCard.innerHTML = `
             <div class="participant-row" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px; ${payment.confirmed ? 'background: rgba(0,255,0,0.1); border: 1px solid #00ff00;' : 'background: rgba(255,0,0,0.1); border: 1px solid #ff0000;'}">
               <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
-              <div class="participant-info" style="flex: 1; min-width: 200px;">
+              <div class="participant-info" style="flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;">
                 <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
                 <div style="color: var(--text-gray); font-size: 0.9rem;">${participantData.phone || 'Brak'}</div>
           </div>
@@ -1554,7 +1567,7 @@
                 </select>
               </div>
               
-              <div class="comment-section" style="flex: 1; min-width: 200px;">
+              <div class="comment-section" style="flex: 1 1 200px; overflow: hidden; text-overflow: ellipsis;">
                 <input type="text" class="payment-comment form-control" placeholder="Komentarz" 
                        value="${payment.comment || ''}" data-participant-id="${participant.participant_id}" 
                        style="width: 100%;">
