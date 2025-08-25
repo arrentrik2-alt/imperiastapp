@@ -2182,7 +2182,9 @@
           document.getElementById('participant1-name').value = r.name;
           document.getElementById('participant1-phone').value = r.phone || '';
           p1results.innerHTML = '';
-          p1search.value = '';
+          p1search.value = r.name;
+          p1search.disabled = true;
+          p1search.dataset.selected = 'true';
           document.getElementById('participant1-badge').style.display = 'inline';
         });
         p1results.appendChild(div);
@@ -2203,7 +2205,9 @@
           document.getElementById('participant2-name').value = r.name;
           document.getElementById('participant2-phone').value = r.phone || '';
           p2results.innerHTML = '';
-          p2search.value = '';
+          p2search.value = r.name;
+          p2search.disabled = true;
+          p2search.dataset.selected = 'true';
           document.getElementById('participant2-badge').style.display = 'inline';
         });
         p2results.appendChild(div);
@@ -2303,8 +2307,15 @@
         // Primary: use selected id if present, otherwise create if name provided
         if (sel1) {
           primaryParticipantId = sel1;
-          await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
-          await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+          // avoid duplicate association
+          const { data: assocCheck } = await supabase.from('participants_lessons_month').select('id').match({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId });
+          if (!assocCheck || assocCheck.length === 0) {
+            await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
+          }
+          const { data: paymentCheck } = await supabase.from('lesson_payments_month').select('id').match({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId });
+          if (!paymentCheck || paymentCheck.length === 0) {
+            await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
+          }
         } else if (p1name) {
           // try to find existing participant by exact name+phone (if phone provided) or by name case-insensitive
           try {
@@ -2350,7 +2361,14 @@
         // Partner: use selected id if present, otherwise create if name provided
         if (sel2) {
           partnerParticipantId = sel2;
-          await supabase.from('participants_lessons_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, role: 'partner' });
+          if (partnerParticipantId === primaryParticipantId) {
+            console.warn('Partner is same as primary; skipping partner association');
+          } else {
+            const { data: assocCheckP } = await supabase.from('participants_lessons_month').select('id').match({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId });
+            if (!assocCheckP || assocCheckP.length === 0) {
+              await supabase.from('participants_lessons_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, role: 'partner' });
+            }
+          }
           // split amounts
           const half = parseFloat((amount / 2).toFixed(2));
           if (primaryParticipantId) {
@@ -2756,6 +2774,23 @@
       document.getElementById('participant2-name').value = '';
       document.getElementById('participant2-phone').value = '';
       document.getElementById('participant2-badge').style.display = 'none';
+    });
+
+    // clicking badge clears selection
+    document.getElementById('participant1-badge').addEventListener('click', () => {
+      document.getElementById('participant1-selected-id').value = '';
+      document.getElementById('participant1-badge').style.display = 'none';
+      p1search.value = '';
+      p1search.disabled = false;
+      delete p1search.dataset.selected;
+    });
+
+    document.getElementById('participant2-badge').addEventListener('click', () => {
+      document.getElementById('participant2-selected-id').value = '';
+      document.getElementById('participant2-badge').style.display = 'none';
+      p2search.value = '';
+      p2search.disabled = false;
+      delete p2search.dataset.selected;
     });
   </script>
 </body>
