@@ -2006,6 +2006,8 @@
     checkAdmin().then(async () => {
       await populateMonthSelectors();
       await loadHomeData();
+      // initialize lesson type buttons and set default so create modal uses correct type
+      try { ensureLessonTypeButtons(); setLessonType(currentLessonType); } catch (e) { console.warn('Lesson type init skipped:', e); }
     });
 
     // Draw donut chart helper (paid/unpaid)
@@ -2836,7 +2838,9 @@
         document.getElementById('home-section').style.display = 'none';
         populateMonthSelectors();
         document.getElementById('lessons-month-select').value = getCurrentMonth();
-        loadLessons();
+        // initialize lesson type buttons and apply current selection
+        ensureLessonTypeButtons();
+        setLessonType(currentLessonType);
       } else {
         document.getElementById('lessons-section').style.display = 'none';
       }
