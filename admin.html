@@ -705,6 +705,100 @@
     </div>
   </div>
 
+  <!-- Lessons Section -->
+  <div class="content-box" id="lessons-section" style="display:none;">
+    <div class="content-header">
+      <h3>Lista lekcji</h3>
+      <button class="btn btn-primary" id="add-lesson-btn">
+        <i class="fas fa-plus"></i> Utwórz lekcję
+      </button>
+    </div>
+
+    <div class="month-selector">
+      <label for="lessons-month-select">Miesiąc:</label>
+      <select id="lessons-month-select" class="form-control">
+        <!-- Will be populated -->
+      </select>
+      <button class="btn btn-outline" id="return-current-month-lessons" title="Wróć do bieżącego miesiąca">
+        <i class="fas fa-calendar-day"></i>
+      </button>
+    </div>
+
+    <div id="lessons-list">
+      <!-- Lessons will be loaded here -->
+    </div>
+  </div>
+
+  <!-- Create Lesson Modal -->
+  <div class="modal" id="create-lesson-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-create-lesson-modal"><i class="fas fa-times"></i></button>
+      <div class="modal-header">
+        <h3>Utwórz lekcję</h3>
+      </div>
+
+      <div class="form-group">
+        <label for="lesson-title">Tytuł lekcji</label>
+        <input type="text" id="lesson-title" class="form-control" placeholder="Tytuł">
+      </div>
+
+      <div class="form-group">
+        <label for="lesson-day">Dzień</label>
+        <select id="lesson-day" class="form-control">
+          <option>Poniedziałek</option>
+          <option>Wtorek</option>
+          <option>Środa</option>
+          <option>Czwartek</option>
+          <option>Piątek</option>
+          <option>Sobota</option>
+          <option>Niedziela</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="lesson-start">Godzina</label>
+        <input type="time" id="lesson-start" class="form-control">
+      </div>
+
+      <div class="form-group">
+        <label for="lesson-trainer">Trener</label>
+        <input type="text" id="lesson-trainer" class="form-control" placeholder="Imię i nazwisko">
+      </div>
+
+      <div class="form-group">
+        <label for="lesson-amount">Kwota za lekcję (zł)</label>
+        <input type="number" id="lesson-amount" class="form-control" step="0.01" min="0">
+      </div>
+
+      <hr>
+      <h4>Uczestnik główny</h4>
+      <div class="form-group">
+        <label for="participant1-name">Imię i nazwisko</label>
+        <input type="text" id="participant1-name" class="form-control">
+      </div>
+      <div class="form-group">
+        <label for="participant1-phone">Telefon</label>
+        <input type="tel" id="participant1-phone" class="form-control">
+      </div>
+
+      <hr>
+      <h4>Partner (opcjonalnie)</h4>
+      <div class="form-group">
+        <label for="participant2-name">Imię i nazwisko (partner)</label>
+        <input type="text" id="participant2-name" class="form-control">
+      </div>
+      <div class="form-group">
+        <label for="participant2-phone">Telefon (partner)</label>
+        <input type="tel" id="participant2-phone" class="form-control">
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-outline" id="cancel-create-lesson-btn">Anuluj</button>
+        <button class="btn btn-primary" id="save-create-lesson-btn"><i class="fas fa-save"></i> Utwórz lekcję</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { supabase } from './supabaseClient.js';
     
@@ -773,6 +867,15 @@
         groupParticipantsSection.style.display = 'block';
         // Don't reset month selector for participants - keep the current selection
         // No specific data loading needed here, as it's a new section
+      } else if (section === 'lessons') {
+        groupsLink.classList.remove('active');
+        homeLink.classList.remove('active');
+        homeSection.style.display = 'none';
+        groupsSection.style.display = 'none';
+        groupParticipantsSection.style.display = 'none';
+        document.getElementById('lessons-section').style.display = 'block';
+        document.getElementById('lessons-month-select').value = getCurrentMonth();
+        loadLessons();
       }
       
       console.log('setActiveNav zakończone, currentGroupId po:', currentGroupId);
@@ -888,6 +991,14 @@
           await loadGroupParticipants(currentGroupId);
         }
       });
+
+      const btnLessons = document.getElementById('return-current-month-lessons');
+      if (btnLessons) btnLessons.addEventListener('click', async () => {
+        const current = getCurrentMonth();
+        await populateMonthSelectors();
+        ensureAndSelect('lessons-month-select', current);
+        loadLessons();
+      });
     })();
     
     // Populate month selectors
@@ -922,6 +1033,7 @@
       render('current-month-select');
       render('groups-month-select');
       render('participants-month-select');
+      render('lessons-month-select');
 
       console.log('Selektory miesięcy zaktualizowane');
     }
@@ -1023,7 +1135,7 @@
         // draw donut chart for home (green = paid, red = unpaid)
         drawDonut('home-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
         
-      } catch (err) {
+        } catch (err) {
         console.error('Błąd ładowania danych:', err);
       }
     }
@@ -1512,14 +1624,14 @@
               <div style="display:flex;justify-content:space-between;align-items:center;">
                 <div style="font-size:0.95rem;color:var(--text-gray)">Zapłacono</div>
                 <div style="font-weight:700;color:var(--success)">${paidSum.toFixed(2)} zł</div>
-              </div>
+        </div>
               <div style="margin-top:6px;">${methodsHtmlG}</div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
                 <div style="font-size:0.95rem;color:var(--text-gray)">Niezapłacono</div>
                 <div style="font-weight:700;color:${unpaidColor}">${unpaidSum.toFixed(2)} zł</div>
-              </div>
+        </div>
               <div style="color:var(--text-gray);margin-top:6px">Razem: ${totalSum.toFixed(2)} zł</div>
-            </div>
+        </div>
           `;
           // draw donut for group: paid vs unpaid
           drawDonut('group-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
@@ -1697,15 +1809,15 @@
             const newComment = e.target.value;
             const participantId = e.target.dataset.participantId;
             
-            try {
-              const { error } = await supabase
+        try {
+          const { error } = await supabase
                 .from('payments_month')
                 .update({ comment: newComment || null })
                 .eq('month', selectedMonth)
                 .eq('participant_id', participantId)
                 .eq('group_id', groupId);
               
-              if (error) throw error;
+          if (error) throw error;
       } catch (err) {
               alert('Błąd aktualizacji komentarza: ' + (err.message || 'Nieznany'));
             }
@@ -1729,7 +1841,7 @@
                   p_payment_method: paymentMethod,
                   p_comment: comment || null
                 });
-                if (error) throw error;
+        if (error) throw error;
                 await loadGroupParticipants(groupId);
               } catch (err) { alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
             });
@@ -1748,7 +1860,7 @@
                   p_participant_id: participantId,
                   p_group_id: groupId
                 });
-                if (error) throw error;
+        if (error) throw error;
                 await loadGroupParticipants(groupId);
               } catch (err) { alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany')); }
             });
@@ -1767,10 +1879,10 @@
       try {
         const { data, error } = await supabase
           .from('groups_month')
-          .select('id')
+                .select('id')
           .eq('month', month)
           .eq('name', groupName)
-              .single();
+                .single();
         
         if (error) {
           console.error('Błąd pobierania ID grupy:', error);
@@ -1971,6 +2083,123 @@
       await _origLoadGroupParticipants(groupId);
       setTimeout(logRodoCount, 200);
     };
+
+    // Lessons UI handlers
+    const lessonsSection = document.getElementById('lessons-section');
+    const addLessonBtn = document.getElementById('add-lesson-btn');
+    const createLessonModal = document.getElementById('create-lesson-modal');
+    const closeCreateLessonModal = document.getElementById('close-create-lesson-modal');
+    const cancelCreateLessonBtn = document.getElementById('cancel-create-lesson-btn');
+    const saveCreateLessonBtn = document.getElementById('save-create-lesson-btn');
+    const lessonsList = document.getElementById('lessons-list');
+
+    // Show/hide modal
+    addLessonBtn.addEventListener('click', () => createLessonModal.classList.add('active'));
+    closeCreateLessonModal.addEventListener('click', () => createLessonModal.classList.remove('active'));
+    cancelCreateLessonBtn.addEventListener('click', () => createLessonModal.classList.remove('active'));
+
+    document.getElementById('return-current-month-lessons').addEventListener('click', async () => {
+      const current = getCurrentMonth();
+      await populateMonthSelectors();
+      ensureAndSelect('lessons-month-select', current);
+      loadLessons();
+    });
+
+    // save lesson
+    saveCreateLessonBtn.addEventListener('click', async () => {
+      const month = document.getElementById('lessons-month-select').value;
+      const title = document.getElementById('lesson-title').value.trim();
+      const day = document.getElementById('lesson-day').value;
+      const start = document.getElementById('lesson-start').value;
+      const trainer = document.getElementById('lesson-trainer').value.trim();
+      const amount = parseFloat(document.getElementById('lesson-amount').value) || 0;
+
+      const p1name = document.getElementById('participant1-name').value.trim();
+      const p1phone = document.getElementById('participant1-phone').value.trim();
+      const p2name = document.getElementById('participant2-name').value.trim();
+      const p2phone = document.getElementById('participant2-phone').value.trim();
+
+      if (!title || !day || !start) { alert('Uzupełnij tytuł, dzień i godzinę'); return; }
+
+      try {
+        const { data: lessonId, error: lessonErr } = await supabase.rpc('insert_lesson_month', { p_month: month, p_title: title, p_day: day, p_start_time: start, p_trainer: trainer, p_amount: amount });
+        if (lessonErr) throw lessonErr;
+
+        // create participants for p1 and p2 in participants_month
+        if (p1name) {
+          const { data: pid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone, p_email: null, p_rodo: false });
+          if (e1) console.warn('Error creating participant1:', e1);
+          else {
+            // link to lesson
+            await supabase.from('participants_lessons_month').insert({ month: month, participant_id: pid1, lesson_id: lessonId, role: 'primary' });
+            // payment for lesson: if partner will be added, split amount later; for now insert full amount, will adjust after partner
+            await supabase.from('lesson_payments_month').insert({ month: month, participant_id: pid1, lesson_id: lessonId, amount: amount, confirmed: false });
+          }
+        }
+
+        if (p2name) {
+          const { data: pid2, error: e2 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone, p_email: null, p_rodo: false });
+          if (e2) console.warn('Error creating participant2:', e2);
+          else {
+            await supabase.from('participants_lessons_month').insert({ month: month, participant_id: pid2, lesson_id: lessonId, role: 'partner' });
+            // split amount equally between primary and partner
+            const half = parseFloat((amount / 2).toFixed(2));
+            // update primary payment to half
+            const { error: updErr } = await supabase
+              .from('lesson_payments_month')
+              .update({ amount: half })
+              .match({ month: month, lesson_id: lessonId, participant_id: pid1 });
+            if (updErr) console.warn('Error updating primary payment to half:', updErr);
+            // create partner payment with half amount
+            await supabase.from('lesson_payments_month').insert({ month: month, participant_id: pid2, lesson_id: lessonId, amount: half, confirmed: false });
+          }
+        }
+
+        createLessonModal.classList.remove('active');
+        await loadLessons();
+      } catch (err) {
+        alert('Błąd tworzenia lekcji: ' + (err.message || 'Nieznany'));
+      }
+    });
+
+    async function loadLessons() {
+      lessonsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie lekcji...</p></div>';
+      const month = document.getElementById('lessons-month-select').value;
+      try {
+        const { data, error } = await supabase.rpc('list_lessons_month', { p_month: month });
+        if (error) throw error;
+        if (!data || data.length === 0) { lessonsList.innerHTML = '<div class="empty-state"><p>Brak lekcji w tym miesiącu</p></div>'; return; }
+        lessonsList.innerHTML = '';
+        data.forEach(lesson => {
+          const el = document.createElement('div');
+          el.className = 'group-card';
+          el.innerHTML = `<h4>${lesson.title} <small style="color:var(--text-gray)">${lesson.day} ${lesson.start_time}</small></h4><div>${lesson.trainer}</div>`;
+          lessonsList.appendChild(el);
+        });
+      } catch (err) { lessonsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania lekcji</p></div>'; }
+    }
+
+    // add nav link handler
+    const navLessons = document.createElement('li');
+    navLessons.innerHTML = `<a href="#" id="nav-lessons"><i class="fas fa-chalkboard-teacher"></i><span class="link-text">Lekcje</span></a>`;
+    document.querySelector('.nav-links').appendChild(navLessons);
+    document.getElementById('nav-lessons').addEventListener('click', (e) => { e.preventDefault(); setActiveNav('lessons'); });
+
+    // extend setActiveNav to handle lessons
+    const _origSetActive = setActiveNav;
+    function setActiveNav(section) {
+      _origSetActive(section);
+      if (section === 'lessons') {
+        document.getElementById('lessons-section').style.display = 'block';
+        document.getElementById('groups-section').style.display = 'none';
+        document.getElementById('home-section').style.display = 'none';
+        populateMonthSelectors();
+        document.getElementById('lessons-month-select').value = getCurrentMonth();
+        loadLessons();
+      } else {
+        document.getElementById('lessons-section').style.display = 'none';
+      }
+    }
   </script>
 </body>
 </html>
