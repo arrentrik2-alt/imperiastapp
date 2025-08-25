@@ -421,6 +421,12 @@
       border-radius: 3px;
       transition: outline 0.25s ease-out;
     }
+    /* locked inputs styling */
+    .readonly-locked {
+      background: rgba(255,255,255,0.03);
+      opacity: 0.85;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -1676,8 +1682,9 @@
           participantCard.className = 'group-card'; // Reusing group-card style
           participantCard.style.cursor = 'default'; // No pointer for participant cards
           
+          // Use the same subtle background as other group cards; avoid aggressive red/green inline styles
           participantCard.innerHTML = `
-            <div class="participant-row" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px; ${payment.confirmed ? 'background: rgba(0,255,0,0.1); border: 1px solid #00ff00;' : 'background: rgba(255,0,0,0.1); border: 1px solid #ff0000;'}">
+            <div class="participant-row" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
               <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
               <div class="participant-info" style="flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;">
                 <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
@@ -1713,7 +1720,7 @@
               </div>
               
               <div class="action-buttons" style="display: flex; gap: 10px; min-width: 120px;">
-                ${payment.confirmed ? `
+                ${payment && payment.confirmed ? `
                   <button class="btn btn-outline delete-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}">
                     <i class="fas fa-times"></i>
                   </button>
@@ -1781,21 +1788,29 @@
 
           // Real-time amount editing
           const amountInput = participantCard.querySelector('.amount-input');
+          // disable amount editing if payment was already confirmed
+          if (payment && payment.confirmed) {
+            amountInput.disabled = true;
+            amountInput.classList.add('readonly-locked');
+          }
           amountInput.addEventListener('change', async (e) => {
             const newAmount = parseFloat(e.target.value);
             const participantId = e.target.dataset.participantId;
             const groupId = e.target.dataset.groupId;
             
-      try {
-        const { error } = await supabase
+            try {
+              const { error } = await supabase
                 .from('payments_month')
-          .update({ amount: newAmount })
+                .update({ amount: newAmount })
                 .eq('month', selectedMonth)
                 .eq('participant_id', participantId)
                 .eq('group_id', groupId);
-              
-        if (error) throw error;
-      } catch (err) {
+              if (error) throw error;
+              // refresh lists and summaries live after manual amount change
+              await loadGroupParticipants(groupId);
+              await loadGroups();
+              await loadHomeData();
+            } catch (err) {
               alert('Błąd aktualizacji kwoty: ' + (err.message || 'Nieznany'));
             }
           });
@@ -1803,7 +1818,7 @@
           // Real-time payment method editing
           const paymentMethodSelect = participantCard.querySelector('.payment-method-select');
           // Do not save on change; lock the select if payment is confirmed
-          if (payment.confirmed) {
+          if (payment && payment.confirmed) {
             paymentMethodSelect.disabled = true;
           } else {
             paymentMethodSelect.disabled = false;
