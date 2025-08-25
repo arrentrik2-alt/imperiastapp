@@ -2159,8 +2159,16 @@
           const names = (partsExisting || []).map(x => x.participants_month?.name).filter(Boolean);
           const titleGen = buildTitle(trainer);
 
-          const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, day_of_month: dayOfMonth, start_time: start, trainer: trainer, amount: amount }).match({ id: currentEditingLessonId, month: month });
+          const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, start_time: start, trainer: trainer, amount: amount }).match({ id: currentEditingLessonId, month: month });
           if (updErr) throw updErr;
+
+          // optional: try to set day_of_month if column exists
+          try {
+            if (dayOfMonth !== null) {
+              const { error: dowErr } = await supabase.from('lessons_month').update({ day_of_month: dayOfMonth }).match({ id: currentEditingLessonId, month: month });
+              if (dowErr) console.warn('Could not update day_of_month (maybe column missing):', dowErr.message || dowErr);
+            }
+          } catch (e) { console.warn('Ignored error updating day_of_month:', e); }
 
           // adjust payments evenly across existing lesson payments
           const { data: payments, error: payErr } = await supabase.from('lesson_payments_month').select('id, participant_id').eq('month', month).eq('lesson_id', currentEditingLessonId);
@@ -2188,8 +2196,10 @@
         if (p2name) participantsForTitle.push(p2name);
         const titleGen = buildTitle(trainer);
 
-        const { data: lessonId, error: lessonErr } = await supabase.rpc('insert_lesson_month', { p_month: month, p_title: titleGen, p_day: day, p_day_of_month: dayOfMonth, p_start_time: start, p_trainer: trainer, p_amount: amount });
+        const { data: insertedLesson, error: lessonErr } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, day_of_month: dayOfMonth, start_time: start, trainer: trainer, amount: amount }).select('id').single();
         if (lessonErr) throw lessonErr;
+        const lessonId = insertedLesson ? insertedLesson.id : null;
+        if (!lessonId) throw new Error('Nie udało się utworzyć lekcji');
 
         // create participants and payments as before
         let primaryParticipantId = null;
@@ -2312,20 +2322,14 @@
               e.stopPropagation();
               if (!confirm('Usunąć lekcję?')) return;
               try {
-                // get associated participant ids
+                // get associated participant ids BEFORE deletion
                 const { data: assoc, error: assocErr } = await supabase.from('participants_lessons_month').select('participant_id').eq('month', month).eq('lesson_id', lesson.id);
                 if (assocErr) throw assocErr;
                 const pids = (assoc || []).map(a => a.participant_id).filter(Boolean);
 
-                // delete lesson payments and participant links
-                const { error: payDelErr } = await supabase.from('lesson_payments_month').delete().match({ month: month, lesson_id: lesson.id });
-                if (payDelErr) throw payDelErr;
-                const { error: partsDelErr } = await supabase.from('participants_lessons_month').delete().match({ month: month, lesson_id: lesson.id });
-                if (partsDelErr) throw partsDelErr;
-
-                // delete lesson record
-                const { error: lessonDelErr } = await supabase.from('lessons_month').delete().match({ id: lesson.id, month: month });
-                if (lessonDelErr) throw lessonDelErr;
+                // call RPC to delete lesson and its payments/links
+                const { error: rpcErr } = await supabase.rpc('delete_lesson_month', { p_month: month, p_id: lesson.id });
+                if (rpcErr) throw rpcErr;
 
                 // remove orphan participants for this month
                 for (const pid of pids) {
