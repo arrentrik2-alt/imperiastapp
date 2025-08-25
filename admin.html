@@ -337,6 +337,22 @@
       margin-bottom: 20px;
     }
     
+    /* Prevent horizontal scrolling in participants/details and allow rows to wrap */
+    #group-participants-section, #participants-list {
+      overflow-x: hidden;
+    }
+    
+    .participant-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    /* Allow inner divs to shrink to avoid forcing horizontal scroll */
+    .participant-row > div {
+      min-width: 0;
+    }
+    
     .month-selector select {
       min-width: 200px;
     }
@@ -1619,6 +1635,12 @@
 
           // Real-time payment method editing
           const paymentMethodSelect = participantCard.querySelector('.payment-method-select');
+          // Do not save on change; lock the select if payment is confirmed
+          if (payment.confirmed) {
+            paymentMethodSelect.disabled = true;
+          } else {
+            paymentMethodSelect.disabled = false;
+          }
           paymentMethodSelect.addEventListener('change', async (e) => {
             const newMethod = e.target.value;
             const participantId = e.target.dataset.participantId;
