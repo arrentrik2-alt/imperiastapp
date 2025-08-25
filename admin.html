@@ -936,7 +936,7 @@
         const mm = String(now.getMonth() + 1).padStart(2, '0');
       return `${yyyy}-${mm}`;
     }
-    
+
     // Format a time string like "HH:MM:SS" or "HH:MM" to "HH:MM" (colon separator)
     function formatTimeToHoursMinutes(timeStr) {
       if (!timeStr) return '';
@@ -1494,39 +1494,8 @@
             });
             // action buttons
             groupCard.querySelector('.edit-btn').addEventListener('click', (e) => { e.stopPropagation(); alert('Funkcja edycji będzie dostępna wkrótce'); });
-            groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
-              e.stopPropagation();
-              if (!confirm('Usunąć grupę?')) return;
-              const btn = e.currentTarget;
-              btn.disabled = true;
-              try {
-                const selectedMonth = document.getElementById('groups-month-select').value;
-                const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, group_id: group.id });
-                if (payErr) throw payErr;
-                const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, group_id: group.id });
-                if (pgErr) throw pgErr;
-                const { data: participantsAll, error: pAllErr } = await supabase.from('participants_month').select('id').eq('month', selectedMonth);
-                if (pAllErr) throw pAllErr;
-                const { data: assoc, error: assocErr } = await supabase.from('participant_groups_month').select('participant_id').eq('month', selectedMonth);
-                if (assocErr) throw assocErr;
-                const assocSet = new Set((assoc || []).map(a => a.participant_id));
-                const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id));
-                if (orphanIds.length > 0) {
-                  const { error: delOrphansErr } = await supabase.from('participants_month').delete().in('id', orphanIds).eq('month', selectedMonth);
-                  if (delOrphansErr) throw delOrphansErr;
-                }
-                const { error } = await supabase.from('groups_month').delete().match({ id: group.id, month: selectedMonth });
-                if (error) throw error;
-                // remove from DOM in-place
-                try { if (window._groupDomIndex) { const existing = window._groupDomIndex.get(group.id); if (existing && existing.parentNode) existing.parentNode.removeChild(existing); window._groupDomIndex.delete(group.id); } } catch(e){}
-                // update home data counts
-                await loadHomeData();
-              } catch (err) { alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany')); } finally { btn.disabled = false; }
-            });
+            groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => { e.stopPropagation(); if (!confirm('Usunąć grupę?')) return; /* reuse existing delete logic by triggering click on original button */ const btn = e.currentTarget; btn.disabled = true; try { /* call same handler code inline to avoid duplication */ const selectedMonth = document.getElementById('groups-month-select').value; const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, group_id: group.id }); if (payErr) throw payErr; const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, group_id: group.id }); if (pgErr) throw pgErr; const { data: participantsAll, error: pAllErr } = await supabase.from('participants_month').select('id').eq('month', selectedMonth); if (pAllErr) throw pAllErr; const { data: assoc, error: assocErr } = await supabase.from('participant_groups_month').select('participant_id').eq('month', selectedMonth); if (assocErr) throw assocErr; const assocSet = new Set((assoc || []).map(a => a.participant_id)); const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id)); if (orphanIds.length > 0) { const { error: delOrphansErr } = await supabase.from('participants_month').delete().in('id', orphanIds).eq('month', selectedMonth); if (delOrphansErr) throw delOrphansErr; } const { error } = await supabase.from('groups_month').delete().match({ id: group.id, month: selectedMonth }); if (error) throw error; await loadGroups(); await loadHomeData(); } catch (err) { alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany')); } finally { btn.disabled = false; } });
           groupsList.appendChild(groupCard);
-          // store lookup for in-place refresh
-          if (!window._groupDomIndex) window._groupDomIndex = new Map();
-          window._groupDomIndex.set(group.id, groupCard);
           });
         });
          
@@ -1657,86 +1626,8 @@
           if (paymentError) throw paymentError;
         }
 
-        // close modal
         closeAddParticipantModal();
-        try {
-          // fetch created participant details
-          const { data: createdParticipant, error: partErr } = await supabase.from('participants_month').select('id,name,phone,rodo').eq('id', participantId).single();
-          let paymentRow = null;
-          try {
-            const { data: pRow } = await supabase.from('payments_month').select('amount,payment_method,confirmed,comment').eq('month', selectedMonth).eq('group_id', currentGroupId).eq('participant_id', participantId).limit(1).maybeSingle();
-            paymentRow = pRow || null;
-          } catch (e) { paymentRow = null; }
-
-          // build a minimal participant card and append
-          try {
-            const amt = paymentRow ? (paymentRow.amount || 0) : 0;
-            const confirmed = paymentRow ? !!paymentRow.confirmed : false;
-            const card = document.createElement('div');
-            card.className = 'group-card';
-            card.style.cursor = 'default';
-            card.innerHTML = `
-              <div class="participant-row" style="display:flex;align-items:center;gap:15px;padding:15px;border-radius:8px;margin-bottom:10px; ${confirmed ? 'background: rgba(0,255,0,0.1); border: 1px solid #00ff00;' : 'background: rgba(255,0,0,0.1); border: 1px solid #ff0000;'}">
-                <div class="participant-number" style="min-width:30px;text-align:center;font-weight:bold;color:var(--text-gray);">-</div>
-                <div class="participant-info" style="flex:0 0 220px;overflow:hidden;text-overflow:ellipsis;">
-                  <div style="font-weight:bold;margin-bottom:5px;">${createdParticipant.name}</div>
-                  <div style="color:var(--text-gray);font-size:0.9rem">${createdParticipant.phone || 'Brak'}</div>
-                </div>
-                <div class="amount-section" style="min-width:120px;">
-                  <div style="display:flex;align-items:center;gap:5px;">
-                    <input type="number" class="amount-input form-control" value="${amt}" step="0.01" min="0" data-participant-id="${createdParticipant.id}" data-group-id="${currentGroupId}" style="width:100px;text-align:center;">
-                    <span style="font-size:0.9rem;color:var(--text-gray);">zł</span>
-                  </div>
-                </div>
-                <div style="min-width:110px;display:flex;align-items:center;gap:8px;">
-                  <label style="color:var(--text-gray);font-size:0.85rem;">RODO</label>
-                  <input type="checkbox" class="rodo-checkbox" data-participant-id="${createdParticipant.id}" ${createdParticipant.rodo ? 'checked' : ''}>
-                </div>
-                <div class="action-buttons" style="display:flex;gap:10px;min-width:120px;">
-                  ${confirmed ? `<button class="btn btn-outline delete-payment-btn" data-participant-id="${createdParticipant.id}" data-group-id="${currentGroupId}"><i class="fas fa-times"></i></button>` : `<button class="btn btn-primary confirm-payment-btn" data-participant-id="${createdParticipant.id}" data-group-id="${currentGroupId}"><i class="fas fa-check"></i></button>`}
-                  <button class="btn btn-outline edit-btn" data-id="${createdParticipant.id}"><i class="fas fa-edit"></i></button>
-                  <button class="btn btn-outline delete-btn" data-id="${createdParticipant.id}"><i class="fas fa-trash"></i></button>
-                </div>
-              </div>
-            `;
-            // append to list
-            groupParticipantsList.insertBefore(card, groupParticipantsList.firstChild);
-            // attach minimal listeners: amount change -> update + refresh summary
-            const amtInput = card.querySelector('.amount-input');
-            if (amtInput) {
-              amtInput.addEventListener('change', async (e) => {
-                try {
-                  const newAmt = parseFloat(e.target.value) || 0;
-                  const { error } = await supabase.from('payments_month').update({ amount: newAmt }).eq('month', selectedMonth).eq('participant_id', createdParticipant.id).eq('group_id', currentGroupId);
-                  if (error) throw error;
-                  await refreshGroupSummaryInPlace(currentGroupId);
-                } catch (err) { console.warn('Error updating amount in-place', err); }
-              });
-            }
-            // delete participant button
-            const delBtn = card.querySelector('.delete-btn');
-            if (delBtn) {
-              delBtn.addEventListener('click', async (e) => {
-                e.stopPropagation(); if (!confirm('Usunąć uczestnika z grupy?')) return;
-                try {
-                  const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, participant_id: createdParticipant.id, group_id: currentGroupId });
-                  if (payErr) throw payErr;
-                  const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, participant_id: createdParticipant.id, group_id: currentGroupId });
-                  if (pgErr) throw pgErr;
-                  if (card && card.parentNode) card.parentNode.removeChild(card);
-                  await refreshGroupSummaryInPlace(currentGroupId);
-                  try { await loadHomeData(); } catch(_){}
-                } catch (err) { alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany')); }
-              });
-            }
-          } catch (e) { /* if DOM append fails, fallback to full reload */ await loadGroupParticipants(currentGroupId); }
-          // refresh summaries and home counts
-          try { await refreshGroupSummaryInPlace(currentGroupId); } catch(_){}
-          try { await loadHomeData(); } catch(_){}
-        } catch (e) {
-          // fallback to reloading participants if anything fails
-          await loadGroupParticipants(currentGroupId);
-        }
+        await loadGroupParticipants(currentGroupId);
         // Removed success alert per user's request
       } catch (err) {
         alert('Błąd dodawania uczestnika: ' + (err.message || 'Nieznany'));
@@ -1906,10 +1797,10 @@
             if (!confirm('Usunąć uczestnika z grupy?')) return;
             
             try {
-              // Remove payments for this participant in this group for the selected month (in-place)
+              // Remove payments for this participant in this group for the selected month
               const { error: payErr } = await supabase
                 .from('payments_month')
-                .delete()
+            .delete()
                 .match({ month: selectedMonth, participant_id: participant.participant_id, group_id: groupId });
               if (payErr) throw payErr;
 
@@ -1923,7 +1814,7 @@
               // If participant has no more associations in this month, remove participant row for that month
               const { data: remaining, error: remErr } = await supabase
                 .from('participant_groups_month')
-                .select('id')
+          .select('id')
                 .match({ month: selectedMonth, participant_id: participant.participant_id });
               if (remErr) throw remErr;
               if (!remaining || remaining.length === 0) {
@@ -1934,19 +1825,8 @@
                 if (delPartErr) throw delPartErr;
               }
 
-              // remove DOM element for this participant
-              try {
-                const selector = '#participants-list .participant-row input[data-participant-id="' + participant.participant_id + '"]';
-                const inputElem = document.querySelector(selector);
-                if (inputElem) {
-                  const card = inputElem.closest('.group-card');
-                  if (card && card.parentNode) card.parentNode.removeChild(card);
-                }
-              } catch (_) {}
-
-              // refresh summaries and home counts
-              try { await refreshGroupSummaryInPlace(groupId); } catch(_){}
-              try { await loadHomeData(); } catch(_){}
+              await loadGroupParticipants(groupId);
+              await loadHomeData(); // refresh counts on home
       } catch (err) {
               alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
             }
@@ -1958,6 +1838,7 @@
             const newAmount = parseFloat(e.target.value);
             const participantId = e.target.dataset.participantId;
             const groupId = e.target.dataset.groupId;
+            
       try {
         const { error } = await supabase
                 .from('payments_month')
@@ -1965,9 +1846,8 @@
                 .eq('month', selectedMonth)
                 .eq('participant_id', participantId)
                 .eq('group_id', groupId);
+              
         if (error) throw error;
-              // update summary and groups list in-place
-              try { await refreshGroupSummaryInPlace(groupId); } catch(_){}
       } catch (err) {
               alert('Błąd aktualizacji kwoty: ' + (err.message || 'Nieznany'));
             }
@@ -2019,18 +1899,17 @@
             }
           });
 
-          // Add payment confirmation event listener (call RPC then reload list)
+          // Add payment confirmation event listener
           const confirmPaymentBtn = participantCard.querySelector('.confirm-payment-btn');
           if (confirmPaymentBtn) {
             confirmPaymentBtn.addEventListener('click', async (e) => {
               e.stopPropagation();
               const participantId = e.currentTarget.dataset.participantId;
               const groupId = e.currentTarget.dataset.groupId;
-              const paymentMethod = participantCard.querySelector('.payment-method-select')?.value || '';
-              const comment = participantCard.querySelector('.payment-comment')?.value || null;
+              const paymentMethod = participantCard.querySelector('.payment-method-select').value;
+              const comment = participantCard.querySelector('.payment-comment').value || null;
               if (!paymentMethod) { alert('Wybierz sposób płatności'); return; }
               try {
-                e.currentTarget.disabled = true;
                 const { error } = await supabase.rpc('update_payment_confirmation', {
                   p_month: selectedMonth,
                   p_participant_id: participantId,
@@ -2038,17 +1917,13 @@
                   p_payment_method: paymentMethod,
                   p_comment: comment || null
                 });
-                if (error) throw error;
+        if (error) throw error;
                 await loadGroupParticipants(groupId);
-                await refreshGroupSummaryInPlace(groupId);
-              } catch (err) {
-                console.error('Error confirming payment:', err);
-                alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany'));
-              }
+              } catch (err) { alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
             });
           }
 
-          // Add payment deletion event listener (call RPC then reload list)
+          // Add payment deletion event listener
           const deletePaymentBtn = participantCard.querySelector('.delete-payment-btn');
           if (deletePaymentBtn) {
             deletePaymentBtn.addEventListener('click', async (e) => {
@@ -2056,19 +1931,14 @@
               const participantId = e.currentTarget.dataset.participantId;
               const groupId = e.currentTarget.dataset.groupId;
               try {
-                e.currentTarget.disabled = true;
                 const { error } = await supabase.rpc('remove_payment_confirmation', {
                   p_month: selectedMonth,
                   p_participant_id: participantId,
                   p_group_id: groupId
                 });
-                if (error) throw error;
+        if (error) throw error;
                 await loadGroupParticipants(groupId);
-                await refreshGroupSummaryInPlace(groupId);
-              } catch (err) {
-                console.error('Error removing payment confirmation:', err);
-                alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany'));
-              }
+              } catch (err) { alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany')); }
             });
           }
 
@@ -2077,64 +1947,6 @@
       } catch (err) {
         console.error('Nieoczekiwany błąd:', err);
         groupParticipantsList.innerHTML = '<div class="empty-state"><p>Wystąpił nieoczekiwany błąd: ' + err.message + '</p></div>';
-      }
-    }
-
-    // Refresh group summary and card in-place
-    async function refreshGroupSummaryInPlace(groupId) {
-      try {
-        const month = (document.getElementById('participants-month-select') && document.getElementById('participants-month-select').value) || (document.getElementById('groups-month-select') && document.getElementById('groups-month-select').value) || getCurrentMonth();
-        const { data: payments, error: paymentsError } = await supabase
-          .from('payments_month')
-          .select('participant_id, amount, payment_method, confirmed')
-          .eq('month', month)
-          .eq('group_id', groupId);
-        if (paymentsError) throw paymentsError;
-
-        const paidSum = (payments || []).filter(p => p.confirmed).reduce((s, p) => s + parseFloat(p.amount || 0), 0);
-        const unpaidSum = (payments || []).filter(p => !p.confirmed).reduce((s, p) => s + parseFloat(p.amount || 0), 0);
-        const byMethod = (payments || []).filter(p => p.confirmed).reduce((acc, p) => { const m = p.payment_method || 'Inne'; acc[m] = (acc[m] || 0) + parseFloat(p.amount || 0); return acc; }, {});
-
-        const summaryEl = document.getElementById('group-participants-summary');
-        if (summaryEl) {
-          let methodsHtmlG = '';
-          Object.keys(byMethod).forEach(k => { methodsHtmlG += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
-          const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
-          summaryEl.innerHTML = `
-            <div style="text-align:right; min-width:180px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div style="font-size:0.95rem;color:var(--text-gray)">Zapłacono</div>
-                <div style="font-weight:700;color:var(--success)">${paidSum.toFixed(2)} zł</div>
-        </div>
-              <div style="margin-top:6px;">${methodsHtmlG}</div>
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-                <div style="font-size:0.95rem;color:var(--text-gray)">Niezapłacono</div>
-                <div style="font-weight:700;color:${unpaidColor}">${unpaidSum.toFixed(2)} zł</div>
-        </div>
-              <div style="color:var(--text-gray);margin-top:6px">Razem: ${(paidSum + unpaidSum).toFixed(2)} zł</div>
-        </div>
-          `;
-          drawDonut('group-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
-        }
-
-        // update groups list card if present
-        try {
-          if (window._groupDomIndex && window._groupDomIndex.has(groupId)) {
-            const card = window._groupDomIndex.get(groupId);
-            const paidCount = (payments || []).filter(p => p.confirmed).length;
-            const unpaidCount = (payments || []).filter(p => !p.confirmed).length;
-            const paidTextLocal = `<span style="color: var(--success); font-weight:600; margin-left:10px;">Zapłacili: ${paidCount}</span>`;
-            const unpaidTextLocal = `<span style="color: ${unpaidCount>0 ? 'var(--error)' : 'var(--success)'}; font-weight:600; margin-left:10px;">Nie zapłacili: ${unpaidCount}</span>`;
-            const h4 = card.querySelector('h4');
-            if (h4) {
-              // try to preserve group name stored in data attribute, fallback to existing text
-              const gname = card.dataset && card.dataset.name ? card.dataset.name : (h4.querySelector('span') ? h4.querySelector('span').textContent : '');
-              h4.innerHTML = `<span>${gname}</span><span style="font-size:0.9rem">${paidTextLocal}${unpaidTextLocal}</span>`;
-            }
-          }
-        } catch (e) { console.warn('refreshGroupSummaryInPlace updateGroupCard error', e); }
-      } catch (e) {
-        console.warn('refreshGroupSummaryInPlace error', e);
       }
     }
 
@@ -2506,10 +2318,9 @@
             }
           }
 
-          const _savedEditedLessonId = currentEditingLessonId;
           createLessonModal.classList.remove('active');
           currentEditingLessonId = null;
-          await refreshLessonInPlace(_savedEditedLessonId);
+          await loadLessons();
           return;
         }
 
@@ -2695,7 +2506,7 @@
         }
 
         createLessonModal.classList.remove('active');
-        await refreshLessonInPlace(lessonId);
+        await loadLessons();
       } catch (err) {
         alert('Błąd tworzenia/edycji lekcji: ' + (err.message || 'Nieznany'));
       }
@@ -2745,7 +2556,6 @@
 
           const el = document.createElement('div');
           el.className = 'group-card';
-          el.dataset.lessonId = lesson.id;
           el.style.marginBottom = '12px';
 
           // header with trainer, participants and amount + actions
@@ -2753,7 +2563,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div style="flex:1;">
                 <h4 style="margin:0;color:var(--gold);">${lesson.title}</h4>
-                <div style="color:var(--text-gray);font-size:0.9rem"><span class="lesson-datetime">${lesson.day_of_month ? formatLessonDate(lesson.day_of_month, month, lesson.day) : lesson.day} ${formatTimeToHoursMinutes(lesson.start_time)}</span><div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
+                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.day_of_month ? formatLessonDate(lesson.day_of_month, month, lesson.day) : lesson.day} ${formatTimeToHoursMinutes(lesson.start_time)}<div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
               </div>
               <div style="text-align:right; min-width:160px;">
                 <div style="font-size:0.85rem;color:var(--text-gray);">Kwota lekcji</div>
@@ -2899,25 +2709,10 @@
 
               // payment method: do not save on change; saved only on confirm
 
-              // confirm / delete payment handlers (update DOM in-place without reloading whole list)
+              // confirm payment
               const confirmBtn = row.querySelector('.lesson-confirm-payment-btn');
-              const deleteBtnExisting = row.querySelector('.lesson-delete-payment-btn');
-
-              // helper to recompute and update lesson total in header
-              async function recomputeLessonTotal(lid) {
-                try {
-                  const { data: allPays, error: apErr } = await supabase.from('lesson_payments_month').select('amount').eq('month', month).eq('lesson_id', lid);
-                  if (!apErr && allPays) {
-                    const sum = (allPays || []).reduce((s,p) => s + parseFloat(p.amount || 0), 0);
-                    const headerSpan = document.querySelector('.lesson-total[data-lesson-id="' + lid + '"]');
-                    if (headerSpan) headerSpan.textContent = sum.toFixed(2) + ' zł';
-                  }
-                } catch (e) { console.warn('Error recomputing lesson total:', e); }
-              }
-
-              // attach confirm behavior to a button element
-              function attachConfirmBehavior(button) {
-                const handler = async (e) => {
+              if (confirmBtn) {
+                confirmBtn.addEventListener('click', async (e) => {
                   e.stopPropagation();
                   const pid = e.currentTarget.dataset.participantId;
                   const lid = e.currentTarget.dataset.lessonId;
@@ -2926,75 +2721,12 @@
                   const comment = row.querySelector('.lesson-payment-comment').value || null;
                   if (!method) { alert('Wybierz sposób płatności'); return; }
                   try {
-                    button.disabled = true;
                     const { error } = await supabase.from('lesson_payments_month').update({ confirmed: true, payment_method: method, comment: comment }).match({ month: month, participant_id: pid, lesson_id: lid });
                     if (error) throw error;
-                    // update UI: turn this button into a delete button and mark row as confirmed
-                    button.disabled = false;
-                    button.classList.remove('btn-primary');
-                    button.classList.add('btn-outline');
-                    button.classList.remove('lesson-confirm-payment-btn');
-                    button.classList.add('lesson-delete-payment-btn');
-                    button.innerHTML = '<i class="fas fa-times"></i>';
-                    // mark row visual state
-                    try {
-                      row.style.transition = 'background 0.18s ease, border 0.18s ease, opacity 0.12s';
-                      row.style.opacity = '0.6';
-                      row.style.background = 'rgba(0,255,0,0.06)';
-                      row.style.border = '1px solid rgba(0,255,0,0.2)';
-                      setTimeout(()=>{ row.style.opacity = '1'; }, 160);
-                      // disable payment method select to indicate confirmed
-                      const sel = row.querySelector('.lesson-payment-method-select'); if (sel) sel.disabled = true;
-                      const commentInput = row.querySelector('.lesson-payment-comment'); if (commentInput) commentInput.disabled = true;
-                    } catch (e) { /* ignore */ }
-                    // recompute header
-                    await recomputeLessonTotal(lid);
-                    // reattach delete behavior
-                    button.removeEventListener('click', handler);
-                    attachDeleteBehavior(button);
-                  } catch (err) { button.disabled = false; alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
-                };
-                button.addEventListener('click', handler);
+        await loadLessons();
+                  } catch (err) { alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
+                });
               }
-
-              // attach delete behavior to a button element
-              function attachDeleteBehavior(button) {
-                const handler = async (e) => {
-                  e.stopPropagation();
-                  const pid = e.currentTarget.dataset.participantId;
-                  const lid = e.currentTarget.dataset.lessonId;
-                  try {
-                    button.disabled = true;
-                    const { error } = await supabase.from('lesson_payments_month').update({ confirmed: false, payment_method: null, comment: null }).match({ month: month, participant_id: pid, lesson_id: lid });
-                    if (error) throw error;
-                    // update UI: turn this button into a confirm button and mark row as not confirmed
-                    button.disabled = false;
-                    button.classList.remove('btn-outline');
-                    button.classList.add('btn-primary');
-                    button.classList.remove('lesson-delete-payment-btn');
-                    button.classList.add('lesson-confirm-payment-btn');
-                    button.innerHTML = '<i class="fas fa-check"></i>';
-                    try {
-                      row.style.transition = 'background 0.18s ease, border 0.18s ease, opacity 0.12s';
-                      row.style.opacity = '0.6';
-                      row.style.background = 'rgba(255,0,0,0.06)';
-                      row.style.border = '1px solid rgba(255,0,0,0.2)';
-                      setTimeout(()=>{ row.style.opacity = '1'; }, 160);
-                      const sel = row.querySelector('.lesson-payment-method-select'); if (sel) sel.disabled = false;
-                      const commentInput = row.querySelector('.lesson-payment-comment'); if (commentInput) commentInput.disabled = false;
-                    } catch (e) { /* ignore */ }
-                    // recompute header
-                    await recomputeLessonTotal(lid);
-                    // reattach confirm behavior
-                    button.removeEventListener('click', handler);
-                    attachConfirmBehavior(button);
-                  } catch (err) { button.disabled = false; alert('Błąd usuwania płatności: ' + (err.message || 'Nieznany')); }
-                };
-                button.addEventListener('click', handler);
-              }
-
-              if (confirmBtn) attachConfirmBehavior(confirmBtn);
-              if (deleteBtnExisting) attachDeleteBehavior(deleteBtnExisting);
 
               // delete payment (reset)
               const deleteBtn = row.querySelector('.lesson-delete-payment-btn');
@@ -3019,9 +2751,6 @@
           // before appending ensure this load is still current
           if (myToken !== lessonsLoadToken) return;
           lessonsList.appendChild(el);
-          // store a quick lookup for this lesson element to support in-place refreshes
-          if (!window._lessonDomIndex) window._lessonDomIndex = new Map();
-          window._lessonDomIndex.set(lesson.id, el);
         }
 
       } catch (err) {
@@ -3116,21 +2845,6 @@
       p2search.disabled = false;
       delete p2search.dataset.selected;
     });
-
-    // Refresh a single lesson DOM node in-place from DB. If not rendered, fall back to full reload.
-    async function refreshLessonInPlace(lessonId) {
-      try {
-        if (!lessonId) { await loadLessons(); return; }
-        const month = document.getElementById('lessons-month-select').value;
-        const { data: lessonObj, error: lErr } = await supabase.from('lessons_month').select('*').match({ id: lessonId, month: month }).single();
-        if (lErr || !lessonObj) { await loadLessons(); return; }
-        const el = window._lessonDomIndex && window._lessonDomIndex.get(lessonId);
-        if (!el) { await loadLessons(); return; }
-        const titleH4 = el.querySelector('h4'); if (titleH4) titleH4.textContent = lessonObj.title || '';
-        const dtSpan = el.querySelector('.lesson-datetime'); if (dtSpan) dtSpan.textContent = (lessonObj.day_of_month ? formatLessonDate(lessonObj.day_of_month, month, lessonObj.day) : lessonObj.day) + ' ' + formatTimeToHoursMinutes(lessonObj.start_time || '');
-        const totalSpan = el.querySelector('.lesson-total'); if (totalSpan) totalSpan.textContent = (Number(lessonObj.amount || 0)).toFixed(2) + ' zł';
-      } catch (e) { console.warn('refreshLessonInPlace error', e); try { await loadLessons(); } catch(_){} }
-    }
   </script>
 </body>
 </html>
