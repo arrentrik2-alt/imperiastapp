@@ -773,35 +773,47 @@
       <hr>
       <h4>Uczestnik główny</h4>
       <div class="form-group">
-        <label for="participant1-search">Wyszukaj istniejącego uczestnika (opcjonalnie)</label>
-        <input type="text" id="participant1-search" class="form-control" placeholder="Wpisz imię, aby wyszukać...">
-        <div id="participant1-search-results" style="background:var(--secondary-bg);border:1px solid var(--border-dark);max-height:160px;overflow:auto;margin-top:6px;border-radius:4px;"></div>
-        <input type="hidden" id="participant1-selected-id">
-      </div>
-      <div class="form-group">
-        <label for="participant1-name">Imię i nazwisko (nowy)</label>
-        <input type="text" id="participant1-name" class="form-control">
-      </div>
-      <div class="form-group">
-        <label for="participant1-phone">Telefon</label>
-        <input type="tel" id="participant1-phone" class="form-control">
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button type="button" class="btn btn-outline" id="participant1-mode-new">Nowy</button>
+          <button type="button" class="btn btn-outline" id="participant1-mode-existing">Istniejący</button>
+        </div>
+        <!-- existing search container -->
+        <div id="participant1-existing-container" style="display:none;">
+          <label for="participant1-search">Wyszukaj istniejącego uczestnika</label>
+          <input type="text" id="participant1-search" class="form-control" placeholder="Wpisz imię, aby wyszukać...">
+          <div id="participant1-search-results" style="background:var(--secondary-bg);border:1px solid var(--border-dark);max-height:160px;overflow:auto;margin-top:6px;border-radius:4px;"></div>
+          <input type="hidden" id="participant1-selected-id">
+        </div>
+        <!-- new participant container -->
+        <div id="participant1-new-container">
+          <label for="participant1-name">Imię i nazwisko</label>
+          <input type="text" id="participant1-name" class="form-control">
+          <label for="participant1-phone" style="margin-top:8px;">Telefon</label>
+          <input type="tel" id="participant1-phone" class="form-control">
+        </div>
       </div>
 
       <hr>
       <h4>Partner (opcjonalnie)</h4>
       <div class="form-group">
-        <label for="participant2-search">Wyszukaj istniejącego uczestnika (opcjonalnie)</label>
-        <input type="text" id="participant2-search" class="form-control" placeholder="Wpisz imię, aby wyszukać...">
-        <div id="participant2-search-results" style="background:var(--secondary-bg);border:1px solid var(--border-dark);max-height:160px;overflow:auto;margin-top:6px;border-radius:4px;"></div>
-        <input type="hidden" id="participant2-selected-id">
-      </div>
-      <div class="form-group">
-        <label for="participant2-name">Imię i nazwisko (partner - nowy)</label>
-        <input type="text" id="participant2-name" class="form-control">
-      </div>
-      <div class="form-group">
-        <label for="participant2-phone">Telefon (partner)</label>
-        <input type="tel" id="participant2-phone" class="form-control">
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button type="button" class="btn btn-outline" id="participant2-mode-new">Nowy</button>
+          <button type="button" class="btn btn-outline" id="participant2-mode-existing">Istniejący</button>
+        </div>
+        <!-- existing search container -->
+        <div id="participant2-existing-container" style="display:none;">
+          <label for="participant2-search">Wyszukaj istniejącego uczestnika</label>
+          <input type="text" id="participant2-search" class="form-control" placeholder="Wpisz imię, aby wyszukać...">
+          <div id="participant2-search-results" style="background:var(--secondary-bg);border:1px solid var(--border-dark);max-height:160px;overflow:auto;margin-top:6px;border-radius:4px;"></div>
+          <input type="hidden" id="participant2-selected-id">
+        </div>
+        <!-- new participant container -->
+        <div id="participant2-new-container">
+          <label for="participant2-name">Imię i nazwisko (partner)</label>
+          <input type="text" id="participant2-name" class="form-control">
+          <label for="participant2-phone" style="margin-top:8px;">Telefon (partner)</label>
+          <input type="tel" id="participant2-phone" class="form-control">
+        </div>
       </div>
 
       <div class="form-actions">
@@ -2605,6 +2617,31 @@
       const [yy, mm] = monthVal.split('-').map(Number);
       const weekday = getWeekdayName(yy, (mm - 1), val);
       if (weekday) document.getElementById('lesson-day').value = weekday;
+    });
+
+    // Participant mode toggles (show new vs existing)
+    document.getElementById('participant1-mode-new').addEventListener('click', () => {
+      document.getElementById('participant1-new-container').style.display = 'block';
+      document.getElementById('participant1-existing-container').style.display = 'none';
+      document.getElementById('participant1-selected-id').value = '';
+    });
+    document.getElementById('participant1-mode-existing').addEventListener('click', () => {
+      document.getElementById('participant1-new-container').style.display = 'none';
+      document.getElementById('participant1-existing-container').style.display = 'block';
+      document.getElementById('participant1-name').value = '';
+      document.getElementById('participant1-phone').value = '';
+    });
+
+    document.getElementById('participant2-mode-new').addEventListener('click', () => {
+      document.getElementById('participant2-new-container').style.display = 'block';
+      document.getElementById('participant2-existing-container').style.display = 'none';
+      document.getElementById('participant2-selected-id').value = '';
+    });
+    document.getElementById('participant2-mode-existing').addEventListener('click', () => {
+      document.getElementById('participant2-new-container').style.display = 'none';
+      document.getElementById('participant2-existing-container').style.display = 'block';
+      document.getElementById('participant2-name').value = '';
+      document.getElementById('participant2-phone').value = '';
     });
   </script>
 </body>
