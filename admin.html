@@ -2019,33 +2019,66 @@
             }
           });
 
-          // Add payment confirmation event listener (call reload of participants to ensure handlers)
+          // Add payment confirmation event listener -- in-place behavior (like lessons)
           const confirmPaymentBtn = participantCard.querySelector('.confirm-payment-btn');
           if (confirmPaymentBtn) {
-            confirmPaymentBtn.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const participantId = e.currentTarget.dataset.participantId;
-              const groupId = e.currentTarget.dataset.groupId;
-              const paymentMethod = participantCard.querySelector('.payment-method-select')?.value || '';
-              const comment = participantCard.querySelector('.payment-comment')?.value || null;
-              if (!paymentMethod) { alert('Wybierz sposób płatności'); return; }
-              try {
-                const { error } = await supabase.rpc('update_payment_confirmation', {
-                  p_month: selectedMonth,
-                  p_participant_id: participantId,
-                  p_group_id: groupId,
-                  p_payment_method: paymentMethod,
-                  p_comment: comment || null
-                });
-                if (error) throw error;
-                // reload participants for consistent handlers and UI
-                await loadGroupParticipants(groupId);
-                await refreshGroupSummaryInPlace(groupId);
-              } catch (err) {
-                console.error('Error confirming payment:', err);
-                alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany'));
-              }
-            });
+            const attachConfirm = (btn) => {
+              btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const participantId = btn.dataset.participantId;
+                const groupId = btn.dataset.groupId;
+                const paymentMethod = participantCard.querySelector('.payment-method-select')?.value || '';
+                const comment = participantCard.querySelector('.payment-comment')?.value || null;
+                if (!paymentMethod) { alert('Wybierz sposób płatności'); return; }
+                try {
+                  btn.disabled = true;
+                  const { error } = await supabase.rpc('update_payment_confirmation', {
+                    p_month: selectedMonth,
+                    p_participant_id: participantId,
+                    p_group_id: groupId,
+                    p_payment_method: paymentMethod,
+                    p_comment: comment || null
+                  });
+                  if (error) throw error;
+                  // update UI
+                  try { setParticipantConfirmedState(participantCard, true); } catch(_){}
+                  // swap button to delete style
+                  btn.disabled = false;
+                  btn.classList.remove('confirm-payment-btn'); btn.classList.remove('btn-primary');
+                  btn.classList.add('delete-payment-btn'); btn.classList.add('btn-outline');
+                  btn.innerHTML = '<i class="fas fa-times"></i>';
+                  // detach current and attach delete
+                  btn.replaceWith(btn.cloneNode(true));
+                  const newBtn = participantCard.querySelector('.delete-payment-btn');
+                  if (newBtn) {
+                    newBtn.addEventListener('click', async (ev) => {
+                      ev.stopPropagation();
+                      try {
+                        newBtn.disabled = true;
+                        const { error: errRem } = await supabase.rpc('remove_payment_confirmation', { p_month: selectedMonth, p_participant_id: participantId, p_group_id: groupId });
+                        if (errRem) throw errRem;
+                        // revert UI
+                        try { setParticipantConfirmedState(participantCard, false); } catch(_){}
+                        // swap back to confirm
+                        newBtn.disabled = false;
+                        newBtn.classList.remove('delete-payment-btn'); newBtn.classList.remove('btn-outline');
+                        newBtn.classList.add('confirm-payment-btn'); newBtn.classList.add('btn-primary');
+                        newBtn.innerHTML = '<i class="fas fa-check"></i>';
+                        // reattach confirm (recurse)
+                        attachConfirm(newBtn);
+                        await refreshGroupSummaryInPlace(groupId);
+                      } catch (err) { newBtn.disabled = false; alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany')); }
+                    });
+                  }
+                  await refreshGroupSummaryInPlace(groupId);
+                } catch (err) {
+                  btn.disabled = false;
+                  console.error('Error confirming payment:', err);
+                  alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany'));
+                }
+              });
+            };
+            attachConfirm(confirmPaymentBtn);
           }
 
           // Add payment deletion event listener (in-place, guarded)
@@ -2056,13 +2089,31 @@
               const participantId = e.currentTarget.dataset.participantId;
               const groupId = e.currentTarget.dataset.groupId;
               try {
+                e.currentTarget.disabled = true;
                 const { error } = await supabase.rpc('remove_payment_confirmation', {
                   p_month: selectedMonth,
                   p_participant_id: participantId,
                   p_group_id: groupId
                 });
                 if (error) throw error;
-                await loadGroupParticipants(groupId);
+                // update UI
+                try { setParticipantConfirmedState(participantCard, false); } catch(_){}
+                // swap back to confirm button
+                e.currentTarget.disabled = false;
+                e.currentTarget.classList.remove('delete-payment-btn'); e.currentTarget.classList.remove('btn-outline');
+                e.currentTarget.classList.add('confirm-payment-btn'); e.currentTarget.classList.add('btn-primary');
+                e.currentTarget.innerHTML = '<i class="fas fa-check"></i>';
+                // attach confirm behavior to new button
+                const newBtn = participantCard.querySelector('.confirm-payment-btn');
+                if (newBtn) {
+                  // remove existing and attach new
+                  newBtn.removeEventListener && newBtn.removeEventListener('click', () => {});
+                  newBtn.addEventListener('click', async (ev) => {
+                    ev.stopPropagation();
+                    // delegate to existing flow by triggering click (or call attachConfirm flow)
+                    try { await loadGroupParticipants(groupId); } catch(_){ }
+                  });
+                }
                 await refreshGroupSummaryInPlace(groupId);
               } catch (err) { console.error('Error removing payment confirmation:', err); alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany')); }
             });
