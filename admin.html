@@ -1161,7 +1161,7 @@
         }
       });
     }
-    
+
         // Render paid/unpaid summary on home
         const paidEl = document.getElementById('home-paid');
         const unpaidEl = document.getElementById('home-unpaid');
@@ -1681,24 +1681,24 @@
                 <div class="participant-info" style="flex:0 0 220px;overflow:hidden;text-overflow:ellipsis;">
                   <div style="font-weight:bold;margin-bottom:5px;">${createdParticipant.name}</div>
                   <div style="color:var(--text-gray);font-size:0.9rem">${createdParticipant.phone || 'Brak'}</div>
-                </div>
+              </div>
                 <div class="amount-section" style="min-width:120px;">
                   <div style="display:flex;align-items:center;gap:5px;">
                     <input type="number" class="amount-input form-control" value="${amt}" step="0.01" min="0" data-participant-id="${createdParticipant.id}" data-group-id="${currentGroupId}" style="width:100px;text-align:center;">
                     <span style="font-size:0.9rem;color:var(--text-gray);">zł</span>
-                  </div>
-                </div>
+              </div>
+              </div>
                 <div style="min-width:110px;display:flex;align-items:center;gap:8px;">
                   <label style="color:var(--text-gray);font-size:0.85rem;">RODO</label>
                   <input type="checkbox" class="rodo-checkbox" data-participant-id="${createdParticipant.id}" ${createdParticipant.rodo ? 'checked' : ''}>
-                </div>
+              </div>
                 <div class="action-buttons" style="display:flex;gap:10px;min-width:120px;">
                   ${confirmed ? `<button class="btn btn-outline delete-payment-btn" data-participant-id="${createdParticipant.id}" data-group-id="${currentGroupId}"><i class="fas fa-times"></i></button>` : `<button class="btn btn-primary confirm-payment-btn" data-participant-id="${createdParticipant.id}" data-group-id="${currentGroupId}"><i class="fas fa-check"></i></button>`}
                   <button class="btn btn-outline edit-btn" data-id="${createdParticipant.id}"><i class="fas fa-edit"></i></button>
                   <button class="btn btn-outline delete-btn" data-id="${createdParticipant.id}"><i class="fas fa-trash"></i></button>
-                </div>
               </div>
-            `;
+            </div>
+          `;
             // append to list
             groupParticipantsList.insertBefore(card, groupParticipantsList.firstChild);
             // attach minimal listeners: amount change -> update + refresh summary
@@ -1708,7 +1708,7 @@
                 try {
                   const newAmt = parseFloat(e.target.value) || 0;
                   const { error } = await supabase.from('payments_month').update({ amount: newAmt }).eq('month', selectedMonth).eq('participant_id', createdParticipant.id).eq('group_id', currentGroupId);
-                  if (error) throw error;
+          if (error) throw error;
                   await refreshGroupSummaryInPlace(currentGroupId);
                 } catch (err) { console.warn('Error updating amount in-place', err); }
               });
@@ -1731,8 +1731,8 @@
             }
           } catch (e) { /* if DOM append fails, fallback to full reload */ await loadGroupParticipants(currentGroupId); }
           // refresh summaries and home counts
-          try { await refreshGroupSummaryInPlace(currentGroupId); } catch(_){}
-          try { await loadHomeData(); } catch(_){}
+          try { await refreshGroupSummaryInPlace(currentGroupId); } catch(_){ }
+          try { await loadHomeData(); } catch(_){ }
         } catch (e) {
           // fallback to reloading participants if anything fails
         await loadGroupParticipants(currentGroupId);
@@ -1767,7 +1767,7 @@
               id, name, phone, rodo
             )
           `)
-          .eq('month', selectedMonth)
+            .eq('month', selectedMonth)
           .eq('group_id', groupId);
 
         if (participantsError) throw participantsError;
@@ -2039,7 +2039,7 @@
                     p_payment_method: paymentMethod,
                     p_comment: comment || null
                   });
-                  if (error) throw error;
+          if (error) throw error;
                   // update UI
                   try { setParticipantConfirmedState(participantCard, true); } catch(_){}
                   // swap button to delete style
@@ -2071,7 +2071,7 @@
                     });
                   }
                   await refreshGroupSummaryInPlace(groupId);
-                } catch (err) {
+        } catch (err) {
                   btn.disabled = false;
                   console.error('Error confirming payment:', err);
                   alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany'));
@@ -2095,7 +2095,7 @@
                   p_participant_id: participantId,
                   p_group_id: groupId
                 });
-                if (error) throw error;
+          if (error) throw error;
                 // update UI
                 try { setParticipantConfirmedState(participantCard, false); } catch(_){}
                 // swap back to confirm button
@@ -2366,14 +2366,14 @@
           console.error('Error saving RODO:', error);
           if (el) el.checked = !checked;
           alert('Błąd zapisu RODO: ' + (error.message || 'Nieznany'));
-        } else {
+              } else {
           console.log('RODO saved successfully for', participantId);
           if (el) {
             el.classList.add('rodo-saved');
             setTimeout(() => el.classList.remove('rodo-saved'), 700);
           }
         }
-        } catch (err) {
+      } catch (err) {
         console.error('Exception saving RODO:', err);
         if (el) el.checked = !checked;
       } finally {
@@ -2649,7 +2649,7 @@
               // link and create payment for existing participant
               await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
               await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
-            } else {
+          } else {
               const { data: createdPid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
               if (e1) console.warn('Error creating participant1:', e1);
               else {
@@ -2720,7 +2720,7 @@
                   .match({ month: month, lesson_id: lessonId, participant_id: primaryParticipantId });
                 if (updErr) console.warn('Error updating primary payment to half:', updErr);
                 await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: half2, confirmed: false });
-              } else {
+            } else {
                 await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
               }
             } else {
@@ -3075,7 +3075,7 @@
                   const lid = e.currentTarget.dataset.lessonId;
                   try {
                     const { error } = await supabase.from('lesson_payments_month').update({ confirmed: false, payment_method: null, comment: null }).match({ month: month, participant_id: pid, lesson_id: lid });
-                    if (error) throw error;
+        if (error) throw error;
                     await loadLessons();
                   } catch (err) { alert('Błąd usuwania płatności: ' + (err.message || 'Nieznany')); }
                 });
@@ -3094,7 +3094,7 @@
           window._lessonDomIndex.set(lesson.id, el);
         }
 
-      } catch (err) {
+        } catch (err) {
         console.error('Błąd ładowania lekcji:', err);
         lessonsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania lekcji</p></div>';
       }
