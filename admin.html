@@ -430,41 +430,37 @@
         <h3>Witaj w panelu administracyjnym</h3>
       </div>
       
-      <div class="home-content">
-        <div class="stats-grid">
-          <div class="stat-card">
-            <h3>Grupy</h3>
-            <div class="stat-number" id="groups-count">0</div>
-          </div>
-          <div class="stat-card">
-            <h3>Uczestnicy</h3>
-            <div class="stat-number" id="participants-count">0</div>
-          </div>
-          <div class="stat-card">
-            <h3>Zapłacone</h3>
-            <div class="stat-number" id="paid-amount">0.00 zł</div>
-          </div>
-          <div class="stat-card">
-            <h3>Niezaplacone</h3>
-            <div class="stat-number" id="unpaid-amount">0.00 zł</div>
-          </div>
+      <div class="month-selector">
+        <label for="current-month-select">Wybierz miesiąc:</label>
+        <select id="current-month-select" class="form-control">
+          <!-- Will be populated with last 12 months -->
+        </select>
+        <button class="btn btn-primary" id="create-new-month-btn">
+          <i class="fas fa-plus"></i> Utwórz nowy miesiąc
+        </button>
         </div>
-        
-        <div class="month-selection" style="margin-top: 30px;">
-          <div style="display: flex; align-items: center; gap: 15px;">
-            <label for="current-month-select">Wybierz miesiąc:</label>
-            <select id="current-month-select" class="form-control" style="width: 200px;">
-              <option value="">Ładowanie...</option>
-            </select>
-            <button id="return-current-month-home" class="btn btn-outline" style="white-space: nowrap;">
-              <i class="fas fa-calendar-day"></i> Bieżący miesiąc
-            </button>
-          </div>
-          <button id="create-month-btn" class="btn btn-primary" style="margin-top: 15px;">
-            <i class="fas fa-plus"></i> Utwórz nowy miesiąc
-          </button>
+      
+      <div class="content-box">
+        <h4 style="margin-bottom: 15px; color: var(--gold);">Podsumowanie dla wybranego miesiąca:</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
+            <div style="color: var(--text-gray); font-size: 0.9rem;">Liczba grup</div>
+            <div style="color: var(--gold); font-size: 1.5rem; font-weight: bold;" id="groups-count">0</div>
         </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
+            <div style="color: var(--text-gray); font-size: 0.9rem;">Liczba uczestników</div>
+            <div style="color: var(--gold); font-size: 1.5rem; font-weight: bold;" id="participants-count">0</div>
       </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
+            <div style="color: var(--text-gray); font-size: 0.9rem;">Zapłacone</div>
+            <div style="color: var(--success); font-size: 1.5rem; font-weight: bold;" id="paid-amount">0.00 zł</div>
+        </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--border-dark);">
+            <div style="color: var(--text-gray); font-size: 0.9rem;">Niezapłacone</div>
+            <div style="color: var(--error); font-size: 1.5rem; font-weight: bold;" id="unpaid-amount">0.00 zł</div>
+          </div>
+            </div>
+          </div>
       
       <div style="margin-top: 20px;">
         <button class="btn btn-primary" id="go-to-groups-btn">
@@ -482,17 +478,11 @@
         </button>
       </div>
 
-      <div class="groups-header">
-        <h3>Grupy</h3>
-        <div style="display: flex; align-items: center; gap: 15px;">
-          <label for="groups-month-select">Miesiąc:</label>
-          <select id="groups-month-select" class="form-control">
-            <option value="">Ładowanie...</option>
-          </select>
-          <button id="return-current-month-groups" class="btn btn-outline" style="white-space: nowrap;">
-            <i class="fas fa-calendar-day"></i> Bieżący miesiąc
-          </button>
-        </div>
+      <div class="month-selector">
+        <label for="groups-month-select">Miesiąc:</label>
+        <select id="groups-month-select" class="form-control">
+          <!-- Will be populated with last 12 months -->
+        </select>
       </div>
 
       <div id="groups-list">
@@ -516,27 +506,11 @@
         </button>
       </div>
       
-      <div class="group-participants-header">
-        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-          <button id="back-to-groups-btn" class="btn btn-outline">
-            <i class="fas fa-arrow-left"></i> Powrót do grup
-          </button>
-          <h3 id="group-participants-title">Uczestnicy grupy</h3>
-        </div>
-        
-        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-          <label for="participants-month-select">Miesiąc:</label>
-          <select id="participants-month-select" class="form-control">
-            <option value="">Ładowanie...</option>
-          </select>
-          <button id="return-current-month-participants" class="btn btn-outline" style="white-space: nowrap;">
-            <i class="fas fa-calendar-day"></i> Bieżący miesiąc
-          </button>
-        </div>
-        
-        <button id="add-participant-btn" class="btn btn-primary">
-          <i class="fas fa-plus"></i> Dodaj uczestnika
-        </button>
+      <div class="month-selector">
+        <label for="participants-month-select">Miesiąc:</label>
+        <select id="participants-month-select" class="form-control">
+          <!-- Will be populated with available months -->
+        </select>
       </div>
       
       <div id="group-participants-info" style="margin-bottom: 20px;">
@@ -803,52 +777,45 @@
     
     // Populate month selectors
     async function populateMonthSelectors() {
+      const options = await getAvailableMonths();
       const currentMonth = getCurrentMonth();
       
-      try {
-        // Get all months from created_months table
-        const { data: months, error } = await supabase
-          .from('created_months')
-          .select('month')
-          .order('month', { ascending: false }); // Sort descending (newest first)
-        
-        if (error) throw error;
-        
-        // Create month options array starting with current month
-        const monthOptions = [currentMonth];
-        
-        // Add other months (excluding current month if it's already there)
-        if (months) {
-          months.forEach(m => {
-            if (m.month !== currentMonth) {
-              monthOptions.push(m.month);
-            }
-          });
-        }
-        
-        // Update all month selectors
-        const monthSelectors = [
-          'current-month-select',
-          'groups-month-select', 
-          'participants-month-select'
-        ];
-        
-        monthSelectors.forEach(selectorId => {
-          const selector = document.getElementById(selectorId);
-          if (selector) {
-            selector.innerHTML = '';
-            monthOptions.forEach(month => {
-              const option = document.createElement('option');
-              option.value = month;
-              option.textContent = month;
-              selector.appendChild(option);
-            });
-          }
-        });
-        
-      } catch (err) {
-        console.error('Błąd ładowania miesięcy:', err);
-      }
+      console.log('Populowanie selektorów miesięcy, currentGroupId:', currentGroupId);
+      
+      // Home page selector
+      const homeSelector = document.getElementById('current-month-select');
+      homeSelector.innerHTML = '';
+      options.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        homeSelector.appendChild(opt);
+      });
+      homeSelector.value = currentMonth;
+      
+      // Groups page selector
+      const groupsSelector = document.getElementById('groups-month-select');
+      groupsSelector.innerHTML = '';
+      options.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        groupsSelector.appendChild(opt);
+      });
+      groupsSelector.value = currentMonth;
+      
+      // Participants page selector
+      const participantsSelector = document.getElementById('participants-month-select');
+      participantsSelector.innerHTML = '';
+      options.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        participantsSelector.appendChild(opt);
+      });
+      participantsSelector.value = currentMonth;
+      
+      console.log('Selektory miesięcy zaktualizowane');
     }
     
     // Load home page data
@@ -1321,18 +1288,17 @@
         
         groupParticipantsList.innerHTML = '';
         
-        participants.forEach((participant, index) => {
+        participants.forEach(participant => {
           const participantData = participant.participants_month;
           const payment = paymentLookup[participant.participant_id] || {};
           const amount = payment.amount || 0;
           
           const participantCard = document.createElement('div');
+          participantCard.className = 'group-card'; // Reusing group-card style
+          participantCard.style.cursor = 'default'; // No pointer for participant cards
+          
           participantCard.innerHTML = `
             <div class="participant-row" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px; ${payment.confirmed ? 'background: rgba(0,255,0,0.1); border: 1px solid #00ff00;' : 'background: rgba(255,0,0,0.1); border: 1px solid #ff0000;'}">
-              <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">
-                ${index + 1}.
-              </div>
-              
               <div class="participant-info" style="flex: 1; min-width: 200px;">
                 <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
                 <div style="color: var(--text-gray); font-size: 0.9rem;">${participantData.phone || 'Brak'}</div>
@@ -1572,73 +1538,6 @@
     checkAdmin().then(async () => {
       await populateMonthSelectors();
       await loadHomeData();
-    });
-
-    // Event listeners
-    document.addEventListener('DOMContentLoaded', function() {
-      // Initialize
-      populateMonthSelectors();
-      setActiveNav('home');
-      
-      // Navigation
-      document.getElementById('nav-home').addEventListener('click', () => setActiveNav('home'));
-      document.getElementById('nav-groups').addEventListener('click', () => setActiveNav('groups'));
-      
-      // Home page
-      document.getElementById('current-month-select').addEventListener('change', loadHomeData);
-      document.getElementById('create-month-btn').addEventListener('click', openCreateMonthModal);
-      
-      // Return to current month buttons
-      document.getElementById('return-current-month-home').addEventListener('click', () => {
-        const currentMonth = getCurrentMonth();
-        document.getElementById('current-month-select').value = currentMonth;
-        loadHomeData();
-      });
-      
-      document.getElementById('return-current-month-groups').addEventListener('click', () => {
-        const currentMonth = getCurrentMonth();
-        document.getElementById('groups-month-select').value = currentMonth;
-        loadGroups();
-      });
-      
-      document.getElementById('return-current-month-participants').addEventListener('click', () => {
-        const currentMonth = getCurrentMonth();
-        document.getElementById('participants-month-select').value = currentMonth;
-        if (currentGroupId) {
-          loadGroupParticipants(currentGroupId);
-        }
-      });
-      
-      // Groups page
-      document.getElementById('groups-month-select').addEventListener('change', loadGroups);
-      document.getElementById('save-group-btn').addEventListener('click', saveGroup);
-      
-      // Group participants page
-      document.getElementById('participants-month-select').addEventListener('change', (e) => {
-        const selectedMonth = e.target.value;
-        if (currentGroupName) {
-          const newGroupId = getCurrentGroupId(selectedMonth, currentGroupName);
-          if (newGroupId) {
-            currentGroupId = newGroupId;
-            loadGroupParticipants(newGroupId);
-          }
-        }
-      });
-      
-      document.getElementById('back-to-groups-btn').addEventListener('click', () => {
-        currentGroupId = null;
-        currentGroupName = null;
-        setActiveNav('groups');
-      });
-      
-      document.getElementById('add-participant-btn').addEventListener('click', showAddParticipantModal);
-      
-      // Modals
-      document.getElementById('close-create-month-modal').addEventListener('click', hideCreateMonthModal);
-      document.getElementById('save-create-month-btn').addEventListener('click', saveCreateMonth);
-      
-      document.getElementById('close-add-participant-modal').addEventListener('click', hideAddParticipantModal);
-      document.getElementById('save-add-participant-btn').addEventListener('click', saveAddParticipant);
     });
   </script>
 </body>
