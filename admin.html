@@ -2177,17 +2177,168 @@
       lessonsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie lekcji...</p></div>';
       const month = document.getElementById('lessons-month-select').value;
       try {
-        const { data, error } = await supabase.rpc('list_lessons_month', { p_month: month });
-        if (error) throw error;
-        if (!data || data.length === 0) { lessonsList.innerHTML = '<div class="empty-state"><p>Brak lekcji w tym miesiącu</p></div>'; return; }
+        const { data: lessons, error: lessonErr } = await supabase.rpc('list_lessons_month', { p_month: month });
+        if (lessonErr) throw lessonErr;
+        if (!lessons || lessons.length === 0) { lessonsList.innerHTML = '<div class="empty-state"><p>Brak lekcji w tym miesiącu</p></div>'; return; }
+
         lessonsList.innerHTML = '';
-        data.forEach(lesson => {
+
+        for (const lesson of lessons) {
+          // fetch participants for this lesson
+          const { data: parts, error: partsErr } = await supabase
+            .from('participants_lessons_month')
+            .select('participant_id, participants_month(id, name, phone)')
+            .eq('month', month)
+            .eq('lesson_id', lesson.id);
+          if (partsErr) {
+            console.warn('Błąd pobierania uczestników lekcji:', partsErr);
+          }
+
+          const participantIds = (parts || []).map(p => p.participant_id);
+          const { data: payments, error: payErr } = await supabase
+            .from('lesson_payments_month')
+            .select('participant_id, amount, payment_method, confirmed, comment')
+            .eq('month', month)
+            .eq('lesson_id', lesson.id)
+            .in('participant_id', participantIds || []);
+          if (payErr) console.warn('Błąd pobierania płatności lekcji:', payErr);
+
+          const paymentLookup = {};
+          (payments || []).forEach(p => { paymentLookup[p.participant_id] = p; });
+
+          // build participant names string
+          const namesStr = (parts || []).map(p => p.participants_month?.name || '').filter(Boolean).join(', ');
+
           const el = document.createElement('div');
           el.className = 'group-card';
-          el.innerHTML = `<h4>${lesson.title} <small style="color:var(--text-gray)">${lesson.day} ${lesson.start_time}</small></h4><div>${lesson.trainer}</div>`;
+          el.style.marginBottom = '12px';
+
+          // header with trainer and participants
+          el.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <h4 style="margin:0;">${lesson.title} <small style="color:var(--text-gray)">${lesson.day} ${lesson.start_time}</small></h4>
+              <div style="text-align:right;color:var(--text-gray);font-size:0.9rem">${lesson.trainer}<br><span style="color:var(--text-light);font-weight:600">${namesStr}</span></div>
+            </div>
+          `;
+
+          // participants container
+          const partsContainer = document.createElement('div');
+          partsContainer.style.marginTop = '10px';
+
+          if (!parts || parts.length === 0) {
+            partsContainer.innerHTML = '<div class="empty-state"><p>Brak uczestników</p></div>';
+          } else {
+            parts.forEach((p, idx) => {
+              const pdata = p.participants_month || {};
+              const pay = paymentLookup[p.participant_id] || {};
+              const amountVal = pay.amount || 0;
+
+              const row = document.createElement('div');
+              row.className = 'participant-row';
+              row.style.padding = '10px';
+              row.style.borderRadius = '6px';
+              row.style.marginBottom = '8px';
+              row.style.background = pay.confirmed ? 'rgba(0,255,0,0.06)' : 'rgba(255,0,0,0.06)';
+              row.style.border = pay.confirmed ? '1px solid rgba(0,255,0,0.2)' : '1px solid rgba(255,0,0,0.2)';
+
+              row.innerHTML = `
+                <div class="participant-number" style="min-width:30px;text-align:center;font-weight:bold;color:var(--text-gray);">${idx+1}.</div>
+                <div class="participant-info" style="flex:0 0 220px; overflow:hidden; text-overflow:ellipsis;">
+                  <div style="font-weight:bold">${pdata.name || 'Brak'}</div>
+                  <div style="color:var(--text-gray);font-size:0.9rem">${pdata.phone || 'Brak'}</div>
+                </div>
+                <div class="amount-section" style="min-width:120px;">
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <input type="number" class="lesson-amount-input form-control" value="${amountVal}" step="0.01" min="0" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:100px;text-align:center;" />
+                    <span style="font-size:0.9rem;color:var(--text-gray);">zł</span>
+                  </div>
+                </div>
+                <div class="payment-method-section" style="min-width:150px;">
+                  <select class="lesson-payment-method-select form-control" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:130px;">
+                    <option value="">Sposób płatności</option>
+                    <option value="karta" ${pay.payment_method === 'karta' ? 'selected' : ''}>Karta</option>
+                    <option value="przelew" ${pay.payment_method === 'przelew' ? 'selected' : ''}>Przelew</option>
+                    <option value="gotowka" ${pay.payment_method === 'gotowka' ? 'selected' : ''}>Gotówka</option>
+                  </select>
+                </div>
+                <div class="comment-section" style="flex:1;min-width:120px;">
+                  <input type="text" class="lesson-payment-comment form-control" placeholder="Komentarz" value="${pay.comment || ''}" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:100%;" />
+                </div>
+                <div class="action-buttons" style="min-width:120px;display:flex;align-items:center;gap:8px;">
+                  ${pay.confirmed ? `<button class="btn btn-outline lesson-delete-payment-btn" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}"><i class="fas fa-times"></i></button>` : `<button class="btn btn-primary lesson-confirm-payment-btn" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}"><i class="fas fa-check"></i></button>`}
+                </div>
+              `;
+
+              // amount change -> update payment amount
+              row.querySelector('.lesson-amount-input').addEventListener('change', async (e) => {
+                const newAmount = parseFloat(e.target.value) || 0;
+                const pid = e.target.dataset.participantId;
+                const lid = e.target.dataset.lessonId;
+                try {
+                  const { error } = await supabase.from('lesson_payments_month').update({ amount: newAmount }).match({ month: month, participant_id: pid, lesson_id: lid });
+                  if (error) throw error;
+                } catch (err) { alert('Błąd aktualizacji kwoty: ' + (err.message || 'Nieznany')); }
+              });
+
+              // comment input -> update in realtime
+              row.querySelector('.lesson-payment-comment').addEventListener('input', async (e) => {
+                const newComment = e.target.value;
+                const pid = e.target.dataset.participantId;
+                const lid = e.target.dataset.lessonId;
+                try {
+                  const { error } = await supabase.from('lesson_payments_month').update({ comment: newComment || null }).match({ month: month, participant_id: pid, lesson_id: lid });
+                  if (error) throw error;
+                } catch (err) { console.warn('Błąd aktualizacji komentarza:', err); }
+              });
+
+              // payment method: do not save on change; saved only on confirm
+
+              // confirm payment
+              const confirmBtn = row.querySelector('.lesson-confirm-payment-btn');
+              if (confirmBtn) {
+                confirmBtn.addEventListener('click', async (e) => {
+                  e.stopPropagation();
+                  const pid = e.currentTarget.dataset.participantId;
+                  const lid = e.currentTarget.dataset.lessonId;
+                  const select = row.querySelector('.lesson-payment-method-select');
+                  const method = select.value;
+                  const comment = row.querySelector('.lesson-payment-comment').value || null;
+                  if (!method) { alert('Wybierz sposób płatności'); return; }
+                  try {
+                    const { error } = await supabase.from('lesson_payments_month').update({ confirmed: true, payment_method: method, comment: comment }).match({ month: month, participant_id: pid, lesson_id: lid });
+                    if (error) throw error;
+                    await loadLessons();
+                  } catch (err) { alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
+                });
+              }
+
+              // delete payment (reset)
+              const deleteBtn = row.querySelector('.lesson-delete-payment-btn');
+              if (deleteBtn) {
+                deleteBtn.addEventListener('click', async (e) => {
+                  e.stopPropagation();
+                  const pid = e.currentTarget.dataset.participantId;
+                  const lid = e.currentTarget.dataset.lessonId;
+                  try {
+                    const { error } = await supabase.from('lesson_payments_month').update({ confirmed: false, payment_method: null, comment: null }).match({ month: month, participant_id: pid, lesson_id: lid });
+                    if (error) throw error;
+                    await loadLessons();
+                  } catch (err) { alert('Błąd usuwania płatności: ' + (err.message || 'Nieznany')); }
+                });
+              }
+
+              partsContainer.appendChild(row);
+            });
+          }
+
+          el.appendChild(partsContainer);
           lessonsList.appendChild(el);
-        });
-      } catch (err) { lessonsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania lekcji</p></div>'; }
+        }
+
+      } catch (err) {
+        console.error('Błąd ładowania lekcji:', err);
+        lessonsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania lekcji</p></div>';
+      }
     }
 
     // add nav link handler
