@@ -344,14 +344,24 @@
     
     .participant-row {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap; /* keep everything in one row */
       align-items: center;
+      gap: 6px; /* tighter gap */
     }
     
     /* Allow inner divs to shrink to avoid forcing horizontal scroll */
     .participant-row > div {
       min-width: 0;
     }
+    
+    /* Tighter widths so everything fits on one line */
+    .amount-section { min-width: 70px; max-width: 100px; }
+    .amount-section input { width: 60px; padding:6px; }
+    .payment-method-section { min-width: 100px; max-width: 120px; }
+    .comment-section { flex: 1; min-width: 100px; max-width: 280px; }
+    .action-buttons { min-width: 70px; gap: 6px; display:flex; align-items:center; }
+    .action-buttons .btn { padding: 6px 6px; font-size: 0.85rem; }
+    .participant-row { padding: 10px 8px; }
     
     .month-selector select {
       min-width: 200px;
