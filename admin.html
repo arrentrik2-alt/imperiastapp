@@ -522,9 +522,10 @@
         </button>
     </div>
     
-      <div id="group-participants-info" style="margin-bottom: 20px;">
-        <h4 id="group-participants-name" style="color: var(--gold);"></h4>
-    </div>
+      <div id="group-participants-info" style="margin-bottom: 20px; display:flex; align-items:center; justify-content:space-between; gap:20px;">
+        <h4 id="group-participants-name" style="color: var(--gold); margin: 0;"></h4>
+        <div id="group-participants-summary" style="color:var(--text-gray); font-size:0.95rem; text-align:right;"></div>
+      </div>
 
       <div style="margin-bottom: 20px;">
         <button class="btn btn-primary" id="add-participant-to-group-btn">
@@ -888,11 +889,47 @@
           document.getElementById('participants-count').textContent = (participants || []).length;
         }
         
-        // TODO: Load paid/unpaid amounts when we add payment confirmation functionality
-        document.getElementById('paid-amount').textContent = '0.00 zł';
-        document.getElementById('unpaid-amount').textContent = '0.00 zł';
+        // Aggregate payments for overview
+        const { data: paymentsAll, error: payErr } = await supabase
+          .from('payments_month')
+          .select('participant_id, amount, payment_method, confirmed')
+          .eq('month', selectedMonth);
         
-        } catch (err) {
+        let paidSum = 0, unpaidSum = 0, totalSum = 0;
+        const byMethod = {};
+        const paidParticipants = new Set();
+        const unpaidParticipants = new Set();
+
+        if (!payErr && paymentsAll) {
+          paymentsAll.forEach(p => {
+            const amt = parseFloat(p.amount || 0);
+            totalSum += amt;
+            if (p.confirmed) {
+              paidSum += amt;
+              paidParticipants.add(p.participant_id);
+              const m = p.payment_method || 'Inne';
+              byMethod[m] = (byMethod[m] || 0) + amt;
+            } else {
+              unpaidSum += amt;
+              unpaidParticipants.add(p.participant_id);
+            }
+          });
+        }
+
+        // Render paid/unpaid summary on home
+        const paidEl = document.getElementById('paid-amount');
+        const unpaidEl = document.getElementById('unpaid-amount');
+        if (paidEl) {
+          let methodsHtml = '';
+          Object.keys(byMethod).forEach(k => { methodsHtml += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
+          paidEl.innerHTML = `<div style="color:var(--success); font-weight:700">Zapłacono: ${paidSum.toFixed(2)} zł</div>${methodsHtml}<div style="color:var(--text-gray); margin-top:6px">Razem: ${totalSum.toFixed(2)} zł</div>`;
+        }
+        if (unpaidEl) {
+          const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
+          unpaidEl.innerHTML = `<div style="color:${unpaidColor}; font-weight:700">Niezapłacono: ${unpaidSum.toFixed(2)} zł</div>`;
+        }
+        
+      } catch (err) {
         console.error('Błąd ładowania danych:', err);
       }
     }
@@ -1099,7 +1136,29 @@
         
         // Hide empty state
         emptyState.style.display = 'none';
-        
+
+        // Prepare payments summary per group for this month
+        const groupIds = data.map(g => g.id);
+        let paymentsAll = [];
+        if (groupIds.length > 0) {
+          const { data: payData, error: payErr } = await supabase
+            .from('payments_month')
+            .select('group_id, confirmed, amount')
+            .eq('month', selectedMonth)
+            .in('group_id', groupIds);
+          if (!payErr && payData) paymentsAll = payData;
+        }
+
+        // Build lookup: counts and sums per group
+        const groupSummaryLookup = {};
+        groupIds.forEach(id => groupSummaryLookup[id] = { paidCount:0, unpaidCount:0, paidSum:0, unpaidSum:0 });
+        paymentsAll.forEach(p => {
+          const s = groupSummaryLookup[p.group_id];
+          if (!s) return;
+          if (p.confirmed) { s.paidCount += 1; s.paidSum += parseFloat(p.amount || 0); }
+          else { s.unpaidCount += 1; s.unpaidSum += parseFloat(p.amount || 0); }
+        });
+
         // Clear and render groups grouped by day
         groupsList.innerHTML = '';
         const daysOrder = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
@@ -1122,8 +1181,12 @@
             const groupCard = document.createElement('div');
             groupCard.className = 'group-card';
             groupCard.style.cursor = 'pointer';
+            const sums = groupSummaryLookup[group.id] || { paidCount:0, unpaidCount:0, paidSum:0, unpaidSum:0 };
+            const paidText = `<span style="color: var(--success); font-weight:600; margin-left:10px;">Zapłacili: ${sums.paidCount}</span>`;
+            const unpaidColor = sums.unpaidCount > 0 ? 'var(--error)' : 'var(--success)';
+            const unpaidText = `<span style="color: ${unpaidColor}; font-weight:600; margin-left:10px;">Nie zapłacili: ${sums.unpaidCount}</span>`;
             groupCard.innerHTML = `
-              <h4>${group.name}</h4>
+              <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
               <div class="group-detail">
                 <i class="fas fa-calendar-day"></i>
                 <span>${group.day}, ${group.start_time}</span>
@@ -1305,14 +1368,14 @@
         
         console.log('Znaleziono uczestników:', participants);
 
-        // Get payments for these participants
+        // Get payments for these participants (and overall group payments)
         const participantIds = participants.map(p => p.participant_id);
         const { data: payments, error: paymentsError } = await supabase
           .from('payments_month')
           .select('participant_id, amount, payment_method, confirmed, comment')
           .eq('month', selectedMonth)
           .eq('group_id', groupId)
-          .in('participant_id', participantIds);
+          .in('participant_id', participantIds || []);
 
         if (paymentsError) throw paymentsError;
         
@@ -1323,6 +1386,27 @@
         payments.forEach(p => {
           paymentLookup[p.participant_id] = p;
         });
+
+        // Build summary for this group
+        const paidSum = payments.filter(p => p.confirmed).reduce((s, p) => s + parseFloat(p.amount||0), 0);
+        const unpaidSum = payments.filter(p => !p.confirmed).reduce((s, p) => s + parseFloat(p.amount||0), 0);
+        const totalSum = paidSum + unpaidSum;
+        const byMethod = payments.filter(p => p.confirmed).reduce((acc,p) => { const m = p.payment_method || 'Inne'; acc[m] = (acc[m]||0) + parseFloat(p.amount||0); return acc; }, {});
+
+        const summaryEl = document.getElementById('group-participants-summary');
+        if (summaryEl) {
+          let methodsHtml = '';
+          Object.keys(byMethod).forEach(k => { methodsHtml += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
+          const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
+          summaryEl.innerHTML = `
+            <div style="text-align:right;">
+              <div style="color:var(--success); font-weight:700">Zapłacono: ${paidSum.toFixed(2)} zł</div>
+              ${methodsHtml}
+              <div style="color:${unpaidColor}; font-weight:700; margin-top:6px">Niezapłacono: ${unpaidSum.toFixed(2)} zł</div>
+              <div style="color:var(--text-gray);">Razem: ${totalSum.toFixed(2)} zł</div>
+            </div>
+          `;
+        }
 
         if (!participants || participants.length === 0) {
           groupParticipantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników dla tej grupy w miesiącu ' + selectedMonth + '.</p></div>';
