@@ -1899,6 +1899,8 @@
     let currentGroupName = null;
     // Token to guard concurrent lesson loads and avoid duplicate rendering
     let lessonsLoadToken = 0;
+    // Currently editing lesson id (null when creating)
+    let currentEditingLessonId = null;
 
     // Initialize
     checkAdmin().then(async () => {
@@ -2094,10 +2096,35 @@
     const saveCreateLessonBtn = document.getElementById('save-create-lesson-btn');
     const lessonsList = document.getElementById('lessons-list');
 
-    // Show/hide modal
-    addLessonBtn.addEventListener('click', () => createLessonModal.classList.add('active'));
-    closeCreateLessonModal.addEventListener('click', () => createLessonModal.classList.remove('active'));
-    cancelCreateLessonBtn.addEventListener('click', () => createLessonModal.classList.remove('active'));
+    // Open create/edit lesson modal (if lessonObj provided -> edit mode)
+    function openCreateLessonModal(lessonObj = null) {
+      // populate or clear
+      if (lessonObj) {
+        currentEditingLessonId = lessonObj.id;
+        document.getElementById('lesson-title').value = lessonObj.title || '';
+        document.getElementById('lesson-day').value = lessonObj.day || 'Poniedziałek';
+        document.getElementById('lesson-start').value = lessonObj.start_time || '';
+        document.getElementById('lesson-trainer').value = lessonObj.trainer || '';
+        document.getElementById('lesson-amount').value = lessonObj.amount || '';
+        // participants fields left empty for editing participants separately
+      } else {
+        currentEditingLessonId = null;
+        document.getElementById('lesson-title').value = '';
+        document.getElementById('lesson-day').value = 'Poniedziałek';
+        document.getElementById('lesson-start').value = '';
+        document.getElementById('lesson-trainer').value = '';
+        document.getElementById('lesson-amount').value = '';
+        document.getElementById('participant1-name').value = '';
+        document.getElementById('participant1-phone').value = '';
+        document.getElementById('participant2-name').value = '';
+        document.getElementById('participant2-phone').value = '';
+      }
+      createLessonModal.classList.add('active');
+    }
+
+    addLessonBtn.addEventListener('click', () => openCreateLessonModal(null));
+    closeCreateLessonModal.addEventListener('click', () => { createLessonModal.classList.remove('active'); currentEditingLessonId = null; });
+    cancelCreateLessonBtn.addEventListener('click', () => { createLessonModal.classList.remove('active'); currentEditingLessonId = null; });
 
     document.getElementById('return-current-month-lessons').addEventListener('click', async () => {
       const current = getCurrentMonth();
@@ -2123,6 +2150,33 @@
       if (!title || !day || !start) { alert('Uzupełnij tytuł, dzień i godzinę'); return; }
 
       try {
+        if (currentEditingLessonId) {
+          // update existing lesson
+          const { error: updErr } = await supabase.from('lessons_month').update({ title: title, day: day, start_time: start, trainer: trainer, amount: amount }).match({ id: currentEditingLessonId, month: month });
+          if (updErr) throw updErr;
+
+          // adjust payments evenly across existing lesson payments
+          const { data: payments, error: payErr } = await supabase.from('lesson_payments_month').select('id, participant_id').eq('month', month).eq('lesson_id', currentEditingLessonId);
+          if (!payErr && payments && payments.length > 0) {
+            const n = payments.length;
+            const base = parseFloat((amount / n).toFixed(2));
+            let sum = base * n;
+            let diff = parseFloat((amount - sum).toFixed(2));
+            // distribute base, add diff to last
+            for (let i = 0; i < payments.length; i++) {
+              let val = base + (i === payments.length -1 ? diff : 0);
+              const { error: e } = await supabase.from('lesson_payments_month').update({ amount: val }).match({ id: payments[i].id });
+              if (e) console.warn('Error updating lesson payment amount:', e);
+            }
+          }
+
+          createLessonModal.classList.remove('active');
+          currentEditingLessonId = null;
+          await loadLessons();
+          return;
+        }
+
+        // create new lesson
         const { data: lessonId, error: lessonErr } = await supabase.rpc('insert_lesson_month', { p_month: month, p_title: title, p_day: day, p_start_time: start, p_trainer: trainer, p_amount: amount });
         if (lessonErr) throw lessonErr;
 
@@ -2170,7 +2224,7 @@
         createLessonModal.classList.remove('active');
         await loadLessons();
       } catch (err) {
-        alert('Błąd tworzenia lekcji: ' + (err.message || 'Nieznany'));
+        alert('Błąd tworzenia/edycji lekcji: ' + (err.message || 'Nieznany'));
       }
     });
 
@@ -2220,13 +2274,48 @@
           el.className = 'group-card';
           el.style.marginBottom = '12px';
 
-          // header with trainer and participants
+          // header with trainer, participants and amount + actions
           el.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <h4 style="margin:0;">${lesson.title} <small style="color:var(--text-gray)">${lesson.day} ${lesson.start_time}</small></h4>
-              <div style="text-align:right;color:var(--text-gray);font-size:0.9rem">${lesson.trainer}<br><span style="color:var(--text-light);font-weight:600">${namesStr}</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+              <div style="flex:1;">
+                <h4 style="margin:0;">${lesson.title} <small style="color:var(--text-gray)">${lesson.day} ${lesson.start_time}</small></h4>
+                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.trainer} • <strong style="color:var(--text-light);">${namesStr}</strong></div>
+              </div>
+              <div style="text-align:right; min-width:160px;">
+                <div style="font-size:0.85rem;color:var(--text-gray);">Kwota lekcji</div>
+                <div style="font-weight:700;color:var(--gold);">${(lesson.amount || 0).toFixed(2)} zł</div>
+              </div>
+              <div style="min-width:80px; display:flex; gap:8px; align-items:center;">
+                <button class="btn btn-outline lesson-edit-btn" data-lesson-id="${lesson.id}"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-outline lesson-delete-btn" data-lesson-id="${lesson.id}"><i class="fas fa-trash"></i></button>
+              </div>
             </div>
           `;
+
+          // wire edit/delete handlers
+          const editBtn = el.querySelector('.lesson-edit-btn');
+          if (editBtn) {
+            editBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              // fetch lesson details and open modal populated
+              const { data: lessonDetail, error: ldErr } = await supabase.from('lessons_month').select('*').eq('id', lesson.id).single();
+              if (ldErr) { alert('Błąd pobierania lekcji: ' + (ldErr.message || 'Nieznany')); return; }
+              openCreateLessonModal(lessonDetail);
+            });
+          }
+
+          const delBtn = el.querySelector('.lesson-delete-btn');
+          if (delBtn) {
+            delBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (!confirm('Usunąć lekcję?')) return;
+              try {
+                const { error } = await supabase.from('lessons_month').delete().match({ id: lesson.id, month: month });
+                if (error) throw error;
+                await loadLessons();
+              } catch (err) { alert('Błąd usuwania lekcji: ' + (err.message || 'Nieznany')); }
+            });
+          }
 
           // participants container
           const partsContainer = document.createElement('div');
