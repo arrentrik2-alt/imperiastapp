@@ -868,14 +868,13 @@
         // Don't reset month selector for participants - keep the current selection
         // No specific data loading needed here, as it's a new section
       } else if (section === 'lessons') {
+        // Basic state changes only; detailed lesson view and loading
+        // are handled by the wrapper to avoid double-loading.
         groupsLink.classList.remove('active');
         homeLink.classList.remove('active');
         homeSection.style.display = 'none';
         groupsSection.style.display = 'none';
         groupParticipantsSection.style.display = 'none';
-        document.getElementById('lessons-section').style.display = 'block';
-        document.getElementById('lessons-month-select').value = getCurrentMonth();
-        loadLessons();
       }
       
       console.log('setActiveNav zakończone, currentGroupId po:', currentGroupId);
@@ -1898,6 +1897,8 @@
 
     // Store current group name for reference
     let currentGroupName = null;
+    // Token to guard concurrent lesson loads and avoid duplicate rendering
+    let lessonsLoadToken = 0;
 
     // Initialize
     checkAdmin().then(async () => {
@@ -2174,16 +2175,22 @@
     });
 
     async function loadLessons() {
+      // Increment token to invalidate previous loads
+      const myToken = ++lessonsLoadToken;
       lessonsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie lekcji...</p></div>';
       const month = document.getElementById('lessons-month-select').value;
       try {
         const { data: lessons, error: lessonErr } = await supabase.rpc('list_lessons_month', { p_month: month });
         if (lessonErr) throw lessonErr;
+        // If a newer load started, abort
+        if (myToken !== lessonsLoadToken) return;
         if (!lessons || lessons.length === 0) { lessonsList.innerHTML = '<div class="empty-state"><p>Brak lekcji w tym miesiącu</p></div>'; return; }
 
         lessonsList.innerHTML = '';
 
         for (const lesson of lessons) {
+          // if a newer load started, stop processing
+          if (myToken !== lessonsLoadToken) return;
           // fetch participants for this lesson
           const { data: parts, error: partsErr } = await supabase
             .from('participants_lessons_month')
@@ -2332,6 +2339,8 @@
           }
 
           el.appendChild(partsContainer);
+          // before appending ensure this load is still current
+          if (myToken !== lessonsLoadToken) return;
           lessonsList.appendChild(el);
         }
 
