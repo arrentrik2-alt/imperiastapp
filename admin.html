@@ -751,6 +751,11 @@
       </div>
 
       <div class="form-group">
+        <label for="lesson-day-of-month">Dzień miesiąca</label>
+        <input type="number" id="lesson-day-of-month" class="form-control" min="1" max="31" placeholder="np. 15">
+      </div>
+
+      <div class="form-group">
         <label for="lesson-start">Godzina</label>
         <input type="time" id="lesson-start" class="form-control">
       </div>
@@ -2097,6 +2102,7 @@
       if (lessonObj) {
         currentEditingLessonId = lessonObj.id;
         document.getElementById('lesson-day').value = lessonObj.day || 'Poniedziałek';
+        document.getElementById('lesson-day-of-month').value = lessonObj.day_of_month || '';
         document.getElementById('lesson-start').value = lessonObj.start_time || '';
         document.getElementById('lesson-trainer').value = lessonObj.trainer || '';
         document.getElementById('lesson-amount').value = lessonObj.amount || '';
@@ -2104,6 +2110,7 @@
       } else {
         currentEditingLessonId = null;
         document.getElementById('lesson-day').value = 'Poniedziałek';
+        document.getElementById('lesson-day-of-month').value = '';
         document.getElementById('lesson-start').value = '';
         document.getElementById('lesson-trainer').value = '';
         document.getElementById('lesson-amount').value = '';
@@ -2139,24 +2146,20 @@
       const p2name = document.getElementById('participant2-name').value.trim();
       const p2phone = document.getElementById('participant2-phone').value.trim();
 
+      const dayOfMonth = parseInt(document.getElementById('lesson-day-of-month').value) || null;
       if (!day || !start) { alert('Uzupełnij dzień i godzinę'); return; }
 
-      // helper to build title: "Lekcja [trainer] - [participants]" (no day/time)
-      const buildTitle = (trainerName, participantsArr) => {
-        const parts = [];
-        if (trainerName) parts.push(trainerName);
-        if (participantsArr && participantsArr.length) parts.push(participantsArr.join(', '));
-        return `Lekcja ${parts.join(' - ')}`;
-      };
+      // helper to build title: "Lekcja [trainer]"
+      const buildTitle = (trainerName) => `Lekcja ${trainerName || ''}`;
 
       try {
         if (currentEditingLessonId) {
           // on edit, fetch participants to construct title
           const { data: partsExisting } = await supabase.from('participants_lessons_month').select('participants_month(name)').eq('month', month).eq('lesson_id', currentEditingLessonId);
           const names = (partsExisting || []).map(x => x.participants_month?.name).filter(Boolean);
-          const titleGen = buildTitle(trainer, names);
+          const titleGen = buildTitle(trainer);
 
-          const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, start_time: start, trainer: trainer, amount: amount }).match({ id: currentEditingLessonId, month: month });
+          const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, day_of_month: dayOfMonth, start_time: start, trainer: trainer, amount: amount }).match({ id: currentEditingLessonId, month: month });
           if (updErr) throw updErr;
 
           // adjust payments evenly across existing lesson payments
@@ -2183,9 +2186,9 @@
         const participantsForTitle = [];
         if (p1name) participantsForTitle.push(p1name);
         if (p2name) participantsForTitle.push(p2name);
-        const titleGen = buildTitle(trainer, participantsForTitle);
+        const titleGen = buildTitle(trainer);
 
-        const { data: lessonId, error: lessonErr } = await supabase.rpc('insert_lesson_month', { p_month: month, p_title: titleGen, p_day: day, p_start_time: start, p_trainer: trainer, p_amount: amount });
+        const { data: lessonId, error: lessonErr } = await supabase.rpc('insert_lesson_month', { p_month: month, p_title: titleGen, p_day: day, p_day_of_month: dayOfMonth, p_start_time: start, p_trainer: trainer, p_amount: amount });
         if (lessonErr) throw lessonErr;
 
         // create participants and payments as before
@@ -2277,12 +2280,12 @@
           el.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div style="flex:1;">
-                <h4 style="margin:0;">${lesson.title} <small style="color:var(--text-gray)">${lesson.day} ${lesson.start_time}</small></h4>
-                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.trainer} • <strong style="color:var(--text-light);">${namesStr}</strong></div>
+                <h4 style="margin:0;color:var(--gold);">${lesson.title}</h4>
+                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}<div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
               </div>
               <div style="text-align:right; min-width:160px;">
                 <div style="font-size:0.85rem;color:var(--text-gray);">Kwota lekcji</div>
-                <div style="font-weight:700;color:var(--gold);">${(lesson.amount || 0).toFixed(2)} zł</div>
+                <div style="font-weight:700;color:var(--gold);" class="lesson-total" data-lesson-id="${lesson.id}">${(lesson.amount || 0).toFixed(2)} zł</div>
               </div>
               <div style="min-width:80px; display:flex; gap:8px; align-items:center;">
                 <button class="btn btn-outline lesson-edit-btn" data-lesson-id="${lesson.id}"><i class="fas fa-edit"></i></button>
