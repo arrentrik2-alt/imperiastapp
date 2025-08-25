@@ -1069,7 +1069,7 @@
           closeModal();
         await loadGroups();
         await loadHomeData(); // Refresh home page data too
-        alert('Grupa została dodana pomyślnie!');
+        // Removed success alert per user's request
       } catch (err) {
         alert('Błąd dodawania grupy: ' + (err.message || 'Nieznany'));
       } finally {
@@ -1100,111 +1100,60 @@
         // Hide empty state
         emptyState.style.display = 'none';
         
-        // Clear and render groups
+        // Clear and render groups grouped by day
         groupsList.innerHTML = '';
-        
-        data.forEach(group => {
-          const groupCard = document.createElement('div');
-          groupCard.className = 'group-card';
-          groupCard.style.cursor = 'pointer';
-          
-          groupCard.innerHTML = `
-            <h4>${group.name}</h4>
-            <div class="group-detail">
-              <i class="fas fa-calendar-day"></i>
-              <span>${group.day}, ${group.start_time}</span>
-            </div>
-            <div class="group-detail">
-              <i class="fas fa-user-tie"></i>
-              <span>${group.trainer}</span>
-            </div>
-            <div class="group-actions">
-              <button class="btn btn-outline edit-btn" data-id="${group.id}">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn btn-outline delete-btn" data-id="${group.id}">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          `;
-          
-          // Add click event to open participants page
-            groupCard.addEventListener('click', (e) => {
-            // Don't open if clicking on action buttons
-            if (e.target.closest('.group-actions')) return;
-            openGroupParticipantsPage(group);
-            setActiveNav('participants');
-          });
-          
-          // Add event listeners for action buttons
-            groupCard.querySelector('.edit-btn').addEventListener('click', (e) => {
-              e.stopPropagation();
-            // TODO: Implement edit functionality
-            alert('Funkcja edycji będzie dostępna wkrótce');
-            });
-          
-            groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
-            e.stopPropagation();
-          if (!confirm('Usunąć grupę?')) return;
-          
-          try {
-              const selectedMonth = document.getElementById('groups-month-select').value;
-
-              // Delete payments for this group in the selected month
-              const { error: payErr } = await supabase
-                .from('payments_month')
-                .delete()
-                .match({ month: selectedMonth, group_id: group.id });
-              if (payErr) throw payErr;
-
-              // Delete participant-group associations for this group in the selected month
-              const { error: pgErr } = await supabase
-                .from('participant_groups_month')
-                .delete()
-                .match({ month: selectedMonth, group_id: group.id });
-              if (pgErr) throw pgErr;
-
-              // Find orphaned participants in this month: participants_month ids not present in participant_groups_month
-              const { data: participantsAll, error: pAllErr } = await supabase
-                .from('participants_month')
-                .select('id')
-                .eq('month', selectedMonth);
-              if (pAllErr) throw pAllErr;
-
-              const { data: assoc, error: assocErr } = await supabase
-                .from('participant_groups_month')
-                .select('participant_id')
-                .eq('month', selectedMonth);
-              if (assocErr) throw assocErr;
-
-              const assocSet = new Set((assoc || []).map(a => a.participant_id));
-              const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id));
-
-              if (orphanIds.length > 0) {
-                const { error: delOrphansErr } = await supabase
-                  .from('participants_month')
-                  .delete()
-                  .in('id', orphanIds)
-                  .eq('month', selectedMonth);
-                if (delOrphansErr) throw delOrphansErr;
-              }
-
-              // Finally delete the group row for the selected month
-              const { error } = await supabase
-                .from('groups_month')
-                .delete()
-                .match({ id: group.id, month: selectedMonth });
-              if (error) throw error;
-
-              await loadGroups();
-              await loadHomeData(); // Refresh home page data too
-            } catch (err) {
-              alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany'));
-            }
-          });
-          
-          groupsList.appendChild(groupCard);
+        const daysOrder = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
+        const groupsByDay = {};
+        data.forEach(g => {
+          if (!groupsByDay[g.day]) groupsByDay[g.day] = [];
+          groupsByDay[g.day].push(g);
         });
+        // For each day in order, if we have groups, render a header and the groups sorted by start_time
+        daysOrder.forEach(dayName => {
+          const list = groupsByDay[dayName];
+          if (!list || list.length === 0) return;
+          // sort by start_time
+          list.sort((a,b) => (a.start_time || '').localeCompare(b.start_time || ''));
+          const dayHeader = document.createElement('div');
+          dayHeader.style.margin = '10px 0 6px';
+          dayHeader.innerHTML = `<strong style="color: var(--text-gray);">${dayName}</strong>`;
+          groupsList.appendChild(dayHeader);
+          list.forEach(group => {
+            const groupCard = document.createElement('div');
+            groupCard.className = 'group-card';
+            groupCard.style.cursor = 'pointer';
+            groupCard.innerHTML = `
+              <h4>${group.name}</h4>
+              <div class="group-detail">
+                <i class="fas fa-calendar-day"></i>
+                <span>${group.day}, ${group.start_time}</span>
+              </div>
+              <div class="group-detail">
+                <i class="fas fa-user-tie"></i>
+                <span>${group.trainer}</span>
+              </div>
+              <div class="group-actions">
+                <button class="btn btn-outline edit-btn" data-id="${group.id}">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-outline delete-btn" data-id="${group.id}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            `;
+            // click handler
+            groupCard.addEventListener('click', (e) => {
+              if (e.target.closest('.group-actions')) return;
+              openGroupParticipantsPage(group);
+              setActiveNav('participants');
+            });
+            // action buttons
+            groupCard.querySelector('.edit-btn').addEventListener('click', (e) => { e.stopPropagation(); alert('Funkcja edycji będzie dostępna wkrótce'); });
+            groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => { e.stopPropagation(); if (!confirm('Usunąć grupę?')) return; /* reuse existing delete logic by triggering click on original button */ const btn = e.currentTarget; btn.disabled = true; try { /* call same handler code inline to avoid duplication */ const selectedMonth = document.getElementById('groups-month-select').value; const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, group_id: group.id }); if (payErr) throw payErr; const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, group_id: group.id }); if (pgErr) throw pgErr; const { data: participantsAll, error: pAllErr } = await supabase.from('participants_month').select('id').eq('month', selectedMonth); if (pAllErr) throw pAllErr; const { data: assoc, error: assocErr } = await supabase.from('participant_groups_month').select('participant_id').eq('month', selectedMonth); if (assocErr) throw assocErr; const assocSet = new Set((assoc || []).map(a => a.participant_id)); const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id)); if (orphanIds.length > 0) { const { error: delOrphansErr } = await supabase.from('participants_month').delete().in('id', orphanIds).eq('month', selectedMonth); if (delOrphansErr) throw delOrphansErr; } const { error } = await supabase.from('groups_month').delete().match({ id: group.id, month: selectedMonth }); if (error) throw error; await loadGroups(); await loadHomeData(); } catch (err) { alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany')); } finally { btn.disabled = false; } });
+            groupsList.appendChild(groupCard);
+          });
+        });
+         
       } catch (err) {
         console.error('Nieoczekiwany błąd:', err);
         groupsList.innerHTML = '<div class="empty-state"><p>Wystąpił nieoczekiwany błąd: ' + err.message + '</p></div>';
@@ -1321,7 +1270,7 @@
 
         closeAddParticipantModal();
         await loadGroupParticipants(currentGroupId);
-        alert('Uczestnik został dodany pomyślnie!');
+        // Removed success alert per user's request
       } catch (err) {
         alert('Błąd dodawania uczestnika: ' + (err.message || 'Nieznany'));
       } finally {
