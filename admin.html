@@ -1148,12 +1148,29 @@
           if (!confirm('Usunąć grupę?')) return;
           
           try {
-              // Delete group record for this month
+              const selectedMonth = document.getElementById('groups-month-select').value;
+
+              // Delete payments referencing this group (all months)
+              const { error: payErr } = await supabase
+                .from('payments_month')
+                .delete()
+                .eq('group_id', group.id);
+              if (payErr) throw payErr;
+
+              // Delete participant-group associations referencing this group (all months)
+              const { error: pgErr } = await supabase
+                .from('participant_groups_month')
+                .delete()
+                .eq('group_id', group.id);
+              if (pgErr) throw pgErr;
+
+              // Finally delete the group row for the selected month
               const { error } = await supabase
                 .from('groups_month')
                 .delete()
-                .eq('id', group.id);
+                .match({ id: group.id, month: selectedMonth });
               if (error) throw error;
+
               await loadGroups();
               await loadHomeData(); // Refresh home page data too
             } catch (err) {
@@ -1426,6 +1443,20 @@
                 .delete()
                 .match({ month: selectedMonth, participant_id: participant.participant_id, group_id: groupId });
               if (pgErr) throw pgErr;
+
+              // If participant has no more associations in this month, remove participant row for that month
+              const { data: remaining, error: remErr } = await supabase
+                .from('participant_groups_month')
+                .select('id')
+                .match({ month: selectedMonth, participant_id: participant.participant_id });
+              if (remErr) throw remErr;
+              if (!remaining || remaining.length === 0) {
+                const { error: delPartErr } = await supabase
+                  .from('participants_month')
+                  .delete()
+                  .match({ month: selectedMonth, id: participant.participant_id });
+                if (delPartErr) throw delPartErr;
+              }
 
               await loadGroupParticipants(groupId);
               await loadHomeData(); // refresh counts on home
