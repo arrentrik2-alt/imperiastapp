@@ -1150,19 +1150,44 @@
           try {
               const selectedMonth = document.getElementById('groups-month-select').value;
 
-              // Delete payments referencing this group (all months)
+              // Delete payments for this group in the selected month
               const { error: payErr } = await supabase
                 .from('payments_month')
                 .delete()
-                .eq('group_id', group.id);
+                .match({ month: selectedMonth, group_id: group.id });
               if (payErr) throw payErr;
 
-              // Delete participant-group associations referencing this group (all months)
+              // Delete participant-group associations for this group in the selected month
               const { error: pgErr } = await supabase
                 .from('participant_groups_month')
                 .delete()
-                .eq('group_id', group.id);
+                .match({ month: selectedMonth, group_id: group.id });
               if (pgErr) throw pgErr;
+
+              // Find orphaned participants in this month: participants_month ids not present in participant_groups_month
+              const { data: participantsAll, error: pAllErr } = await supabase
+                .from('participants_month')
+                .select('id')
+                .eq('month', selectedMonth);
+              if (pAllErr) throw pAllErr;
+
+              const { data: assoc, error: assocErr } = await supabase
+                .from('participant_groups_month')
+                .select('participant_id')
+                .eq('month', selectedMonth);
+              if (assocErr) throw assocErr;
+
+              const assocSet = new Set((assoc || []).map(a => a.participant_id));
+              const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id));
+
+              if (orphanIds.length > 0) {
+                const { error: delOrphansErr } = await supabase
+                  .from('participants_month')
+                  .delete()
+                  .in('id', orphanIds)
+                  .eq('month', selectedMonth);
+                if (delOrphansErr) throw delOrphansErr;
+              }
 
               // Finally delete the group row for the selected month
               const { error } = await supabase
