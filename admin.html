@@ -30,6 +30,7 @@
       color: var(--text-light);
       min-height: 100vh;
       display: flex;
+      overflow-x: hidden;
     }
     
     /* Sidebar */
@@ -93,6 +94,7 @@
       flex: 1;
       margin-left: 250px;
       padding: 20px;
+      overflow-x: hidden;
     }
     
     .header {
@@ -344,7 +346,7 @@
     
     .participant-row {
       display: flex;
-      flex-wrap: nowrap; /* keep everything in one row */
+      flex-wrap: wrap; /* allow wrapping on small screens to prevent horizontal scroll */
       align-items: center;
       gap: 6px; /* tighter gap */
     }
@@ -409,6 +411,13 @@
       .main-content {
         margin-left: 0;
       }
+    }
+
+    /* RODO saved visual */
+    .rodo-saved {
+      outline: 2px solid rgba(40,167,69,0.8);
+      border-radius: 3px;
+      transition: outline 0.25s ease-out;
     }
   </style>
 </head>
@@ -1843,6 +1852,42 @@
       ctx.font = '12px sans-serif';
       ctx.fillText(`${(paid+unpaid).toFixed(2)} zł`, cx, cy + 12);
     }
+
+    document.querySelectorAll('#participants-list .rodo-checkbox').forEach(cb => {
+      // replace to remove duplicate listeners
+      const clone = cb.cloneNode(true);
+      cb.parentNode.replaceChild(clone, cb);
+    });
+    document.querySelectorAll('#participants-list .rodo-checkbox').forEach(cb => {
+      cb.addEventListener('change', async (e) => {
+        const pid = e.currentTarget.dataset.participantId;
+        const checked = e.currentTarget.checked;
+        e.currentTarget.disabled = true;
+        try {
+          const { error } = await supabase
+            .from('participants_month')
+            .update({ rodo: checked })
+            .match({ month: selectedMonth, id: pid });
+          if (error) {
+            console.error('Error saving RODO:', error);
+            alert('Błąd zapisu RODO: ' + (error.message || 'Nieznany'));
+            e.currentTarget.checked = !checked; // revert
+          } else {
+            // visual feedback
+            e.currentTarget.classList.add('rodo-saved');
+            setTimeout(() => e.currentTarget.classList.remove('rodo-saved'), 700);
+            // refresh list from DB to ensure persistence
+            if (currentGroupId) await loadGroupParticipants(currentGroupId);
+          }
+        } catch (err) {
+          console.error('Exception saving RODO:', err);
+          alert('Błąd zapisu RODO: ' + (err.message || 'Nieznany'));
+          e.currentTarget.checked = !checked; // revert
+        } finally {
+          e.currentTarget.disabled = false;
+        }
+      });
+    });
   </script>
 </body>
 </html>
