@@ -936,59 +936,6 @@
         const mm = String(now.getMonth() + 1).padStart(2, '0');
       return `${yyyy}-${mm}`;
     }
-
-    // Format a time string like "HH:MM:SS" or "HH:MM" to "HH:MM" (colon separator)
-    function formatTimeToHoursMinutes(timeStr) {
-      if (!timeStr) return '';
-      try {
-        const parts = String(timeStr).split(':');
-        const hh = String(parts[0] || '').padStart(2, '0');
-        const mm = String(parts[1] || '00').padStart(2, '0');
-        return `${hh}:${mm}`;
-      } catch (e) {
-        return String(timeStr).replace(/\./g, ':');
-      }
-    }
-
-    // Format lesson date using day_of_month (if present) or compute first date in month matching weekday -> "DD.MM"
-    function formatLessonDate(dayOfMonth, monthYyyyMm, defaultDayName) {
-      // If explicit day_of_month provided, use it
-      if (dayOfMonth) {
-        const mm = (monthYyyyMm && monthYyyyMm.split('-')[1]) || String(new Date().getMonth() + 1).padStart(2, '0');
-        return `${String(dayOfMonth).padStart(2, '0')}.${String(mm).padStart(2, '0')}`;
-      }
-
-      // Otherwise try to compute a representative day_of_month from the weekday name and month
-      try {
-        const weekdayMap = {
-          'niedziela': 0, 'niedzielę': 0, 'niedzieli': 0,
-          'poniedziałek': 1, 'poniedziałku': 1,
-          'wtorek': 2, 'wtorku': 2,
-          'środa': 3, 'sroda': 3, 'środy': 3,
-          'czwartek': 4, 'czwartku': 4,
-          'piątek': 5, 'piatek': 5, 'piątku': 5,
-          'sobota': 6, 'soboty': 6
-        };
-        const monthParts = (monthYyyyMm || '').split('-');
-        const year = parseInt(monthParts[0], 10) || new Date().getFullYear();
-        const monthIdx = (parseInt(monthParts[1], 10) - 1) || new Date().getMonth();
-        const desired = weekdayMap[String(defaultDayName || '').toLowerCase()];
-        if (typeof desired !== 'number') return defaultDayName || '';
-
-        // find first date in month that matches desired weekday
-        const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-        for (let d = 1; d <= daysInMonth; d++) {
-          const dt = new Date(year, monthIdx, d);
-          if (dt.getDay() === desired) {
-            return `${String(d).padStart(2, '0')}.${String(monthIdx + 1).padStart(2, '0')}`;
-          }
-        }
-      } catch (e) {
-        // fallthrough
-      }
-
-      return defaultDayName || '';
-    }
     
     // Helper function to get available months (current + created)
     async function getAvailableMonths() {
@@ -1471,7 +1418,7 @@
               <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
             <div class="group-detail">
               <i class="fas fa-calendar-day"></i>
-                <span>${group.day}, ${formatTimeToHoursMinutes(group.start_time)}</span>
+                <span>${group.day}, ${group.start_time}</span>
             </div>
             <div class="group-detail">
               <i class="fas fa-user-tie"></i>
@@ -2556,7 +2503,6 @@
 
           const el = document.createElement('div');
           el.className = 'group-card';
-          el.dataset.lessonId = lesson.id;
           el.style.marginBottom = '12px';
 
           // header with trainer, participants and amount + actions
@@ -2564,7 +2510,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div style="flex:1;">
                 <h4 style="margin:0;color:var(--gold);">${lesson.title}</h4>
-                <div style="color:var(--text-gray);font-size:0.9rem"><span class="lesson-datetime">${lesson.day_of_month ? formatLessonDate(lesson.day_of_month, month, lesson.day) : lesson.day} ${formatTimeToHoursMinutes(lesson.start_time)}</span><div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
+                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}<div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
               </div>
               <div style="text-align:right; min-width:160px;">
                 <div style="font-size:0.85rem;color:var(--text-gray);">Kwota lekcji</div>
@@ -2710,25 +2656,10 @@
 
               // payment method: do not save on change; saved only on confirm
 
-              // confirm / delete payment handlers (update DOM in-place without reloading whole list)
+              // confirm payment
               const confirmBtn = row.querySelector('.lesson-confirm-payment-btn');
-              const deleteBtnExisting = row.querySelector('.lesson-delete-payment-btn');
-
-              // helper to recompute and update lesson total in header
-              async function recomputeLessonTotal(lid) {
-                try {
-                  const { data: allPays, error: apErr } = await supabase.from('lesson_payments_month').select('amount').eq('month', month).eq('lesson_id', lid);
-                  if (!apErr && allPays) {
-                    const sum = (allPays || []).reduce((s,p) => s + parseFloat(p.amount || 0), 0);
-                    const headerSpan = document.querySelector('.lesson-total[data-lesson-id="' + lid + '"]');
-                    if (headerSpan) headerSpan.textContent = sum.toFixed(2) + ' zł';
-                  }
-                } catch (e) { console.warn('Error recomputing lesson total:', e); }
-              }
-
-              // attach confirm behavior to a button element
-              function attachConfirmBehavior(button) {
-                const handler = async (e) => {
+              if (confirmBtn) {
+                confirmBtn.addEventListener('click', async (e) => {
                   e.stopPropagation();
                   const pid = e.currentTarget.dataset.participantId;
                   const lid = e.currentTarget.dataset.lessonId;
@@ -2737,75 +2668,12 @@
                   const comment = row.querySelector('.lesson-payment-comment').value || null;
                   if (!method) { alert('Wybierz sposób płatności'); return; }
                   try {
-                    button.disabled = true;
                     const { error } = await supabase.from('lesson_payments_month').update({ confirmed: true, payment_method: method, comment: comment }).match({ month: month, participant_id: pid, lesson_id: lid });
                     if (error) throw error;
-                    // update UI: turn this button into a delete button and mark row as confirmed
-                    button.disabled = false;
-                    button.classList.remove('btn-primary');
-                    button.classList.add('btn-outline');
-                    button.classList.remove('lesson-confirm-payment-btn');
-                    button.classList.add('lesson-delete-payment-btn');
-                    button.innerHTML = '<i class="fas fa-times"></i>';
-                    // mark row visual state
-                    try {
-                      row.style.transition = 'background 0.18s ease, border 0.18s ease, opacity 0.12s';
-                      row.style.opacity = '0.6';
-                      row.style.background = 'rgba(0,255,0,0.06)';
-                      row.style.border = '1px solid rgba(0,255,0,0.2)';
-                      setTimeout(()=>{ row.style.opacity = '1'; }, 160);
-                      // disable payment method select to indicate confirmed
-                      const sel = row.querySelector('.lesson-payment-method-select'); if (sel) sel.disabled = true;
-                      const commentInput = row.querySelector('.lesson-payment-comment'); if (commentInput) commentInput.disabled = true;
-                    } catch (e) { /* ignore */ }
-                    // recompute header
-                    await recomputeLessonTotal(lid);
-                    // reattach delete behavior
-                    button.removeEventListener('click', handler);
-                    attachDeleteBehavior(button);
-                  } catch (err) { button.disabled = false; alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
-                };
-                button.addEventListener('click', handler);
+        await loadLessons();
+                  } catch (err) { alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
+                });
               }
-
-              // attach delete behavior to a button element
-              function attachDeleteBehavior(button) {
-                const handler = async (e) => {
-                  e.stopPropagation();
-                  const pid = e.currentTarget.dataset.participantId;
-                  const lid = e.currentTarget.dataset.lessonId;
-                  try {
-                    button.disabled = true;
-                    const { error } = await supabase.from('lesson_payments_month').update({ confirmed: false, payment_method: null, comment: null }).match({ month: month, participant_id: pid, lesson_id: lid });
-                    if (error) throw error;
-                    // update UI: turn this button into a confirm button and mark row as not confirmed
-                    button.disabled = false;
-                    button.classList.remove('btn-outline');
-                    button.classList.add('btn-primary');
-                    button.classList.remove('lesson-delete-payment-btn');
-                    button.classList.add('lesson-confirm-payment-btn');
-                    button.innerHTML = '<i class="fas fa-check"></i>';
-                    try {
-                      row.style.transition = 'background 0.18s ease, border 0.18s ease, opacity 0.12s';
-                      row.style.opacity = '0.6';
-                      row.style.background = 'rgba(255,0,0,0.06)';
-                      row.style.border = '1px solid rgba(255,0,0,0.2)';
-                      setTimeout(()=>{ row.style.opacity = '1'; }, 160);
-                      const sel = row.querySelector('.lesson-payment-method-select'); if (sel) sel.disabled = false;
-                      const commentInput = row.querySelector('.lesson-payment-comment'); if (commentInput) commentInput.disabled = false;
-                    } catch (e) { /* ignore */ }
-                    // recompute header
-                    await recomputeLessonTotal(lid);
-                    // reattach confirm behavior
-                    button.removeEventListener('click', handler);
-                    attachConfirmBehavior(button);
-                  } catch (err) { button.disabled = false; alert('Błąd usuwania płatności: ' + (err.message || 'Nieznany')); }
-                };
-                button.addEventListener('click', handler);
-              }
-
-              if (confirmBtn) attachConfirmBehavior(confirmBtn);
-              if (deleteBtnExisting) attachDeleteBehavior(deleteBtnExisting);
 
               // delete payment (reset)
               const deleteBtn = row.querySelector('.lesson-delete-payment-btn');
@@ -2830,9 +2698,6 @@
           // before appending ensure this load is still current
           if (myToken !== lessonsLoadToken) return;
           lessonsList.appendChild(el);
-          // store a quick lookup for this lesson element to support in-place refreshes
-          if (!window._lessonDomIndex) window._lessonDomIndex = new Map();
-          window._lessonDomIndex.set(lesson.id, el);
         }
 
       } catch (err) {
@@ -2927,21 +2792,6 @@
       p2search.disabled = false;
       delete p2search.dataset.selected;
     });
-
-    // Refresh a single lesson DOM node in-place from DB. If not rendered, fall back to full reload.
-    async function refreshLessonInPlace(lessonId) {
-      try {
-        if (!lessonId) { await loadLessons(); return; }
-        const month = document.getElementById('lessons-month-select').value;
-        const { data: lessonObj, error: lErr } = await supabase.from('lessons_month').select('*').match({ id: lessonId, month: month }).single();
-        if (lErr || !lessonObj) { await loadLessons(); return; }
-        const el = window._lessonDomIndex && window._lessonDomIndex.get(lessonId);
-        if (!el) { await loadLessons(); return; }
-        const titleH4 = el.querySelector('h4'); if (titleH4) titleH4.textContent = lessonObj.title || '';
-        const dtSpan = el.querySelector('.lesson-datetime'); if (dtSpan) dtSpan.textContent = (lessonObj.day_of_month ? formatLessonDate(lessonObj.day_of_month, month, lessonObj.day) : lessonObj.day) + ' ' + formatTimeToHoursMinutes(lessonObj.start_time || '');
-        const totalSpan = el.querySelector('.lesson-total'); if (totalSpan) totalSpan.textContent = (Number(lessonObj.amount || 0)).toFixed(2) + ' zł';
-      } catch (e) { console.warn('refreshLessonInPlace error', e); try { await loadLessons(); } catch(_){} }
-    }
   </script>
 </body>
 </html>
