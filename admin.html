@@ -829,12 +829,21 @@
           document.getElementById('groups-count').textContent = (groups || []).length;
         }
         
-        // TODO: Load participants count, paid/unpaid amounts when we add those features
-        document.getElementById('participants-count').textContent = '0';
+        // Load participants count
+        const { data: participants, error: participantsError } = await supabase
+          .from('participants_month')
+          .select('id')
+          .eq('month', selectedMonth);
+        
+        if (!participantsError) {
+          document.getElementById('participants-count').textContent = (participants || []).length;
+        }
+        
+        // TODO: Load paid/unpaid amounts when we add payment confirmation functionality
         document.getElementById('paid-amount').textContent = '0.00 zł';
         document.getElementById('unpaid-amount').textContent = '0.00 zł';
         
-        } catch (err) {
+      } catch (err) {
         console.error('Błąd ładowania danych:', err);
       }
     }
@@ -1257,7 +1266,7 @@
         const participantIds = participants.map(p => p.participant_id);
         const { data: payments, error: paymentsError } = await supabase
           .from('payments_month')
-          .select('participant_id, amount')
+          .select('participant_id, amount, payment_method, confirmed, comment')
           .eq('month', selectedMonth)
           .eq('group_id', groupId)
           .in('participant_id', participantIds);
@@ -1269,7 +1278,7 @@
         // Create payment lookup
         const paymentLookup = {};
         payments.forEach(p => {
-          paymentLookup[p.participant_id] = p.amount;
+          paymentLookup[p.participant_id] = p;
         });
 
         if (!participants || participants.length === 0) {
@@ -1281,7 +1290,8 @@
         
         participants.forEach(participant => {
           const participantData = participant.participants_month;
-          const amount = paymentLookup[participant.participant_id] || 0;
+          const payment = paymentLookup[participant.participant_id] || {};
+          const amount = payment.amount || 0;
           
           const participantCard = document.createElement('div');
           participantCard.className = 'group-card'; // Reusing group-card style
@@ -1297,7 +1307,40 @@
               <i class="fas fa-dollar-sign"></i>
               <span>${amount.toFixed(2)} zł</span>
             </div>
-            <div class="group-actions">
+            <div class="payment-section" style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 5px;">
+              ${payment.confirmed ? `
+                <div style="color: var(--success); margin-bottom: 10px;">
+                  <i class="fas fa-check-circle"></i> Płatność potwierdzona
+                  ${payment.payment_method ? ` (${payment.payment_method})` : ''}
+                  ${payment.comment ? `<br><small>Komentarz: ${payment.comment}</small>` : ''}
+                </div>
+              ` : `
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                  <label style="color: var(--text-gray); font-size: 0.9rem;">Sposób płatności:</label>
+                  <select class="payment-method-select form-control" style="flex: 1; max-width: 150px;" data-participant-id="${participant.participant_id}">
+                    <option value="">Wybierz sposób</option>
+                    <option value="karta" ${payment.payment_method === 'karta' ? 'selected' : ''}>Karta</option>
+                    <option value="przelew" ${payment.payment_method === 'przelew' ? 'selected' : ''}>Przelew</option>
+                    <option value="gotowka" ${payment.payment_method === 'gotowka' ? 'selected' : ''}>Gotówka</option>
+                  </select>
+                </div>
+                <div style="margin-bottom: 10px;">
+                  <input type="text" class="payment-comment form-control" placeholder="Komentarz (opcjonalnie)" value="${payment.comment || ''}" data-participant-id="${participant.participant_id}" style="width: 100%;">
+                </div>
+              `}
+              <div style="display: flex; gap: 10px;">
+                ${payment.confirmed ? `
+                  <button class="btn btn-outline delete-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}" style="flex: 1;">
+                    <i class="fas fa-trash"></i> Usuń płatność
+                  </button>
+                ` : `
+                  <button class="btn btn-primary confirm-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}" style="flex: 1;">
+                    <i class="fas fa-check"></i> Potwierdź płatność
+                  </button>
+                `}
+              </div>
+            </div>
+            <div class="group-actions" style="margin-top: 15px;">
               <button class="btn btn-outline edit-btn" data-id="${participant.participant_id}">
                 <i class="fas fa-edit"></i>
               </button>
@@ -1332,6 +1375,79 @@
               alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
             }
           });
+
+          // Add payment confirmation event listener
+          const confirmPaymentBtn = participantCard.querySelector('.confirm-payment-btn');
+          if (confirmPaymentBtn) {
+            confirmPaymentBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              
+              const participantId = e.target.dataset.participantId;
+              const groupId = e.target.dataset.groupId;
+              const paymentMethod = participantCard.querySelector('.payment-method-select').value;
+              const comment = participantCard.querySelector('.payment-comment').value;
+              
+              if (!paymentMethod) {
+                alert('Wybierz sposób płatności');
+                return;
+              }
+              
+              try {
+                // Update payment with method, comment and confirm it
+                const { error } = await supabase
+                  .from('payments_month')
+                  .update({
+                    payment_method: paymentMethod,
+                    comment: comment || null,
+                    confirmed: true
+                  })
+                  .eq('month', selectedMonth)
+                  .eq('participant_id', participantId)
+                  .eq('group_id', groupId);
+                
+                if (error) throw error;
+                
+                await loadGroupParticipants(groupId);
+                alert('Płatność została potwierdzona!');
+              } catch (err) {
+                alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany'));
+              }
+            });
+          }
+
+          // Add payment deletion event listener
+          const deletePaymentBtn = participantCard.querySelector('.delete-payment-btn');
+          if (deletePaymentBtn) {
+            deletePaymentBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              
+              if (!confirm('Usunąć potwierdzenie płatności?')) return;
+              
+              const participantId = e.target.dataset.participantId;
+              const groupId = e.target.dataset.groupId;
+              
+              try {
+                // Reset payment confirmation
+                const { error } = await supabase
+                  .from('payments_month')
+                  .update({
+                    payment_method: null,
+                    comment: null,
+                    confirmed: false
+                  })
+                  .eq('month', selectedMonth)
+                  .eq('participant_id', participantId)
+                  .eq('group_id', groupId);
+                
+                if (error) throw error;
+                
+                await loadGroupParticipants(groupId);
+                alert('Potwierdzenie płatności zostało usunięte!');
+              } catch (err) {
+                alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany'));
+              }
+            });
+          }
 
           groupParticipantsList.appendChild(participantCard);
         });
