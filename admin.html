@@ -948,16 +948,35 @@
           unpaidEl.innerHTML = `<div style="color:${unpaidColor}; font-weight:700">Niezapłacono: ${unpaidSum.toFixed(2)} zł</div>`;
         }
 
-        // update small home summary block text (methods)
+        // build methods html
+        let methodsHtml = '';
+        Object.keys(byMethod).forEach(k => methodsHtml += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`);
+
+        // update home summary block with nicer card
         const homeSummary = document.getElementById('home-summary-block');
         if (homeSummary) {
-          let methodsHtml = '';
-          Object.keys(byMethod).forEach(k => methodsHtml += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`);
-          homeSummary.innerHTML = `<div style="font-size:0.9rem;">${methodsHtml}</div>`;
+          const pct = totalSum ? Math.round((paidSum/totalSum)*100) : 0;
+          const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
+          homeSummary.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:8px;min-width:140px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:0.9rem;color:var(--text-gray)">Zapłacono</div>
+                <div style="font-weight:700;color:var(--success)">${paidSum.toFixed(2)} zł</div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:0.9rem;color:var(--text-gray)">Niezapłacono</div>
+                <div style="font-weight:700;color:${unpaidColor}">${unpaidSum.toFixed(2)} zł</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.04);height:10px;border-radius:6px;overflow:hidden">
+                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--success),#2bb673)"></div>
+              </div>
+              <div style="font-size:0.85rem;color:var(--text-gray);">${methodsHtml}</div>
+            </div>
+          `;
         }
 
-        // draw donut chart for home
-        drawDonut('home-donut', paidSum, totalSum || 1, 'rgba(40,167,69,0.9)', 'rgba(220,53,69,0.6)');
+        // draw donut chart for home (green = paid, red = unpaid)
+        drawDonut('home-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
         
       } catch (err) {
         console.error('Błąd ładowania danych:', err);
@@ -1425,17 +1444,25 @@
 
         const summaryEl = document.getElementById('group-participants-summary');
         if (summaryEl) {
-          let methodsHtml = '';
-          Object.keys(byMethod).forEach(k => { methodsHtml += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
+          let methodsHtmlG = '';
+          Object.keys(byMethod).forEach(k => { methodsHtmlG += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
           const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
           summaryEl.innerHTML = `
-            <div style="text-align:right;">
-              <div style="color:var(--success); font-weight:700">Zapłacono: ${paidSum.toFixed(2)} zł</div>
-              ${methodsHtml}
-              <div style="color:${unpaidColor}; font-weight:700; margin-top:6px">Niezapłacono: ${unpaidSum.toFixed(2)} zł</div>
-              <div style="color:var(--text-gray);">Razem: ${totalSum.toFixed(2)} zł</div>
-        </div>
+            <div style="text-align:right; min-width:180px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:0.95rem;color:var(--text-gray)">Zapłacono</div>
+                <div style="font-weight:700;color:var(--success)">${paidSum.toFixed(2)} zł</div>
+              </div>
+              <div style="margin-top:6px;">${methodsHtmlG}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                <div style="font-size:0.95rem;color:var(--text-gray)">Niezapłacono</div>
+                <div style="font-weight:700;color:${unpaidColor}">${unpaidSum.toFixed(2)} zł</div>
+              </div>
+              <div style="color:var(--text-gray);margin-top:6px">Razem: ${totalSum.toFixed(2)} zł</div>
+            </div>
           `;
+          // draw donut for group: paid vs unpaid
+          drawDonut('group-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
         }
 
         if (!participants || participants.length === 0) {
@@ -1720,40 +1747,77 @@
       await loadHomeData();
     });
 
-    // Draw donut chart helper
-    function drawDonut(canvasId, value, total, colorFilled, colorEmpty) {
+    // Draw donut chart helper (paid/unpaid)
+    function drawDonut(canvasId, paid, unpaid, colorPaid, colorUnpaid) {
       const canvas = document.getElementById(canvasId);
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const w = canvas.width;
       const h = canvas.height;
       const cx = w/2; const cy = h/2; const r = Math.min(w,h)/2 - 6;
-      const pct = total <= 0 ? 0 : Math.max(0, Math.min(1, value/total));
+      const total = (parseFloat(paid)||0) + (parseFloat(unpaid)||0);
       ctx.clearRect(0,0,w,h);
-      // background
+
+      // background ring
       ctx.beginPath();
       ctx.arc(cx,cy,r,0,Math.PI*2);
-      ctx.fillStyle = 'rgba(255,255,255,0.06)';
-      ctx.fill();
-      // empty arc
-      ctx.beginPath();
-      ctx.moveTo(cx,cy);
-      ctx.arc(cx,cy,r, -Math.PI/2 + 2*Math.PI*pct, -Math.PI/2 + 2*Math.PI, false);
-      ctx.closePath();
-      ctx.fillStyle = colorEmpty;
-      ctx.fill();
-      // filled arc
-      ctx.beginPath();
-      ctx.moveTo(cx,cy);
-      ctx.arc(cx,cy,r, -Math.PI/2, -Math.PI/2 + 2*Math.PI*pct, false);
-      ctx.closePath();
-      ctx.fillStyle = colorFilled;
-      ctx.fill();
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.stroke();
+
+      if (total <= 0) {
+        // nothing to draw
+        // inner circle
+        ctx.beginPath();
+        ctx.arc(cx,cy,r-16,0,Math.PI*2);
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-bg') || '#1e1e1e';
+        ctx.fill();
+        // center text
+        ctx.fillStyle = 'var(--text-gray)';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Brak danych', cx, cy);
+        return;
+      }
+
+      const start = -Math.PI/2;
+      const paidAngle = (paid/total) * Math.PI * 2;
+
+      // draw paid arc
+      if (paid > 0) {
+        ctx.beginPath();
+        ctx.arc(cx,cy,r,start,start + paidAngle, false);
+        ctx.strokeStyle = colorPaid;
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'butt';
+        ctx.stroke();
+      }
+
+      // draw unpaid arc (rest)
+      if (unpaid > 0) {
+        ctx.beginPath();
+        ctx.arc(cx,cy,r,start + paidAngle, start + 2*Math.PI, false);
+        ctx.strokeStyle = colorUnpaid;
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'butt';
+        ctx.stroke();
+      }
+
       // inner circle
       ctx.beginPath();
-      ctx.arc(cx,cy,r*0.6,0,Math.PI*2);
-      ctx.fillStyle = 'var(--secondary-bg)';
+      ctx.arc(cx,cy,r-18,0,Math.PI*2);
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-bg') || '#121212';
       ctx.fill();
+
+      // center text: paid / total
+      ctx.fillStyle = 'var(--text-light)';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${((paid/total)*100).toFixed(0)}%`, cx, cy - 8);
+      ctx.font = '12px sans-serif';
+      ctx.fillText(`${(paid+unpaid).toFixed(2)} zł`, cx, cy + 12);
     }
   </script>
 </body>
