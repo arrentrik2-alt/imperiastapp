@@ -1875,10 +1875,11 @@
                   }
                   const actionButtons = participantCard.querySelector('.action-buttons');
                   if (actionButtons) {
-                    const confBtn = actionButtons.querySelector('.confirm-payment-btn');
-                    if (confBtn) confBtn.remove();
-                    if (!actionButtons.querySelector('.delete-payment-btn')) {
-                      const delBtn = document.createElement('button');
+                    // find existing confirm button and convert it in-place to a delete button to preserve order
+                    const confBtnExisting = actionButtons.querySelector('.confirm-payment-btn');
+                    if (confBtnExisting) {
+                      // create a fresh button node based on confirm button to avoid duplicate listeners
+                      const delBtn = confBtnExisting.cloneNode(false);
                       delBtn.className = 'btn btn-outline delete-payment-btn';
                       delBtn.dataset.participantId = participantId;
                       delBtn.dataset.groupId = groupId;
@@ -1896,13 +1897,13 @@
                             row.style.background = 'rgba(255,0,0,0.08)';
                             row.style.border = '1px solid #ff0000';
                           }
-                          delBtn.remove();
-                          const newConf = document.createElement('button');
-                          newConf.className = 'btn btn-primary confirm-payment-btn';
-                          newConf.dataset.participantId = participantId;
-                          newConf.dataset.groupId = groupId;
-                          newConf.innerHTML = '<i class="fas fa-check"></i>';
-                          newConf.addEventListener('click', async (e2) => {
+                          // revert button back to confirm (create fresh node)
+                          const revertBtn = delBtn.cloneNode(false);
+                          revertBtn.className = 'btn btn-primary confirm-payment-btn';
+                          revertBtn.dataset.participantId = participantId;
+                          revertBtn.dataset.groupId = groupId;
+                          revertBtn.innerHTML = '<i class="fas fa-check"></i>';
+                          revertBtn.addEventListener('click', async (e2) => {
                             e2.stopPropagation();
                             const paymentMethod = participantCard.querySelector('.payment-method-select').value;
                             const comment = participantCard.querySelector('.payment-comment').value || null;
@@ -1920,14 +1921,16 @@
                                 row.style.background = 'rgba(0,255,0,0.08)';
                                 row.style.border = '1px solid #00ff00';
                               }
-                              newConf.remove();
-                              if (!actionButtons.querySelector('.delete-payment-btn')) actionButtons.appendChild(delBtn);
+                              // replace revertBtn with delBtn again (so user can delete)
+                              revertBtn.replaceWith(delBtn);
                             } catch (innerErr) { alert('Błąd potwierdzania płatności: ' + (innerErr.message || 'Nieznany')); }
                           });
-                          actionButtons.appendChild(newConf);
+                          // replace delete with revert-confirm in DOM
+                          delBtn.replaceWith(revertBtn);
                         } catch (innerErr) { alert('Błąd usuwania potwierdzenia płatności: ' + (innerErr.message || 'Nieznany')); }
                       });
-                      actionButtons.appendChild(delBtn);
+                      // replace confirm with delete in DOM (keeps original position)
+                      confBtnExisting.replaceWith(delBtn);
                     }
                   }
                 } catch (domErr) { console.warn('Błąd aktualizacji DOM po potwierdzeniu płatności:', domErr); }
@@ -2769,10 +2772,12 @@
                                   paidRow2.style.border = '1px solid #ff0000';
                                 }
                               }
-                              newDel.remove();
+                              // replace delete button with a confirm button in-place to preserve order
                               const container2 = row.querySelector('.action-buttons');
                               if (container2) {
-                                const newConf = document.createElement('button');
+                                const existingDel = container2.querySelector('.lesson-delete-payment-btn');
+                                // create confirm button
+                                const newConf = (existingDel && existingDel.cloneNode(false)) || document.createElement('button');
                                 newConf.className = 'btn btn-primary lesson-confirm-payment-btn';
                                 newConf.dataset.participantId = pid;
                                 newConf.dataset.lessonId = lid;
@@ -2793,15 +2798,20 @@
                                         paidRow3.style.border = '1px solid #00ff00';
                                       }
                                     }
-                                    newConf.remove();
-                                    if (!container2.querySelector('.lesson-delete-payment-btn')) container2.appendChild(newDel);
+                                    // replace confirm with delete again
+                                    newConf.replaceWith(newDel);
                                   } catch (err3) { alert('Błąd potwierdzania płatności: ' + (err3.message || 'Nieznany')); }
                                 });
-                                container2.appendChild(newConf);
+                                if (existingDel) existingDel.replaceWith(newConf); else container2.appendChild(newConf);
                               }
                             } catch (err2) { alert('Błąd usuwania płatności: ' + (err2.message || 'Nieznany')); }
                           });
-                          container.appendChild(newDel);
+                          // place newDel where the confirm button was to keep ordering
+                          const container = row.querySelector('.action-buttons');
+                          if (container) {
+                            const confExisting = container.querySelector('.lesson-confirm-payment-btn');
+                            if (confExisting) confExisting.replaceWith(newDel); else container.appendChild(newDel);
+                          }
                         }
                       }
                     } catch (domErr) { console.warn('Błąd aktualizacji DOM po potwierdzeniu płatności lekcji:', domErr); }
