@@ -567,7 +567,7 @@
         <button class="btn btn-outline" id="return-current-month-participants" title="Wróć do bieżącego miesiąca">
           <i class="fas fa-calendar-day"></i>
         </button>
-    </div>
+        </div>
     
       <div id="group-participants-info" style="margin-bottom: 20px; display:flex; align-items:center; justify-content:space-between; gap:20px;">
         <h4 id="group-participants-name" style="color: var(--gold); margin: 0;"></h4>
@@ -575,18 +575,18 @@
           <canvas id="group-donut" width="80" height="80"></canvas>
           <div id="group-participants-summary" style="color:var(--text-gray); font-size:0.95rem; text-align:right;"></div>
       </div>
-    </div>
+      </div>
 
       <div style="margin-bottom: 20px;">
         <button class="btn btn-primary" id="add-participant-to-group-btn">
           <i class="fas fa-plus"></i> Dodaj uczestnika
         </button>
-    </div>
+        </div>
 
-      <div id="participants-list">
+        <div id="participants-list">
         <!-- Participants will be loaded here -->
+        </div>
       </div>
-    </div>
 
   <!-- Add Group Modal -->
   <div class="modal" id="add-group-modal">
@@ -597,13 +597,13 @@
       
       <div class="modal-header">
         <h3 id="group-modal-title">Dodaj nową grupę</h3>
-      </div>
-      
+    </div>
+    
       <div class="form-group">
         <label for="group-name">Nazwa grupy</label>
         <input type="text" id="group-name" class="form-control" placeholder="Nazwa grupy">
-      </div>
-      
+    </div>
+
       <div class="form-group">
         <label for="group-day">Dzień tygodnia</label>
         <select id="group-day" class="form-control">
@@ -615,27 +615,27 @@
           <option value="Sobota">Sobota</option>
           <option value="Niedziela">Niedziela</option>
         </select>
-      </div>
-      
+    </div>
+
       <div class="form-group">
         <label for="group-start">Godzina rozpoczęcia</label>
         <input type="time" id="group-start" class="form-control">
-      </div>
-      
+    </div>
+
       <div class="form-group">
         <label for="group-trainer">Trener</label>
         <input type="text" id="group-trainer" class="form-control" placeholder="Imię i nazwisko trenera">
-      </div>
-      
+    </div>
+
       <div class="form-actions">
         <button class="btn btn-outline" id="cancel-group-btn">Anuluj</button>
         <button class="btn btn-primary" id="save-group-btn">
           <i class="fas fa-save"></i> Zapisz grupę
         </button>
+        </div>
       </div>
-      </div>
-      </div>
-      
+    </div>
+
   <!-- Create New Month Modal -->
   <div class="modal" id="create-month-modal">
     <div class="modal-content">
@@ -645,50 +645,50 @@
       
       <div class="modal-header">
         <h3>Utwórz nowy miesiąc</h3>
-      </div>
-      
+    </div>
+
       <div class="form-group">
         <label for="new-month-input">Miesiąc (YYYY-MM)</label>
         <input type="text" id="new-month-input" class="form-control" placeholder="np. 2024-12">
-      </div>
-      
+    </div>
+
       <div class="form-actions">
         <button class="btn btn-outline" id="cancel-create-month-btn">Anuluj</button>
         <button class="btn btn-primary" id="save-create-month-btn">
           <i class="fas fa-save"></i> Utwórz miesiąc
         </button>
+        </div>
       </div>
     </div>
-  </div>
 
   <!-- Add Participant Modal -->
   <div class="modal" id="add-participant-modal">
-    <div class="modal-content">
+      <div class="modal-content">
       <button class="modal-close" id="close-participant-modal">
-        <i class="fas fa-times"></i>
-      </button>
+          <i class="fas fa-times"></i>
+        </button>
       
-      <div class="modal-header">
+        <div class="modal-header">
         <h3>Dodaj uczestnika do grupy</h3>
         <p id="participant-group-name" style="color: var(--text-gray); margin-top: 5px;"></p>
-      </div>
+        </div>
       
-      <div class="form-group">
+        <div class="form-group">
         <label for="participant-name">Imię i nazwisko</label>
         <input type="text" id="participant-name" class="form-control" placeholder="Imię i nazwisko">
-      </div>
+        </div>
       
-      <div class="form-group">
+        <div class="form-group">
         <label for="participant-phone">Telefon (opcjonalnie)</label>
         <input type="tel" id="participant-phone" class="form-control" placeholder="+48 123 456 789">
-      </div>
+        </div>
       
-      <div class="form-group">
+        <div class="form-group">
         <label for="participant-amount">Kwota za grupę (zł)</label>
         <input type="number" id="participant-amount" class="form-control" placeholder="0.00" step="0.01" min="0">
-      </div>
+        </div>
       
-      <div class="form-group">
+        <div class="form-group">
         <label for="participant-rodo">RODO</label>
         <div style="display:flex; align-items:center; gap:8px;">
           <input type="checkbox" id="participant-rodo">
@@ -696,14 +696,14 @@
         </div>
       </div>
       
-      <div class="form-actions">
+        <div class="form-actions">
         <button class="btn btn-outline" id="cancel-participant-btn">Anuluj</button>
         <button class="btn btn-primary" id="save-participant-btn">
           <i class="fas fa-save"></i> Dodaj uczestnika
         </button>
+        </div>
       </div>
     </div>
-  </div>
 
   <!-- Lessons Section -->
   <div class="content-box" id="lessons-section" style="display:none;">
@@ -722,13 +722,13 @@
       <button class="btn btn-outline" id="return-current-month-lessons" title="Wróć do bieżącego miesiąca">
         <i class="fas fa-calendar-day"></i>
       </button>
-    </div>
-
+      </div>
+      
     <div id="lessons-list">
       <!-- Lessons will be loaded here -->
     </div>
-  </div>
-
+      </div>
+      
   <!-- Create Lesson Modal -->
   <div class="modal" id="create-lesson-modal">
     <div class="modal-content">
@@ -736,7 +736,7 @@
       <div class="modal-header">
         <h3>Utwórz lekcję</h3>
       </div>
-
+      
       <div class="form-group">
         <label for="lesson-day">Dzień</label>
         <select id="lesson-day" class="form-control">
@@ -749,27 +749,27 @@
           <option>Niedziela</option>
         </select>
       </div>
-
+      
       <div class="form-group">
         <label for="lesson-day-of-month">Dzień miesiąca</label>
         <input type="number" id="lesson-day-of-month" class="form-control" min="1" max="31" placeholder="np. 15">
       </div>
-
+      
       <div class="form-group">
         <label for="lesson-start">Godzina</label>
         <input type="time" id="lesson-start" class="form-control">
       </div>
-
+      
       <div class="form-group">
         <label for="lesson-trainer">Trener</label>
         <input type="text" id="lesson-trainer" class="form-control" placeholder="Imię i nazwisko">
       </div>
-
+      
       <div class="form-group">
         <label for="lesson-amount">Kwota za lekcję (zł)</label>
         <input type="number" id="lesson-amount" class="form-control" step="0.01" min="0">
       </div>
-
+      
       <hr>
       <h4>Uczestnik główny</h4>
       <div class="form-group">
@@ -792,7 +792,7 @@
           <input type="tel" id="participant1-phone" class="form-control">
         </div>
       </div>
-
+      
       <hr>
       <h4>Partner (opcjonalnie)</h4>
       <div class="form-group">
@@ -815,7 +815,7 @@
           <input type="tel" id="participant2-phone" class="form-control">
         </div>
       </div>
-
+      
       <div class="form-actions">
         <button class="btn btn-outline" id="cancel-create-lesson-btn">Anuluj</button>
         <button class="btn btn-primary" id="save-create-lesson-btn"><i class="fas fa-save"></i> Utwórz lekcję</button>
@@ -1588,7 +1588,7 @@
       if (!groupId) {
         console.error('Brak ID grupy');
           return;
-      }
+        }
       
       const selectedMonth = document.getElementById('participants-month-select').value;
       console.log('Ładowanie uczestników dla grupy:', groupId, 'miesiąc:', selectedMonth, 'currentGroupName:', currentGroupName);
@@ -1609,7 +1609,7 @@
           .eq('group_id', groupId);
 
         if (participantsError) throw participantsError;
-        
+
         console.log('Znaleziono uczestników:', participants);
 
         // Get payments for these participants (and overall group payments)
@@ -1663,8 +1663,8 @@
         if (!participants || participants.length === 0) {
           groupParticipantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników dla tej grupy w miesiącu ' + selectedMonth + '.</p></div>';
           return;
-      }
-        
+        }
+
         groupParticipantsList.innerHTML = '';
         
         participants.forEach((participant, index) => {
@@ -1682,7 +1682,7 @@
               <div class="participant-info" style="flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;">
                 <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
                 <div style="color: var(--text-gray); font-size: 0.9rem;">${participantData.phone || 'Brak'}</div>
-          </div>
+              </div>
               
               <div class="amount-section" style="min-width: 120px;">
                 <div style="display: flex; align-items: center; gap: 5px;">
@@ -1761,7 +1761,7 @@
               // If participant has no more associations in this month, remove participant row for that month
               const { data: remaining, error: remErr } = await supabase
                 .from('participant_groups_month')
-                .select('id')
+          .select('id')
                 .match({ month: selectedMonth, participant_id: participant.participant_id });
               if (remErr) throw remErr;
               if (!remaining || remaining.length === 0) {
@@ -1795,7 +1795,7 @@
                 .eq('group_id', groupId);
               
         if (error) throw error;
-            } catch (err) {
+      } catch (err) {
               alert('Błąd aktualizacji kwoty: ' + (err.message || 'Nieznany'));
             }
           });
@@ -1817,11 +1817,11 @@
                 .from('payments_month')
                 .update({ payment_method: newMethod || null })
                 .eq('month', selectedMonth)
-                .eq('participant_id', participantId)
+            .eq('participant_id', participantId)
                 .eq('group_id', groupId);
               
           if (error) throw error;
-            } catch (err) {
+        } catch (err) {
               alert('Błąd aktualizacji sposobu płatności: ' + (err.message || 'Nieznany'));
             }
           });
@@ -1841,7 +1841,7 @@
                 .eq('group_id', groupId);
               
           if (error) throw error;
-      } catch (err) {
+        } catch (err) {
               alert('Błąd aktualizacji komentarza: ' + (err.message || 'Nieznany'));
             }
           });
@@ -2031,7 +2031,7 @@
             // refresh list from DB to ensure persistence
             if (currentGroupId) await loadGroupParticipants(currentGroupId);
           }
-        } catch (err) {
+      } catch (err) {
           console.error('Exception saving RODO:', err);
           alert('Błąd zapisu RODO: ' + (err.message || 'Nieznany'));
           e.currentTarget.checked = !checked; // revert
@@ -2062,7 +2062,7 @@
             setTimeout(() => el.classList.remove('rodo-saved'), 700);
           }
         }
-      } catch (err) {
+        } catch (err) {
         console.error('Exception saving RODO:', err);
         if (el) el.checked = !checked;
       } finally {
@@ -2131,7 +2131,7 @@
         document.getElementById('lesson-trainer').value = lessonObj.trainer || '';
         document.getElementById('lesson-amount').value = lessonObj.amount || '';
         // participants fields left empty for editing participants separately
-      } else {
+        } else {
         currentEditingLessonId = null;
         document.getElementById('lesson-day').value = 'Poniedziałek';
         document.getElementById('lesson-day-of-month').value = '';
@@ -2306,10 +2306,20 @@
           await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
           await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
         } else if (p1name) {
-          // try to find existing participant by name (case-insensitive) to avoid duplicates
+          // try to find existing participant by exact name+phone (if phone provided) or by name case-insensitive
           try {
-            const { data: existing, error: existErr } = await supabase.from('participants_month').select('id,name,phone').eq('month', month).ilike('name', p1name).limit(1).single();
-            if (!existErr && existing && existing.id) {
+            const phoneNormalized = (p1phone || '').trim();
+            let existingArr = null;
+            if (phoneNormalized) {
+              const res = await supabase.from('participants_month').select('id,name,phone').eq('month', month).ilike('name', p1name).eq('phone', phoneNormalized).limit(1);
+              existingArr = res.data;
+            } else {
+              const res = await supabase.from('participants_month').select('id,name,phone').eq('month', month).ilike('name', p1name).limit(1);
+              existingArr = res.data;
+            }
+
+            if (existingArr && existingArr.length > 0 && existingArr[0].id) {
+              const existing = existingArr[0];
               primaryParticipantId = existing.id;
               document.getElementById('participant1-selected-id').value = primaryParticipantId;
               document.getElementById('participant1-badge').style.display = 'inline';
@@ -2326,7 +2336,7 @@
               }
             }
           } catch (e) {
-            console.warn('Error checking existing participant1:', e);
+            console.warn('Error checking/creating participant1:', e);
             const { data: createdPid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
             if (e1) console.warn('Error creating participant1 fallback:', e1);
             else {
@@ -2354,10 +2364,20 @@
             await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
           }
         } else if (p2name) {
-          // try to find existing partner by name
+          // try to find existing partner by exact name+phone if phone provided, else by name
           try {
-            const { data: existing2, error: existErr2 } = await supabase.from('participants_month').select('id,name,phone').eq('month', month).ilike('name', p2name).limit(1).single();
-            if (!existErr2 && existing2 && existing2.id) {
+            const phoneNormalized2 = (p2phone || '').trim();
+            let existingArr2 = null;
+            if (phoneNormalized2) {
+              const res2 = await supabase.from('participants_month').select('id,name,phone').eq('month', month).ilike('name', p2name).eq('phone', phoneNormalized2).limit(1);
+              existingArr2 = res2.data;
+            } else {
+              const res2 = await supabase.from('participants_month').select('id,name,phone').eq('month', month).ilike('name', p2name).limit(1);
+              existingArr2 = res2.data;
+            }
+
+            if (existingArr2 && existingArr2.length > 0 && existingArr2[0].id) {
+              const existing2 = existingArr2[0];
               partnerParticipantId = existing2.id;
               document.getElementById('participant2-selected-id').value = partnerParticipantId;
               document.getElementById('participant2-badge').style.display = 'inline';
@@ -2393,7 +2413,7 @@
               }
             }
           } catch (e) {
-            console.warn('Error checking existing participant2:', e);
+            console.warn('Error checking/creating participant2:', e);
             const { data: createdPid2, error: e2 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
             if (e2) console.warn('Error creating participant2 fallback:', e2);
             else {
@@ -2553,7 +2573,7 @@
                 <div class="participant-info" style="flex:0 0 220px; overflow:hidden; text-overflow:ellipsis;">
                   <div style="font-weight:bold">${pdata.name || 'Brak'}</div>
                   <div style="color:var(--text-gray);font-size:0.9rem">${pdata.phone || 'Brak'}</div>
-                </div>
+                  </div>
                 <div class="amount-section" style="min-width:120px;">
                   <div style="display:flex;align-items:center;gap:6px;">
                     <input type="number" class="lesson-amount-input form-control" value="${amountVal}" step="0.01" min="0" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:100px;text-align:center;" />
@@ -2566,11 +2586,11 @@
                     <option value="karta" ${pay.payment_method === 'karta' ? 'selected' : ''}>Karta</option>
                     <option value="przelew" ${pay.payment_method === 'przelew' ? 'selected' : ''}>Przelew</option>
                     <option value="gotowka" ${pay.payment_method === 'gotowka' ? 'selected' : ''}>Gotówka</option>
-                  </select>
-                </div>
+                    </select>
+                  </div>
                 <div class="comment-section" style="flex:1;min-width:120px;">
                   <input type="text" class="lesson-payment-comment form-control" placeholder="Komentarz" value="${pay.comment || ''}" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:100%;" />
-                </div>
+                  </div>
                 <div class="action-buttons" style="min-width:120px;display:flex;align-items:center;gap:8px;">
                   ${pay.confirmed ? `<button class="btn btn-outline lesson-delete-payment-btn" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}"><i class="fas fa-times"></i></button>` : `<button class="btn btn-primary lesson-confirm-payment-btn" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}"><i class="fas fa-check"></i></button>`}
                 </div>
@@ -2583,7 +2603,7 @@
                 const lid = e.target.dataset.lessonId;
                 try {
                   const { error } = await supabase.from('lesson_payments_month').update({ amount: newAmount }).match({ month: month, participant_id: pid, lesson_id: lid });
-                  if (error) throw error;
+        if (error) throw error;
                   // recompute lesson total
                   const { data: allPays, error: apErr } = await supabase.from('lesson_payments_month').select('amount').eq('month', month).eq('lesson_id', lid);
                   if (!apErr && allPays) {
@@ -2612,7 +2632,7 @@
                 const lid = e.target.dataset.lessonId;
                 try {
                   const { error } = await supabase.from('lesson_payments_month').update({ comment: newComment || null }).match({ month: month, participant_id: pid, lesson_id: lid });
-                  if (error) throw error;
+          if (error) throw error;
                 } catch (err) { console.warn('Błąd aktualizacji komentarza:', err); }
               });
 
@@ -2632,7 +2652,7 @@
                   try {
                     const { error } = await supabase.from('lesson_payments_month').update({ confirmed: true, payment_method: method, comment: comment }).match({ month: month, participant_id: pid, lesson_id: lid });
                     if (error) throw error;
-                    await loadLessons();
+        await loadLessons();
                   } catch (err) { alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
                 });
               }
