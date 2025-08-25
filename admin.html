@@ -435,10 +435,13 @@
         <select id="current-month-select" class="form-control">
           <!-- Will be populated with last 12 months -->
         </select>
+        <button class="btn btn-outline" id="return-current-month-home" title="Wróć do bieżącego miesiąca">
+          <i class="fas fa-calendar-day"></i>
+        </button>
         <button class="btn btn-primary" id="create-new-month-btn">
           <i class="fas fa-plus"></i> Utwórz nowy miesiąc
         </button>
-        </div>
+      </div>
       
       <div class="content-box">
         <h4 style="margin-bottom: 15px; color: var(--gold);">Podsumowanie dla wybranego miesiąca:</h4>
@@ -483,6 +486,9 @@
         <select id="groups-month-select" class="form-control">
           <!-- Will be populated with last 12 months -->
         </select>
+        <button class="btn btn-outline" id="return-current-month-groups" title="Wróć do bieżącego miesiąca">
+          <i class="fas fa-calendar-day"></i>
+        </button>
       </div>
 
       <div id="groups-list">
@@ -496,7 +502,7 @@
         </div>
       </div>
     </div>
-
+    
     <!-- Group Participants Section -->
     <div class="content-box" id="group-participants-section" style="display:none;">
       <div class="content-header">
@@ -504,25 +510,28 @@
         <button class="btn btn-outline" id="back-to-groups-btn">
           <i class="fas fa-arrow-left"></i> Powrót do grup
         </button>
-      </div>
+        </div>
       
       <div class="month-selector">
         <label for="participants-month-select">Miesiąc:</label>
         <select id="participants-month-select" class="form-control">
           <!-- Will be populated with available months -->
-        </select>
-      </div>
-      
+          </select>
+        <button class="btn btn-outline" id="return-current-month-participants" title="Wróć do bieżącego miesiąca">
+          <i class="fas fa-calendar-day"></i>
+        </button>
+    </div>
+    
       <div id="group-participants-info" style="margin-bottom: 20px;">
         <h4 id="group-participants-name" style="color: var(--gold);"></h4>
-      </div>
-      
+    </div>
+
       <div style="margin-bottom: 20px;">
         <button class="btn btn-primary" id="add-participant-to-group-btn">
           <i class="fas fa-plus"></i> Dodaj uczestnika
         </button>
-      </div>
-      
+    </div>
+
       <div id="participants-list">
         <!-- Participants will be loaded here -->
       </div>
@@ -754,11 +763,11 @@
       options.push({ value: currentMonth, label: currentLabel });
       
       try {
-        // Get created months from created_months table
+        // Get created months from created_months table (order by creation time newest first)
         const { data: months, error } = await supabase
           .from('created_months')
           .select('month')
-          .order('month', { ascending: false });
+          .order('created_at', { ascending: false });
         
         if (!error && months) {
           months.forEach(m => {
@@ -843,7 +852,7 @@
         document.getElementById('paid-amount').textContent = '0.00 zł';
         document.getElementById('unpaid-amount').textContent = '0.00 zł';
         
-      } catch (err) {
+        } catch (err) {
         console.error('Błąd ładowania danych:', err);
       }
     }
@@ -1080,7 +1089,7 @@
           `;
           
           // Add click event to open participants page
-          groupCard.addEventListener('click', (e) => {
+            groupCard.addEventListener('click', (e) => {
             // Don't open if clicking on action buttons
             if (e.target.closest('.group-actions')) return;
             openGroupParticipantsPage(group);
@@ -1088,26 +1097,26 @@
           });
           
           // Add event listeners for action buttons
-          groupCard.querySelector('.edit-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
+            groupCard.querySelector('.edit-btn').addEventListener('click', (e) => {
+              e.stopPropagation();
             // TODO: Implement edit functionality
             alert('Funkcja edycji będzie dostępna wkrótce');
-          });
+            });
           
-          groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
-            e.stopPropagation();
+            groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
+              e.stopPropagation();
             if (!confirm('Usunąć grupę?')) return;
             
             try {
               const { error } = await supabase.rpc('delete_group_month', { p_id: group.id });
-              if (error) throw error;
-              await loadGroups();
+                if (error) throw error;
+                await loadGroups();
               await loadHomeData(); // Refresh home page data too
               alert('Grupa została usunięta');
-            } catch (err) {
-              alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany'));
-            }
-          });
+              } catch (err) {
+                alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany'));
+              }
+            });
           
           groupsList.appendChild(groupCard);
         });
@@ -1239,7 +1248,7 @@
     async function loadGroupParticipants(groupId) {
       if (!groupId) {
         console.error('Brak ID grupy');
-        return;
+          return;
       }
       
       const selectedMonth = document.getElementById('participants-month-select').value;
@@ -1283,12 +1292,12 @@
 
         if (!participants || participants.length === 0) {
           groupParticipantsList.innerHTML = '<div class="empty-state"><p>Brak uczestników dla tej grupy w miesiącu ' + selectedMonth + '.</p></div>';
-          return;
-        }
+        return;
+      }
         
         groupParticipantsList.innerHTML = '';
         
-        participants.forEach(participant => {
+        participants.forEach((participant, index) => {
           const participantData = participant.participants_month;
           const payment = paymentLookup[participant.participant_id] || {};
           const amount = payment.amount || 0;
@@ -1299,6 +1308,7 @@
           
           participantCard.innerHTML = `
             <div class="participant-row" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px; ${payment.confirmed ? 'background: rgba(0,255,0,0.1); border: 1px solid #00ff00;' : 'background: rgba(255,0,0,0.1); border: 1px solid #ff0000;'}">
+              <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
               <div class="participant-info" style="flex: 1; min-width: 200px;">
                 <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
                 <div style="color: var(--text-gray); font-size: 0.9rem;">${participantData.phone || 'Brak'}</div>
@@ -1310,8 +1320,8 @@
                          data-participant-id="${participant.participant_id}" data-group-id="${groupId}" 
                          style="width: 100px; text-align: center;">
                   <span style="font-size: 0.9rem; color: var(--text-gray);">zł</span>
-                </div>
-              </div>
+          </div>
+          </div>
               
               <div class="payment-method-section" style="min-width: 150px;">
                 <select class="payment-method-select form-control" data-participant-id="${participant.participant_id}" style="width: 130px;">
@@ -1366,9 +1376,9 @@
                 p_group_id: groupId
               });
               
-              if (error) throw error;
+        if (error) throw error;
               await loadGroupParticipants(groupId);
-            } catch (err) {
+      } catch (err) {
               alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
             }
           });
@@ -1380,15 +1390,15 @@
             const participantId = e.target.dataset.participantId;
             const groupId = e.target.dataset.groupId;
             
-            try {
-              const { error } = await supabase
+      try {
+        const { error } = await supabase
                 .from('payments_month')
-                .update({ amount: newAmount })
+          .update({ amount: newAmount })
                 .eq('month', selectedMonth)
                 .eq('participant_id', participantId)
                 .eq('group_id', groupId);
               
-              if (error) throw error;
+        if (error) throw error;
             } catch (err) {
               alert('Błąd aktualizacji kwoty: ' + (err.message || 'Nieznany'));
             }
@@ -1400,15 +1410,15 @@
             const newMethod = e.target.value;
             const participantId = e.target.dataset.participantId;
             
-            try {
-              const { error } = await supabase
+        try {
+          const { error } = await supabase
                 .from('payments_month')
                 .update({ payment_method: newMethod || null })
                 .eq('month', selectedMonth)
                 .eq('participant_id', participantId)
                 .eq('group_id', groupId);
               
-              if (error) throw error;
+          if (error) throw error;
             } catch (err) {
               alert('Błąd aktualizacji sposobu płatności: ' + (err.message || 'Nieznany'));
             }
@@ -1429,7 +1439,7 @@
                 .eq('group_id', groupId);
               
               if (error) throw error;
-            } catch (err) {
+      } catch (err) {
               alert('Błąd aktualizacji komentarza: ' + (err.message || 'Nieznany'));
             }
           });
@@ -1517,7 +1527,7 @@
           .select('id')
           .eq('month', month)
           .eq('name', groupName)
-          .single();
+              .single();
         
         if (error) {
           console.error('Błąd pobierania ID grupy:', error);
