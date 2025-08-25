@@ -1657,68 +1657,16 @@
           if (paymentError) throw paymentError;
         }
 
-        // close modal
+        // close modal and reload participants list to ensure consistent UI
         closeAddParticipantModal();
         try {
-          // fetch created participant details
-          const { data: createdParticipant, error: partErr } = await supabase.from('participants_month').select('id,name,phone,rodo').eq('id', participantId).single();
-          let paymentRow = null;
-          try {
-            const { data: pRow } = await supabase.from('payments_month').select('amount,payment_method,confirmed,comment').eq('month', selectedMonth).eq('group_id', currentGroupId).eq('participant_id', participantId).limit(1).maybeSingle();
-            paymentRow = pRow || null;
-          } catch (e) { paymentRow = null; }
-
-          // build a minimal participant card and append
-          try {
-            const amt = paymentRow ? (paymentRow.amount || 0) : 0;
-            const confirmed = paymentRow ? !!paymentRow.confirmed : false;
-            const card = document.createElement('div');
-            card.className = 'group-card';
-            card.style.cursor = 'default';
-            card.innerHTML = `
-              <div class="participant-row" style="display:flex;align-items:center;gap:15px;padding:15px;border-radius:8px;margin-bottom:10px; ${confirmed ? 'background: rgba(0,255,0,0.1); border: 1px solid #00ff00;' : 'background: rgba(255,0,0,0.1); border: 1px solid #ff0000;'}">
-                <div class="participant-number" style="min-width:30px;text-align:center;font-weight:bold;color:var(--text-gray);">-</div>
-                <div class="participant-info" style="flex:0 0 220px;overflow:hidden;text-overflow:ellipsis;">
-                  <div style="font-weight:bold;margin-bottom:5px;">${createdParticipant.name}</div>
-                  <div style="color:var(--text-gray);font-size:0.9rem">${createdParticipant.phone || 'Brak'}</div>
-              </div>
-                <div class="amount-section" style="min-width:120px;">
-                  <div style="display:flex;align-items:center;gap:5px;">
-                    <input type="number" class="amount-input form-control" value="${amt}" step="0.01" min="0" data-participant-id="${createdParticipant.id}" data-group-id="${currentGroupId}" style="width:100px;text-align:center;">
-                    <span style="font-size:0.9rem;color:var(--text-gray);">zł</span>
-              </div>
-              </div>
-                <div style="min-width:110px;display:flex;align-items:center;gap:8px;">
-                  <label style="color:var(--text-gray);font-size:0.85rem;">RODO</label>
-                  <input type="checkbox" class="rodo-checkbox" data-participant-id="${createdParticipant.id}" ${createdParticipant.rodo ? 'checked' : ''}>
-              </div>
-                <div class="action-buttons" style="display:flex;gap:10px;min-width:120px;">
-                  ${confirmed ? `<button class="btn btn-outline delete-payment-btn" data-participant-id="${createdParticipant.id}" data-group-id="${currentGroupId}"><i class="fas fa-times"></i></button>` : `<button class="btn btn-primary confirm-payment-btn" data-participant-id="${createdParticipant.id}" data-group-id="${currentGroupId}"><i class="fas fa-check"></i></button>`}
-                  <button class="btn btn-outline edit-btn" data-id="${createdParticipant.id}"><i class="fas fa-edit"></i></button>
-                  <button class="btn btn-outline delete-btn" data-id="${createdParticipant.id}"><i class="fas fa-trash"></i></button>
-              </div>
-            </div>
-          `;
-            // append to list and set proper participant number
-            groupParticipantsList.insertBefore(card, groupParticipantsList.firstChild);
-            try {
-              const numberElem = card.querySelector('.participant-number');
-              if (numberElem) {
-                const count = groupParticipantsList.querySelectorAll('.group-card').length;
-                numberElem.textContent = String(count) + '.';
-              }
-            } catch(e){}
-            // apply confirmed visual state
-            try { setParticipantConfirmedState(card, !!confirmed); } catch(e){}
-          } catch (e) { /* if DOM append fails, fallback to full reload */ await loadGroupParticipants(currentGroupId); }
-          // refresh summaries and home counts
-          try { await refreshGroupSummaryInPlace(currentGroupId); } catch(_){ }
-          try { await loadHomeData(); } catch(_){ }
+          await loadGroupParticipants(currentGroupId);
+          await refreshGroupSummaryInPlace(currentGroupId);
+          await loadHomeData();
         } catch (e) {
-          // fallback to reloading participants if anything fails
-        await loadGroupParticipants(currentGroupId);
+          console.warn('Error reloading participants after add:', e);
+          await loadGroupParticipants(currentGroupId);
         }
-        // Removed success alert per user's request
       } catch (err) {
         alert('Błąd dodawania uczestnika: ' + (err.message || 'Nieznany'));
       } finally {
@@ -2007,66 +1955,33 @@
             }
           });
 
-          // Add payment confirmation event listener -- in-place behavior (like lessons)
+          // Add payment confirmation event listener (robust: call RPC then reload participants)
           const confirmPaymentBtn = participantCard.querySelector('.confirm-payment-btn');
           if (confirmPaymentBtn) {
-            const attachConfirm = (btn) => {
-              btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const participantId = btn.dataset.participantId;
-                const groupId = btn.dataset.groupId;
-                const paymentMethod = participantCard.querySelector('.payment-method-select')?.value || '';
-                const comment = participantCard.querySelector('.payment-comment')?.value || null;
-                if (!paymentMethod) { alert('Wybierz sposób płatności'); return; }
-                try {
-                  btn.disabled = true;
-                  const { error } = await supabase.rpc('update_payment_confirmation', {
-                    p_month: selectedMonth,
-                    p_participant_id: participantId,
-                    p_group_id: groupId,
-                    p_payment_method: paymentMethod,
-                    p_comment: comment || null
-                  });
-          if (error) throw error;
-                  // update UI
-                  try { setParticipantConfirmedState(participantCard, true); } catch(_){}
-                  // swap button to delete style
-                  btn.disabled = false;
-                  btn.classList.remove('confirm-payment-btn'); btn.classList.remove('btn-primary');
-                  btn.classList.add('delete-payment-btn'); btn.classList.add('btn-outline');
-                  btn.innerHTML = '<i class="fas fa-times"></i>';
-                  // detach current and attach delete
-                  btn.replaceWith(btn.cloneNode(true));
-                  const newBtn = participantCard.querySelector('.delete-payment-btn');
-                  if (newBtn) {
-                    newBtn.addEventListener('click', async (ev) => {
-                      ev.stopPropagation();
-                      try {
-                        newBtn.disabled = true;
-                        const { error: errRem } = await supabase.rpc('remove_payment_confirmation', { p_month: selectedMonth, p_participant_id: participantId, p_group_id: groupId });
-                        if (errRem) throw errRem;
-                        // revert UI
-                        try { setParticipantConfirmedState(participantCard, false); } catch(_){}
-                        // swap back to confirm
-                        newBtn.disabled = false;
-                        newBtn.classList.remove('delete-payment-btn'); newBtn.classList.remove('btn-outline');
-                        newBtn.classList.add('confirm-payment-btn'); newBtn.classList.add('btn-primary');
-                        newBtn.innerHTML = '<i class="fas fa-check"></i>';
-                        // reattach confirm (recurse)
-                        attachConfirm(newBtn);
-                        await refreshGroupSummaryInPlace(groupId);
-                      } catch (err) { newBtn.disabled = false; alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany')); }
-                    });
-                  }
-                  await refreshGroupSummaryInPlace(groupId);
-        } catch (err) {
-                  btn.disabled = false;
-                  console.error('Error confirming payment:', err);
-                  alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany'));
-                }
-              });
-            };
-            attachConfirm(confirmPaymentBtn);
+            confirmPaymentBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const participantId = e.currentTarget.dataset.participantId;
+              const groupId = e.currentTarget.dataset.groupId;
+              const paymentMethod = participantCard.querySelector('.payment-method-select')?.value || '';
+              const comment = participantCard.querySelector('.payment-comment')?.value || null;
+              if (!paymentMethod) { alert('Wybierz sposób płatności'); return; }
+              try {
+                e.currentTarget.disabled = true;
+                const { error } = await supabase.rpc('update_payment_confirmation', {
+                  p_month: selectedMonth,
+                  p_participant_id: participantId,
+                  p_group_id: groupId,
+                  p_payment_method: paymentMethod,
+                  p_comment: comment || null
+                });
+                if (error) throw error;
+                await loadGroupParticipants(groupId);
+                await refreshGroupSummaryInPlace(groupId);
+              } catch (err) {
+                console.error('Error confirming payment:', err);
+                alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany'));
+              }
+            });
           }
 
           // Add payment deletion event listener (in-place, guarded)
