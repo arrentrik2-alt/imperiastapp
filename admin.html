@@ -1865,7 +1865,72 @@
                   p_comment: comment || null
                 });
         if (error) throw error;
-                await loadGroupParticipants(groupId);
+                // Update DOM for this participant without reloading full list
+                try {
+                  const row = participantCard.querySelector('.participant-row');
+                  if (row) {
+                    row.style.transition = 'background 0.12s, border-color 0.12s';
+                    row.style.background = 'rgba(0,255,0,0.08)';
+                    row.style.border = '1px solid #00ff00';
+                  }
+                  const actionButtons = participantCard.querySelector('.action-buttons');
+                  if (actionButtons) {
+                    const confBtn = actionButtons.querySelector('.confirm-payment-btn');
+                    if (confBtn) confBtn.remove();
+                    if (!actionButtons.querySelector('.delete-payment-btn')) {
+                      const delBtn = document.createElement('button');
+                      delBtn.className = 'btn btn-outline delete-payment-btn';
+                      delBtn.dataset.participantId = participantId;
+                      delBtn.dataset.groupId = groupId;
+                      delBtn.innerHTML = '<i class="fas fa-times"></i>';
+                      delBtn.addEventListener('click', async (ev) => {
+                        ev.stopPropagation();
+                        try {
+                          const { error: remErr } = await supabase.rpc('remove_payment_confirmation', {
+                            p_month: selectedMonth,
+                            p_participant_id: participantId,
+                            p_group_id: groupId
+                          });
+                          if (remErr) throw remErr;
+                          if (row) {
+                            row.style.background = 'rgba(255,0,0,0.08)';
+                            row.style.border = '1px solid #ff0000';
+                          }
+                          delBtn.remove();
+                          const newConf = document.createElement('button');
+                          newConf.className = 'btn btn-primary confirm-payment-btn';
+                          newConf.dataset.participantId = participantId;
+                          newConf.dataset.groupId = groupId;
+                          newConf.innerHTML = '<i class="fas fa-check"></i>';
+                          newConf.addEventListener('click', async (e2) => {
+                            e2.stopPropagation();
+                            const paymentMethod = participantCard.querySelector('.payment-method-select').value;
+                            const comment = participantCard.querySelector('.payment-comment').value || null;
+                            if (!paymentMethod) { alert('Wybierz sposób płatności'); return; }
+                            try {
+                              const { error: upErr } = await supabase.rpc('update_payment_confirmation', {
+                                p_month: selectedMonth,
+                                p_participant_id: participantId,
+                                p_group_id: groupId,
+                                p_payment_method: paymentMethod,
+                                p_comment: comment || null
+                              });
+                              if (upErr) throw upErr;
+                              if (row) {
+                                row.style.background = 'rgba(0,255,0,0.08)';
+                                row.style.border = '1px solid #00ff00';
+                              }
+                              newConf.remove();
+                              if (!actionButtons.querySelector('.delete-payment-btn')) actionButtons.appendChild(delBtn);
+                            } catch (innerErr) { alert('Błąd potwierdzania płatności: ' + (innerErr.message || 'Nieznany')); }
+                          });
+                          actionButtons.appendChild(newConf);
+                        } catch (innerErr) { alert('Błąd usuwania potwierdzenia płatności: ' + (innerErr.message || 'Nieznany')); }
+                      });
+                      actionButtons.appendChild(delBtn);
+                    }
+                  }
+                } catch (domErr) { console.warn('Błąd aktualizacji DOM po potwierdzeniu płatności:', domErr); }
               } catch (err) { alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
             });
           }
@@ -2670,7 +2735,76 @@
                   try {
                     const { error } = await supabase.from('lesson_payments_month').update({ confirmed: true, payment_method: method, comment: comment }).match({ month: month, participant_id: pid, lesson_id: lid });
                     if (error) throw error;
-        await loadLessons();
+                    // Update DOM for this lesson row: mark as confirmed and swap buttons without full reload
+                    try {
+                      const rowEl = row; // current row variable in scope
+                      if (rowEl) {
+                        const paidRow = rowEl.querySelector('.lesson-payment-row');
+                        if (paidRow) {
+                          paidRow.style.transition = 'background 0.12s, border-color 0.12s';
+                          paidRow.style.background = 'rgba(0,255,0,0.08)';
+                          paidRow.style.border = '1px solid #00ff00';
+                        }
+                      }
+                      // swap confirm/delete buttons
+                      const delBtn = row.querySelector('.lesson-delete-payment-btn');
+                      if (!delBtn) {
+                        const container = row.querySelector('.action-buttons');
+                        if (container) {
+                          const newDel = document.createElement('button');
+                          newDel.className = 'btn btn-outline lesson-delete-payment-btn';
+                          newDel.dataset.participantId = pid;
+                          newDel.dataset.lessonId = lid;
+                          newDel.innerHTML = '<i class="fas fa-times"></i>';
+                          newDel.addEventListener('click', async (ev) => {
+                            ev.stopPropagation();
+                            try {
+                              const { error: rErr } = await supabase.from('lesson_payments_month').update({ confirmed: false, payment_method: null, comment: null }).match({ month: month, participant_id: pid, lesson_id: lid });
+                              if (rErr) throw rErr;
+                              // reflect deletion UI
+                              if (row) {
+                                const paidRow2 = row.querySelector('.lesson-payment-row');
+                                if (paidRow2) {
+                                  paidRow2.style.background = 'rgba(255,0,0,0.08)';
+                                  paidRow2.style.border = '1px solid #ff0000';
+                                }
+                              }
+                              newDel.remove();
+                              const container2 = row.querySelector('.action-buttons');
+                              if (container2) {
+                                const newConf = document.createElement('button');
+                                newConf.className = 'btn btn-primary lesson-confirm-payment-btn';
+                                newConf.dataset.participantId = pid;
+                                newConf.dataset.lessonId = lid;
+                                newConf.innerHTML = '<i class="fas fa-check"></i>';
+                                newConf.addEventListener('click', async (e3) => {
+                                  e3.stopPropagation();
+                                  const select = row.querySelector('.lesson-payment-method-select');
+                                  const method2 = select ? select.value : null;
+                                  const comment2 = row.querySelector('.lesson-payment-comment').value || null;
+                                  if (!method2) { alert('Wybierz sposób płatności'); return; }
+                                  try {
+                                    const { error: cErr } = await supabase.from('lesson_payments_month').update({ confirmed: true, payment_method: method2, comment: comment2 }).match({ month: month, participant_id: pid, lesson_id: lid });
+                                    if (cErr) throw cErr;
+                                    if (row) {
+                                      const paidRow3 = row.querySelector('.lesson-payment-row');
+                                      if (paidRow3) {
+                                        paidRow3.style.background = 'rgba(0,255,0,0.08)';
+                                        paidRow3.style.border = '1px solid #00ff00';
+                                      }
+                                    }
+                                    newConf.remove();
+                                    if (!container2.querySelector('.lesson-delete-payment-btn')) container2.appendChild(newDel);
+                                  } catch (err3) { alert('Błąd potwierdzania płatności: ' + (err3.message || 'Nieznany')); }
+                                });
+                                container2.appendChild(newConf);
+                              }
+                            } catch (err2) { alert('Błąd usuwania płatności: ' + (err2.message || 'Nieznany')); }
+                          });
+                          container.appendChild(newDel);
+                        }
+                      }
+                    } catch (domErr) { console.warn('Błąd aktualizacji DOM po potwierdzeniu płatności lekcji:', domErr); }
                   } catch (err) { alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
                 });
               }
