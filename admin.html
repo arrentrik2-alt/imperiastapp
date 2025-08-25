@@ -427,6 +427,15 @@
       opacity: 0.85;
       pointer-events: none;
     }
+    /* unified payment status colors */
+    :root {
+      --paid-bg: rgba(40,167,69,0.06);
+      --paid-border: rgba(40,167,69,0.18);
+      --unpaid-bg: rgba(220,53,69,0.06);
+      --unpaid-border: rgba(220,53,69,0.18);
+    }
+    .payment-paid { background: var(--paid-bg) !important; border: 1px solid var(--paid-border) !important; }
+    .payment-unpaid { background: var(--unpaid-bg) !important; border: 1px solid var(--unpaid-border) !important; }
   </style>
 </head>
 <body>
@@ -1684,7 +1693,7 @@
           
           // Use the same subtle background as other group cards; avoid aggressive red/green inline styles
           participantCard.innerHTML = `
-            <div class="participant-row" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px; ${payment && payment.confirmed ? 'background: rgba(0,255,0,0.1); border: 1px solid #00ff00;' : 'background: rgba(255,0,0,0.1); border: 1px solid #ff0000;'}">
+            <div class="participant-row ${payment && payment.confirmed ? 'payment-paid' : 'payment-unpaid'}" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
               <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
               <div class="participant-info" style="flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;">
                 <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
@@ -2642,8 +2651,10 @@
               row.style.borderRadius = '6px';
               row.style.marginBottom = '8px';
               // Use same green/red styling as used in group participant cards
-              row.style.background = pay.confirmed ? 'rgba(0,128,0,0.06)' : 'rgba(255,0,0,0.06)';
-              row.style.border = pay.confirmed ? '1px solid rgba(0,128,0,0.18)' : '1px solid rgba(255,0,0,0.18)';
+              // Use same green/red styling as used in group participant cards
+              // apply unified classes instead of inline colors
+              if (pay && pay.confirmed) { row.classList.add('payment-paid'); row.classList.remove('payment-unpaid'); }
+              else { row.classList.add('payment-unpaid'); row.classList.remove('payment-paid'); }
 
               row.innerHTML = `
                 <div class="participant-number" style="min-width:30px;text-align:center;font-weight:bold;color:var(--text-gray);">${idx+1}.</div>
