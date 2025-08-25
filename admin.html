@@ -1699,36 +1699,17 @@
               </div>
             </div>
           `;
-            // append to list
+            // append to list and set proper participant number
             groupParticipantsList.insertBefore(card, groupParticipantsList.firstChild);
-            // attach minimal listeners: amount change -> update + refresh summary
-            const amtInput = card.querySelector('.amount-input');
-            if (amtInput) {
-              amtInput.addEventListener('change', async (e) => {
-                try {
-                  const newAmt = parseFloat(e.target.value) || 0;
-                  const { error } = await supabase.from('payments_month').update({ amount: newAmt }).eq('month', selectedMonth).eq('participant_id', createdParticipant.id).eq('group_id', currentGroupId);
-          if (error) throw error;
-                  await refreshGroupSummaryInPlace(currentGroupId);
-                } catch (err) { console.warn('Error updating amount in-place', err); }
-              });
-            }
-            // delete participant button
-            const delBtn = card.querySelector('.delete-btn');
-            if (delBtn) {
-              delBtn.addEventListener('click', async (e) => {
-                e.stopPropagation(); if (!confirm('Usunąć uczestnika z grupy?')) return;
-                try {
-                  const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, participant_id: createdParticipant.id, group_id: currentGroupId });
-                  if (payErr) throw payErr;
-                  const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, participant_id: createdParticipant.id, group_id: currentGroupId });
-                  if (pgErr) throw pgErr;
-                  if (card && card.parentNode) card.parentNode.removeChild(card);
-                  await refreshGroupSummaryInPlace(currentGroupId);
-                  try { await loadHomeData(); } catch(_){}
-                } catch (err) { alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany')); }
-              });
-            }
+            try {
+              const numberElem = card.querySelector('.participant-number');
+              if (numberElem) {
+                const count = groupParticipantsList.querySelectorAll('.group-card').length;
+                numberElem.textContent = String(count) + '.';
+              }
+            } catch(e){}
+            // apply confirmed visual state
+            try { setParticipantConfirmedState(card, !!confirmed); } catch(e){}
           } catch (e) { /* if DOM append fails, fallback to full reload */ await loadGroupParticipants(currentGroupId); }
           // refresh summaries and home counts
           try { await refreshGroupSummaryInPlace(currentGroupId); } catch(_){ }
