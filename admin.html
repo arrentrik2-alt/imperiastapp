@@ -950,12 +950,43 @@
       }
     }
 
-    // Format lesson date using day_of_month and the selected month (YYYY-MM) -> "DD.MM"
+    // Format lesson date using day_of_month (if present) or compute first date in month matching weekday -> "DD.MM"
     function formatLessonDate(dayOfMonth, monthYyyyMm, defaultDayName) {
+      // If explicit day_of_month provided, use it
       if (dayOfMonth) {
         const mm = (monthYyyyMm && monthYyyyMm.split('-')[1]) || String(new Date().getMonth() + 1).padStart(2, '0');
         return `${String(dayOfMonth).padStart(2, '0')}.${String(mm).padStart(2, '0')}`;
       }
+
+      // Otherwise try to compute a representative day_of_month from the weekday name and month
+      try {
+        const weekdayMap = {
+          'niedziela': 0, 'niedzielę': 0, 'niedzieli': 0,
+          'poniedziałek': 1, 'poniedziałku': 1,
+          'wtorek': 2, 'wtorku': 2,
+          'środa': 3, 'sroda': 3, 'środy': 3,
+          'czwartek': 4, 'czwartku': 4,
+          'piątek': 5, 'piatek': 5, 'piątku': 5,
+          'sobota': 6, 'soboty': 6
+        };
+        const monthParts = (monthYyyyMm || '').split('-');
+        const year = parseInt(monthParts[0], 10) || new Date().getFullYear();
+        const monthIdx = (parseInt(monthParts[1], 10) - 1) || new Date().getMonth();
+        const desired = weekdayMap[String(defaultDayName || '').toLowerCase()];
+        if (typeof desired !== 'number') return defaultDayName || '';
+
+        // find first date in month that matches desired weekday
+        const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dt = new Date(year, monthIdx, d);
+          if (dt.getDay() === desired) {
+            return `${String(d).padStart(2, '0')}.${String(monthIdx + 1).padStart(2, '0')}`;
+          }
+        }
+      } catch (e) {
+        // fallthrough
+      }
+
       return defaultDayName || '';
     }
     
