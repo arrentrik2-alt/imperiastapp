@@ -1735,7 +1735,7 @@
           try { await loadHomeData(); } catch(_){}
         } catch (e) {
           // fallback to reloading participants if anything fails
-        await loadGroupParticipants(currentGroupId);
+          await loadGroupParticipants(currentGroupId);
         }
         // Removed success alert per user's request
       } catch (err) {
@@ -1909,7 +1909,7 @@
               // Remove payments for this participant in this group for the selected month (in-place)
               const { error: payErr } = await supabase
                 .from('payments_month')
-            .delete()
+                .delete()
                 .match({ month: selectedMonth, participant_id: participant.participant_id, group_id: groupId });
               if (payErr) throw payErr;
 
@@ -1923,7 +1923,7 @@
               // If participant has no more associations in this month, remove participant row for that month
               const { data: remaining, error: remErr } = await supabase
                 .from('participant_groups_month')
-          .select('id')
+                .select('id')
                 .match({ month: selectedMonth, participant_id: participant.participant_id });
               if (remErr) throw remErr;
               if (!remaining || remaining.length === 0) {
@@ -2038,8 +2038,17 @@
                   p_comment: comment || null
                 });
         if (error) throw error;
-                // update participant UI in-place (use helper to keep outer/inner consistent)
-                try { setParticipantConfirmedState(participantCard, true); } catch (uiErr) { /* ignore */ }
+                // update participant UI in-place
+                try {
+                  participantCard.style.transition = 'background 0.18s ease, border 0.18s ease, opacity 0.12s';
+                  participantCard.style.opacity = '0.6';
+                  participantCard.style.background = 'rgba(0,255,0,0.1)';
+                  participantCard.style.border = '1px solid rgba(0,255,0,0.2)';
+                  setTimeout(()=>{ participantCard.style.opacity = '1'; }, 160);
+                  const sel = participantCard.querySelector('.payment-method-select'); if (sel) sel.disabled = true;
+                  const amtInput = participantCard.querySelector('.amount-input'); if (amtInput) amtInput.disabled = true;
+                  const commentInput = participantCard.querySelector('.payment-comment'); if (commentInput) commentInput.disabled = true;
+                } catch (uiErr) { /* ignore */ }
                 // convert this button into delete button
                 const btn = e.currentTarget;
                 try { btn.removeEventListener('click', _confHandler); } catch(_){}
@@ -2300,36 +2309,6 @@
       ctx.fillText(`${((paid/total)*100).toFixed(0)}%`, cx, cy - 8);
       ctx.font = '12px sans-serif';
       ctx.fillText(`${(paid+unpaid).toFixed(2)} zł`, cx, cy + 12);
-    }
-
-    // Helper: set participant card confirmed/unconfirmed state consistently
-    function setParticipantConfirmedState(participantCard, confirmed) {
-      try {
-        const innerRow = participantCard.querySelector('.participant-row');
-        if (confirmed) {
-          participantCard.style.transition = 'background 0.18s ease, border 0.18s ease, opacity 0.12s';
-          participantCard.style.background = 'rgba(0,255,0,0.1)';
-          participantCard.style.border = '1px solid rgba(0,255,0,0.2)';
-          if (innerRow) {
-            innerRow.style.background = 'rgba(0,255,0,0.06)';
-            innerRow.style.border = '1px solid rgba(0,255,0,0.2)';
-          }
-          const sel = participantCard.querySelector('.payment-method-select'); if (sel) sel.disabled = true;
-          const amtInput = participantCard.querySelector('.amount-input'); if (amtInput) amtInput.disabled = true;
-          const commentInput = participantCard.querySelector('.payment-comment'); if (commentInput) commentInput.disabled = true;
-        } else {
-          participantCard.style.transition = 'background 0.18s ease, border 0.18s ease, opacity 0.12s';
-          participantCard.style.background = 'rgba(255,0,0,0.1)';
-          participantCard.style.border = '1px solid rgba(255,0,0,0.2)';
-          if (innerRow) {
-            innerRow.style.background = 'rgba(255,0,0,0.1)';
-            innerRow.style.border = '1px solid rgba(255,0,0,0.2)';
-          }
-          const sel = participantCard.querySelector('.payment-method-select'); if (sel) sel.disabled = false;
-          const amtInput = participantCard.querySelector('.amount-input'); if (amtInput) amtInput.disabled = false;
-          const commentInput = participantCard.querySelector('.payment-comment'); if (commentInput) commentInput.disabled = false;
-        }
-      } catch (e) { console.warn('setParticipantConfirmedState error', e); }
     }
 
     document.querySelectorAll('#participants-list .rodo-checkbox').forEach(cb => {
