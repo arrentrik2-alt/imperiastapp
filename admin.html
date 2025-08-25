@@ -1735,7 +1735,7 @@
           try { await loadHomeData(); } catch(_){}
         } catch (e) {
           // fallback to reloading participants if anything fails
-          await loadGroupParticipants(currentGroupId);
+        await loadGroupParticipants(currentGroupId);
         }
         // Removed success alert per user's request
       } catch (err) {
@@ -1909,7 +1909,7 @@
               // Remove payments for this participant in this group for the selected month (in-place)
               const { error: payErr } = await supabase
                 .from('payments_month')
-                .delete()
+            .delete()
                 .match({ month: selectedMonth, participant_id: participant.participant_id, group_id: groupId });
               if (payErr) throw payErr;
 
@@ -1923,7 +1923,7 @@
               // If participant has no more associations in this month, remove participant row for that month
               const { data: remaining, error: remErr } = await supabase
                 .from('participant_groups_month')
-                .select('id')
+          .select('id')
                 .match({ month: selectedMonth, participant_id: participant.participant_id });
               if (remErr) throw remErr;
               if (!remaining || remaining.length === 0) {
