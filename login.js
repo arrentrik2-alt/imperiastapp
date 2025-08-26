@@ -11,11 +11,42 @@ async function login() {
 
   if (error) {
     alert('Błąd logowania: ' + error.message);
-  } else {
-    // Zalogowano – przekieruj do panelu admina
-    window.location.href = 'admin.html';  // <-- tutaj zmień na swoją stronę panelu
+    return;
+  }
+
+  const user = data.user;
+  if (!user) {
+    // fallback
+    window.location.href = 'admin.html';
+    return;
+  }
+
+  // Spróbuj pobrać profil aby sprawdzić rolę
+  try {
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileErr) {
+      console.warn('Brak profilu, przekierowuję do panelu admina:', profileErr.message);
+      window.location.href = 'admin.html';
+      return;
+    }
+
+    if (profile.role === 'clubadmin') {
+      window.location.href = 'club.html';
+    } else {
+      window.location.href = 'admin.html';
+    }
+  } catch (e) {
+    console.error('Błąd podczas pobierania profilu:', e);
+    window.location.href = 'admin.html';
   }
 }
 
 // Podpinamy funkcję do przycisku
 document.getElementById('loginBtn').onclick = login;
+
+
