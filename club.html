@@ -38,6 +38,13 @@
     .btn-delete { background:#e53935; color:white; }
     .form-inline { display:flex; gap:10px; align-items:center; }
     .form-inline input, .form-inline select { padding:8px; border-radius:6px; border:1px solid var(--border-dark); background:#111; color:var(--text-light); }
+    .btn-outline { background-color: transparent; border: 1px solid var(--gold); color: var(--gold); padding:6px 10px; border-radius:6px; }
+    /* modal overlay */
+    #overlay { display:none; position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999; }
+    #addModal { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1000; width:700px; max-width:95%; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+    .modal-header { border-bottom:1px solid var(--border-dark); padding-bottom:10px; margin-bottom:12px; }
+    #addModal input, #addModal select { background: #111; border:1px solid var(--border-dark); color:var(--text-light); padding:8px; border-radius:6px; }
+    #modalTitle { color: var(--gold); }
     /* modal overlay */
     #overlay { display:none; position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999; }
     #addModal { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1000; width:700px; max-width:95%; }
@@ -89,7 +96,7 @@
 
     <div id="overlay"></div>
     <div id="addModal" class="content-box" style="display:none; max-width:700px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;" class="modal-header">
         <h3 id="modalTitle">Dodaj nowego członka</h3>
         <button class="btn btn-outline" onclick="hideAddForm()">Zamknij</button>
       </div>
@@ -136,12 +143,41 @@
   <script type="module">
     import { supabase } from './supabaseClient.js';
 
-    function showAddForm() {
+    function showAddForm(isEditing) {
+      // if caller explicitly passes false, treat as new; otherwise respect form.dataset.editing
+      const form = document.getElementById('addMemberForm');
+      const currentlyEditing = form.dataset.editing === 'true';
+      const editing = typeof isEditing === 'boolean' ? isEditing : currentlyEditing;
+
+      if (!editing) {
+        // reset form for new member
+        form.dataset.editing = 'false';
+        document.getElementById('modalTitle').textContent = 'Dodaj nowego członka';
+        document.getElementById('submitBtn').textContent = 'Dodaj';
+        document.getElementById('m_name').value = '';
+        document.getElementById('m_email').value = '';
+        document.getElementById('m_phone').value = '';
+        document.getElementById('m_style').value = '';
+        document.getElementById('m_karnet').value = '290';
+        document.getElementById('m_id').value = generateId();
+      } else {
+        // keep existing id and values (edit mode)
+        form.dataset.editing = 'true';
+        document.getElementById('modalTitle').textContent = 'Edytuj członka';
+        document.getElementById('submitBtn').textContent = 'Zapisz';
+      }
+
       document.getElementById('overlay').style.display = 'block';
       document.getElementById('addModal').style.display = 'block';
-      document.getElementById('m_id').value = generateId();
     }
-    function hideAddForm() { document.getElementById('addModal').style.display = 'none'; document.getElementById('overlay').style.display = 'none'; }
+
+    function hideAddForm() {
+      document.getElementById('addModal').style.display = 'none';
+      document.getElementById('overlay').style.display = 'none';
+      const form = document.getElementById('addMemberForm');
+      form.dataset.editing = 'false';
+      document.getElementById('submitBtn').textContent = 'Dodaj';
+    }
     function generateId() { let id=''; for(let i=0;i<6;i++) id+=Math.floor(1+Math.random()*9); return id; }
 
     async function loadMembers() {
@@ -188,7 +224,7 @@
       document.getElementById('m_id').value = data.id;
       document.getElementById('addMemberForm').dataset.editing = 'true';
       document.getElementById('submitBtn').textContent = 'Zapisz';
-      showAddForm();
+      showAddForm(true);
     }
 
     document.getElementById('addMemberForm').addEventListener('submit', async (e)=>{
