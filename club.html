@@ -45,7 +45,6 @@
     <div class="logo"><h1>IMPERIA</h1><div style="color:var(--text-gray); font-size:12px;">Panel Klubu</div></div>
     <ul class="nav-links">
       <li><a href="#" id="nav-members"><i class="fas fa-users"></i><span style="margin-left:8px;">Lista członków</span></a></li>
-      <li><a href="/admin.html" id="nav-admin"><i class="fas fa-user-shield"></i><span style="margin-left:8px;">Panel Admina</span></a></li>
       <li><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span style="margin-left:8px;">Wyloguj</span></a></li>
     </ul>
   </aside>
@@ -88,23 +87,35 @@
     <div id="addModal" class="content-box" style="display:none; max-width:700px;">
       <h3>Dodaj nowego członka</h3>
       <form id="addMemberForm" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-        <input id="m_name" placeholder="Imię i nazwisko" required />
-        <div style="display:flex; gap:8px;">
-          <input id="m_email" placeholder="Email" style="flex:1;" />
-          <input id="m_phone" placeholder="Telefon" style="width:180px;" />
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Imię i nazwisko</label>
+          <input id="m_name" placeholder="Imię i nazwisko" required style="flex:1;" />
         </div>
-        <div style="display:flex; gap:8px;">
-          <select id="m_style" required>
-            <option value="">Styl</option>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Email</label>
+          <input id="m_email" placeholder="Email" style="flex:1;" />
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Telefon</label>
+          <input id="m_phone" placeholder="Telefon" style="flex:1;" />
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Styl</label>
+          <select id="m_style" required style="flex:1;">
+            <option value="">Wybierz</option>
             <option value="LA">LA</option>
             <option value="ST">ST</option>
             <option value="10t">10T</option>
           </select>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Karnet</label>
           <select id="m_karnet" required>
             <option value="290">290</option>
             <option value="250">250</option>
             <option value="200">200</option>
           </select>
+          <label style="width:80px; text-align:right;">ID</label>
           <input id="m_id" readonly style="width:120px;" />
         </div>
         <div style="display:flex; gap:8px; justify-content:flex-end;">
@@ -127,13 +138,15 @@
 
     async function loadMembers() {
       const search = document.getElementById('searchInput').value.toLowerCase().trim();
-      const { data, error } = await supabase.from('members').select('*').order('name');
+      const { data, error } = await supabase.from('members').select('*');
       if (error) { alert('Błąd ładowania: '+error.message); return; }
-      const tbody = document.getElementById('membersBody'); tbody.innerHTML='';
-      const rows = (data||[]).filter(m => {
+      // sort alphabetically by name (Polish locale, case-insensitive)
+      const sorted = (data||[]).slice().sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'pl', {sensitivity:'base'}));
+      const rows = sorted.filter(m => {
         if (!search) return true;
         return (m.name||'').toLowerCase().includes(search) || (m.id||'').toString().includes(search);
       });
+      const tbody = document.getElementById('membersBody'); tbody.innerHTML='';
       rows.forEach((m,idx)=>{
         const tr=document.createElement('tr');
         tr.innerHTML = `
