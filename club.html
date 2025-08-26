@@ -89,8 +89,11 @@
 
     <div id="overlay"></div>
     <div id="addModal" class="content-box" style="display:none; max-width:700px;">
-      <h3>Dodaj nowego członka</h3>
-      <form id="addMemberForm" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h3 id="modalTitle">Dodaj nowego członka</h3>
+        <button class="btn btn-outline" onclick="hideAddForm()">Zamknij</button>
+      </div>
+      <form id="addMemberForm" data-editing="false" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
         <div style="display:flex; gap:8px; align-items:center;">
           <label style="width:120px;">Imię i nazwisko</label>
           <input id="m_name" placeholder="Imię i nazwisko" required style="flex:1;" />
@@ -124,7 +127,7 @@
         </div>
         <div style="display:flex; gap:8px; justify-content:flex-end;">
           <button type="button" class="btn" onclick="hideAddForm()">Anuluj</button>
-          <button type="submit" class="btn btn-primary">Dodaj</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">Dodaj</button>
         </div>
       </form>
     </div>
@@ -162,17 +165,48 @@
           <td>${m.phone||''}</td>
           <td>${m.style||''}</td>
           <td>${m.karnet||''}</td>
-          <td><button class="btn btn-delete" onclick="deleteMember('${m.id}')">Usuń</button></td>`;
+          <td>
+            <button class="btn" onclick="editMember('${m.id}')" style="margin-right:6px;">Edytuj</button>
+            <button class="btn btn-delete" onclick="deleteMember('${m.id}')">Usuń</button>
+          </td>`;
         tbody.appendChild(tr);
       });
     }
 
     window.deleteMember = async function(id){ if(!confirm('Usunąć tego członka?')) return; const { error } = await supabase.from('members').delete().eq('id', id); if(error) alert('Błąd: '+error.message); else loadMembers(); }
 
+    // Edit member - open modal with member data
+    window.editMember = async function(id) {
+      const { data, error } = await supabase.from('members').select('*').eq('id', id).single();
+      if (error || !data) { alert('Nie znaleziono członka'); return; }
+      document.getElementById('modalTitle').textContent = 'Edytuj członka';
+      document.getElementById('m_name').value = data.name || '';
+      document.getElementById('m_email').value = data.email || '';
+      document.getElementById('m_phone').value = data.phone || '';
+      document.getElementById('m_style').value = data.style || '';
+      document.getElementById('m_karnet').value = data.karnet || '290';
+      document.getElementById('m_id').value = data.id;
+      document.getElementById('addMemberForm').dataset.editing = 'true';
+      document.getElementById('submitBtn').textContent = 'Zapisz';
+      showAddForm();
+    }
+
     document.getElementById('addMemberForm').addEventListener('submit', async (e)=>{
       e.preventDefault();
+      const editing = document.getElementById('addMemberForm').dataset.editing === 'true';
       const member={ id: document.getElementById('m_id').value, name: document.getElementById('m_name').value.trim(), email: document.getElementById('m_email').value.trim(), phone: document.getElementById('m_phone').value.trim(), style: document.getElementById('m_style').value, karnet: parseInt(document.getElementById('m_karnet').value,10) };
-      const { error } = await supabase.from('members').insert([member]); if(error){ alert('Błąd dodawania: '+error.message); return; } hideAddForm(); loadMembers();
+      if (editing) {
+        // update
+        const { error } = await supabase.from('members').update({ name: member.name, email: member.email, phone: member.phone, style: member.style, karnet: member.karnet }).eq('id', member.id);
+        if (error) { alert('Błąd zapisu: '+error.message); return; }
+      } else {
+        const { error } = await supabase.from('members').insert([member]);
+        if (error) { alert('Błąd dodawania: '+error.message); return; }
+      }
+      document.getElementById('addMemberForm').dataset.editing = 'false';
+      document.getElementById('submitBtn').textContent = 'Dodaj';
+      hideAddForm();
+      loadMembers();
     });
 
     // Logout
