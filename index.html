@@ -322,24 +322,46 @@
           await supabase.auth.signOut();
           return;
         }
-        
-        if (!profile || profile.role !== "admin") {
-          errorText.textContent = 'Nie masz uprawnień administratora.';
+
+        if (!profile) {
+          errorText.textContent = 'BRAK REKORDU W TABELI PROFILES';
           errorMsg.style.display = 'block';
-          
+
           // Pokaż panel debugowania
           document.getElementById('debugInfo').style.display = 'block';
           document.getElementById('debugToggle').innerHTML = 'Ukryj informacje diagnostyczne ▲';
-          
+
           // Aktualizuj zapytanie SQL z prawidłowym ID
           sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
-          
+
           await supabase.auth.signOut();
           return;
         }
-        
-        // Przekieruj do panelu admina
-        window.location.href = 'admin.html';
+
+        // Redirect based on role
+        if (profile.role === 'admin') {
+          window.location.href = 'admin.html';
+          return;
+        }
+
+        if (profile.role === 'clubadmin') {
+          window.location.href = 'club.html';
+          return;
+        }
+
+        // in all other cases deny access
+        errorText.textContent = 'Nie masz uprawnień administratora.';
+        errorMsg.style.display = 'block';
+
+        // Pokaż panel debugowania
+        document.getElementById('debugInfo').style.display = 'block';
+        document.getElementById('debugToggle').innerHTML = 'Ukryj informacje diagnostyczne ▲';
+
+        // Aktualizuj zapytanie SQL z prawidłowym ID
+        sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
+
+        await supabase.auth.signOut();
+        return;
         
       } catch (err) {
         console.error('Nieoczekiwany błąd:', err);
