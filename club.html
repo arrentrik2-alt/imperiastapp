@@ -1,1 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Imperia - Lista Klubu</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="header">
+    <button class="back-button" onclick="goToHomePage()">← Powrót</button>
+    <h1 style="margin:0;">IMPERIA KRAKÓW - Lista Klubu</h1>
+  </div>
+
+  <div class="form-container">
+    <h2>Lista członków</h2>
+    <button id="addMemberBtn" class="btn btn-add" onclick="showAddForm()">+ Dodaj członka</button>
+    <div id="membersTableContainer" class="table-container" style="margin-top:15px;">
+      <table id="membersTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Imię i nazwisko</th>
+            <th>ID</th>
+            <th>Email</th>
+            <th>Telefon</th>
+            <th>Styl</th>
+            <th>Karnet</th>
+            <th>Akcje</th>
+          </tr>
+        </thead>
+        <tbody id="membersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="addForm" class="form-container" style="display:none; margin-top:10px;">
+    <h2>Dodaj nowego członka</h2>
+    <form id="addMemberForm">
+      <div class="form-group">
+        <label for="m_name">Imię i nazwisko:</label>
+        <input id="m_name" required />
+      </div>
+      <div class="form-group">
+        <label for="m_id">ID (6 cyfr):</label>
+        <input id="m_id" readonly />
+      </div>
+      <div class="form-group">
+        <label for="m_email">Email:</label>
+        <input id="m_email" type="email" />
+      </div>
+      <div class="form-group">
+        <label for="m_phone">Telefon:</label>
+        <input id="m_phone" />
+      </div>
+      <div class="form-group">
+        <label for="m_style">Styl:</label>
+        <select id="m_style" required>
+          <option value="">Wybierz</option>
+          <option value="LA">LA</option>
+          <option value="ST">ST</option>
+          <option value="10t">10T</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="m_karnet">Karnet:</label>
+        <select id="m_karnet" required>
+          <option value="290">290</option>
+          <option value="250">250</option>
+          <option value="200">200</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-submit">Dodaj</button>
+      <button type="button" class="btn btn-clear" onclick="hideAddForm()">Anuluj</button>
+    </form>
+  </div>
+
+  <script type="module">
+    import { supabase } from './supabaseClient.js';
+
+    function goToHomePage() {
+      window.location.href = 'index.html';
+    }
+
+    function showAddForm() {
+      document.getElementById('addForm').style.display = 'block';
+      document.getElementById('m_id').value = generateId();
+    }
+
+    function hideAddForm() {
+      document.getElementById('addForm').style.display = 'none';
+    }
+
+    function generateId() {
+      let id = '';
+      for (let i = 0; i < 6; i++) {
+        id += Math.floor(1 + Math.random() * 9);
+      }
+      return id;
+    }
+
+    async function loadMembers() {
+      const { data, error } = await supabase.from('members').select('*').order('name');
+      if (error) {
+        alert('Błąd ładowania: ' + error.message);
+        return;
+      }
+      const tbody = document.getElementById('membersBody');
+      tbody.innerHTML = '';
+      data.forEach((m, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx+1}</td>
+          <td>${m.name}</td>
+          <td>${m.id}</td>
+          <td>${m.email || ''}</td>
+          <td>${m.phone || ''}</td>
+          <td>${m.style || ''}</td>
+          <td>${m.karnet || ''}</td>
+          <td><button class="btn btn-delete" onclick="deleteMember('${m.id}')">Usuń</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.deleteMember = async function(id) {
+      if (!confirm('Usunąć tego członka?')) return;
+      const { error } = await supabase.from('members').delete().eq('id', id);
+      if (error) alert('Błąd: ' + error.message);
+      else loadMembers();
+    }
+
+    document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const member = {
+        id: document.getElementById('m_id').value,
+        name: document.getElementById('m_name').value.trim(),
+        email: document.getElementById('m_email').value.trim(),
+        phone: document.getElementById('m_phone').value.trim(),
+        style: document.getElementById('m_style').value,
+        karnet: parseInt(document.getElementById('m_karnet').value, 10)
+      };
+
+      const { error } = await supabase.from('members').insert([member]);
+      if (error) {
+        alert('Błąd dodawania: ' + error.message);
+        return;
+      }
+
+      hideAddForm();
+      loadMembers();
+    });
+
+    // Init
+    loadMembers();
+  </script>
+</body>
+</html>
+
+
 
