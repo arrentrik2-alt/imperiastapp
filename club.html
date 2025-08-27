@@ -62,8 +62,9 @@
   <main class="main-content">
     <div class="header">
       <h2>Lista Klubu</h2>
-      <div>
+      <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn btn-primary" onclick="showAddForm()">+ Dodaj członka</button>
+        <button class="btn" id="createCampBtnClub">+ Stwórz obóz</button>
       </div>
     </div>
 
@@ -137,6 +138,43 @@
           <button type="submit" class="btn btn-primary" id="submitBtn">Dodaj</button>
         </div>
       </form>
+    </div>
+    <!-- Camp modal (merged from oboz.html) -->
+    <div id="overlayOboz" style="display:none; position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999;"></div>
+    <div id="modalOboz" style="display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1000; width:800px; max-width:95%; background:#1e1e1e; padding:16px; border:1px solid #333; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;" class="modal-header">
+        <h3 id="campModalTitle" style="color:var(--gold);">Nowy camp</h3>
+        <button class="btn btn-outline" id="closeOboz">Zamknij</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Nazwa campu</label>
+          <input id="campName" style="flex:1; padding:8px; border-radius:6px; background:#111; border:1px solid #333; color:#fff;" />
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Data</label>
+          <input id="campDate" type="date" class="small-input" />
+          <label style="width:120px; text-align:right;">Kwota</label>
+          <input id="campPrice" type="number" class="small-input" />
+          <select id="campCurrency" class="small-input"><option>PLN</option><option>EUR</option></select>
+        </div>
+        <div style="display:flex; gap:20px;">
+          <div style="flex:1;">
+            <h4 style="color:var(--gold);">Szkoleniowcy ST</h4>
+            <div id="stTrainers" class="trainers-list"></div>
+            <button class="btn" id="addStTrainer">+ Dodaj szkoleniowca ST</button>
+          </div>
+          <div style="flex:1;">
+            <h4 style="color:var(--gold);">Szkoleniowcy LA</h4>
+            <div id="laTrainers" class="trainers-list"></div>
+            <button class="btn" id="addLaTrainer">+ Dodaj szkoleniowca LA</button>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+          <button class="btn" id="cancelCreate">Anuluj</button>
+          <button class="btn btn-primary" id="createCamp">Utwórz obóz</button>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -247,6 +285,64 @@
 
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await supabase.auth.signOut(); window.location.href='index.html'; });
+
+    // Camp modal handlers (merged)
+    function showCampModal() { document.getElementById('overlayOboz').style.display='block'; document.getElementById('modalOboz').style.display='block'; }
+    function hideCampModal() { document.getElementById('overlayOboz').style.display='none'; document.getElementById('modalOboz').style.display='none'; }
+    document.getElementById('createCampBtnClub').addEventListener('click', showCampModal);
+    document.getElementById('closeOboz').addEventListener('click', hideCampModal);
+    document.getElementById('cancelCreate').addEventListener('click', hideCampModal);
+
+    const stTrainers = document.getElementById('stTrainers');
+    const laTrainers = document.getElementById('laTrainers');
+
+    function createTrainerRow(container) {
+      const row = document.createElement('div'); row.className='trainer-row';
+      row.innerHTML = `<input placeholder="Imię i nazwisko" class="trainer-name" style="flex:1;"/><input placeholder="Cena za lekcję" class="trainer-price small-input" type="number"/> <button class="btn btn-delete">Usuń</button>`;
+      const del = row.querySelector('.btn-delete'); del.addEventListener('click', ()=> row.remove());
+      container.appendChild(row);
+    }
+
+    document.getElementById('addStTrainer').addEventListener('click', ()=> createTrainerRow(stTrainers));
+    document.getElementById('addLaTrainer').addEventListener('click', ()=> createTrainerRow(laTrainers));
+
+    document.getElementById('createCamp').addEventListener('click', async ()=>{
+      const name = document.getElementById('campName').value.trim();
+      const date = document.getElementById('campDate').value;
+      const price = parseFloat(document.getElementById('campPrice').value)||0;
+      const currency = document.getElementById('campCurrency').value || 'PLN';
+      if (!name) { alert('Podaj nazwę campu'); return; }
+
+      // create training
+      const { data: training, error } = await supabase.from('trainings').insert([{ name, type: 'camp_la', date, price, currency }]).select().single();
+      if (error) { alert('Błąd tworzenia: '+error.message); return; }
+
+      // save trainers
+      const trainersToInsert = [];
+      const trainerRows = [...stTrainers.querySelectorAll('.trainer-row'), ...laTrainers.querySelectorAll('.trainer-row')];
+      for (const r of trainerRows) {
+        const tname = r.querySelector('.trainer-name').value.trim();
+        const tprice = parseFloat(r.querySelector('.trainer-price').value)||0;
+        if (!tname) continue;
+        trainersToInsert.push({ name: tname, default_price: tprice, currency });
+      }
+      if (trainersToInsert.length>0) {
+        const { data: trainersData, error: tErr } = await supabase.from('trainers').insert(trainersToInsert).select();
+        if (tErr) console.warn('Trainers insert error', tErr.message);
+        // link trainers to training
+        const links = trainersData.map(t => ({ training_id: training.id, trainer_id: t.id, price: t.default_price }));
+        await supabase.from('training_trainers').insert(links);
+      }
+
+      // create participants from members
+      const { data: membersData, error: mErr } = await supabase.from('members').select('*');
+      if (mErr) { alert('Błąd pobierania członków: '+mErr.message); return; }
+      const participants = membersData.map(m => ({ training_id: training.id, member_id: m.id, participant_name: m.name }));
+      await supabase.from('training_participants').insert(participants);
+
+      hideCampModal();
+      alert('Camp utworzony pomyślnie');
+    });
 
     // expose functions for inline handlers (module scope isn't global)
     window.showAddForm = showAddForm;
