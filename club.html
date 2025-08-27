@@ -55,6 +55,7 @@
     <div class="logo"><h1>IMPERIA</h1><div style="color:var(--text-gray); font-size:12px;">Panel Klubu</div></div>
     <ul class="nav-links">
       <li><a href="#" id="nav-members"><i class="fas fa-users"></i><span style="margin-left:8px;">Lista członków</span></a></li>
+      <li><a href="#" id="nav-camps"><i class="fas fa-campground"></i><span style="margin-left:8px;">Obozy</span></a></li>
       <li><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span style="margin-left:8px;">Wyloguj</span></a></li>
     </ul>
   </aside>
@@ -64,10 +65,10 @@
       <h2>Lista Klubu</h2>
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn btn-primary" onclick="showAddForm()">+ Dodaj członka</button>
-        <button class="btn" id="createCampBtnClub">+ Stwórz obóz</button>
       </div>
     </div>
 
+    <div id="members-section">
     <div class="content-box">
       <div style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; gap:8px;">
@@ -92,6 +93,26 @@
           </thead>
           <tbody id="membersBody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Camps section (hidden by default) -->
+    <div id="camps-section" style="display:none;">
+      <div class="content-box">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="color:var(--gold);">Obozy</h3>
+          <div>
+            <button class="btn" id="createCampBtnCamps">+ Stwórz obóz</button>
+          </div>
+        </div>
+        <div id="trainingsListContainer" style="margin-top:12px;">
+          <h4 style="color:var(--gold);">Lista obozów</h4>
+          <div id="trainingsList"></div>
+        </div>
+        <div id="campDetails" style="margin-top:16px; display:none;">
+          <h4 id="campDetailsTitle" style="color:var(--gold);"></h4>
+          <div id="campParticipants" style="margin-top:8px;"></div>
+        </div>
       </div>
     </div>
 
@@ -289,7 +310,10 @@
     // Camp modal handlers (merged)
     function showCampModal() { document.getElementById('overlayOboz').style.display='block'; document.getElementById('modalOboz').style.display='block'; }
     function hideCampModal() { document.getElementById('overlayOboz').style.display='none'; document.getElementById('modalOboz').style.display='none'; }
-    document.getElementById('createCampBtnClub').addEventListener('click', showCampModal);
+    // nav handlers
+    document.getElementById('nav-members').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='block'; document.getElementById('camps-section').style.display='none'; });
+    document.getElementById('nav-camps').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='none'; document.getElementById('camps-section').style.display='block'; loadTrainingsList(); });
+    document.getElementById('createCampBtnCamps').addEventListener('click', showCampModal);
     document.getElementById('closeOboz').addEventListener('click', hideCampModal);
     document.getElementById('cancelCreate').addEventListener('click', hideCampModal);
 
