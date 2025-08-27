@@ -3,31 +3,149 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Imperia - Tworzenie obozu</title>
+  <title>Imperia - Lista Klubu</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="styles.css">
   <style>
-    .small-input { width:120px; }
-    .trainers-list { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-    .trainer-row { display:flex; gap:8px; align-items:center; }
-    .trainer-row input { padding:6px; border-radius:6px; background:#111; border:1px solid #222; color:#fff; }
+    :root {
+      --primary-bg: #121212;
+      --secondary-bg: #1e1e1e;
+      --gold: #d4af37;
+      --gold-light: #f1e5b9;
+      --text-light: #f5f5f5;
+      --text-gray: #b0b0b0;
+      --border-dark: #333;
+      --success: #28a745;
+      --error: #dc3545;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--primary-bg); color: var(--text-light); min-height:100vh; display:flex; overflow-x:hidden; }
+    .sidebar { width: 250px; background-color: var(--secondary-bg); height: 100vh; position: fixed; left:0; top:0; padding:20px 0; border-right:1px solid var(--border-dark); }
+    .logo { text-align:center; padding:0 20px 20px; border-bottom:1px solid var(--border-dark); margin-bottom:20px; }
+    .logo h1 { color: var(--gold); font-size:1.2rem; }
+    .nav-links { list-style:none; padding:0 15px; }
+    .nav-links li { margin-bottom:8px; }
+    .nav-links a { display:flex; align-items:center; padding:10px 12px; text-decoration:none; color:var(--text-gray); border-radius:6px; }
+    .nav-links a:hover { background-color: rgba(212,175,55,0.06); color:var(--gold); }
+    .main-content { flex:1; margin-left:250px; padding:20px; }
+    .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+    .header h2 { color:var(--gold); }
+    .content-box { background-color: var(--secondary-bg); border-radius:8px; padding:18px; margin-bottom:16px; border:1px solid var(--border-dark); }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border:1px solid #2b2b2b; padding:10px; text-align:left; }
+    th { background: rgba(212,175,55,0.08); color:var(--gold); }
+    .btn { padding:8px 12px; border-radius:6px; border:none; cursor:pointer; }
+    .btn-primary { background:var(--gold); color:#121212; }
+    .btn-delete { background:#e53935; color:white; }
+    .form-inline { display:flex; gap:10px; align-items:center; }
+    .form-inline input, .form-inline select { padding:8px; border-radius:6px; border:1px solid var(--border-dark); background:#111; color:var(--text-light); }
+    .btn-outline { background-color: transparent; border: 1px solid var(--gold); color: var(--gold); padding:6px 10px; border-radius:6px; }
+    /* modal overlay */
+    #overlay { display:none; position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999; }
+    #addModal { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1000; width:700px; max-width:95%; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+    .modal-header { border-bottom:1px solid var(--border-dark); padding-bottom:10px; margin-bottom:12px; }
+    #addModal input, #addModal select { background: #111; border:1px solid var(--border-dark); color:var(--text-light); padding:8px; border-radius:6px; }
+    #modalTitle { color: var(--gold); }
+    /* modal overlay */
+    #overlay { display:none; position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999; }
+    #addModal { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1000; width:700px; max-width:95%; }
   </style>
 </head>
 <body>
-  <main style="padding:20px; max-width:1000px; margin:0 auto;">
-    <h2 style="color:#d4af37;">Tworzenie obozu</h2>
-    <div style="margin-top:12px;">
-      <button class="btn btn-primary" id="createCampBtn">+ Stwórz camp</button>
+  <aside class="sidebar">
+    <div class="logo"><h1>IMPERIA</h1><div style="color:var(--text-gray); font-size:12px;">Panel Klubu</div></div>
+    <ul class="nav-links">
+      <li><a href="#" id="nav-members"><i class="fas fa-users"></i><span style="margin-left:8px;">Lista członków</span></a></li>
+      <li><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span style="margin-left:8px;">Wyloguj</span></a></li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <div class="header">
+      <h2>Lista Klubu</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-primary" onclick="showAddForm()">+ Dodaj członka</button>
+        <button class="btn" id="createCampBtnClub">+ Stwórz obóz</button>
+      </div>
     </div>
 
-    <!-- Modal -->
-    <div id="overlayOboz" style="display:none; position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999;"></div>
-    <div id="modalOboz" style="display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1000; width:800px; max-width:95%; background:#1e1e1e; padding:16px; border:1px solid #333; border-radius:8px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h3 style="color:#d4af37;">Nowy camp</h3>
-        <button class="btn btn-outline" id="closeOboz">Zamknij</button>
+    <div class="content-box">
+      <div style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; gap:8px;">
+          <input id="searchInput" placeholder="Szukaj..." style="padding:8px; border-radius:6px; border:1px solid var(--border-dark); background:#111; color:var(--text-light);" />
+          <button class="btn" onclick="loadMembers()">Odśwież</button>
+        </div>
       </div>
 
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Imię i nazwisko</th>
+              <th>ID</th>
+              <th>Email</th>
+              <th>Telefon</th>
+              <th>Styl</th>
+              <th>Karnet</th>
+              <th>Akcje</th>
+            </tr>
+          </thead>
+          <tbody id="membersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="overlay"></div>
+    <div id="addModal" class="content-box" style="display:none; max-width:700px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;" class="modal-header">
+        <h3 id="modalTitle">Dodaj nowego członka</h3>
+        <button class="btn btn-outline" onclick="hideAddForm()">Zamknij</button>
+      </div>
+      <form id="addMemberForm" data-editing="false" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Imię i nazwisko</label>
+          <input id="m_name" placeholder="Imię i nazwisko" required style="flex:1;" />
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Email</label>
+          <input id="m_email" placeholder="Email" style="flex:1;" />
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Telefon</label>
+          <input id="m_phone" placeholder="Telefon" style="flex:1;" />
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Styl</label>
+          <select id="m_style" required style="flex:1;">
+            <option value="">Wybierz</option>
+            <option value="LA">LA</option>
+            <option value="ST">ST</option>
+            <option value="10t">10T</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:120px;">Karnet</label>
+          <select id="m_karnet" required>
+            <option value="290">290</option>
+            <option value="250">250</option>
+            <option value="200">200</option>
+          </select>
+          <label style="width:80px; text-align:right;">ID</label>
+          <input id="m_id" readonly style="width:120px;" />
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" class="btn" onclick="hideAddForm()">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">Dodaj</button>
+        </div>
+      </form>
+    </div>
+    <!-- Camp modal (merged from oboz.html) -->
+    <div id="overlayOboz" style="display:none; position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999;"></div>
+    <div id="modalOboz" style="display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1000; width:800px; max-width:95%; background:#1e1e1e; padding:16px; border:1px solid #333; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;" class="modal-header">
+        <h3 id="campModalTitle" style="color:var(--gold);">Nowy camp</h3>
+        <button class="btn btn-outline" id="closeOboz">Zamknij</button>
+      </div>
       <div style="display:flex; flex-direction:column; gap:8px;">
         <div style="display:flex; gap:8px; align-items:center;">
           <label style="width:120px;">Nazwa campu</label>
@@ -40,50 +158,140 @@
           <input id="campPrice" type="number" class="small-input" />
           <select id="campCurrency" class="small-input"><option>PLN</option><option>EUR</option></select>
         </div>
-
         <div style="display:flex; gap:20px;">
           <div style="flex:1;">
-            <h4 style="color:#d4af37;">Szkoleniowcy ST</h4>
+            <h4 style="color:var(--gold);">Szkoleniowcy ST</h4>
             <div id="stTrainers" class="trainers-list"></div>
             <button class="btn" id="addStTrainer">+ Dodaj szkoleniowca ST</button>
           </div>
-
           <div style="flex:1;">
-            <h4 style="color:#d4af37;">Szkoleniowcy LA</h4>
+            <h4 style="color:var(--gold);">Szkoleniowcy LA</h4>
             <div id="laTrainers" class="trainers-list"></div>
             <button class="btn" id="addLaTrainer">+ Dodaj szkoleniowca LA</button>
           </div>
         </div>
-
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
           <button class="btn" id="cancelCreate">Anuluj</button>
           <button class="btn btn-primary" id="createCamp">Utwórz obóz</button>
         </div>
       </div>
     </div>
-
-    <div id="campResult" style="margin-top:20px;"></div>
-
-    <div style="margin-top:24px;">
-      <h3 style="color:var(--gold);">Lista obozów</h3>
-      <div id="trainingsList" style="margin-top:8px;"></div>
-    </div>
-
-    <div id="campDetails" style="margin-top:20px; display:none;">
-      <h3 id="campDetailsTitle" style="color:var(--gold);"></h3>
-      <div id="campParticipants" style="margin-top:8px;"></div>
-    </div>
   </main>
 
   <script type="module">
     import { supabase } from './supabaseClient.js';
 
-    function showModal() { document.getElementById('overlayOboz').style.display='block'; document.getElementById('modalOboz').style.display='block'; }
-    function hideModal() { document.getElementById('overlayOboz').style.display='none'; document.getElementById('modalOboz').style.display='none'; }
+    function showAddForm(isEditing) {
+      // if caller explicitly passes false, treat as new; otherwise respect form.dataset.editing
+      const form = document.getElementById('addMemberForm');
+      const currentlyEditing = form.dataset.editing === 'true';
+      const editing = typeof isEditing === 'boolean' ? isEditing : currentlyEditing;
 
-    document.getElementById('createCampBtn').addEventListener('click', ()=>{ showModal(); });
-    document.getElementById('closeOboz').addEventListener('click', hideModal);
-    document.getElementById('cancelCreate').addEventListener('click', hideModal);
+      if (!editing) {
+        // reset form for new member
+        form.dataset.editing = 'false';
+        document.getElementById('modalTitle').textContent = 'Dodaj nowego członka';
+        document.getElementById('submitBtn').textContent = 'Dodaj';
+        document.getElementById('m_name').value = '';
+        document.getElementById('m_email').value = '';
+        document.getElementById('m_phone').value = '';
+        document.getElementById('m_style').value = '';
+        document.getElementById('m_karnet').value = '290';
+        document.getElementById('m_id').value = generateId();
+      } else {
+        // keep existing id and values (edit mode)
+        form.dataset.editing = 'true';
+        document.getElementById('modalTitle').textContent = 'Edytuj członka';
+        document.getElementById('submitBtn').textContent = 'Zapisz';
+      }
+
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('addModal').style.display = 'block';
+    }
+
+    function hideAddForm() {
+      document.getElementById('addModal').style.display = 'none';
+      document.getElementById('overlay').style.display = 'none';
+      const form = document.getElementById('addMemberForm');
+      form.dataset.editing = 'false';
+      document.getElementById('submitBtn').textContent = 'Dodaj';
+    }
+    function generateId() { let id=''; for(let i=0;i<6;i++) id+=Math.floor(1+Math.random()*9); return id; }
+
+    async function loadMembers() {
+      const search = document.getElementById('searchInput').value.toLowerCase().trim();
+      const { data, error } = await supabase.from('members').select('*');
+      if (error) { alert('Błąd ładowania: '+error.message); return; }
+      // sort alphabetically by name (Polish locale, case-insensitive)
+      const sorted = (data||[]).slice().sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'pl', {sensitivity:'base'}));
+      const rows = sorted.filter(m => {
+        if (!search) return true;
+        return (m.name||'').toLowerCase().includes(search) || (m.id||'').toString().includes(search);
+      });
+      const tbody = document.getElementById('membersBody'); tbody.innerHTML='';
+      rows.forEach((m,idx)=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx+1}</td>
+          <td>${m.name}</td>
+          <td>${m.id}</td>
+          <td>${m.email||''}</td>
+          <td>${m.phone||''}</td>
+          <td>${m.style||''}</td>
+          <td>${m.karnet||''}</td>
+          <td>
+            <button class="btn" onclick="editMember('${m.id}')" style="margin-right:6px;">Edytuj</button>
+            <button class="btn btn-delete" onclick="deleteMember('${m.id}')">Usuń</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.deleteMember = async function(id){ if(!confirm('Usunąć tego członka?')) return; const { error } = await supabase.from('members').delete().eq('id', id); if(error) alert('Błąd: '+error.message); else loadMembers(); }
+
+    // Edit member - open modal with member data
+    window.editMember = async function(id) {
+      const { data, error } = await supabase.from('members').select('*').eq('id', id).single();
+      if (error || !data) { alert('Nie znaleziono członka'); return; }
+      document.getElementById('modalTitle').textContent = 'Edytuj członka';
+      document.getElementById('m_name').value = data.name || '';
+      document.getElementById('m_email').value = data.email || '';
+      document.getElementById('m_phone').value = data.phone || '';
+      document.getElementById('m_style').value = data.style || '';
+      document.getElementById('m_karnet').value = data.karnet || '290';
+      document.getElementById('m_id').value = data.id;
+      document.getElementById('addMemberForm').dataset.editing = 'true';
+      document.getElementById('submitBtn').textContent = 'Zapisz';
+      showAddForm(true);
+    }
+
+    document.getElementById('addMemberForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const editing = document.getElementById('addMemberForm').dataset.editing === 'true';
+      const member={ id: document.getElementById('m_id').value, name: document.getElementById('m_name').value.trim(), email: document.getElementById('m_email').value.trim(), phone: document.getElementById('m_phone').value.trim(), style: document.getElementById('m_style').value, karnet: parseInt(document.getElementById('m_karnet').value,10) };
+      if (editing) {
+        // update
+        const { error } = await supabase.from('members').update({ name: member.name, email: member.email, phone: member.phone, style: member.style, karnet: member.karnet }).eq('id', member.id);
+        if (error) { alert('Błąd zapisu: '+error.message); return; }
+      } else {
+        const { error } = await supabase.from('members').insert([member]);
+        if (error) { alert('Błąd dodawania: '+error.message); return; }
+      }
+      document.getElementById('addMemberForm').dataset.editing = 'false';
+      document.getElementById('submitBtn').textContent = 'Dodaj';
+      hideAddForm();
+      loadMembers();
+    });
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', async ()=>{ await supabase.auth.signOut(); window.location.href='index.html'; });
+
+    // Camp modal handlers (merged)
+    function showCampModal() { document.getElementById('overlayOboz').style.display='block'; document.getElementById('modalOboz').style.display='block'; }
+    function hideCampModal() { document.getElementById('overlayOboz').style.display='none'; document.getElementById('modalOboz').style.display='none'; }
+    document.getElementById('createCampBtnClub').addEventListener('click', showCampModal);
+    document.getElementById('closeOboz').addEventListener('click', hideCampModal);
+    document.getElementById('cancelCreate').addEventListener('click', hideCampModal);
 
     const stTrainers = document.getElementById('stTrainers');
     const laTrainers = document.getElementById('laTrainers');
@@ -132,47 +340,17 @@
       const participants = membersData.map(m => ({ training_id: training.id, member_id: m.id, participant_name: m.name }));
       await supabase.from('training_participants').insert(participants);
 
-      hideModal();
-      document.getElementById('campResult').innerHTML = '<div style="color:var(--gold);">Camp utworzony pomyślnie</div>';
-      loadTrainingsList();
+      hideCampModal();
+      alert('Camp utworzony pomyślnie');
     });
 
-    async function loadTrainingsList() {
-      const { data, error } = await supabase.from('trainings').select('*').order('created_at', { ascending: false });
-      const container = document.getElementById('trainingsList'); container.innerHTML = '';
-      if (error) { container.innerHTML = '<div>Błąd ładowania</div>'; return; }
-      data.forEach(t => {
-        const el = document.createElement('div'); el.style.padding='8px'; el.style.border='1px solid #333'; el.style.marginBottom='6px';
-        el.innerHTML = `<strong>${t.name}</strong> — ${t.date || ''} — <button class="btn" onclick="openTraining('${t.id}')">Otwórz</button>`;
-        container.appendChild(el);
-      });
-    }
+    // expose functions for inline handlers (module scope isn't global)
+    window.showAddForm = showAddForm;
+    window.hideAddForm = hideAddForm;
+    window.loadMembers = loadMembers;
 
-    window.openTraining = async function(id) {
-      // load participants and trainers
-      const { data: training } = await supabase.from('trainings').select('*').eq('id', id).single();
-      const { data: participants } = await supabase.from('training_participants').select('*').eq('training_id', id);
-      const { data: trainers } = await supabase.from('training_trainers').select('price, trainer_id, trainers(name)').eq('training_id', id);
-      document.getElementById('campDetailsTitle').textContent = training.name + ' (' + (training.date||'') + ')';
-      const partContainer = document.getElementById('campParticipants'); partContainer.innerHTML = '';
-      // header
-      const table = document.createElement('table'); table.style.width='100%';
-      const thead = document.createElement('thead'); thead.innerHTML = '<tr><th>Imię i nazwisko</th><th>Kwota camp</th>' + trainers.map(tr=>`<th>${tr.trainers.name} - lekcje</th><th>${tr.trainers.name} - kwota</th>`).join('') + '<th>Akcje</th></tr>';
-      table.appendChild(thead);
-      const tbody = document.createElement('tbody');
-      participants.forEach(p => {
-        const tr = document.createElement('tr');
-        let cols = `<td>${p.participant_name}</td><td><input value="${p.camp_amount||''}"/></td>`;
-        trainers.forEach(t => { cols += `<td><input type="number"/></td><td><input type="number"/></td>`; });
-        cols += `<td><button class="btn">Zapisz</button></td>`;
-        tr.innerHTML = cols; tbody.appendChild(tr);
-      });
-      table.appendChild(tbody); partContainer.appendChild(table);
-      document.getElementById('campDetails').style.display='block';
-    }
-
-    // initial load
-    loadTrainingsList();
+    // Init
+    loadMembers();
   </script>
 </body>
 </html>
