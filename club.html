@@ -20,6 +20,10 @@
       * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
       body { background-color: var(--primary-bg); color: var(--text-light); min-height: 100vh; display: flex; overflow-x: hidden; }
       .sidebar { width: 250px; background-color: var(--secondary-bg); height: 100vh; position: fixed; left: 0; top: 0; padding: 20px 0; border-right: 1px solid var(--border-dark); transition: all 0.3s ease; z-index: 1000; }
+      .sidebar.collapsed { width: 70px; }
+      .sidebar.collapsed .logo h1 { display: none; }
+      .sidebar.collapsed .nav-links a span { display: none; }
+      .sidebar.collapsed .nav-links a i { margin-right: 0; }
       .logo { text-align: center; padding: 0 20px 20px; border-bottom: 1px solid var(--border-dark); margin-bottom: 20px; }
       .logo h1 { color: var(--gold); font-size: 1.5rem; font-weight: bold; }
       .nav-links { list-style: none; padding: 0 15px; }
@@ -27,7 +31,8 @@
       .nav-links a { display: flex; align-items: center; padding: 12px 15px; text-decoration: none; color: var(--text-gray); border-radius: 5px; transition: all 0.3s ease; }
       .nav-links a:hover, .nav-links a.active { background-color: rgba(212, 175, 55, 0.1); color: var(--gold); }
       .nav-links a i { margin-right: 10px; font-size: 1.1rem; }
-      .main-content { flex: 1; margin-left: 250px; padding: 20px; overflow-x: hidden; }
+      .main-content { flex: 1; margin-left: 250px; padding: 20px; overflow-x: hidden; transition: margin-left 0.3s ease; }
+      .main-content.sidebar-collapsed { margin-left: 70px; }
       .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid var(--border-dark); }
       .header h2 { color: var(--gold); font-size: 1.8rem; }
       .user-info { display: flex; align-items: center; }
@@ -123,10 +128,57 @@
         color: var(--text-gray);
         font-size: 0.9rem;
       }
+      .camp-status {
+        margin-top: 8px;
+        padding: 8px;
+        background-color: rgba(255,255,255,0.05);
+        border-radius: 4px;
+        font-size: 0.85rem;
+        line-height: 1.4;
+      }
       .camp-item-date {
         color: var(--text-light);
         font-weight: bold;
         text-align: right;
+      }
+
+      /* Camp summary styling */
+      .camp-summary {
+        margin-top: 30px;
+        padding: 20px;
+        background-color: var(--secondary-bg);
+        border-radius: 8px;
+        border: 1px solid var(--border-dark);
+      }
+      .summary-section {
+        margin-bottom: 20px;
+      }
+      .summary-section h4 {
+        color: var(--gold);
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+      }
+      .summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+      .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background-color: rgba(255,255,255,0.03);
+        border-radius: 4px;
+      }
+      .summary-label {
+        color: var(--text-gray);
+        font-weight: 500;
+      }
+      .summary-value {
+        color: var(--text-light);
+        font-weight: bold;
+        font-size: 1.1rem;
       }
       .form-control { width: 100%; padding: 10px; background-color: rgba(255,255,255,0.03); border: 1px solid var(--border-dark); border-radius: 4px; color: var(--text-light); }
       .form-control:focus { outline: none; border-color: var(--gold); }
@@ -141,10 +193,15 @@
     </style>
   </head>
   <body>
-    <aside class="sidebar">
-      <div class="logo"><h1>Klub</h1></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="logo">
+        <h1>Klub</h1>
+        <button id="sidebarToggle" class="btn btn-outline" style="position: absolute; top: 10px; right: 10px; padding: 5px 8px; font-size: 0.8rem;">
+          <i class="fa fa-bars"></i>
+        </button>
+      </div>
       <ul class="nav-links">
-        <li><a class="active" href="club.html"><i class="fa fa-user"></i><span class="link-text">Członkowie</span></a></li>
+        <li><a href="club.html" id="membersLink"><i class="fa fa-user"></i><span class="link-text">Członkowie</span></a></li>
         <li><a href="#" id="campyLink"><i class="fa fa-campground"></i><span class="link-text">Campy ST</span></a></li>
       </ul>
     </aside>
@@ -275,6 +332,55 @@
       const refreshBtn = document.getElementById('refreshBtn');
       let currentEditId = null;
 
+      // Sidebar functionality
+      const sidebar = document.getElementById('sidebar');
+      const mainContent = document.querySelector('.main-content');
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const membersLink = document.getElementById('membersLink');
+
+      function toggleSidebar() {
+        sidebar.classList.toggle('collapsed');
+        mainContent.classList.toggle('sidebar-collapsed');
+
+        // Save state to localStorage
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        localStorage.setItem('sidebarCollapsed', isCollapsed);
+      }
+
+      function updateSidebarActiveState(currentPage) {
+        // Remove active class from all links
+        document.querySelectorAll('.nav-links a').forEach(link => {
+          link.classList.remove('active');
+        });
+
+        // Add active class to current page link
+        if (currentPage === 'members') {
+          membersLink.classList.add('active');
+        } else if (currentPage === 'camps') {
+          campyLink.classList.add('active');
+        }
+      }
+
+      // Initialize sidebar state
+      function initializeSidebar() {
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (isCollapsed) {
+          sidebar.classList.add('collapsed');
+          mainContent.classList.add('sidebar-collapsed');
+        }
+
+        sidebarToggle.addEventListener('click', toggleSidebar);
+
+        // Determine current page
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('club.html')) {
+          updateSidebarActiveState('members');
+        }
+      }
+
+      // Initialize on page load
+      document.addEventListener('DOMContentLoaded', initializeSidebar);
+
       function openModal(){ memberModal.classList.add('active'); memberModal.setAttribute('aria-hidden','false'); }
       function closeModal(){ memberModal.classList.remove('active'); memberModal.setAttribute('aria-hidden','true'); memberForm.reset(); }
 
@@ -375,10 +481,13 @@
       const campySection = document.getElementById('campySection');
       const createCampBtn = document.getElementById('createCampBtn');
 
-      campyLink.addEventListener('click', (e)=>{
+      document.getElementById('campyLink').addEventListener('click', (e)=>{
         e.preventDefault();
+        const clubMain = document.querySelector('main.main-content');
+        const campySection = document.getElementById('campySection');
         clubMain.style.display = 'none';
         campySection.style.display = 'block';
+        updateSidebarActiveState('camps');
         initializeCampView();
       });
 
@@ -448,11 +557,54 @@
           return;
         }
 
-        const campListHtml = camps.map(camp => `
+        // Load payment status for each camp
+        const campStatuses = await Promise.all(camps.map(async (camp) => {
+          const { data: participants } = await supabase
+            .from('training_participants')
+            .select('id,camp_amount,camp_status')
+            .eq('training_id', camp.id);
+
+          const { data: payments } = await supabase
+            .from('oboz_lesson_payments')
+            .select('lessons_count,status')
+            .eq('training_participant_id', participants?.[0]?.id || 0);
+
+          let paidCount = 0;
+          let unconfirmedCount = 0;
+          let unpaidLessons = 0;
+
+          participants?.forEach(p => {
+            if (p.camp_status === 'paid') {
+              paidCount++;
+            } else if (p.camp_amount) {
+              unconfirmedCount++;
+            }
+          });
+
+          payments?.forEach(payment => {
+            if (payment.status !== 'paid' && payment.lessons_count) {
+              unpaidLessons += parseInt(payment.lessons_count) || 0;
+            }
+          });
+
+          return {
+            ...camp,
+            paidCount,
+            unconfirmedCount,
+            unpaidLessons: Math.round(unpaidLessons / 2)
+          };
+        }));
+
+        const campListHtml = campStatuses.map(camp => `
           <div class="camp-item" data-camp-id="${camp.id}">
             <div class="camp-item-info">
               <h4>${escapeHtml(camp.name)}</h4>
               <p>Cena: ${camp.price} PLN</p>
+              <p class="camp-status">
+                Zapłaciło osób: ${camp.paidCount}<br>
+                Nie zapłaciło osób: ${camp.unconfirmedCount}<br>
+                Nie zapłacone lekcje: ${camp.unpaidLessons}
+              </p>
             </div>
             <div class="camp-item-date">
               ${new Date(camp.date).toLocaleDateString('pl-PL')}
@@ -469,6 +621,51 @@
             showCampDetails(campId);
           });
         });
+      }
+
+      // Update camp summary
+      function updateCampSummary(parts, trainerInfo) {
+        let totalCampAmount = 0;
+        let paidCampAmount = 0;
+        let totalLessons = 0;
+        let unpaidLessons = 0;
+
+        // Get training ID from parts
+        const trainingId = parts[0]?.training_id || '';
+
+        parts.forEach(p => {
+          // Calculate camp amounts - check both localStorage and DB values
+          const campDueValue = localStorage.getItem(`camp_due_${trainingId}_${p.id}`) ||
+                              (p.camp_status === 'paid' ? p.camp_amount : '') || '';
+          if (campDueValue) {
+            totalCampAmount += parseFloat(campDueValue) || 0;
+          }
+          if (p.camp_status === 'paid' && p.camp_amount) {
+            paidCampAmount += parseFloat(p.camp_amount) || 0;
+          }
+
+          // Calculate lesson amounts
+          p.oboz.forEach(ob => {
+            if (ob.lessons_count) {
+              const lessonCount = parseInt(ob.lessons_count) || 0;
+              totalLessons += lessonCount;
+              if (ob.status !== 'paid') {
+                unpaidLessons += lessonCount;
+              }
+            }
+          });
+        });
+
+        // Update summary display
+        const totalCampEl = document.getElementById('totalCampAmount');
+        const paidCampEl = document.getElementById('paidCampAmount');
+        const totalLessonsEl = document.getElementById('totalLessons');
+        const unpaidLessonsEl = document.getElementById('unpaidLessons');
+
+        if (totalCampEl) totalCampEl.textContent = `${totalCampAmount} PLN`;
+        if (paidCampEl) paidCampEl.textContent = `${paidCampAmount} PLN`;
+        if (totalLessonsEl) totalLessonsEl.textContent = Math.round(totalLessons / 2);
+        if (unpaidLessonsEl) unpaidLessonsEl.textContent = Math.round(unpaidLessons / 2);
       }
 
       // Show camp details
@@ -694,8 +891,10 @@
                   }).join('');
                   // Get stored camp due amount from localStorage or use paid amount if already paid
                   const storedCampDue = p.camp_status === 'paid' ? (p.camp_amount || '') : (localStorage.getItem(`camp_due_${trainingId}_${p.id}`) || '');
+                  const isUnconfirmedCamp = storedCampDue && p.camp_status !== 'paid';
+                  const campDueStyle = isUnconfirmedCamp ? 'background:#ffe6e6;border-color:#ff6b6b;' : '';
                   return `<tr data-part-id="${p.id}"><td style="padding:4px">${escapeHtml(p.participant_name)}</td><td style="padding:4px;text-align:center">
-                    <input data-part-id="${p.id}" data-due="${campDue}" class="form-control camp-due" style="width:80px;margin:0 auto" value="${storedCampDue}" data-training-id="${trainingId}" />
+                    <input data-part-id="${p.id}" data-due="${campDue}" class="form-control camp-due" style="width:80px;margin:0 auto;${campDueStyle}" value="${storedCampDue}" data-training-id="${trainingId}" />
                   </td><td style="padding:4px;text-align:center">
                     <div class="payment-controls">
                       <input data-part-id="${p.id}" class="form-control camp-paid" style="width:70px;margin:0 2px" value="${campPaid||''}" />
@@ -708,10 +907,47 @@
             </table>
           </div>
         `;
+
+        // Add summary section
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'camp-summary';
+        summaryDiv.innerHTML = `
+          <div class="summary-section">
+            <h4>Podsumowanie Campu</h4>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span class="summary-label">Ogólna kwota:</span>
+                <span class="summary-value" id="totalCampAmount">0 PLN</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Zapłacona kwota:</span>
+                <span class="summary-value" id="paidCampAmount">0 PLN</span>
+              </div>
+            </div>
+          </div>
+          <div class="summary-section">
+            <h4>Podsumowanie Lekcji</h4>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <span class="summary-label">Wszystkie lekcje:</span>
+                <span class="summary-value" id="totalLessons">0</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Nie zapłacone lekcje:</span>
+                <span class="summary-value" id="unpaidLessons">0</span>
+              </div>
+            </div>
+          </div>
+        `;
+
         const campDetailsContainer = document.getElementById('campDetailsContainer');
         if(campDetailsContainer) {
           campDetailsContainer.innerHTML = '';
           campDetailsContainer.appendChild(container);
+          campDetailsContainer.appendChild(summaryDiv);
+
+          // Calculate and update summary
+          updateCampSummary(parts, trainerInfo);
         }
 
         // Set visual status for existing payments
@@ -765,8 +1001,23 @@
             const partId = input.getAttribute('data-part-id');
             const trainingId = input.getAttribute('data-training-id');
             const value = input.value;
-            if (trainingId && partId && value) {
-              localStorage.setItem(`camp_due_${trainingId}_${partId}`, value);
+
+            // Update localStorage
+            if (trainingId && partId) {
+              if (value) {
+                localStorage.setItem(`camp_due_${trainingId}_${partId}`, value);
+                // Add red highlight for unconfirmed amounts
+                input.style.background = '#ffe6e6';
+                input.style.borderColor = '#ff6b6b';
+              } else {
+                localStorage.removeItem(`camp_due_${trainingId}_${partId}`);
+                // Remove red highlight when empty
+                input.style.background = '';
+                input.style.borderColor = '';
+              }
+
+              // Update summary after camp due change
+              updateCampSummary(parts, trainerInfo);
             }
           });
         });
@@ -843,6 +1094,9 @@
                 if(deleteBtn) deleteBtn.setAttribute('data-oboz-id', newObozId);
               }
             }
+
+            // Update summary after lesson change
+            updateCampSummary(parts, trainerInfo);
           });
         });
 
@@ -882,6 +1136,12 @@
               if(paidInput){ paidInput.style.background = '#007f0e'; paidInput.style.color = '#ffffff'; }
               if(dueInput){ dueInput.style.background = '#007f0e'; dueInput.style.color = '#ffffff'; }
               btn.disabled = true;
+
+              // Update summary after camp payment confirmation
+              updateCampSummary(parts, trainerInfo);
+
+              // Update summary after payment confirmation
+              updateCampSummary(parts, trainerInfo);
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
           });
         });
