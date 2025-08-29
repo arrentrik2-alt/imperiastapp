@@ -419,7 +419,8 @@
         const container = document.createElement('div');
         container.className = 'content-box';
         const theadCols = ['<th>Imię i nazwisko</th>', `<th>Camp (do zapłaty)</th>`, `<th>Camp (zaplacono)</th>`];
-        trainerInfo.forEach(t=>{ theadCols.push(`<th>${escapeHtml(t.name)} (do zapłaty)</th>`); theadCols.push(`<th>${escapeHtml(t.name)} (zaplacono)</th>`); });
+        // for each trainer: lessons (editable), due (calculated), paid (input + confirm)
+        trainerInfo.forEach(t=>{ theadCols.push(`<th>${escapeHtml(t.name)}<br/>Lekcje</th>`); theadCols.push(`<th>${escapeHtml(t.name)}<br/>Do zapłaty</th>`); theadCols.push(`<th>${escapeHtml(t.name)}<br/>Zaplacono</th>`); });
         container.innerHTML = `
           <div class="content-header"><h3>${escapeHtml(training.name)} — ${escapeHtml(training.date)}</h3></div>
           <div style="overflow:auto">
@@ -431,10 +432,13 @@
                   const campPaid = p.camp_amount || '';
                   const obozCells = trainerInfo.map(ti=>{
                     const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
-                    const due = ob.amount || (ti.price * (ob.lessons_count||0)) || 0;
-                    const paid = (ob.status === 'paid') ? due : '';
-                    return `<td style="text-align:right;padding:6px">${due}</td><td style="text-align:center;padding:6px">
-                      <input data-oboz-id="${ob.id||''}" data-due="${due}" class="form-control oboz-paid" style="width:100px;display:inline-block" />
+                    const lessons = ob.lessons_count || '';
+                    const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : (ti.price * (ob.lessons_count||0));
+                    const paid = (ob.status === 'paid') ? (ob.amount || due) : '';
+                    return `<td style="padding:6px"><input data-oboz-id="${ob.id||''}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:70px" value="${lessons||''}" /></td>
+                    <td style="text-align:right;padding:6px"><input data-oboz-id="${ob.id||''}" data-price="${ti.price}" class="form-control oboz-due" readonly style="width:100px" value="${due||0}" /></td>
+                    <td style="text-align:center;padding:6px">
+                      <input data-oboz-id="${ob.id||''}" class="form-control oboz-paid" style="width:100px;display:inline-block" value="${paid||''}" />
                       <button class="btn oboz-confirm" data-oboz-id="${ob.id||''}">OK</button>
                     </td>`;
                   }).join('');
@@ -456,15 +460,10 @@
         container.querySelectorAll('.camp-confirm').forEach(btn=>{
           btn.addEventListener('click', async ()=>{
             const partId = btn.getAttribute('data-part-id');
-            const due = parseFloat(btn.getAttribute('data-due')) || 0;
-            const paidInput = container.querySelector(`input.camp-paid[data-part-id="${partId}"]`);
             const dueInput = container.querySelector(`input.camp-due[data-part-id="${partId}"]`);
-            const paid = parseFloat(paidInput.value) || 0;
+            const paidInput = container.querySelector(`input.camp-paid[data-part-id="${partId}"]`);
             const newDue = parseFloat(dueInput.value) || 0;
-            // allow manual change of due (camp amount per participant)
-            if(newDue !== due){
-              // update due in DB (training_participants.camp_amount as due isn't used; we'll store due in camp_amount until confirmed)
-            }
+            const paid = parseFloat(paidInput.value) || 0;
             if(paid === newDue){
               const { error } = await supabase.from('training_participants').update({ camp_amount: paid, camp_status: 'paid' }).eq('id', partId);
               if(error){ alert('Błąd zapisu: '+error.message); return; }
@@ -472,6 +471,25 @@
               dueInput.style.background = '#ddffdd';
               btn.disabled = true;
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
+          });
+        });
+
+        // lessons change: recalculate due for trainer cells
+        container.querySelectorAll('.oboz-lessons').forEach(input => {
+          input.addEventListener('input', async ()=>{
+            const obozId = input.getAttribute('data-oboz-id');
+            const trainerId = input.getAttribute('data-trainer-id');
+            const lessons = parseInt(input.value,10) || 0;
+            // find corresponding due input
+            const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`);
+            const price = parseFloat(dueInput.getAttribute('data-price')) || 0;
+            const newDue = lessons * price;
+            dueInput.value = newDue;
+            dueInput.style.background = '#ffefcc';
+            // optionally update DB lessons_count and amount
+            if(obozId){
+              await supabase.from('oboz_lesson_payments').update({ lessons_count: lessons, amount: newDue }).eq('id', obozId);
+            }
           });
         });
 
