@@ -459,8 +459,9 @@
                   return `<tr data-part-id="${p.id}"><td>${escapeHtml(p.participant_name)}</td><td style="text-align:right;padding:6px">
                     <input data-part-id="${p.id}" data-due="${campDue}" class="form-control camp-due" style="width:100px;display:inline-block" value="${campDue||''}" />
                   </td><td style="text-align:center;padding:6px">
-                    <input data-part-id="${p.id}" class="form-control camp-paid" style="width:100px;display:inline-block" value="${campPaid||''}" />
+                    <input data-part-id="${p.id}" class="form-control camp-paid" style="width:100px;display:inline-block;color:#000" value="${campPaid||''}" />
                     <button class="btn camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>
+                    <button class="btn camp-delete" data-part-id="${p.id}">Usuń</button>
                   </td>${obozCells}</tr>`;
                 }).join('')}
               </tbody>
@@ -542,8 +543,24 @@
             // remove row cell values
             const paidInput = container.querySelector(`input.oboz-paid[data-oboz-id="${obozId}"]`);
             const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`);
-            if(paidInput) paidInput.value = '';
-            if(dueInput) dueInput.value = 0;
+            if(paidInput) { paidInput.value = ''; paidInput.style.background=''; paidInput.style.color=''; }
+            if(dueInput) { dueInput.value = 0; dueInput.style.background=''; dueInput.style.color=''; }
+            btn.disabled = true;
+          });
+        });
+
+        // delete handlers for camp payments (per participant)
+        container.querySelectorAll('.camp-delete').forEach(btn=>{
+          btn.addEventListener('click', async ()=>{
+            const partId = btn.getAttribute('data-part-id');
+            if(!confirm('Usunąć płatność campu dla tego uczestnika?')) return;
+            // reset participant camp_amount and status
+            const { error } = await supabase.from('training_participants').update({ camp_amount: 0, camp_status: 'unset' }).eq('id', partId);
+            if(error){ alert('Błąd usuwania: '+error.message); return; }
+            const paidInput = container.querySelector(`input.camp-paid[data-part-id="${partId}"]`);
+            const dueInput = container.querySelector(`input.camp-due[data-part-id="${partId}"]`);
+            if(paidInput){ paidInput.value=''; paidInput.style.background=''; paidInput.style.color=''; }
+            if(dueInput){ dueInput.style.background=''; dueInput.style.color=''; }
             btn.disabled = true;
           });
         });
