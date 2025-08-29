@@ -757,7 +757,7 @@
             paidCampAmount += confirmedAmount;
           }
 
-          // Calculate lesson amounts per trainer
+          // Calculate lesson amounts per trainer from database
           p.oboz.forEach(ob => {
             if (ob.lessons_count) {
               const lessonCount = parseInt(ob.lessons_count) || 0;
@@ -772,6 +772,38 @@
                   trainerStats[ob.trainer_id].unpaidLessons += lessonCount;
                 } else {
                   trainerStats[ob.trainer_id].paidParticipants++;
+                }
+              }
+            }
+          });
+
+          // Also check for lessons entered in input fields but not yet confirmed
+          // This ensures that entered but unconfirmed lessons are counted as unpaid
+          trainerInfo.forEach(ti => {
+            const lessonInput = document.querySelector(`input.oboz-lessons[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+            if (lessonInput && lessonInput.value) {
+              const inputLessonCount = parseInt(lessonInput.value) || 0;
+              const existingDbEntry = p.oboz.find(ob => ob.trainer_id === ti.id);
+
+              // If there's a lesson count in input but no confirmed payment, count it as unpaid
+              if (inputLessonCount > 0 && (!existingDbEntry || existingDbEntry.status !== 'paid')) {
+                // Check if this input value is different from what's in database
+                const dbLessonCount = existingDbEntry ? (parseInt(existingDbEntry.lessons_count) || 0) : 0;
+
+                if (inputLessonCount > dbLessonCount) {
+                  const additionalLessons = inputLessonCount - dbLessonCount;
+
+                  // Add to total lessons
+                  totalLessons += additionalLessons;
+
+                  if (trainerStats[ti.id]) {
+                    trainerStats[ti.id].totalLessons += additionalLessons;
+                    trainerStats[ti.id].participants = Math.max(trainerStats[ti.id].participants, 1);
+
+                    // Count as unpaid since not confirmed
+                    unpaidLessons += additionalLessons;
+                    trainerStats[ti.id].unpaidLessons += additionalLessons;
+                  }
                 }
               }
             }
@@ -1204,11 +1236,20 @@
             if(Math.abs(paid - newDue) < EPS){
               const { error } = await supabase.from('training_participants').update({ camp_amount: paid, camp_status: 'paid' }).eq('id', partId);
               if(error){ alert('Błąd zapisu: '+error.message); return; }
-              paidInput.style.background = '#007f0e';
-              paidInput.style.color = '#ffffff';
-              dueInput.style.background = '#007f0e';
-              dueInput.style.color = '#ffffff';
+              // Add status-paid class to inputs immediately
+              paidInput.classList.add('status-paid');
+              paidInput.classList.remove('status-unpaid');
+              dueInput.classList.add('status-paid');
+              // Remove red highlight if it was there
+              if(dueInput.style.background.includes('#b91c1c') || dueInput.style.background.includes('#ffe6e6')) {
+                dueInput.style.background = '';
+                dueInput.style.borderColor = '';
+                dueInput.style.color = '';
+              }
               btn.disabled = true;
+
+              // Update summary after camp payment confirmation
+              updateCampSummary(parts, trainerInfo, currentTrainingId);
 
               // Refresh camp list to update status
               const currentMonth = document.getElementById('monthSelect').value;
@@ -1395,6 +1436,9 @@
             if(lessonsInput) lessonsInput.setAttribute('data-oboz-id','');
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
 
+            // Update summary after lesson payment deletion
+            updateCampSummary(parts, trainerInfo, currentTrainingId);
+
             // Refresh all data after lesson payment deletion
             const currentMonth = document.getElementById('monthSelect').value;
             if(currentMonth){
@@ -1434,6 +1478,9 @@
               }
             }
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
+
+            // Update summary after camp payment deletion
+            updateCampSummary(parts, trainerInfo, currentTrainingId);
 
             // Refresh all data after camp payment deletion
             const currentMonth = document.getElementById('monthSelect').value;
