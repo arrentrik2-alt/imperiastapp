@@ -706,7 +706,9 @@
           `;
         }).join('');
 
+        console.log('Updating camp list with', campStatuses.length, 'camps');
         document.getElementById('campList').innerHTML = campListHtml;
+        console.log('Camp list updated successfully');
 
         // Add click handlers for camp items
         document.querySelectorAll('.camp-item').forEach(item => {
@@ -817,10 +819,32 @@
         const unpaidLessonsEl = document.getElementById('unpaidLessons');
         const trainerSummariesEl = document.getElementById('trainerSummaries');
 
-        if (totalCampEl) totalCampEl.textContent = `${totalCampAmount} PLN`;
-        if (paidCampEl) paidCampEl.textContent = `${paidCampAmount} PLN`;
-        if (totalLessonsEl) totalLessonsEl.textContent = Math.round(totalLessons / 2);
-        if (unpaidLessonsEl) unpaidLessonsEl.textContent = Math.round(unpaidLessons / 2);
+        console.log('Found elements:', {
+          totalCampEl: !!totalCampEl,
+          paidCampEl: !!paidCampEl,
+          totalLessonsEl: !!totalLessonsEl,
+          unpaidLessonsEl: !!unpaidLessonsEl,
+          trainerSummariesEl: !!trainerSummariesEl
+        });
+
+        console.log('Updating summary:', { totalCampAmount, paidCampAmount, totalLessons, unpaidLessons });
+
+        if (totalCampEl) {
+          totalCampEl.textContent = `${totalCampAmount} PLN`;
+          console.log('Updated totalCampEl:', totalCampEl.textContent);
+        }
+        if (paidCampEl) {
+          paidCampEl.textContent = `${paidCampAmount} PLN`;
+          console.log('Updated paidCampEl:', paidCampEl.textContent);
+        }
+        if (totalLessonsEl) {
+          totalLessonsEl.textContent = Math.round(totalLessons / 2);
+          console.log('Updated totalLessonsEl:', totalLessonsEl.textContent);
+        }
+        if (unpaidLessonsEl) {
+          unpaidLessonsEl.textContent = Math.round(unpaidLessons / 2);
+          console.log('Updated unpaidLessonsEl:', unpaidLessonsEl.textContent);
+        }
 
         // Generate trainer summaries
         if (trainerSummariesEl) {
@@ -1009,6 +1033,7 @@
         });
       }
       async function renderCampFromDB(trainingId){
+        console.log('renderCampFromDB called with trainingId:', trainingId);
         // Make trainingId available for all event handlers
         let currentTrainingId = trainingId;
 
@@ -1253,20 +1278,14 @@
               }
               btn.disabled = true;
 
-              // Update summary after camp payment confirmation
-              updateCampSummary(parts, trainerInfo, currentTrainingId);
-
               // Refresh camp list to update status
               const currentMonth = document.getElementById('monthSelect').value;
               if(currentMonth){
                 loadCampsForMonth(currentMonth);
               }
 
-              // Re-render camp details to get fresh data
-              const trainingId = parts[0]?.training_id;
-              if(trainingId){
-                renderCampFromDB(trainingId);
-              }
+              // Re-render camp details to get fresh data and update summary
+              renderCampFromDB(currentTrainingId);
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
           });
         });
@@ -1334,10 +1353,7 @@
             }
 
             // Re-render camp details to get fresh data
-            const trainingId = parts[0]?.training_id;
-            if(trainingId){
-              renderCampFromDB(trainingId);
-            }
+            renderCampFromDB(currentTrainingId);
           });
         });
 
@@ -1425,27 +1441,25 @@
               paidInput.setAttribute('data-oboz-id','');
             }
             if(dueInput){
-              dueInput.value = 0;
+              // Recalculate amount based on current lessons count
+              const lessonsCount = lessonsInput ? parseInt(lessonsInput.value) || 0 : 0;
+              const price = parseFloat(dueInput.getAttribute('data-price')) || 0;
+              const recalculatedAmount = lessonsCount * price;
+              dueInput.value = recalculatedAmount;
               dueInput.classList.remove('status-paid');
               dueInput.setAttribute('data-oboz-id','');
             }
             if(lessonsInput) lessonsInput.setAttribute('data-oboz-id','');
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
 
-            // Update summary after lesson payment deletion
-            updateCampSummary(parts, trainerInfo, currentTrainingId, container);
-
-            // Refresh all data after lesson payment deletion
+            // Refresh camp list to update status
             const currentMonth = document.getElementById('monthSelect').value;
             if(currentMonth){
               loadCampsForMonth(currentMonth);
             }
 
-            // Re-render camp details to get fresh data
-            const trainingId = parts[0]?.training_id;
-            if(trainingId){
-              renderCampFromDB(trainingId);
-            }
+            // Re-render camp details to get fresh data and update summary
+            renderCampFromDB(currentTrainingId);
           });
         });
 
@@ -1475,16 +1489,13 @@
             }
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
 
-            // Update summary after camp payment deletion
-            updateCampSummary(parts, trainerInfo, currentTrainingId, container);
-
-            // Refresh all data after camp payment deletion
+            // Refresh camp list to update status
             const currentMonth = document.getElementById('monthSelect').value;
             if(currentMonth){
               loadCampsForMonth(currentMonth);
             }
 
-            // Re-render camp details to get fresh data
+            // Re-render camp details to get fresh data and update summary
             renderCampFromDB(currentTrainingId);
           });
         });
