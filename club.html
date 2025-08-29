@@ -93,6 +93,33 @@
         border-color: #bd2130;
       }
 
+      /* Lesson input group with +/- buttons */
+      .lesson-input-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+      }
+      .lesson-input-group input {
+        text-align: center;
+        padding: 4px 2px;
+      }
+      .lesson-plus, .lesson-minus {
+        padding: 2px 6px;
+        font-size: 12px;
+        line-height: 1;
+        min-width: 20px;
+        height: 24px;
+        cursor: pointer;
+        border: 1px solid var(--border-dark);
+        background-color: var(--secondary-bg);
+        color: var(--text-light);
+        border-radius: 3px;
+      }
+      .lesson-plus:hover, .lesson-minus:hover {
+        background-color: var(--gold);
+        color: var(--primary-bg);
+      }
+
       /* Members table styling */
       #membersTable th, #membersTable td {
         padding: 8px;
@@ -754,9 +781,9 @@
             totalCampAmount += enteredAmount;
           }
 
-          // Add only confirmed amounts to paid total
-          if (confirmedAmount > 0) {
-            paidCampAmount += confirmedAmount;
+          // Add all entered amounts to paid total (user requirement - all entered amounts count as paid)
+          if (enteredAmount > 0) {
+            paidCampAmount += enteredAmount;
           }
 
           // Calculate lesson amounts per trainer from database
@@ -1021,14 +1048,23 @@
             }
           });
 
-          // Refresh camp list for current month and render details
-          const currentMonth = document.getElementById('monthSelect').value;
-          if(currentMonth){
-            loadCampsForMonth(currentMonth);
+          // Auto-select current month if camp was created in current month
+          const campDate = new Date(date);
+          const currentDate = new Date();
+          if(campDate.getMonth() === currentDate.getMonth() && campDate.getFullYear() === currentDate.getFullYear()){
+            const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('monthSelect').value = currentMonthKey;
+            loadCampsForMonth(currentMonthKey);
+          } else {
+            // Refresh camp list for current month
+            const currentMonth = document.getElementById('monthSelect').value;
+            if(currentMonth){
+              loadCampsForMonth(currentMonth);
+            }
           }
 
           // Show camp details
-          showCampDetails(training.id);
+          renderCampFromDB(training.id);
           campModal.remove();
         });
       }
@@ -1048,7 +1084,7 @@
         const trainerInfo = trainers.map(tr => {
           const link = tlinks.find(t=>t.trainer_id === tr.id) || {};
           return { id: tr.id, name: tr.name, price: link.price || tr.default_price || 0, currency: 'PLN' };
-        });
+        }).sort((a, b) => a.name.localeCompare(b.name)); // Sort by name to prevent position changes
 
         // fetch participants
         const { data: parts } = await supabase.from('training_participants').select('id,member_id,participant_name,camp_amount,camp_status').eq('training_id', trainingId).order('participant_name', {ascending:true});
@@ -1095,7 +1131,13 @@
                     const paid = (ob.status === 'paid') ? (ob.amount || due) : '';
                     const paidClass = ob.status === 'paid' ? 'status-paid' : (paid ? 'status-unpaid' : '');
                     const currency = ob.currency || ti.currency || 'PLN';
-                    return `<td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:60px;margin:0 auto" value="${lessons||''}" /></td>
+                    return `<td style="padding:4px;text-align:center">
+                      <div class="lesson-input-group">
+                        <button class="btn btn-small lesson-minus" data-part-id="${p.id}" data-trainer-id="${ti.id}">-</button>
+                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:40px;margin:0;text-align:center" value="${lessons||''}" />
+                        <button class="btn btn-small lesson-plus" data-part-id="${p.id}" data-trainer-id="${ti.id}">+</button>
+                      </div>
+                    </td>
                     <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:80px;margin:0 auto;background:#ffffff;color:#000000;text-align:center" value="${due||0}" /></td>
                     <td style="padding:4px;text-align:center">
                       <div class="payment-controls">
@@ -1497,6 +1539,37 @@
 
             // Re-render camp details to get fresh data and update summary
             renderCampFromDB(currentTrainingId);
+          });
+        });
+
+        // Add +/- button functionality for lesson inputs
+        container.querySelectorAll('.lesson-plus').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const partId = this.getAttribute('data-part-id');
+            const trainerId = this.getAttribute('data-trainer-id');
+            const input = container.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+            if (input) {
+              const currentValue = parseInt(input.value) || 0;
+              input.value = currentValue + 1;
+              // Trigger input event to recalculate amounts
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+          });
+        });
+
+        container.querySelectorAll('.lesson-minus').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const partId = this.getAttribute('data-part-id');
+            const trainerId = this.getAttribute('data-trainer-id');
+            const input = container.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+            if (input) {
+              const currentValue = parseInt(input.value) || 0;
+              if (currentValue > 0) {
+                input.value = currentValue - 1;
+                // Trigger input event to recalculate amounts
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            }
           });
         });
 
