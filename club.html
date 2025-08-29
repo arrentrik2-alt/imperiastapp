@@ -520,7 +520,23 @@
     });
     document.getElementById('createTrainingStBtn').addEventListener('click', async ()=>{
       const name=document.getElementById('trainingStName').value.trim(); const price=parseFloat(document.getElementById('trainingStPrice').value)||0; const currency=document.getElementById('trainingStCurrency').value||'PLN'; const date=document.getElementById('trainingStDate').value; if(!name){ alert('Wprowadź nazwę'); return; }
-      const { data: training, error } = await supabase.from('trainings').insert([{ name, type: 'training_st', date, price, currency }]).select().single(); if(error){ alert('Błąd: '+error.message); return; }
+      const allowedTypes = ['camp_la','camp_st','training_la','training_st'];
+      const payload = { name, type: 'training_st', date, price, currency };
+      if (!allowedTypes.includes(payload.type)) { alert('Nieprawidłowy typ szkolenia: '+payload.type); console.error('Invalid trainings.type', payload); return; }
+      let training; let error;
+      try {
+        const resp = await supabase.from('trainings').insert([payload]).select().single();
+        training = resp.data; error = resp.error;
+      } catch(e) {
+        console.error('Insert trainings exception', e);
+        alert('Błąd tworzenia (exception). Sprawdź konsolę.');
+        return;
+      }
+      if(error){
+        console.error('Trainings insert error', error);
+        alert('Błąd: '+error.message + '\nSzczegóły: '+ (error.details||'no details'));
+        return;
+      }
       const rows=[...trainersStContainer.querySelectorAll('.trainer-row')]; const trainersToInsert=[]; for(const r of rows){ const n=r.querySelector('.trainer-name').value.trim(); const p=parseFloat(r.querySelector('.trainer-price').value)||0; if(!n) continue; trainersToInsert.push({ name: n, default_price: p, currency }); }
       if(trainersToInsert.length){ const { data: trainersData } = await supabase.from('trainers').insert(trainersToInsert).select(); const links=trainersData.map(t=>({ training_id: training.id, trainer_id: t.id, price: t.default_price })); await supabase.from('training_trainers').insert(links); }
       const { data: members } = await supabase.from('members').select('*'); const participants = members.map(m=>({ training_id: training.id, member_id: m.id, participant_name: m.name })); await supabase.from('training_participants').insert(participants);
@@ -532,8 +548,16 @@
       const container = document.getElementById('trainingsStList');
       if (!container) return;
       container.innerHTML = '';
-      const { data, error } = await supabase.from('trainings').select('*').eq('type','training_st').order('created_at',{ascending:false});
-      if (error) { container.innerHTML = '<div>Błąd</div>'; return; }
+      let data, error;
+      try {
+        const resp = await supabase.from('trainings').select('id,name,type,date,price,currency').eq('type','training_st').order('created_at',{ascending:false});
+        data = resp.data; error = resp.error;
+      } catch(e) {
+        console.error('loadTrainingsSTList exception', e);
+        container.innerHTML = '<div>Błąd (exception). Sprawdź konsolę.</div>';
+        return;
+      }
+      if (error) { console.error('loadTrainingsSTList error', error); container.innerHTML = '<div>Błąd</div>'; return; }
       if (!data || data.length===0) { container.innerHTML = '<div>Brak szkoleń ST</div>'; return; }
       data.forEach(t=>{ const el=document.createElement('div'); el.style.padding='8px'; el.style.border='1px solid #333'; el.style.marginBottom='6px'; el.innerHTML=`<strong>${t.name}</strong> - ${t.date||''} <button class="btn" data-id="${t.id}">Otwórz</button>`; el.querySelector('button').addEventListener('click', ()=> openTraining(t.id)); container.appendChild(el); });
     }
@@ -543,11 +567,16 @@
       const container = document.getElementById('trainingsList');
       if (!container) return;
       container.innerHTML = '';
-      const { data, error } = await supabase.from('trainings').select('*').order('created_at', { ascending: false });
-      if (error) {
-        container.innerHTML = '<div>Błąd ładowania listy obozów</div>';
+      let data, error;
+      try {
+        const resp = await supabase.from('trainings').select('id,name,type,date,price,currency').order('created_at', { ascending: false });
+        data = resp.data; error = resp.error;
+      } catch(e) {
+        console.error('loadTrainingsList exception', e);
+        container.innerHTML = '<div>Błąd (exception). Sprawdź konsolę.</div>';
         return;
       }
+      if (error) { console.error('loadTrainingsList error', error); container.innerHTML = '<div>Błąd ładowania listy obozów</div>'; return; }
       if (!data || data.length === 0) {
         container.innerHTML = '<div>Brak obozów</div>';
         return;
