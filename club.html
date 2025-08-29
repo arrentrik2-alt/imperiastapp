@@ -769,10 +769,14 @@
           };
         });
 
+        console.log('Initialized trainer stats:', Object.keys(trainerStats));
+
         // Get training ID from parts (parts don't have training_id, so we need to pass it as parameter)
         const trainingId = parts[0]?.training_id || trainingIdParam || '';
 
         parts.forEach(p => {
+          console.log('Processing participant:', p.id);
+          console.log('Current trainer stats before processing this participant:', JSON.stringify(trainerStats));
           // Calculate camp amounts - check all entered values (both confirmed and unconfirmed)
           const campDueValue = localStorage.getItem(`camp_due_${trainingId}_${p.id}`) || '';
           const campPaidValue = localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || '';
@@ -844,21 +848,29 @@
 
           // Calculate trainer amounts (due and paid)
           trainerInfo.forEach(ti => {
+            console.log(`Processing trainer ${ti.name} for participant ${p.id}`);
+
             // Check for due amount input field
             const dueInput = containerParam.querySelector(`input.oboz-due[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+            console.log(`Due input for trainer ${ti.id}:`, dueInput, dueInput?.value);
             if (dueInput && dueInput.value) {
               const dueAmount = parseFloat(dueInput.value) || 0;
+              console.log(`Due amount for trainer ${ti.id}:`, dueAmount);
               if (dueAmount > 0) {
                 trainerStats[ti.id].totalDueAmount += dueAmount;
+                console.log(`Added ${dueAmount} to totalDueAmount for trainer ${ti.id}, now: ${trainerStats[ti.id].totalDueAmount}`);
               }
             }
 
             // Check for paid amount input field (only from "Zapłacono" column)
             const paidInput = containerParam.querySelector(`input.oboz-paid[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
-            if (paidInput && paidInput.value) {
+            console.log(`Paid input for trainer ${ti.id}:`, paidInput, paidInput?.value);
+            if (paidInput && paidInput.value !== undefined && paidInput.value !== null && paidInput.value !== '') {
               const paidAmount = parseFloat(paidInput.value) || 0;
+              console.log(`Paid amount for trainer ${ti.id}:`, paidAmount);
               if (paidAmount > 0) {
                 trainerStats[ti.id].totalPaidAmount += paidAmount;
+                console.log(`Added ${paidAmount} to totalPaidAmount for trainer ${ti.id}, now: ${trainerStats[ti.id].totalPaidAmount}`);
               }
             }
           });
@@ -880,6 +892,7 @@
         });
 
         console.log('Updating summary:', { totalCampAmount, paidCampAmount, totalLessons, unpaidLessons });
+        console.log('Final trainer stats:', trainerStats);
 
         if (totalCampEl) {
           totalCampEl.textContent = `${totalCampAmount} PLN`;
