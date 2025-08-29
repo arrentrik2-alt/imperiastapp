@@ -591,6 +591,10 @@
     window.showAddForm = showAddForm;
     window.hideAddForm = hideAddForm;
     window.loadMembers = loadMembers;
+    // expose trainings loaders and openTraining for console/debug
+    if (typeof loadTrainingsSTList === 'function') window.loadTrainingsSTList = loadTrainingsSTList;
+    if (typeof loadTrainingsList === 'function') window.loadTrainingsList = loadTrainingsList;
+    if (typeof openTraining === 'function') window.openTraining = openTraining;
 
     // helper to show Trainings ST view
     function showTrainingsSTView() {
