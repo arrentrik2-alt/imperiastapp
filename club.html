@@ -284,6 +284,16 @@
         const sel = document.getElementById('campSelect');
         const val = sel.value;
         if(!val) return alert('Wybierz camp');
+
+        // Clear previous camp content
+        const campySection = document.getElementById('campySection');
+        const existingCamps = campySection.querySelectorAll('.content-box');
+        existingCamps.forEach(camp => {
+          if (!camp.contains(document.getElementById('campList'))) {
+            camp.remove();
+          }
+        });
+
         renderCampFromDB(val);
       });
 
@@ -399,6 +409,15 @@
             }
           }
 
+          // Clear previous camp content before rendering new one
+          const campySection = document.getElementById('campySection');
+          const existingCamps = campySection.querySelectorAll('.content-box');
+          existingCamps.forEach(camp => {
+            if (!camp.contains(document.getElementById('campList'))) {
+              camp.remove();
+            }
+          });
+
           // render from DB
           renderCampFromDB(training.id);
           campModal.remove();
@@ -431,9 +450,9 @@
         const campId = 'camp_' + trainingId;
         const container = document.createElement('div');
         container.className = 'content-box';
-        const theadCols = ['<th>Imię i nazwisko</th>', `<th>Camp (do zapłaty)</th>`, `<th>Camp (zaplacono)</th>`];
+        const theadCols = ['<th>Imię i nazwisko</th>', `<th>Camp (do zapłaty ${training.price || 0} PLN)</th>`, `<th>Camp (zaplacono)</th>`];
         // for each trainer: lessons (editable), due (calculated), paid (input + confirm)
-        trainerInfo.forEach(t=>{ theadCols.push(`<th>${escapeHtml(t.name)}<br/>Lekcje</th>`); theadCols.push(`<th>${escapeHtml(t.name)}<br/>Do zapłaty</th>`); theadCols.push(`<th>${escapeHtml(t.name)}<br/>Zaplacono</th>`); });
+        trainerInfo.forEach(t=>{ theadCols.push(`<th>${escapeHtml(t.name)}<br/>Lekcje</th>`); theadCols.push(`<th>${escapeHtml(t.name)}<br/>Do zapłaty ${t.price} PLN</th>`); theadCols.push(`<th>${escapeHtml(t.name)}<br/>Zaplacono</th>`); });
         container.innerHTML = `
           <div class="content-header"><h3>${escapeHtml(training.name)} — ${escapeHtml(training.date)}</h3></div>
           <div style="overflow:auto">
@@ -458,7 +477,7 @@
                     </td>`;
                   }).join('');
                   return `<tr data-part-id="${p.id}"><td>${escapeHtml(p.participant_name)}</td><td style="text-align:right;padding:6px">
-                    <input data-part-id="${p.id}" data-due="${campDue}" class="form-control camp-due" style="width:100px;display:inline-block" value="${campDue||''}" />
+                    <input data-part-id="${p.id}" data-due="${campDue}" class="form-control camp-due" style="width:100px;display:inline-block" value="" />
                   </td><td style="text-align:center;padding:6px">
                     <input data-part-id="${p.id}" class="form-control camp-paid" style="width:100px;display:inline-block;color:#000" value="${campPaid||''}" />
                     <button class="btn camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>
