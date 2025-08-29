@@ -415,7 +415,7 @@
         // map trainer id -> info (price from tlinks)
         const trainerInfo = trainers.map(tr => {
           const link = tlinks.find(t=>t.trainer_id === tr.id) || {};
-          return { id: tr.id, name: tr.name, price: link.price || tr.default_price || 0 };
+          return { id: tr.id, name: tr.name, price: link.price || tr.default_price || 0, currency: 'PLN' };
         });
 
         // fetch participants
@@ -448,8 +448,9 @@
                     const lessons = ob.lessons_count || '';
                     const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : (ti.price * (ob.lessons_count||0));
                     const paid = (ob.status === 'paid') ? (ob.amount || due) : '';
+                    const currency = ob.currency || ti.currency || 'PLN';
                     return `<td style="padding:6px"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:70px" value="${lessons||''}" /></td>
-                    <td style="text-align:right;padding:6px"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-price="${ti.price}" data-currency="${ti.currency || 'PLN'}" class="form-control oboz-due" readonly style="width:100px;background:#ffffff;color:#000000" value="${due||0}" /></td>
+                    <td style="text-align:right;padding:6px"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:100px;background:#ffffff;color:#000000" value="${due||0}" /></td>
                     <td style="text-align:center;padding:6px">
                       <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid" style="width:100px;display:inline-block;color:#000" value="${paid||''}" />
                       <button class="btn oboz-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
@@ -470,6 +471,49 @@
         `;
         const campList = document.getElementById('campList'); if(campList) campList.innerHTML = '';
         document.getElementById('campySection').appendChild(container);
+
+        // Set visual status for existing payments
+        parts.forEach(p => {
+          // Set camp payment status
+          if (p.camp_status === 'paid') {
+            const paidInput = container.querySelector(`input.camp-paid[data-part-id="${p.id}"]`);
+            const dueInput = container.querySelector(`input.camp-due[data-part-id="${p.id}"]`);
+            const confirmBtn = container.querySelector(`button.camp-confirm[data-part-id="${p.id}"]`);
+
+            if (paidInput) {
+              paidInput.style.background = '#007f0e';
+              paidInput.style.color = '#ffffff';
+            }
+            if (dueInput) {
+              dueInput.style.background = '#007f0e';
+              dueInput.style.color = '#ffffff';
+            }
+            if (confirmBtn) {
+              confirmBtn.disabled = true;
+            }
+          }
+
+          // Set lesson payment status
+          p.oboz.forEach(ob => {
+            if (ob.status === 'paid') {
+              const paidInput = container.querySelector(`input.oboz-paid[data-oboz-id="${ob.id}"]`);
+              const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${ob.id}"]`);
+              const confirmBtn = container.querySelector(`button.oboz-confirm[data-oboz-id="${ob.id}"]`);
+
+              if (paidInput) {
+                paidInput.style.background = '#007f0e';
+                paidInput.style.color = '#ffffff';
+              }
+              if (dueInput) {
+                dueInput.style.background = '#007f0e';
+                dueInput.style.color = '#ffffff';
+              }
+              if (confirmBtn) {
+                confirmBtn.disabled = true;
+              }
+            }
+          });
+        });
 
         // attach handlers
         container.querySelectorAll('.camp-confirm').forEach(btn=>{
@@ -511,11 +555,39 @@
             dueInput.value = newDue;
             dueInput.style.background = '#ffcdd2';
             dueInput.style.color = '#000';
+
             // update DB lessons_count and amount if we have a record
             if(obozId){
-              await supabase.from('oboz_lesson_payments').update({ lessons_count: lessons, amount: newDue }).eq('id', obozId);
+              const { error } = await supabase.from('oboz_lesson_payments').update({ lessons_count: lessons, amount: newDue }).eq('id', obozId);
+              if(error) console.error('Error updating lessons:', error);
+            } else if(lessons > 0) {
+              // create new payment record if lessons > 0 and no record exists yet
+              const currency = dueInput.getAttribute('data-currency') || 'PLN';
+              const insertObj = {
+                training_participant_id: partId,
+                trainer_id: trainerId,
+                lessons_count: lessons,
+                amount: newDue,
+                currency: currency,
+                status: 'unset'
+              };
+              const { data: newRow, error: insErr } = await supabase.from('oboz_lesson_payments').insert([insertObj]).select().single();
+              if(!insErr && newRow){
+                // update data-oboz-id on all related elements
+                const newObozId = newRow.id;
+                input.setAttribute('data-oboz-id', newObozId);
+                dueInput.setAttribute('data-oboz-id', newObozId);
+
+                const paidInput = container.querySelector(`input.oboz-paid[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+                if(paidInput) paidInput.setAttribute('data-oboz-id', newObozId);
+
+                const confirmBtn = container.querySelector(`button.oboz-confirm[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+                if(confirmBtn) confirmBtn.setAttribute('data-oboz-id', newObozId);
+
+                const deleteBtn = container.querySelector(`button.oboz-delete[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+                if(deleteBtn) deleteBtn.setAttribute('data-oboz-id', newObozId);
+              }
             }
-            // Always recalculate locally even if no DB record yet
           });
         });
 
