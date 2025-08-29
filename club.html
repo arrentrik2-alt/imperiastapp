@@ -98,20 +98,19 @@
       </div>
     </div>
 
-    <!-- Trainings ST section -->
+    <!-- Trainings ST section (simplified UI) -->
     <div id="trainings-st-section" style="display:none;">
       <div class="content-box">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <h3 style="color:var(--gold);">Szkolenia ST</h3>
-          <div>
-            <button class="btn btn-primary" id="createTrainingSTHeaderBtn" onclick="showTrainStModal()">+ Stwórz szkolenie ST</button>
+          <div><!-- header create button is in the main header; simplified section has its own small create button for direct access -->
+            <button id="createTrainingBtn" class="btn btn-primary" style="display:none;">+ Stwórz szkolenie</button>
           </div>
         </div>
         <div id="trainingsStListContainer" style="margin-top:12px;">
           <h4 style="color:var(--gold);">Lista szkoleń ST</h4>
           <div id="trainingsStList"></div>
         </div>
-        <div id="trainingStDetails" style="margin-top:16px; display:none;"></div>
       </div>
     </div>
 
@@ -478,16 +477,21 @@
       }
     }
     function hideTrainStModal(){ const overlay = document.getElementById('overlayTrainSt'); const modal = document.getElementById('modalTrainSt'); if (overlay) overlay.style.display='none'; if (modal) modal.style.display='none'; }
-    // expose modal functions globally and attach header button safely
+    // expose modal functions globally and attach header/section create buttons safely
     window.showTrainStModal = showTrainStModal;
     window.hideTrainStModal = hideTrainStModal;
     const createSTHdrBtn = document.getElementById('createTrainingSTHeaderBtn');
+    const createTrainingBtn = document.getElementById('createTrainingBtn');
     if (createSTHdrBtn) {
-      // ensure handler attached via addEventListener
+      createSTHdrBtn.style.display = 'none'; // shown when entering ST view
       createSTHdrBtn.addEventListener('click', showTrainStModal);
     }
-    document.getElementById('closeTrainSt').addEventListener('click', hideTrainStModal);
-    document.getElementById('cancelTrainSt').addEventListener('click', hideTrainStModal);
+    if (createTrainingBtn) {
+      createTrainingBtn.style.display = 'none';
+      createTrainingBtn.addEventListener('click', showTrainStModal);
+    }
+    const closeTrainStEl = document.getElementById('closeTrainSt'); if (closeTrainStEl) closeTrainStEl.addEventListener('click', hideTrainStModal);
+    const cancelTrainStEl = document.getElementById('cancelTrainSt'); if (cancelTrainStEl) cancelTrainStEl.addEventListener('click', hideTrainStModal);
     document.getElementById('addTrainerSt').addEventListener('click', ()=>{
       const row=document.createElement('div'); row.className='trainer-row'; row.innerHTML=`<input class="trainer-name" placeholder="Imię i nazwisko" style="flex:1;"/><input class="trainer-price small-input" type="number" placeholder="Cena"/><button class="btn btn-delete">Usuń</button>`;
       row.querySelector('.btn-delete').addEventListener('click', ()=>row.remove()); trainersStContainer.appendChild(row);
@@ -626,10 +630,12 @@
       if (ms) ms.style.display = 'none';
       if (ts) ts.style.display = 'block';
       const hdr = document.querySelector('.header h2'); if (hdr) hdr.textContent = 'Szkolenia ST';
-      // show ST header create button
+      // show ST header and section create buttons
       const stCreate = document.getElementById('createTrainingSTHeaderBtn'); if (stCreate) stCreate.style.display = 'inline-block';
-      // ensure modal create button is wired
-      const createBtn = document.getElementById('createTrainingSTHeaderBtn'); if (createBtn) createBtn.addEventListener('click', showTrainStModal);
+      const secCreate = document.getElementById('createTrainingBtn'); if (secCreate) secCreate.style.display = 'inline-block';
+      // ensure modal create buttons are wired
+      if (stCreate) stCreate.removeEventListener && stCreate.addEventListener('click', showTrainStModal);
+      if (secCreate) secCreate.removeEventListener && secCreate.addEventListener('click', showTrainStModal);
       // hide other header buttons
       const addHdr = document.getElementById('addMemberHeaderBtn'); if (addHdr) addHdr.style.display = 'none';
       const campHdr = document.getElementById('createCampHeaderBtn'); if (campHdr) campHdr.style.display = 'none';
