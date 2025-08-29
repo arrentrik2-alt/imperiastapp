@@ -375,6 +375,104 @@
       alert('Camp utworzony pomyślnie');
     });
 
+    // Load trainings list for camps section
+    async function loadTrainingsList() {
+      const container = document.getElementById('trainingsList');
+      if (!container) return;
+      container.innerHTML = '';
+      const { data, error } = await supabase.from('trainings').select('*').order('created_at', { ascending: false });
+      if (error) {
+        container.innerHTML = '<div>Błąd ładowania listy obozów</div>';
+        return;
+      }
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div>Brak obozów</div>';
+        return;
+      }
+      data.forEach(t => {
+        const el = document.createElement('div');
+        el.style.padding = '8px';
+        el.style.border = '1px solid #333';
+        el.style.marginBottom = '6px';
+        const dateStr = t.date ? new Date(t.date).toLocaleDateString() : '';
+        el.innerHTML = `<strong>${t.name}</strong> — ${dateStr} — <button class="btn" data-id="${t.id}">Otwórz</button>`;
+        const btn = el.querySelector('button');
+        btn.addEventListener('click', () => openTraining(t.id));
+        container.appendChild(el);
+      });
+    }
+
+    // Open training detail: render participants and trainer columns
+    async function openTraining(trainingId) {
+      const { data: training, error: terr } = await supabase.from('trainings').select('*').eq('id', trainingId).single();
+      if (terr || !training) { alert('Nie można wczytać campu'); return; }
+
+      // fetch trainers linked to this training
+      const { data: trLinks } = await supabase.from('training_trainers').select('price,trainer_id,trainers(id,name)').eq('training_id', trainingId);
+      const trainers = trLinks || [];
+
+      // fetch participants
+      const { data: participants } = await supabase.from('training_participants').select('*').eq('training_id', trainingId).order('participant_name');
+
+      const titleEl = document.getElementById('campDetailsTitle');
+      const participantsEl = document.getElementById('campParticipants');
+      titleEl.textContent = training.name + ' (' + (training.date||'') + ')';
+      participantsEl.innerHTML = '';
+
+      const table = document.createElement('table');
+      table.style.width = '100%';
+      const thead = document.createElement('thead');
+      let headRow = '<tr><th>Imię i nazwisko</th><th>Camp (kwota)</th>';
+      trainers.forEach(t => { headRow += `<th>${t.trainers.name} - lekcje</th><th>${t.trainers.name} - kwota</th>`; });
+      headRow += '<th>Akcje</th></tr>';
+      thead.innerHTML = headRow; table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      for (const p of (participants || [])) {
+        const tr = document.createElement('tr');
+        let cols = `<td>${p.participant_name}</td>`;
+        cols += `<td><input class="camp-amount" data-rowid="${p.id}" value="${p.camp_amount||''}" style="width:80px;"/></td>`;
+        trainers.forEach(t => {
+          cols += `<td><input class="lessons-count" data-participant="${p.id}" data-trainer="${t.trainer_id}" type="number" style="width:70px;"/></td>`;
+          cols += `<td><input class="lesson-amount" data-participant="${p.id}" data-trainer="${t.trainer_id}" type="number" style="width:80px;"/></td>`;
+        });
+        cols += `<td><button class="btn" data-pid="${p.id}">Zapisz</button></td>`;
+        tr.innerHTML = cols; tbody.appendChild(tr);
+      }
+
+      table.appendChild(tbody); participantsEl.appendChild(table);
+      document.getElementById('campDetails').style.display = 'block';
+
+      // attach save handlers for each row button
+      participantsEl.querySelectorAll('button[data-pid]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const pid = btn.dataset.pid;
+          const campInput = participantsEl.querySelector(`input.camp-amount[data-rowid="${pid}"]`);
+          const campVal = parseFloat(campInput.value) || null;
+          // update camp amount
+          await supabase.from('training_participants').update({ camp_amount: campVal }).eq('id', pid);
+
+          // for each trainer, upsert oboz_lesson_payments
+          for (const t of trainers) {
+            const lessonsEl = participantsEl.querySelector(`input.lessons-count[data-participant="${pid}"][data-trainer="${t.trainer_id}"]`);
+            const amountEl = participantsEl.querySelector(`input.lesson-amount[data-participant="${pid}"][data-trainer="${t.trainer_id}"]`);
+            const lessons = lessonsEl ? parseInt(lessonsEl.value) || 0 : 0;
+            const amount = amountEl ? parseFloat(amountEl.value) || 0 : 0;
+
+            // check existing
+            const { data: existing } = await supabase.from('oboz_lesson_payments').select('*').eq('training_participant_id', pid).eq('trainer_id', t.trainer_id).limit(1).single();
+            if (existing && existing.id) {
+              await supabase.from('oboz_lesson_payments').update({ lessons_count: lessons, amount: amount, status: amount>0? 'pending':'unset' }).eq('id', existing.id);
+            } else {
+              await supabase.from('oboz_lesson_payments').insert([{ training_participant_id: pid, trainer_id: t.trainer_id, lessons_count: lessons, amount: amount, currency: training.currency, status: amount>0? 'pending':'unset' }]);
+            }
+          }
+
+          alert('Zapisano płatności');
+        });
+      });
+    }
+
     // expose functions for inline handlers (module scope isn't global)
     window.showAddForm = showAddForm;
     window.hideAddForm = hideAddForm;
