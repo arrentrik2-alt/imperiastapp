@@ -62,6 +62,7 @@
       <div class="logo"><h1>Klub</h1></div>
       <ul class="nav-links">
         <li><a class="active" href="club.html"><i class="fa fa-user"></i><span class="link-text">Członkowie</span></a></li>
+        <li><a href="#" id="campyLink"><i class="fa fa-campground"></i><span class="link-text">Campy ST</span></a></li>
       </ul>
     </aside>
 
@@ -144,6 +145,20 @@
         </form>
       </div>
     </div>
+
+    <!-- Campy ST section (hidden by default) -->
+    <main id="campySection" class="main-content" style="display:none">
+      <div class="header">
+        <h2>Campy ST</h2>
+        <div class="user-info">
+          <button id="createCampBtn" class="btn btn-primary"><i class="fa fa-plus"></i>Stwórz camp</button>
+        </div>
+      </div>
+
+      <div class="content-box">
+        <div id="campList">Brak utworzonych campów</div>
+      </div>
+    </main>
 
     <script type="module">
       import { supabase } from './supabaseClient.js';
@@ -248,6 +263,155 @@
 
       // initial load
       fetchMembers();
+
+      // --- campy st logic ---
+      const campyLink = document.getElementById('campyLink');
+      const clubMain = document.querySelector('main.main-content');
+      const campySection = document.getElementById('campySection');
+      const createCampBtn = document.getElementById('createCampBtn');
+
+      campyLink.addEventListener('click', (e)=>{
+        e.preventDefault();
+        clubMain.style.display = 'none';
+        campySection.style.display = 'block';
+      });
+
+      createCampBtn.addEventListener('click', ()=>{
+        openCampModal();
+      });
+
+      // simple modal for creating camp + trainers
+      function openCampModal(){
+        // build modal HTML dynamically
+        const html = `
+          <div class="modal active" id="campModal">
+            <div class="modal-content">
+              <button class="modal-close" id="campModalClose">&times;</button>
+              <div class="modal-header"><h3>Stwórz camp ST</h3></div>
+              <form id="campForm">
+                <div class="form-group"><label>Nazwa campu</label><input class="form-control" id="campName" name="campName" required/></div>
+                <div class="form-group"><label>Data</label><input class="form-control" id="campDate" name="campDate" type="date" required/></div>
+                <div class="form-group"><label>Kwota campu</label><input class="form-control" id="campAmount" name="campAmount" type="number" required/></div>
+                <div id="trainersContainer"></div>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                  <button type="button" id="addTrainerBtn" class="btn">Dodaj szkoleniowca</button>
+                  <div style="flex:1"></div>
+                  <button type="button" id="campCancel" class="btn">Anuluj</button>
+                  <button type="submit" class="btn btn-primary">Utwórz camp</button>
+                </div>
+              </form>
+            </div>
+          </div>`;
+        document.body.insertAdjacentHTML('beforeend', html);
+        const campModal = document.getElementById('campModal');
+        const campModalClose = document.getElementById('campModalClose');
+        const campForm = document.getElementById('campForm');
+        const campCancel = document.getElementById('campCancel');
+        const addTrainerBtn = document.getElementById('addTrainerBtn');
+        const trainersContainer = document.getElementById('trainersContainer');
+
+        campModalClose.addEventListener('click', ()=> campModal.remove());
+        campCancel.addEventListener('click', ()=> campModal.remove());
+
+        function addTrainerRow(){
+          const idx = trainersContainer.children.length;
+          const row = document.createElement('div');
+          row.className = 'form-group';
+          row.innerHTML = `
+            <label>Szkoleniowiec ${idx+1}</label>
+            <input class="form-control trainer-name" placeholder="Imię i nazwisko" />
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <input class="form-control trainer-amount" type="number" placeholder="Kwota za lekcję" />
+              <select class="form-control trainer-currency">
+                <option value="PLN">PLN</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
+          `;
+          trainersContainer.appendChild(row);
+        }
+
+        addTrainerBtn.addEventListener('click', addTrainerRow);
+        // add one trainer by default
+        addTrainerRow();
+
+        campForm.addEventListener('submit', async (e)=>{
+          e.preventDefault();
+          const name = document.getElementById('campName').value.trim();
+          const date = document.getElementById('campDate').value;
+          const amount = parseFloat(document.getElementById('campAmount').value);
+          if(!name || !date || !amount) { alert('Uzupełnij pola campu'); return; }
+
+          const trainers = Array.from(trainersContainer.querySelectorAll('.form-group')).map(g=>({
+            name: (g.querySelector('.trainer-name')||{}).value || '',
+            amount: parseFloat((g.querySelector('.trainer-amount')||{}).value) || 0,
+            currency: (g.querySelector('.trainer-currency')||{}).value || 'PLN'
+          })).filter(t=>t.name);
+
+          // Build camp UI: table with members of style ST or 10t
+          const { data: members, error: memErr } = await supabase.from('members').select('id,name,style').in('style', ['ST','10t']).order('name', {ascending:true});
+          if(memErr){ alert('Błąd pobierania członków: '+memErr.message); campModal.remove(); return; }
+
+          renderCamp(name, date, amount, trainers, members);
+          campModal.remove();
+        });
+      }
+
+      function renderCamp(name, date, amount, trainers, members){
+        const campId = 'camp_' + Date.now();
+        const container = document.createElement('div');
+        container.className = 'content-box';
+        container.innerHTML = `
+          <div class="content-header"><h3>${escapeHtml(name)} — ${escapeHtml(date)}</h3></div>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Imię i nazwisko</th>
+                  <th>Camp (zaplacono)</th>
+                  ${trainers.map(t=>`<th>${escapeHtml(t.name)}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${members.map(m=>`<tr data-member-id="${escapeHtml(m.id)}">
+                  <td>${escapeHtml(m.name)}</td>
+                  <td><input class="camp-pay" data-member-id="${escapeHtml(m.id)}" data-confirmed="false" type="number" placeholder="kwota" style="width:120px"/></td>
+                  ${trainers.map(()=>`<td><input class="trainer-pay" type="number" placeholder="kwota" style="width:120px" data-confirmed="false"/></td>`).join('')}
+                </tr>`).join('')}
+              </tbody>
+            </table>
+            <div style="margin-top:8px">
+              <button class="btn" id="${campId}_confirm_all">Potwierdź zaznaczone wpłaty</button>
+            </div>
+          </div>
+        `;
+        const campList = document.getElementById('campList');
+        if(campList) campList.innerHTML = '';
+        document.getElementById('campySection').appendChild(container);
+
+        // behavior: input background red when not confirmed and has value, green when confirmed
+        container.querySelectorAll('input.camp-pay, input.trainer-pay').forEach(input => {
+          input.addEventListener('input', ()=>{
+            if(input.value && input.value.trim() !== ''){
+              input.style.background = '#ffdddd';
+            } else {
+              input.style.background = '';
+            }
+          });
+        });
+
+        document.getElementById(campId + '_confirm_all').addEventListener('click', ()=>{
+          // confirm only full amounts equal to camp amount for camp-pay, trainer amounts confirmed individually
+          container.querySelectorAll('tr').forEach((tr, idx)=>{
+            const campInput = tr.querySelector('input.camp-pay');
+            if(campInput && parseFloat(campInput.value) === amount){ campInput.style.background = '#ddffdd'; campInput.dataset.confirmed = 'true'; }
+            tr.querySelectorAll('input.trainer-pay').forEach((tInput,i)=>{
+              const trainerAmount = trainers[i] ? trainers[i].amount : 0;
+              if(parseFloat(tInput.value) === trainerAmount){ tInput.style.background = '#ddffdd'; tInput.dataset.confirmed = 'true'; }
+            });
+          });
+        });
+      }
     </script>
   </body>
 </html>
