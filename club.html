@@ -463,7 +463,11 @@
     // Trainings ST modal handlers and logic
     function showTrainStModal(){ document.getElementById('overlayTrainSt').style.display='block'; document.getElementById('modalTrainSt').style.display='block'; }
     function hideTrainStModal(){ document.getElementById('overlayTrainSt').style.display='none'; document.getElementById('modalTrainSt').style.display='none'; }
-    document.getElementById('createTrainingSTHeaderBtn').addEventListener('click', showTrainStModal);
+    // expose modal functions globally and attach header button safely
+    window.showTrainStModal = showTrainStModal;
+    window.hideTrainStModal = hideTrainStModal;
+    const createSTHdrBtn = document.getElementById('createTrainingSTHeaderBtn');
+    if (createSTHdrBtn) createSTHdrBtn.addEventListener('click', showTrainStModal);
     document.getElementById('closeTrainSt').addEventListener('click', hideTrainStModal);
     document.getElementById('cancelTrainSt').addEventListener('click', hideTrainStModal);
     document.getElementById('addTrainerSt').addEventListener('click', ()=>{
