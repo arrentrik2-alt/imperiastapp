@@ -773,17 +773,19 @@
         parts.forEach(p => {
           // Calculate camp amounts - check all entered values (both confirmed and unconfirmed)
           const campDueValue = localStorage.getItem(`camp_due_${trainingId}_${p.id}`) || '';
+          const campPaidValue = localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || '';
           const confirmedAmount = p.camp_status === 'paid' ? parseFloat(p.camp_amount) || 0 : 0;
 
           // Add any entered amount to total (whether confirmed or not)
-          const enteredAmount = campDueValue ? parseFloat(campDueValue) : (confirmedAmount > 0 ? confirmedAmount : 0);
-          if (enteredAmount > 0) {
-            totalCampAmount += enteredAmount;
+          const enteredDueAmount = campDueValue ? parseFloat(campDueValue) : (confirmedAmount > 0 ? confirmedAmount : 0);
+          if (enteredDueAmount > 0) {
+            totalCampAmount += enteredDueAmount;
           }
 
-          // Add all entered amounts to paid total (user requirement - all entered amounts count as paid)
-          if (enteredAmount > 0) {
-            paidCampAmount += enteredAmount;
+          // Add all entered camp paid amounts to paid total (user requirement - all entered camp paid amounts count as paid)
+          const enteredPaidAmount = campPaidValue ? parseFloat(campPaidValue) : (confirmedAmount > 0 ? confirmedAmount : 0);
+          if (enteredPaidAmount > 0) {
+            paidCampAmount += enteredPaidAmount;
           }
 
           // Calculate lesson amounts per trainer from database
@@ -1151,12 +1153,16 @@
                   const storedCampDue = p.camp_status === 'paid' ? (p.camp_amount || '') : (localStorage.getItem(`camp_due_${trainingId}_${p.id}`) || '');
                   const isUnconfirmedCamp = storedCampDue && p.camp_status !== 'paid';
                   const campDueStyle = isUnconfirmedCamp ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : '';
-                  const campPaidClass = p.camp_status === 'paid' ? 'status-paid' : (campPaid ? 'status-unpaid' : '');
+
+                  // Get stored camp paid amount from localStorage or use confirmed amount if already paid
+                  const storedCampPaid = p.camp_status === 'paid' ? (p.camp_amount || '') : (localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || '');
+                  const isUnconfirmedPaid = storedCampPaid && p.camp_status !== 'paid';
+                  const campPaidClass = p.camp_status === 'paid' ? 'status-paid' : (storedCampPaid ? 'status-unpaid' : '');
                   return `<tr data-part-id="${p.id}"><td style="padding:4px">${escapeHtml(p.participant_name)}</td><td style="padding:4px;text-align:center">
                     <input data-part-id="${p.id}" data-due="${campDue}" class="form-control camp-due" style="width:80px;margin:0 auto;${campDueStyle}" value="${storedCampDue}" data-training-id="${trainingId}" />
                   </td><td style="padding:4px;text-align:center">
                     <div class="payment-controls">
-                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:70px;margin:0 2px" value="${campPaid||''}" />
+                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:70px;margin:0 2px" value="${storedCampPaid||''}" />
                       <button class="btn btn-small camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>
                       <button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>
                     </div>
@@ -1219,14 +1225,28 @@
               confirmBtn.disabled = true;
             }
           } else {
-            // Check if there's an unconfirmed amount
+            // Check if there's an unconfirmed amount in camp due or camp paid
             const storedCampDue = localStorage.getItem(`camp_due_${currentTrainingId}_${p.id}`);
-            if (storedCampDue) {
+            const storedCampPaid = localStorage.getItem(`camp_paid_${currentTrainingId}_${p.id}`);
+
+            if (storedCampDue || storedCampPaid) {
               const paidInput = container.querySelector(`input.camp-paid[data-part-id="${p.id}"]`);
               const dueInput = container.querySelector(`input.camp-due[data-part-id="${p.id}"]`);
 
               if (paidInput && !paidInput.classList.contains('status-paid')) {
-                paidInput.classList.add('status-unpaid');
+                if (storedCampPaid) {
+                  paidInput.classList.add('status-unpaid');
+                  paidInput.style.background = '#28a745';
+                  paidInput.style.color = '#ffffff';
+                } else {
+                  paidInput.classList.add('status-unpaid');
+                }
+              }
+
+              if (dueInput && storedCampDue && !dueInput.classList.contains('status-paid')) {
+                dueInput.style.background = '#b91c1c';
+                dueInput.style.borderColor = '#dc2626';
+                dueInput.style.color = '#ffffff';
               }
             }
           }
@@ -1297,6 +1317,45 @@
           });
         });
 
+        // Save camp paid amount to localStorage when changed
+        container.querySelectorAll('.camp-paid').forEach(input => {
+          input.addEventListener('input', () => {
+            const partId = input.getAttribute('data-part-id');
+            const value = input.value;
+
+            // Update localStorage for camp paid amounts
+            if (partId) {
+              if (value) {
+                localStorage.setItem(`camp_paid_${currentTrainingId}_${partId}`, value);
+                // Add green highlight for entered amounts
+                if (!input.classList.contains('status-paid')) {
+                  input.classList.add('status-unpaid');
+                  input.style.background = '#28a745';
+                  input.style.color = '#ffffff';
+                }
+              } else {
+                localStorage.removeItem(`camp_paid_${currentTrainingId}_${partId}`);
+                // Remove highlight when empty
+                input.classList.remove('status-paid', 'status-unpaid');
+                input.style.background = '';
+                input.style.color = '';
+              }
+
+              // Update summary after camp paid change
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container);
+
+              // Refresh camp list to update status
+              const currentMonth = document.getElementById('monthSelect').value;
+              if(currentMonth){
+                loadCampsForMonth(currentMonth);
+              }
+
+              // Re-render camp details to get fresh data
+              renderCampFromDB(currentTrainingId);
+            }
+          });
+        });
+
         container.querySelectorAll('.camp-confirm').forEach(btn=>{
           btn.addEventListener('click', async ()=>{
             const partId = btn.getAttribute('data-part-id');
@@ -1318,6 +1377,15 @@
                 dueInput.style.borderColor = '';
                 dueInput.style.color = '';
               }
+              if(paidInput.style.background.includes('#28a745')) {
+                paidInput.style.background = '';
+                paidInput.style.color = '';
+              }
+
+              // Clear localStorage values since payment is now confirmed
+              localStorage.removeItem(`camp_due_${currentTrainingId}_${partId}`);
+              localStorage.removeItem(`camp_paid_${currentTrainingId}_${partId}`);
+
               btn.disabled = true;
 
               // Refresh camp list to update status
