@@ -648,14 +648,26 @@
           participants?.forEach(p => {
             if (p.camp_status === 'paid') {
               paidCount++;
-            } else if (p.camp_amount && p.camp_amount > 0) {
-              unconfirmedCount++;
+            } else {
+              // Check for entered amounts in localStorage or confirmed amounts
+              const storedAmount = localStorage.getItem(`camp_due_${camp.id}_${p.id}`);
+              const confirmedAmount = p.camp_amount || 0;
+
+              if (storedAmount && storedAmount > 0) {
+                unconfirmedCount++;
+              } else if (confirmedAmount > 0) {
+                // If amount is confirmed but not marked as paid, count as unconfirmed
+                unconfirmedCount++;
+              }
             }
           });
 
           payments?.forEach(payment => {
-            if (payment.status !== 'paid' && payment.lessons_count) {
-              unpaidLessons += parseInt(payment.lessons_count) || 0;
+            if (payment.lessons_count) {
+              const lessonCount = parseInt(payment.lessons_count) || 0;
+              if (payment.status !== 'paid') {
+                unpaidLessons += lessonCount;
+              }
             }
           });
 
@@ -727,14 +739,19 @@
         const trainingId = parts[0]?.training_id || '';
 
         parts.forEach(p => {
-          // Calculate camp amounts - check both localStorage and DB values
-          const campDueValue = localStorage.getItem(`camp_due_${trainingId}_${p.id}`) ||
-                              (p.camp_status === 'paid' ? p.camp_amount : '') || '';
-          if (campDueValue) {
-            totalCampAmount += parseFloat(campDueValue) || 0;
+          // Calculate camp amounts - check all entered values (both confirmed and unconfirmed)
+          const campDueValue = localStorage.getItem(`camp_due_${trainingId}_${p.id}`) || '';
+          const confirmedAmount = p.camp_status === 'paid' ? parseFloat(p.camp_amount) || 0 : 0;
+
+          // Add any entered amount to total (whether confirmed or not)
+          const enteredAmount = campDueValue ? parseFloat(campDueValue) : (confirmedAmount > 0 ? confirmedAmount : 0);
+          if (enteredAmount > 0) {
+            totalCampAmount += enteredAmount;
           }
-          if (p.camp_status === 'paid' && p.camp_amount) {
-            paidCampAmount += parseFloat(p.camp_amount) || 0;
+
+          // Add only confirmed amounts to paid total
+          if (confirmedAmount > 0) {
+            paidCampAmount += confirmedAmount;
           }
 
           // Calculate lesson amounts per trainer
@@ -1164,6 +1181,12 @@
               if(currentMonth){
                 loadCampsForMonth(currentMonth);
               }
+
+              // Re-render camp details to get fresh data
+              const trainingId = parts[0]?.training_id;
+              if(trainingId){
+                renderCampFromDB(trainingId);
+              }
             }
           });
         });
@@ -1184,6 +1207,18 @@
               dueInput.style.background = '#007f0e';
               dueInput.style.color = '#ffffff';
               btn.disabled = true;
+
+              // Refresh camp list to update status
+              const currentMonth = document.getElementById('monthSelect').value;
+              if(currentMonth){
+                loadCampsForMonth(currentMonth);
+              }
+
+              // Re-render camp details to get fresh data
+              const trainingId = parts[0]?.training_id;
+              if(trainingId){
+                renderCampFromDB(trainingId);
+              }
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
           });
         });
@@ -1249,6 +1284,12 @@
             if(currentMonth){
               loadCampsForMonth(currentMonth);
             }
+
+            // Re-render camp details to get fresh data
+            const trainingId = parts[0]?.training_id;
+            if(trainingId){
+              renderCampFromDB(trainingId);
+            }
           });
         });
 
@@ -1309,6 +1350,12 @@
               if(currentMonth2){
                 loadCampsForMonth(currentMonth2);
               }
+
+              // Re-render camp details to get fresh data
+              const trainingId = parts[0]?.training_id;
+              if(trainingId){
+                renderCampFromDB(trainingId);
+              }
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
           });
         });
@@ -1349,13 +1396,16 @@
             if(lessonsInput) lessonsInput.setAttribute('data-oboz-id','');
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
 
-            // Update summary after lesson payment deletion
-            updateCampSummary(parts, trainerInfo);
-
-            // Refresh camp list to update status
+            // Refresh all data after lesson payment deletion
             const currentMonth = document.getElementById('monthSelect').value;
             if(currentMonth){
               loadCampsForMonth(currentMonth);
+            }
+
+            // Re-render camp details to get fresh data
+            const trainingId = parts[0]?.training_id;
+            if(trainingId){
+              renderCampFromDB(trainingId);
             }
           });
         });
@@ -1386,13 +1436,16 @@
             }
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
 
-            // Update summary after camp payment deletion
-            updateCampSummary(parts, trainerInfo);
-
-            // Refresh camp list to update status
+            // Refresh all data after camp payment deletion
             const currentMonth = document.getElementById('monthSelect').value;
             if(currentMonth){
               loadCampsForMonth(currentMonth);
+            }
+
+            // Re-render camp details to get fresh data
+            const trainingId = parts[0]?.training_id;
+            if(trainingId){
+              renderCampFromDB(trainingId);
             }
           });
         });
