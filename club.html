@@ -359,6 +359,8 @@
       if (ts) ts.style.display = 'none';
       const createHdr = document.getElementById('createCampHeaderBtn');
       if (createHdr) createHdr.style.display = 'none';
+      const stHdr = document.getElementById('createTrainingSTHeaderBtn'); if (stHdr) stHdr.style.display = 'none';
+      const secCreate = document.getElementById('createTrainingBtn'); if (secCreate) secCreate.style.display = 'none';
       const addHdr = document.getElementById('addMemberHeaderBtn');
       if (addHdr) addHdr.style.display = 'inline-block';
     });
@@ -374,6 +376,8 @@
       if (ts) ts.style.display = 'none';
       const createHdr = document.getElementById('createCampHeaderBtn');
       if (createHdr) createHdr.style.display = 'inline-block';
+      const stHdr = document.getElementById('createTrainingSTHeaderBtn'); if (stHdr) stHdr.style.display = 'none';
+      const secCreate = document.getElementById('createTrainingBtn'); if (secCreate) secCreate.style.display = 'none';
       const addHdr = document.getElementById('addMemberHeaderBtn');
       if (addHdr) addHdr.style.display = 'none';
       if (typeof loadTrainingsList === 'function') loadTrainingsList();
@@ -463,18 +467,36 @@
     function showTrainStModal(){
       const overlay = document.getElementById('overlayTrainSt');
       const modal = document.getElementById('modalTrainSt');
-      if (overlay) overlay.style.display = 'block';
-      if (modal) {
-        modal.style.display = 'block';
-        // ensure visible on screen
-        modal.style.top = '10%';
-        modal.style.transform = 'translate(-50%, 0)';
-        // focus first input
-        const firstInput = modal.querySelector('input,select,button');
-        if (firstInput) firstInput.focus();
-        // scroll into view
-        try { modal.scrollIntoView({behavior:'smooth', block:'center'}); } catch(e){}
+      if (!modal) return;
+      // ensure overlay and modal are visible and on top of everything
+      if (overlay) {
+        overlay.style.display = 'block';
+        overlay.style.zIndex = '1999';
+        overlay.style.pointerEvents = 'auto';
+        overlay.style.opacity = '1';
       }
+      modal.style.display = 'block';
+      // force fixed centering and highest stacking context
+      modal.style.position = 'fixed';
+      modal.style.left = '50%';
+      modal.style.top = '50%';
+      modal.style.transform = 'translate(-50%,-50%)';
+      modal.style.zIndex = '2000';
+      modal.style.pointerEvents = 'auto';
+      modal.style.visibility = 'visible';
+      modal.style.opacity = '1';
+
+      // focus first focusable element inside modal
+      const firstInput = modal.querySelector('input,select,button,textarea');
+      if (firstInput) {
+        try { firstInput.focus(); } catch(e){}
+      }
+
+      // also attempt to bring to front by appending to body
+      try {
+        document.body.appendChild(modal);
+        if (overlay) document.body.appendChild(overlay);
+      } catch(e){}
     }
     function hideTrainStModal(){ const overlay = document.getElementById('overlayTrainSt'); const modal = document.getElementById('modalTrainSt'); if (overlay) overlay.style.display='none'; if (modal) modal.style.display='none'; }
     // expose modal functions globally and attach header/section create buttons safely
