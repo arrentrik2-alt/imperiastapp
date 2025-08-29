@@ -64,8 +64,8 @@
     <div class="header">
       <h2>Lista Klubu</h2>
       <div style="display:flex;gap:8px;align-items:center;">
-        <button id="addMemberHeaderBtn" class="btn btn-primary" onclick="showAddForm()">+ Dodaj członka</button>
-        <button id="createCampHeaderBtn" class="btn btn-primary" style="display:none;" onclick="showCampModal()">+ Stwórz obóz</button>
+        <button id="addMemberHeaderBtn" class="btn btn-primary">+ Dodaj członka</button>
+        <button id="createCampHeaderBtn" class="btn btn-primary" style="display:none;">+ Stwórz obóz</button>
       </div>
     </div>
 
@@ -350,10 +350,15 @@
     document.getElementById('nav-members').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='block'; document.getElementById('camps-section').style.display='none'; document.getElementById('trainings-st-section').style.display='none'; document.getElementById('createCampHeaderBtn').style.display='none'; document.getElementById('addMemberHeaderBtn').style.display='inline-block'; });
     document.getElementById('nav-camps').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='none'; document.getElementById('camps-section').style.display='block'; document.getElementById('trainings-st-section').style.display='none'; document.getElementById('createCampHeaderBtn').style.display='inline-block'; document.getElementById('addMemberHeaderBtn').style.display='none'; loadTrainingsList(); });
     document.getElementById('nav-trainings-st').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='none'; document.getElementById('camps-section').style.display='none'; document.getElementById('trainings-st-section').style.display='block'; document.getElementById('createCampHeaderBtn').style.display='none'; document.getElementById('addMemberHeaderBtn').style.display='none'; loadTrainingsSTList(); });
-    document.getElementById('createCampBtnCamps').addEventListener('click', showCampModal);
+    // attach create camp listeners if element exists
+    const campBtn = document.getElementById('createCampBtnCamps');
+    if (campBtn) campBtn.addEventListener('click', showCampModal);
     // header create button wired to same modal (attach safely)
     const hdrBtn = document.getElementById('createCampHeaderBtn');
     if (hdrBtn) hdrBtn.addEventListener('click', showCampModal);
+    // header add member button attach
+    const addHdrBtn = document.getElementById('addMemberHeaderBtn');
+    if (addHdrBtn) addHdrBtn.addEventListener('click', () => window.showAddForm && window.showAddForm(false));
     document.getElementById('closeOboz').addEventListener('click', hideCampModal);
     document.getElementById('cancelCreate').addEventListener('click', hideCampModal);
 
