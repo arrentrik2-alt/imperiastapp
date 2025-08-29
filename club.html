@@ -412,10 +412,16 @@
         const trainerIds = tlinks.map(t=>t.trainer_id);
         const { data: trainers } = await supabase.from('trainers').select('id,name,default_price').in('id', trainerIds);
 
+        // fetch existing payments to get currency info
+        const { data: existingPayments } = await supabase.from('oboz_lesson_payments').select('trainer_id,currency').eq('training_participant_id', parts[0]?.id || '').neq('currency', null);
+
         // map trainer id -> info (price from tlinks)
         const trainerInfo = trainers.map(tr => {
           const link = tlinks.find(t=>t.trainer_id === tr.id) || {};
-          return { id: tr.id, name: tr.name, price: link.price || tr.default_price || 0 };
+          // find currency for this trainer from existing payments
+          const existingPayment = existingPayments?.find(p => p.trainer_id === tr.id);
+          const currency = existingPayment?.currency || 'PLN';
+          return { id: tr.id, name: tr.name, price: link.price || tr.default_price || 0, currency };
         });
 
         // fetch participants
@@ -449,7 +455,7 @@
                     const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : (ti.price * (ob.lessons_count||0));
                     const paid = (ob.status === 'paid') ? (ob.amount || due) : '';
                     return `<td style="padding:6px"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:70px" value="${lessons||''}" /></td>
-                    <td style="text-align:right;padding:6px"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-price="${ti.price}" class="form-control oboz-due" readonly style="width:100px;background:#ffffff;color:#000000" value="${due||0}" /></td>
+                    <td style="text-align:right;padding:6px"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-price="${ti.price}" data-currency="${ti.currency}" class="form-control oboz-due" readonly style="width:100px;background:#ffffff;color:#000000" value="${due||0}" /></td>
                     <td style="text-align:center;padding:6px">
                       <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid" style="width:100px;display:inline-block;color:#000" value="${paid||''}" />
                       <button class="btn oboz-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}">OK</button>
@@ -495,11 +501,17 @@
         // lessons change: recalculate due for trainer cells
         container.querySelectorAll('.oboz-lessons').forEach(input => {
           input.addEventListener('input', async ()=>{
-            const obozId = input.getAttribute('data-oboz-id');
+            const obozId = input.getAttribute('data-oboz-id') || '';
+            const partId = input.getAttribute('data-part-id');
             const trainerId = input.getAttribute('data-trainer-id');
             const lessons = parseInt(input.value,10) || 0;
-            // find corresponding due input
-            const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`);
+            // find corresponding due input (try oboz-id first, then part-id + trainer-id)
+            let dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`);
+            if(!dueInput && partId && trainerId) {
+              dueInput = container.querySelector(`input.oboz-due[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+            }
+            if(!dueInput) return; // can't find due input
+
             const price = parseFloat(dueInput.getAttribute('data-price')) || 0;
             const newDue = lessons * price;
             dueInput.value = newDue;
@@ -576,6 +588,9 @@
             if(paidInput){ paidInput.value = ''; paidInput.style.background=''; paidInput.style.color=''; paidInput.setAttribute('data-oboz-id',''); }
             if(dueInput){ dueInput.value = 0; dueInput.style.background=''; dueInput.style.color=''; dueInput.setAttribute('data-oboz-id',''); }
             if(lessonsInput) lessonsInput.setAttribute('data-oboz-id','');
+            // re-enable confirm button
+            const confirmBtn = container.querySelector(`button.oboz-confirm[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+            if(confirmBtn) confirmBtn.disabled = false;
           });
         });
 
@@ -591,7 +606,7 @@
             const dueInput = container.querySelector(`input.camp-due[data-part-id="${partId}"]`);
             if(paidInput){ paidInput.value=''; paidInput.style.background=''; paidInput.style.color=''; }
             if(dueInput){ dueInput.style.background=''; dueInput.style.color=''; }
-            btn.disabled = true;
+            // Don't disable the button - user should be able to delete again if needed
           });
         });
       }
