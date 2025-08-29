@@ -126,14 +126,14 @@
           <div class="form-group">
             <label>Styl</label>
             <select class="form-control" id="style" name="style">
-              <option value="st">st</option>
-              <option value="la">la</option>
+              <option value="LA">LA</option>
+              <option value="ST">ST</option>
               <option value="10t">10t</option>
             </select>
           </div>
           <div class="form-group">
             <label>Karnet</label>
-            <select class="form-control" id="pass" name="pass">
+            <select class="form-control" id="karnet" name="karnet">
               <option value="200">200</option>
               <option value="250">250</option>
               <option value="290">290</option>
@@ -172,19 +172,20 @@
 
       async function fetchMembers(){
         membersTableBody.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
-        const { data, error } = await supabase.from('members').select('*').order('fullname', {ascending:true});
+        // existing schema uses columns: id (text primary key), name, email, phone, style, karnet
+        const { data, error } = await supabase.from('members').select('id,name,email,phone,style,karnet').order('name', {ascending:true});
         if(error){ membersTableBody.innerHTML = `<tr><td colspan="6">Błąd: ${error.message}</td></tr>`; return; }
         if(!data || data.length===0){ membersTableBody.innerHTML = '<tr><td colspan="6">Brak członków</td></tr>'; return; }
         membersTableBody.innerHTML = '';
         for(const m of data){
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${escapeHtml(m.fullname)}</td>
-            <td>${escapeHtml(m.member_id)}</td>
+            <td>${escapeHtml(m.name)}</td>
+            <td>${escapeHtml(m.id)}</td>
             <td>${escapeHtml(m.email)}</td>
             <td>${escapeHtml(m.phone)}</td>
             <td>${escapeHtml(m.style)}</td>
-            <td>${escapeHtml(String(m.pass))}</td>
+            <td>${escapeHtml(String(m.karnet))}</td>
           `;
           membersTableBody.appendChild(tr);
         }
@@ -193,14 +194,15 @@
       memberForm.addEventListener('submit', async (e)=>{
         e.preventDefault();
         const form = new FormData(memberForm);
-        const fullname = (form.get('fullname') || '').toString().trim();
+        const name = (form.get('fullname') || '').toString().trim();
         const email = (form.get('email') || '').toString().trim();
         const phone = (form.get('phone') || '').toString().trim();
         const style = form.get('style');
-        const pass = form.get('pass');
-        if(!fullname){ alert('Podaj imię i nazwisko'); return; }
-        const member_id = generate6DigitId();
-        const { data, error } = await supabase.from('members').insert([{ fullname, member_id, email, phone, style, pass }]);
+        const karnet = parseInt(form.get('karnet'), 10);
+        if(!name){ alert('Podaj imię i nazwisko'); return; }
+        // id is text primary key in existing schema
+        const id = generate6DigitId();
+        const { data, error } = await supabase.from('members').insert([{ id, name, email, phone, style, karnet }]);
         if(error){ alert('Błąd dodawania: '+error.message); return; }
         closeModal();
         fetchMembers();
