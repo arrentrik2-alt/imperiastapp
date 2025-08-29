@@ -461,8 +461,23 @@
     });
 
     // Trainings ST modal handlers and logic
-    function showTrainStModal(){ document.getElementById('overlayTrainSt').style.display='block'; document.getElementById('modalTrainSt').style.display='block'; }
-    function hideTrainStModal(){ document.getElementById('overlayTrainSt').style.display='none'; document.getElementById('modalTrainSt').style.display='none'; }
+    function showTrainStModal(){
+      const overlay = document.getElementById('overlayTrainSt');
+      const modal = document.getElementById('modalTrainSt');
+      if (overlay) overlay.style.display = 'block';
+      if (modal) {
+        modal.style.display = 'block';
+        // ensure visible on screen
+        modal.style.top = '10%';
+        modal.style.transform = 'translate(-50%, 0)';
+        // focus first input
+        const firstInput = modal.querySelector('input,select,button');
+        if (firstInput) firstInput.focus();
+        // scroll into view
+        try { modal.scrollIntoView({behavior:'smooth', block:'center'}); } catch(e){}
+      }
+    }
+    function hideTrainStModal(){ const overlay = document.getElementById('overlayTrainSt'); const modal = document.getElementById('modalTrainSt'); if (overlay) overlay.style.display='none'; if (modal) modal.style.display='none'; }
     // expose modal functions globally and attach header button safely
     window.showTrainStModal = showTrainStModal;
     window.hideTrainStModal = hideTrainStModal;
