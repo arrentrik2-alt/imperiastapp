@@ -718,7 +718,7 @@
       }
 
       // Update camp summary
-      function updateCampSummary(parts, trainerInfo, trainingIdParam) {
+      function updateCampSummary(parts, trainerInfo, trainingIdParam, containerParam) {
         let totalCampAmount = 0;
         let paidCampAmount = 0;
         let totalLessons = 0;
@@ -780,7 +780,7 @@
           // Also check for lessons entered in input fields but not yet confirmed
           // This ensures that entered but unconfirmed lessons are counted as unpaid
           trainerInfo.forEach(ti => {
-            const lessonInput = document.querySelector(`input.oboz-lessons[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+            const lessonInput = containerParam.querySelector(`input.oboz-lessons[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
             if (lessonInput && lessonInput.value) {
               const inputLessonCount = parseInt(lessonInput.value) || 0;
               const existingDbEntry = p.oboz.find(ob => ob.trainer_id === ti.id);
@@ -1050,7 +1050,12 @@
           theadCols.push(`<th><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Zaplacono</div></th>`);
         });
         container.innerHTML = `
-          <div class="content-header"><h3>${escapeHtml(training.name)} — ${escapeHtml(training.date)}</h3></div>
+          <div class="content-header">
+            <h3>${escapeHtml(training.name)} — ${escapeHtml(training.date)}</h3>
+            <div style="margin-top: 10px;">
+              <input type="text" id="participantSearch" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;" />
+            </div>
+          </div>
           <div style="overflow:auto">
             <table>
               <thead><tr>${theadCols.join('')}</tr></thead>
@@ -1125,7 +1130,7 @@
           campDetailsContainer.appendChild(summaryDiv);
 
           // Calculate and update summary
-          updateCampSummary(parts, trainerInfo, trainingId);
+          updateCampSummary(parts, trainerInfo, trainingId, container);
         }
 
         // Set visual status for existing payments
@@ -1211,7 +1216,7 @@
               }
 
               // Update summary after camp due change
-              updateCampSummary(parts, trainerInfo, trainingId);
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container);
 
               // Refresh camp list to update status
               const currentMonth = document.getElementById('monthSelect').value;
@@ -1320,7 +1325,7 @@
             }
 
             // Update summary after lesson change
-            updateCampSummary(parts, trainerInfo, currentTrainingId);
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container);
 
             // Refresh camp list to update status
             const currentMonth = document.getElementById('monthSelect').value;
@@ -1341,8 +1346,8 @@
             let obozId = btn.getAttribute('data-oboz-id') || '';
             const partId = btn.getAttribute('data-part-id');
             // find paid/due inputs by either oboz-id or by part+trainer
-            const paidInput = container.querySelector(`input.oboz-paid[data-oboz-id="${obozId}"]`) || container.querySelector(`input.oboz-paid[data-part-id="${partId}"]`);
-            const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`) || container.querySelector(`input.oboz-due[data-part-id="${partId}"]`);
+            const paidInput = container.querySelector(`input.oboz-paid[data-oboz-id="${obozId}"]`) || container.querySelector(`input.oboz-paid[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+            const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`) || container.querySelector(`input.oboz-due[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
             const trainerId = paidInput ? paidInput.getAttribute('data-trainer-id') : null;
             // find lessons input
             const lessonsInput = container.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
@@ -1377,16 +1382,7 @@
               btn.disabled = true;
 
               // Update summary after camp payment confirmation
-              updateCampSummary(parts, trainerInfo, currentTrainingId);
-
-              // Refresh camp list to update status
-              const currentMonth1 = document.getElementById('monthSelect').value;
-              if(currentMonth1){
-                loadCampsForMonth(currentMonth1);
-              }
-
-              // Update summary after payment confirmation
-              updateCampSummary(parts, trainerInfo, currentTrainingId);
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container);
 
               // Refresh camp list to update status
               const currentMonth2 = document.getElementById('monthSelect').value;
@@ -1437,7 +1433,7 @@
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
 
             // Update summary after lesson payment deletion
-            updateCampSummary(parts, trainerInfo, currentTrainingId);
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container);
 
             // Refresh all data after lesson payment deletion
             const currentMonth = document.getElementById('monthSelect').value;
@@ -1480,7 +1476,7 @@
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
 
             // Update summary after camp payment deletion
-            updateCampSummary(parts, trainerInfo, currentTrainingId);
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container);
 
             // Refresh all data after camp payment deletion
             const currentMonth = document.getElementById('monthSelect').value;
@@ -1492,6 +1488,24 @@
             renderCampFromDB(currentTrainingId);
           });
         });
+
+        // Add participant search functionality
+        const searchInput = container.querySelector('#participantSearch');
+        if (searchInput) {
+          searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            const rows = container.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+              const participantName = row.querySelector('td:first-child')?.textContent?.toLowerCase() || '';
+              if (participantName.includes(searchTerm)) {
+                row.style.display = '';
+              } else {
+                row.style.display = 'none';
+              }
+            });
+          });
+        }
       }
     </script>
   </body>
