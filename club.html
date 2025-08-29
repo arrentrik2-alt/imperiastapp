@@ -234,6 +234,7 @@
 
   <script type="module">
     import { supabase } from './supabaseClient.js';
+    document.addEventListener('DOMContentLoaded', function() {
 
     function showAddForm(isEditing) {
       // if caller explicitly passes false, treat as new; otherwise respect form.dataset.editing
@@ -593,6 +594,7 @@
 
     // Init
     loadMembers();
+    });
   </script>
 </body>
 </html>
