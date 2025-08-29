@@ -346,10 +346,54 @@
     // expose for debugging/global access
     window.showCampModal = showCampModal;
     window.hideCampModal = hideCampModal;
-    // nav handlers
-    document.getElementById('nav-members').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='block'; document.getElementById('camps-section').style.display='none'; document.getElementById('trainings-st-section').style.display='none'; document.getElementById('createCampHeaderBtn').style.display='none'; document.getElementById('addMemberHeaderBtn').style.display='inline-block'; });
-    document.getElementById('nav-camps').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='none'; document.getElementById('camps-section').style.display='block'; document.getElementById('trainings-st-section').style.display='none'; document.getElementById('createCampHeaderBtn').style.display='inline-block'; document.getElementById('addMemberHeaderBtn').style.display='none'; loadTrainingsList(); });
-    document.getElementById('nav-trainings-st').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='none'; document.getElementById('camps-section').style.display='none'; document.getElementById('trainings-st-section').style.display='block'; document.getElementById('createCampHeaderBtn').style.display='none'; document.getElementById('addMemberHeaderBtn').style.display='none'; loadTrainingsSTList(); });
+    // nav handlers (attach safely only if elements exist)
+    const navMembers = document.getElementById('nav-members');
+    if (navMembers) navMembers.addEventListener('click', (e) => {
+      e.preventDefault();
+      const ms = document.getElementById('members-section');
+      const cs = document.getElementById('camps-section');
+      const ts = document.getElementById('trainings-st-section');
+      if (ms) ms.style.display = 'block';
+      if (cs) cs.style.display = 'none';
+      if (ts) ts.style.display = 'none';
+      const createHdr = document.getElementById('createCampHeaderBtn');
+      if (createHdr) createHdr.style.display = 'none';
+      const addHdr = document.getElementById('addMemberHeaderBtn');
+      if (addHdr) addHdr.style.display = 'inline-block';
+    });
+
+    const navCamps = document.getElementById('nav-camps');
+    if (navCamps) navCamps.addEventListener('click', (e) => {
+      e.preventDefault();
+      const ms = document.getElementById('members-section');
+      const cs = document.getElementById('camps-section');
+      const ts = document.getElementById('trainings-st-section');
+      if (ms) ms.style.display = 'none';
+      if (cs) cs.style.display = 'block';
+      if (ts) ts.style.display = 'none';
+      const createHdr = document.getElementById('createCampHeaderBtn');
+      if (createHdr) createHdr.style.display = 'inline-block';
+      const addHdr = document.getElementById('addMemberHeaderBtn');
+      if (addHdr) addHdr.style.display = 'none';
+      if (typeof loadTrainingsList === 'function') loadTrainingsList();
+    });
+
+    const navTrainingsST = document.getElementById('nav-trainings-st');
+    if (navTrainingsST) navTrainingsST.addEventListener('click', (e) => {
+      e.preventDefault();
+      const ms = document.getElementById('members-section');
+      const cs = document.getElementById('camps-section');
+      const ts = document.getElementById('trainings-st-section');
+      if (ms) ms.style.display = 'none';
+      if (cs) cs.style.display = 'none';
+      if (ts) ts.style.display = 'block';
+      const createHdr = document.getElementById('createCampHeaderBtn');
+      if (createHdr) createHdr.style.display = 'none';
+      const addHdr = document.getElementById('addMemberHeaderBtn');
+      if (addHdr) addHdr.style.display = 'none';
+      if (typeof loadTrainingsSTList === 'function') loadTrainingsSTList();
+    });
+
     // attach create camp listeners if element exists
     const campBtn = document.getElementById('createCampBtnCamps');
     if (campBtn) campBtn.addEventListener('click', showCampModal);
@@ -358,9 +402,9 @@
     if (hdrBtn) hdrBtn.addEventListener('click', showCampModal);
     // header add member button attach
     const addHdrBtn = document.getElementById('addMemberHeaderBtn');
-    if (addHdrBtn) addHdrBtn.addEventListener('click', () => window.showAddForm && window.showAddForm(false));
-    document.getElementById('closeOboz').addEventListener('click', hideCampModal);
-    document.getElementById('cancelCreate').addEventListener('click', hideCampModal);
+    if (addHdrBtn) addHdrBtn.addEventListener('click', () => (window.showAddForm ? window.showAddForm(false) : null));
+    const closeOb = document.getElementById('closeOboz'); if (closeOb) closeOb.addEventListener('click', hideCampModal);
+    const cancelCreateBtn = document.getElementById('cancelCreate'); if (cancelCreateBtn) cancelCreateBtn.addEventListener('click', hideCampModal);
 
     const stTrainers = document.getElementById('stTrainers');
     const laTrainers = document.getElementById('laTrainers');
