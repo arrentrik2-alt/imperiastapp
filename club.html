@@ -56,6 +56,7 @@
     <ul class="nav-links">
       <li><a href="#" id="nav-members"><i class="fas fa-users"></i><span style="margin-left:8px;">Lista członków</span></a></li>
       <li><a href="#" id="nav-camps"><i class="fas fa-campground"></i><span style="margin-left:8px;">Obozy</span></a></li>
+      <li><a href="#" id="nav-trainings-st"><i class="fas fa-chalkboard-teacher"></i><span style="margin-left:8px;">Szkolenia ST</span></a></li>
       <li><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span style="margin-left:8px;">Wyloguj</span></a></li>
     </ul>
   </aside>
@@ -94,6 +95,23 @@
           </thead>
           <tbody id="membersBody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Trainings ST section -->
+    <div id="trainings-st-section" style="display:none;">
+      <div class="content-box">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="color:var(--gold);">Szkolenia ST</h3>
+          <div>
+            <button class="btn btn-primary" id="createTrainingSTHeaderBtn">+ Stwórz szkolenie ST</button>
+          </div>
+        </div>
+        <div id="trainingsStListContainer" style="margin-top:12px;">
+          <h4 style="color:var(--gold);">Lista szkoleń ST</h4>
+          <div id="trainingsStList"></div>
+        </div>
+        <div id="trainingStDetails" style="margin-top:16px; display:none;"></div>
       </div>
     </div>
 
@@ -315,8 +333,9 @@
     window.showCampModal = showCampModal;
     window.hideCampModal = hideCampModal;
     // nav handlers
-    document.getElementById('nav-members').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='block'; document.getElementById('camps-section').style.display='none'; document.getElementById('createCampHeaderBtn').style.display='none'; document.getElementById('addMemberHeaderBtn').style.display='inline-block'; });
-    document.getElementById('nav-camps').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='none'; document.getElementById('camps-section').style.display='block'; document.getElementById('createCampHeaderBtn').style.display='inline-block'; document.getElementById('addMemberHeaderBtn').style.display='none'; loadTrainingsList(); });
+    document.getElementById('nav-members').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='block'; document.getElementById('camps-section').style.display='none'; document.getElementById('trainings-st-section').style.display='none'; document.getElementById('createCampHeaderBtn').style.display='none'; document.getElementById('addMemberHeaderBtn').style.display='inline-block'; });
+    document.getElementById('nav-camps').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='none'; document.getElementById('camps-section').style.display='block'; document.getElementById('trainings-st-section').style.display='none'; document.getElementById('createCampHeaderBtn').style.display='inline-block'; document.getElementById('addMemberHeaderBtn').style.display='none'; loadTrainingsList(); });
+    document.getElementById('nav-trainings-st').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('members-section').style.display='none'; document.getElementById('camps-section').style.display='none'; document.getElementById('trainings-st-section').style.display='block'; document.getElementById('createCampHeaderBtn').style.display='none'; document.getElementById('addMemberHeaderBtn').style.display='none'; loadTrainingsSTList(); });
     document.getElementById('createCampBtnCamps').addEventListener('click', showCampModal);
     // header create button wired to same modal (attach safely)
     const hdrBtn = document.getElementById('createCampHeaderBtn');
@@ -374,6 +393,17 @@
       hideCampModal();
       alert('Camp utworzony pomyślnie');
     });
+
+    // Trainings ST list loader
+    async function loadTrainingsSTList() {
+      const container = document.getElementById('trainingsStList');
+      if (!container) return;
+      container.innerHTML = '';
+      const { data, error } = await supabase.from('trainings').select('*').eq('type','training_st').order('created_at',{ascending:false});
+      if (error) { container.innerHTML = '<div>Błąd</div>'; return; }
+      if (!data || data.length===0) { container.innerHTML = '<div>Brak szkoleń ST</div>'; return; }
+      data.forEach(t=>{ const el=document.createElement('div'); el.style.padding='8px'; el.style.border='1px solid #333'; el.style.marginBottom='6px'; el.innerHTML=`<strong>${t.name}</strong> - ${t.date||''} <button class="btn" data-id="${t.id}">Otwórz</button>`; el.querySelector('button').addEventListener('click', ()=> openTraining(t.id)); container.appendChild(el); });
+    }
 
     // Load trainings list for camps section
     async function loadTrainingsList() {
