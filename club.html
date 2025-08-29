@@ -763,7 +763,9 @@
             totalLessons: 0,
             unpaidLessons: 0,
             participants: 0,
-            paidParticipants: 0
+            paidParticipants: 0,
+            totalDueAmount: 0,    // Ogólna kwota do zapłaty za lekcje
+            totalPaidAmount: 0    // Suma kwot w kolumnie zapłacono
           };
         });
 
@@ -839,6 +841,36 @@
               }
             }
           });
+
+          // Calculate trainer amounts (due and paid)
+          trainerInfo.forEach(ti => {
+            // Check for due amount input field
+            const dueInput = containerParam.querySelector(`input.oboz-due[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+            if (dueInput && dueInput.value) {
+              const dueAmount = parseFloat(dueInput.value) || 0;
+              if (dueAmount > 0) {
+                trainerStats[ti.id].totalDueAmount += dueAmount;
+              }
+            }
+
+            // Check for paid amount input field
+            const paidInput = containerParam.querySelector(`input.oboz-paid[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+            if (paidInput && paidInput.value) {
+              const paidAmount = parseFloat(paidInput.value) || 0;
+              if (paidAmount > 0) {
+                trainerStats[ti.id].totalPaidAmount += paidAmount;
+              }
+            }
+
+            // Also check localStorage for paid amounts
+            const storedPaidAmount = localStorage.getItem(`oboz_paid_${trainingId}_${p.id}_${ti.id}`);
+            if (storedPaidAmount) {
+              const amount = parseFloat(storedPaidAmount) || 0;
+              if (amount > 0) {
+                trainerStats[ti.id].totalPaidAmount += amount;
+              }
+            }
+          });
         });
 
         // Update summary display
@@ -886,6 +918,14 @@
                   <div class="stat-item">
                     <span class="stat-label">Lekcje:</span>
                     <span class="stat-value">${Math.round(trainer.totalLessons / 2)}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Ogólna kwota:</span>
+                    <span class="stat-value">${trainer.totalDueAmount.toFixed(2)} PLN</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Zapłacona kwota:</span>
+                    <span class="stat-value ${trainer.totalPaidAmount > 0 ? 'status-paid' : ''}">${trainer.totalPaidAmount.toFixed(2)} PLN</span>
                   </div>
                   <div class="stat-item">
                     <span class="stat-label">Nie zapłacone:</span>
@@ -1132,6 +1172,10 @@
                     const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : (ti.price * (ob.lessons_count||0));
                     const paid = (ob.status === 'paid') ? (ob.amount || due) : '';
                     const paidClass = ob.status === 'paid' ? 'status-paid' : (paid ? 'status-unpaid' : '');
+
+                    // Get stored oboz paid amount from localStorage or use confirmed amount if already paid
+                    const storedObozPaid = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`oboz_paid_${trainingId}_${p.id}_${ti.id}`) || '');
+                    const finalObozPaid = storedObozPaid || paid;
                     const currency = ob.currency || ti.currency || 'PLN';
                     return `<td style="padding:4px;text-align:center">
                       <div class="lesson-input-group">
@@ -1143,7 +1187,7 @@
                     <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:80px;margin:0 auto;background:#ffffff;color:#000000;text-align:center" value="${due||0}" /></td>
                     <td style="padding:4px;text-align:center">
                       <div class="payment-controls">
-                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid ${paidClass}" style="width:70px;margin:0 2px" value="${paid||''}" />
+                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid ${paidClass}" style="width:70px;margin:0 2px" value="${finalObozPaid||''}" />
                         <button class="btn btn-small oboz-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
                         <button class="btn btn-small btn-delete oboz-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>
                       </div>
@@ -1276,6 +1320,19 @@
               }
             }
           });
+
+          // Check for stored oboz paid amounts in localStorage
+          trainerInfo.forEach(ti => {
+            const storedObozPaid = localStorage.getItem(`oboz_paid_${currentTrainingId}_${p.id}_${ti.id}`);
+            if (storedObozPaid) {
+              const paidInput = container.querySelector(`input.oboz-paid[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+              if (paidInput && !paidInput.classList.contains('status-paid')) {
+                paidInput.classList.add('status-unpaid');
+                paidInput.style.background = '#28a745';
+                paidInput.style.color = '#ffffff';
+              }
+            }
+          });
         });
 
         // attach handlers
@@ -1303,6 +1360,46 @@
               }
 
               // Update summary after camp due change
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container);
+
+              // Refresh camp list to update status
+              const currentMonth = document.getElementById('monthSelect').value;
+              if(currentMonth){
+                loadCampsForMonth(currentMonth);
+              }
+
+              // Re-render camp details to get fresh data
+              renderCampFromDB(currentTrainingId);
+            }
+          });
+        });
+
+        // Save oboz paid amount to localStorage when changed (for trainer lessons)
+        container.querySelectorAll('.oboz-paid').forEach(input => {
+          input.addEventListener('input', () => {
+            const partId = input.getAttribute('data-part-id');
+            const trainerId = input.getAttribute('data-trainer-id');
+            const value = input.value;
+
+            // Update localStorage for oboz paid amounts
+            if (partId && trainerId) {
+              if (value) {
+                localStorage.setItem(`oboz_paid_${currentTrainingId}_${partId}_${trainerId}`, value);
+                // Add green highlight for entered amounts
+                if (!input.classList.contains('status-paid')) {
+                  input.classList.add('status-unpaid');
+                  input.style.background = '#28a745';
+                  input.style.color = '#ffffff';
+                }
+              } else {
+                localStorage.removeItem(`oboz_paid_${currentTrainingId}_${partId}_${trainerId}`);
+                // Remove highlight when empty
+                input.classList.remove('status-paid', 'status-unpaid');
+                input.style.background = '';
+                input.style.color = '';
+              }
+
+              // Update summary after oboz paid change
               updateCampSummary(parts, trainerInfo, currentTrainingId, container);
 
               // Refresh camp list to update status
@@ -1503,9 +1600,17 @@
               if(paidInput){
                 paidInput.classList.add('status-paid');
                 paidInput.classList.remove('status-unpaid');
+                // Remove green highlight since payment is confirmed
+                if(paidInput.style.background.includes('#28a745')) {
+                  paidInput.style.background = '';
+                  paidInput.style.color = '';
+                }
               }
               if(dueInput){ dueInput.classList.add('status-paid'); }
               btn.disabled = true;
+
+              // Clear localStorage values since payment is now confirmed
+              localStorage.removeItem(`oboz_paid_${currentTrainingId}_${partId}_${trainerId}`);
 
               // Update summary after camp payment confirmation
               updateCampSummary(parts, trainerInfo, currentTrainingId, container);
