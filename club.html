@@ -533,9 +533,12 @@
           resp = await supabase.from('members').insert([{ id, name, email, phone, style, karnet }]);
         }
         const { error } = resp;
-        if(error){ alert('Błąd zapisu: '+error.message); return; }
+        if(error){
+          alert('Błąd zapisu: '+error.message);
+          console.error('Supabase error:', error);
+          return;
+        }
         currentEditId = null;
-        if(error){ alert('Błąd dodawania: '+error.message); return; }
         closeModal();
         fetchMembers();
       });
@@ -715,7 +718,7 @@
       }
 
       // Update camp summary
-      function updateCampSummary(parts, trainerInfo) {
+      function updateCampSummary(parts, trainerInfo, trainingIdParam) {
         let totalCampAmount = 0;
         let paidCampAmount = 0;
         let totalLessons = 0;
@@ -735,8 +738,8 @@
           };
         });
 
-        // Get training ID from parts
-        const trainingId = parts[0]?.training_id || '';
+        // Get training ID from parts (parts don't have training_id, so we need to pass it as parameter)
+        const trainingId = parts[0]?.training_id || trainingIdParam || '';
 
         parts.forEach(p => {
           // Calculate camp amounts - check all entered values (both confirmed and unconfirmed)
@@ -974,6 +977,9 @@
         });
       }
       async function renderCampFromDB(trainingId){
+        // Make trainingId available for all event handlers
+        let currentTrainingId = trainingId;
+
         // fetch training
         const { data: training } = await supabase.from('trainings').select('*').eq('id', trainingId).single();
         // fetch training trainers
@@ -1087,7 +1093,7 @@
           campDetailsContainer.appendChild(summaryDiv);
 
           // Calculate and update summary
-          updateCampSummary(parts, trainerInfo);
+          updateCampSummary(parts, trainerInfo, trainingId);
         }
 
         // Set visual status for existing payments
@@ -1110,8 +1116,7 @@
             }
           } else {
             // Check if there's an unconfirmed amount
-            const trainingId = parts[0]?.training_id || '';
-            const storedCampDue = localStorage.getItem(`camp_due_${trainingId}_${p.id}`);
+            const storedCampDue = localStorage.getItem(`camp_due_${currentTrainingId}_${p.id}`);
             if (storedCampDue) {
               const paidInput = container.querySelector(`input.camp-paid[data-part-id="${p.id}"]`);
               const dueInput = container.querySelector(`input.camp-due[data-part-id="${p.id}"]`);
@@ -1174,7 +1179,7 @@
               }
 
               // Update summary after camp due change
-              updateCampSummary(parts, trainerInfo);
+              updateCampSummary(parts, trainerInfo, trainingId);
 
               // Refresh camp list to update status
               const currentMonth = document.getElementById('monthSelect').value;
@@ -1183,10 +1188,7 @@
               }
 
               // Re-render camp details to get fresh data
-              const trainingId = parts[0]?.training_id;
-              if(trainingId){
-                renderCampFromDB(trainingId);
-              }
+              renderCampFromDB(currentTrainingId);
             }
           });
         });
@@ -1277,7 +1279,7 @@
             }
 
             // Update summary after lesson change
-            updateCampSummary(parts, trainerInfo);
+            updateCampSummary(parts, trainerInfo, currentTrainingId);
 
             // Refresh camp list to update status
             const currentMonth = document.getElementById('monthSelect').value;
@@ -1334,7 +1336,7 @@
               btn.disabled = true;
 
               // Update summary after camp payment confirmation
-              updateCampSummary(parts, trainerInfo);
+              updateCampSummary(parts, trainerInfo, currentTrainingId);
 
               // Refresh camp list to update status
               const currentMonth1 = document.getElementById('monthSelect').value;
@@ -1343,7 +1345,7 @@
               }
 
               // Update summary after payment confirmation
-              updateCampSummary(parts, trainerInfo);
+              updateCampSummary(parts, trainerInfo, currentTrainingId);
 
               // Refresh camp list to update status
               const currentMonth2 = document.getElementById('monthSelect').value;
@@ -1352,10 +1354,7 @@
               }
 
               // Re-render camp details to get fresh data
-              const trainingId = parts[0]?.training_id;
-              if(trainingId){
-                renderCampFromDB(trainingId);
-              }
+              renderCampFromDB(currentTrainingId);
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
           });
         });
@@ -1443,10 +1442,7 @@
             }
 
             // Re-render camp details to get fresh data
-            const trainingId = parts[0]?.training_id;
-            if(trainingId){
-              renderCampFromDB(trainingId);
-            }
+            renderCampFromDB(currentTrainingId);
           });
         });
       }
