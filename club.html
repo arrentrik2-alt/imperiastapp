@@ -1048,6 +1048,12 @@
             loadCampsForMonth(currentMonthKey);
           }
 
+          // Refresh camp list for current month and render details
+          const currentMonth = document.getElementById('monthSelect').value;
+          if(currentMonth){
+            loadCampsForMonth(currentMonth);
+          }
+
           // Show camp details
           showCampDetails(training.id);
           campModal.remove();
@@ -1461,14 +1467,14 @@
             if(!confirm('Usunąć tę płatność?')) return;
             const { error } = await supabase.from('oboz_lesson_payments').delete().eq('id', obozId);
             if(error){ alert('Błąd usuwania: '+error.message); return; }
-            // clear UI and unset oboz ids, but keep lessons count
+            // clear UI and unset oboz ids
             if(paidInput){
               paidInput.value = '';
               paidInput.classList.remove('status-paid', 'status-unpaid');
               paidInput.setAttribute('data-oboz-id','');
             }
             if(dueInput){
-              // Recalculate amount based on current lessons count (keep lessons, recalculate amount)
+              // Keep lessons count but recalculate amount as unconfirmed
               const lessonsCount = lessonsInput ? parseInt(lessonsInput.value) || 0 : 0;
               const price = parseFloat(dueInput.getAttribute('data-price')) || 0;
               const recalculatedAmount = lessonsCount * price;
