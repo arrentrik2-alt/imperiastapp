@@ -322,7 +322,6 @@
             <input class="form-control trainer-name" placeholder="Imię i nazwisko" />
             <div style="display:flex;gap:8px;margin-top:6px">
               <input class="form-control trainer-amount" type="number" placeholder="Kwota za lekcję" />
-              <input class="form-control trainer-lessons" type="number" placeholder="Ilość lekcji" />
               <select class="form-control trainer-currency">
                 <option value="PLN">PLN</option>
                 <option value="EUR">EUR</option>
@@ -382,8 +381,8 @@
             const { data: part, error: partErr } = await supabase.from('training_participants').insert([{ training_id: training.id, member_id: m.id, participant_name: m.name, camp_amount: 0, camp_status: 'unset' }]).select().single();
             if(partErr || !part) continue;
             for(const ct of createdTrainers){
-              const total = (ct.amount || 0) * (ct.lessons || 0);
-              await supabase.from('oboz_lesson_payments').insert([{ training_participant_id: part.id, trainer_id: ct.id, lessons_count: ct.lessons, amount: total, currency: ct.currency || 'PLN', status: 'unset' }]);
+              // lessons will be entered manually later per participant; initialize with 0
+              await supabase.from('oboz_lesson_payments').insert([{ training_participant_id: part.id, trainer_id: ct.id, lessons_count: 0, amount: 0, currency: ct.currency || 'PLN', status: 'unset' }]);
             }
           }
 
@@ -439,8 +438,10 @@
                       <button class="btn oboz-confirm" data-oboz-id="${ob.id||''}">OK</button>
                     </td>`;
                   }).join('');
-                  return `<tr data-part-id="${p.id}"><td>${escapeHtml(p.participant_name)}</td><td style="text-align:right;padding:6px">${campDue}</td><td style="text-align:center;padding:6px">
-                    <input data-part-id="${p.id}" data-due="${campDue}" class="form-control camp-paid" style="width:100px;display:inline-block" value="${campPaid||''}" />
+                  return `<tr data-part-id="${p.id}"><td>${escapeHtml(p.participant_name)}</td><td style="text-align:right;padding:6px">
+                    <input data-part-id="${p.id}" data-due="${campDue}" class="form-control camp-due" style="width:100px;display:inline-block" value="${campDue||''}" />
+                  </td><td style="text-align:center;padding:6px">
+                    <input data-part-id="${p.id}" class="form-control camp-paid" style="width:100px;display:inline-block" value="${campPaid||''}" />
                     <button class="btn camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>
                   </td>${obozCells}</tr>`;
                 }).join('')}
@@ -456,12 +457,19 @@
           btn.addEventListener('click', async ()=>{
             const partId = btn.getAttribute('data-part-id');
             const due = parseFloat(btn.getAttribute('data-due')) || 0;
-            const input = container.querySelector(`input.camp-paid[data-part-id="${partId}"]`);
-            const paid = parseFloat(input.value) || 0;
-            if(paid === due){
+            const paidInput = container.querySelector(`input.camp-paid[data-part-id="${partId}"]`);
+            const dueInput = container.querySelector(`input.camp-due[data-part-id="${partId}"]`);
+            const paid = parseFloat(paidInput.value) || 0;
+            const newDue = parseFloat(dueInput.value) || 0;
+            // allow manual change of due (camp amount per participant)
+            if(newDue !== due){
+              // update due in DB (training_participants.camp_amount as due isn't used; we'll store due in camp_amount until confirmed)
+            }
+            if(paid === newDue){
               const { error } = await supabase.from('training_participants').update({ camp_amount: paid, camp_status: 'paid' }).eq('id', partId);
               if(error){ alert('Błąd zapisu: '+error.message); return; }
-              input.style.background = '#ddffdd';
+              paidInput.style.background = '#ddffdd';
+              dueInput.style.background = '#ddffdd';
               btn.disabled = true;
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
           });
