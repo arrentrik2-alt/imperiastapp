@@ -92,6 +92,7 @@
                 <th>Telefon</th>
                 <th>Styl</th>
                 <th>Karnet</th>
+                <th>Akcje</th>
               </tr>
             </thead>
             <tbody>
@@ -154,6 +155,7 @@
       const modalClose = document.getElementById('modalClose');
       const memberForm = document.getElementById('memberForm');
       const refreshBtn = document.getElementById('refreshBtn');
+      let currentEditId = null;
 
       function openModal(){ memberModal.classList.add('active'); memberModal.setAttribute('aria-hidden','false'); }
       function closeModal(){ memberModal.classList.remove('active'); memberModal.setAttribute('aria-hidden','true'); memberForm.reset(); }
@@ -183,9 +185,39 @@
             <td>${escapeHtml(m.phone)}</td>
             <td>${escapeHtml(m.style)}</td>
             <td>${escapeHtml(String(m.karnet))}</td>
+            <td>
+              <button class="btn" data-action="edit" data-id="${escapeHtml(m.id)}" title="Edytuj"><i class="fa fa-pen"></i></button>
+              <button class="btn" data-action="delete" data-id="${escapeHtml(m.id)}" title="Usuń"><i class="fa fa-trash"></i></button>
+            </td>
           `;
           membersTableBody.appendChild(tr);
         }
+
+        // attach delegation handlers for edit/delete
+        membersTableBody.querySelectorAll('button[data-action]').forEach(btn => {
+          btn.addEventListener('click', async (ev) => {
+            const action = btn.getAttribute('data-action');
+            const id = btn.getAttribute('data-id');
+            if(action === 'edit'){
+              // fetch single member
+              const { data: row, error: rowErr } = await supabase.from('members').select('id,name,email,phone,style,karnet').eq('id', id).single();
+              if(rowErr){ alert('Błąd ładowania: '+rowErr.message); return; }
+              // populate form
+              memberForm.fullname.value = row.name || '';
+              memberForm.email.value = row.email || '';
+              memberForm.phone.value = row.phone || '';
+              memberForm.style.value = row.style || '';
+              memberForm.karnet.value = row.karnet || '';
+              currentEditId = id;
+              openModal();
+            } else if(action === 'delete'){
+              if(!confirm('Na pewno usunąć członka?')) return;
+              const { error: delErr } = await supabase.from('members').delete().eq('id', id);
+              if(delErr){ alert('Błąd usuwania: '+delErr.message); return; }
+              fetchMembers();
+            }
+          });
+        });
       }
 
       memberForm.addEventListener('submit', async (e)=>{
@@ -197,9 +229,18 @@
         const style = form.get('style');
         const karnet = parseInt(form.get('karnet'), 10);
         if(!name){ alert('Podaj imię i nazwisko'); return; }
-        // id is text primary key in existing schema
-        const id = generate6DigitId();
-        const { data, error } = await supabase.from('members').insert([{ id, name, email, phone, style, karnet }]);
+        let resp;
+        if(currentEditId){
+          // update
+          resp = await supabase.from('members').update({ name, email, phone, style, karnet }).eq('id', currentEditId);
+        } else {
+          // create
+          const id = generate6DigitId();
+          resp = await supabase.from('members').insert([{ id, name, email, phone, style, karnet }]);
+        }
+        const { error } = resp;
+        if(error){ alert('Błąd zapisu: '+error.message); return; }
+        currentEditId = null;
         if(error){ alert('Błąd dodawania: '+error.message); return; }
         closeModal();
         fetchMembers();
