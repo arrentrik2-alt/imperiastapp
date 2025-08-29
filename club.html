@@ -853,21 +853,12 @@
               }
             }
 
-            // Check for paid amount input field
+            // Check for paid amount input field (only from "Zapłacono" column)
             const paidInput = containerParam.querySelector(`input.oboz-paid[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
             if (paidInput && paidInput.value) {
               const paidAmount = parseFloat(paidInput.value) || 0;
               if (paidAmount > 0) {
                 trainerStats[ti.id].totalPaidAmount += paidAmount;
-              }
-            }
-
-            // Also check localStorage for paid amounts
-            const storedPaidAmount = localStorage.getItem(`oboz_paid_${trainingId}_${p.id}_${ti.id}`);
-            if (storedPaidAmount) {
-              const amount = parseFloat(storedPaidAmount) || 0;
-              if (amount > 0) {
-                trainerStats[ti.id].totalPaidAmount += amount;
               }
             }
           });
