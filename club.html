@@ -115,6 +115,39 @@
       </div>
     </div>
 
+    <!-- Trainings ST modal (inline in club.html) -->
+    <div id="overlayTrainSt" style="display:none; position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999;"></div>
+    <div id="modalTrainSt" style="display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1000; width:800px; max-width:95%; background:#1e1e1e; padding:16px; border:1px solid #333; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;" class="modal-header">
+        <h3 style="color:var(--gold);">Nowe szkolenie ST</h3>
+        <button class="btn btn-outline" id="closeTrainSt">Zamknij</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:140px;">Nazwa szkolenia</label>
+          <input id="trainingStName" style="flex:1; padding:8px; border-radius:6px; background:#111; border:1px solid #333; color:#fff;" />
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="width:140px;">Kwota za szkolenie</label>
+          <input id="trainingStPrice" type="number" class="small-input" />
+          <select id="trainingStCurrency" class="small-input"><option>PLN</option><option>EUR</option></select>
+          <label style="width:100px; text-align:right;">Data</label>
+          <input id="trainingStDate" type="date" class="small-input" />
+        </div>
+
+        <div>
+          <h4 style="color:var(--gold);">Szkoleniowcy</h4>
+          <div id="trainersStContainer" class="trainers-list"></div>
+          <button class="btn" id="addTrainerSt">+ Dodaj szkoleniowca</button>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+          <button class="btn" id="cancelTrainSt">Anuluj</button>
+          <button class="btn btn-primary" id="createTrainingStBtn">Utwórz szkolenie</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Camps section (hidden by default) -->
     <div id="camps-section" style="display:none;">
       <div class="content-box">
@@ -345,6 +378,7 @@
 
     const stTrainers = document.getElementById('stTrainers');
     const laTrainers = document.getElementById('laTrainers');
+    const trainersStContainer = document.getElementById('trainersStContainer');
 
     function createTrainerRow(container) {
       const row = document.createElement('div'); row.className='trainer-row';
@@ -392,6 +426,25 @@
 
       hideCampModal();
       alert('Camp utworzony pomyślnie');
+    });
+
+    // Trainings ST modal handlers and logic
+    function showTrainStModal(){ document.getElementById('overlayTrainSt').style.display='block'; document.getElementById('modalTrainSt').style.display='block'; }
+    function hideTrainStModal(){ document.getElementById('overlayTrainSt').style.display='none'; document.getElementById('modalTrainSt').style.display='none'; }
+    document.getElementById('createTrainingSTHeaderBtn').addEventListener('click', showTrainStModal);
+    document.getElementById('closeTrainSt').addEventListener('click', hideTrainStModal);
+    document.getElementById('cancelTrainSt').addEventListener('click', hideTrainStModal);
+    document.getElementById('addTrainerSt').addEventListener('click', ()=>{
+      const row=document.createElement('div'); row.className='trainer-row'; row.innerHTML=`<input class="trainer-name" placeholder="Imię i nazwisko" style="flex:1;"/><input class="trainer-price small-input" type="number" placeholder="Cena"/><button class="btn btn-delete">Usuń</button>`;
+      row.querySelector('.btn-delete').addEventListener('click', ()=>row.remove()); trainersStContainer.appendChild(row);
+    });
+    document.getElementById('createTrainingStBtn').addEventListener('click', async ()=>{
+      const name=document.getElementById('trainingStName').value.trim(); const price=parseFloat(document.getElementById('trainingStPrice').value)||0; const currency=document.getElementById('trainingStCurrency').value||'PLN'; const date=document.getElementById('trainingStDate').value; if(!name){ alert('Wprowadź nazwę'); return; }
+      const { data: training, error } = await supabase.from('trainings').insert([{ name, type: 'training_st', date, price, currency }]).select().single(); if(error){ alert('Błąd: '+error.message); return; }
+      const rows=[...trainersStContainer.querySelectorAll('.trainer-row')]; const trainersToInsert=[]; for(const r of rows){ const n=r.querySelector('.trainer-name').value.trim(); const p=parseFloat(r.querySelector('.trainer-price').value)||0; if(!n) continue; trainersToInsert.push({ name: n, default_price: p, currency }); }
+      if(trainersToInsert.length){ const { data: trainersData } = await supabase.from('trainers').insert(trainersToInsert).select(); const links=trainersData.map(t=>({ training_id: training.id, trainer_id: t.id, price: t.default_price })); await supabase.from('training_trainers').insert(links); }
+      const { data: members } = await supabase.from('members').select('*'); const participants = members.map(m=>({ training_id: training.id, member_id: m.id, participant_name: m.name })); await supabase.from('training_participants').insert(participants);
+      hideTrainStModal(); alert('Szkolenie ST utworzone'); loadTrainingsSTList();
     });
 
     // Trainings ST list loader
