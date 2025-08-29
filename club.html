@@ -467,7 +467,10 @@
     window.showTrainStModal = showTrainStModal;
     window.hideTrainStModal = hideTrainStModal;
     const createSTHdrBtn = document.getElementById('createTrainingSTHeaderBtn');
-    if (createSTHdrBtn) createSTHdrBtn.addEventListener('click', showTrainStModal);
+    if (createSTHdrBtn) {
+      // ensure handler attached via addEventListener
+      createSTHdrBtn.addEventListener('click', showTrainStModal);
+    }
     document.getElementById('closeTrainSt').addEventListener('click', hideTrainStModal);
     document.getElementById('cancelTrainSt').addEventListener('click', hideTrainStModal);
     document.getElementById('addTrainerSt').addEventListener('click', ()=>{
