@@ -136,11 +136,11 @@
       /* Alternating row colors for all tables */
       #membersTable tbody tr:nth-child(even),
       #campDetailsContainer table tbody tr:nth-child(even) {
-        background-color: rgba(255, 255, 255, 0.05);
+        background-color: rgba(255, 255, 255, 0.15);
       }
       #membersTable tbody tr:nth-child(odd),
       #campDetailsContainer table tbody tr:nth-child(odd) {
-        background-color: rgba(0, 0, 0, 0.05);
+        background-color: rgba(0, 0, 0, 0.08);
       }
       .action-buttons {
         display: inline-flex;
@@ -1824,13 +1824,16 @@
           });
         });
 
-        // lessons change: recalculate due for trainer cells
+        // lessons change: recalculate due for trainer cells with debouncing
+        const lessonUpdateTimeouts = new Map(); // Store timeouts for debouncing
+
         container.querySelectorAll('.oboz-lessons').forEach(input => {
-          input.addEventListener('input', async ()=>{
+          input.addEventListener('input', ()=>{
             const obozId = input.getAttribute('data-oboz-id') || '';
             const partId = input.getAttribute('data-part-id');
             const trainerId = input.getAttribute('data-trainer-id');
             const lessons = parseInt(input.value,10) || 0;
+
             // find corresponding due input (try oboz-id first, then part-id + trainer-id)
             let dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`);
             if(!dueInput && partId && trainerId) {
@@ -1844,51 +1847,68 @@
             dueInput.style.background = '#ffcdd2';
             dueInput.style.color = '#000';
 
-            // update DB lessons_count and amount if we have a record
-            if(obozId){
-              const { error } = await supabase.from('oboz_lesson_payments').update({ lessons_count: lessons, amount: newDue }).eq('id', obozId);
-              if(error) console.error('Error updating lessons:', error);
-            } else if(lessons > 0) {
-              // create new payment record if lessons > 0 and no record exists yet
-              const currency = dueInput.getAttribute('data-currency') || 'PLN';
-              const insertObj = {
-                training_participant_id: partId,
-                trainer_id: trainerId,
-                lessons_count: lessons,
-                amount: newDue,
-                currency: currency,
-                status: 'unset'
-              };
-              const { data: newRow, error: insErr } = await supabase.from('oboz_lesson_payments').insert([insertObj]).select().single();
-              if(!insErr && newRow){
-                // update data-oboz-id on all related elements
-                const newObozId = newRow.id;
-                input.setAttribute('data-oboz-id', newObozId);
-                dueInput.setAttribute('data-oboz-id', newObozId);
+            // Clear existing timeout for this input
+            const timeoutKey = `${partId}-${trainerId}`;
+            if (lessonUpdateTimeouts.has(timeoutKey)) {
+              clearTimeout(lessonUpdateTimeouts.get(timeoutKey));
+            }
 
-                const paidInput = container.querySelector(`input.oboz-paid[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-                if(paidInput) paidInput.setAttribute('data-oboz-id', newObozId);
+            // Set new timeout for database update (500ms delay)
+            const timeoutId = setTimeout(async () => {
+              try {
+                // update DB lessons_count and amount if we have a record
+                if(obozId){
+                  const { error } = await supabase.from('oboz_lesson_payments').update({ lessons_count: lessons, amount: newDue }).eq('id', obozId);
+                  if(error) console.error('Error updating lessons:', error);
+                } else if(lessons > 0) {
+                  // create new payment record if lessons > 0 and no record exists yet
+                  const currency = dueInput.getAttribute('data-currency') || 'PLN';
+                  const insertObj = {
+                    training_participant_id: partId,
+                    trainer_id: trainerId,
+                    lessons_count: lessons,
+                    amount: newDue,
+                    currency: currency,
+                    status: 'unset'
+                  };
+                  const { data: newRow, error: insErr } = await supabase.from('oboz_lesson_payments').insert([insertObj]).select().single();
+                  if(!insErr && newRow){
+                    // update data-oboz-id on all related elements
+                    const newObozId = newRow.id;
+                    input.setAttribute('data-oboz-id', newObozId);
+                    dueInput.setAttribute('data-oboz-id', newObozId);
 
-                const confirmBtn = container.querySelector(`button.oboz-confirm[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-                if(confirmBtn) confirmBtn.setAttribute('data-oboz-id', newObozId);
+                    const paidInput = container.querySelector(`input.oboz-paid[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+                    if(paidInput) paidInput.setAttribute('data-oboz-id', newObozId);
 
-                const deleteBtn = container.querySelector(`button.oboz-delete[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-                if(deleteBtn) deleteBtn.setAttribute('data-oboz-id', newObozId);
+                    const confirmBtn = container.querySelector(`button.oboz-confirm[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+                    if(confirmBtn) confirmBtn.setAttribute('data-oboz-id', newObozId);
+
+                    const deleteBtn = container.querySelector(`button.oboz-delete[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+                    if(deleteBtn) deleteBtn.setAttribute('data-oboz-id', newObozId);
+                  }
+                }
+
+                // Update summary after lesson change (only once after debounce)
+                const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+                updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+
+                // Refresh camp list to update status (only once after debounce) - optimized
+                const currentMonth = document.getElementById('monthSelect').value;
+                if(currentMonth){
+                  // Only refresh if we actually need to update the status
+                  setTimeout(() => loadCampsForMonth(currentMonth), 100);
+                }
+
+              } catch (error) {
+                console.error('Error in lesson update:', error);
               }
-            }
 
-            // Update summary after lesson change
-            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+              // Remove timeout from map
+              lessonUpdateTimeouts.delete(timeoutKey);
+            }, 500); // 500ms debounce delay
 
-            // Refresh camp list to update status
-            const currentMonth = document.getElementById('monthSelect').value;
-            if(currentMonth){
-              loadCampsForMonth(currentMonth);
-            }
-
-            // Re-render camp details to get fresh data
-            renderCampFromDB(currentTrainingId);
+            lessonUpdateTimeouts.set(timeoutKey, timeoutId);
           });
         });
 
@@ -2083,7 +2103,7 @@
             const rows = container.querySelectorAll('tbody tr');
 
             rows.forEach(row => {
-              const participantName = row.querySelector('td:first-child')?.textContent?.toLowerCase() || '';
+              const participantName = row.querySelector('td:nth-child(2)')?.textContent?.toLowerCase() || '';
               if (participantName.includes(searchTerm)) {
                 row.style.display = '';
               } else {
