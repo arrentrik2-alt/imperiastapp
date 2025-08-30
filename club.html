@@ -765,7 +765,7 @@
       }
 
       // Update camp summary
-      function updateCampSummary(parts, trainerInfo, trainingIdParam, containerParam) {
+      function updateCampSummary(parts, trainerInfo, trainingIdParam, containerParam, trainingCurrency = 'PLN') {
         let totalCampAmount = 0;
         let paidCampAmount = 0;
         let totalLessons = 0;
@@ -941,11 +941,11 @@
         console.log('Final trainer stats:', trainerStats);
 
         if (totalCampEl) {
-          totalCampEl.textContent = `${totalCampAmount} PLN`;
+          totalCampEl.textContent = `${totalCampAmount} ${trainingCurrency}`;
           console.log('Updated totalCampEl:', totalCampEl.textContent);
         }
         if (paidCampEl) {
-          paidCampEl.textContent = `${paidCampAmount} PLN`;
+          paidCampEl.textContent = `${paidCampAmount} ${trainingCurrency}`;
           console.log('Updated paidCampEl:', paidCampEl.textContent);
         }
         if (totalLessonsEl) {
@@ -1329,7 +1329,7 @@
         container.className = 'content-box';
         const theadCols = [
           '<th><div class="header-main">Imię i nazwisko</div></th>',
-          `<th><div class="header-main">Camp</div><div class="header-sub">do zapłaty ${training.price || 0} PLN</div></th>`,
+          `<th><div class="header-main">Camp</div><div class="header-sub">do zapłaty ${training.price || 0} ${training.currency || 'PLN'}</div></th>`,
           `<th><div class="header-main">Camp</div><div class="header-sub">zaplacono</div></th>`
         ];
         // for each trainer: lessons (editable), due (calculated), paid (input + confirm)
@@ -1412,11 +1412,11 @@
             <div class="summary-grid">
               <div class="summary-item">
                 <span class="summary-label">Ogólna kwota campu:</span>
-                <span class="summary-value" id="totalCampAmount">0 PLN</span>
+                <span class="summary-value" id="totalCampAmount">0 ${trainingCurrency}</span>
               </div>
               <div class="summary-item">
                 <span class="summary-label">Zapłacona kwota na camp:</span>
-                <span class="summary-value" id="paidCampAmount">0 PLN</span>
+                <span class="summary-value" id="paidCampAmount">0 ${trainingCurrency}</span>
               </div>
             </div>
           </div>
@@ -1464,7 +1464,7 @@
           campDetailsContainer.appendChild(summaryDiv);
 
           // Calculate and update summary
-          updateCampSummary(parts, trainerInfo, trainingId, container);
+          updateCampSummary(parts, trainerInfo, trainingId, container, trainingCurrency);
 
           // Update expenses display and financial summary
           setTimeout(() => {
@@ -1583,7 +1583,8 @@
               }
 
               // Update summary after camp due change
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container);
+              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
 
               // Refresh camp list to update status
               const currentMonth = document.getElementById('monthSelect').value;
@@ -1623,7 +1624,8 @@
               }
 
               // Update summary after oboz paid change
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container);
+              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
 
               // Refresh camp list to update status
               const currentMonth = document.getElementById('monthSelect').value;
@@ -1662,7 +1664,8 @@
               }
 
               // Update summary after camp paid change
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container);
+              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
 
               // Refresh camp list to update status
               const currentMonth = document.getElementById('monthSelect').value;
@@ -1774,7 +1777,8 @@
             }
 
             // Update summary after lesson change
-            updateCampSummary(parts, trainerInfo, currentTrainingId, container);
+            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
 
             // Refresh camp list to update status
             const currentMonth = document.getElementById('monthSelect').value;
@@ -1836,7 +1840,8 @@
               localStorage.removeItem(`oboz_paid_${currentTrainingId}_${partId}_${trainerId}`);
 
               // Update summary after camp payment confirmation
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container);
+              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
 
               // Refresh camp list to update status
               const currentMonth2 = document.getElementById('monthSelect').value;
