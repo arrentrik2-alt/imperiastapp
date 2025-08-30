@@ -1124,9 +1124,16 @@
             // try find
             let { data: found } = await supabase.from('trainers').select('*').eq('name', t.name).limit(1).single();
             let trainerId;
-            if(found && found.id){ trainerId = found.id; }
+            if(found && found.id){
+              trainerId = found.id;
+              // Update currency if different
+              if(found.currency !== t.currency) {
+                console.log(`Updating currency for trainer ${t.name} from ${found.currency} to ${t.currency}`);
+                await supabase.from('trainers').update({ currency: t.currency }).eq('id', trainerId);
+              }
+            }
             else {
-              const { data: newTrainer, error: trErr } = await supabase.from('trainers').insert([{ name: t.name, default_price: t.amount }]).select().single();
+              const { data: newTrainer, error: trErr } = await supabase.from('trainers').insert([{ name: t.name, default_price: t.amount, currency: t.currency }]).select().single();
               if(trErr){ alert('Błąd tworzenia trenera: '+trErr.message); continue; }
               trainerId = newTrainer.id;
             }
@@ -1226,16 +1233,23 @@
           throw new Error('Nie znaleziono danych trenerów');
         }
 
+        console.log('Loaded trainers data:', trainers);
+        console.log('Trainer currencies:', trainers.map(t => ({ name: t.name, currency: t.currency })));
+
         // map trainer id -> info (price from tlinks, currency from trainers)
         const trainerInfo = trainers.map(tr => {
           const link = tlinks.find(t=>t.trainer_id === tr.id) || {};
-          return {
+          const trainerData = {
             id: tr.id,
             name: tr.name,
             price: link.price || tr.default_price || 0,
             currency: tr.currency || 'PLN'
           };
+          console.log(`Trainer ${tr.name}: currency from DB = ${tr.currency}, final currency = ${trainerData.currency}`);
+          return trainerData;
         }).sort((a, b) => a.name.localeCompare(b.name)); // Sort by name to prevent position changes
+
+        console.log('Final trainerInfo:', trainerInfo.map(t => ({ name: t.name, currency: t.currency })));
 
         // fetch participants
         const { data: parts, error: partsError } = await supabase.from('training_participants').select('id,member_id,participant_name,camp_amount,camp_status').eq('training_id', trainingId).order('participant_name', {ascending:true});
