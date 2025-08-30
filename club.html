@@ -778,6 +778,7 @@
         trainerInfo.forEach(t => {
           trainerStats[t.id] = {
             name: t.name,
+            currency: t.currency,
             totalLessons: 0,
             unpaidLessons: 0,
             participants: 0,
@@ -1000,6 +1001,20 @@
                     </div>
                   </div>
 
+                  ${trainer.expenses && trainer.expenses.length > 0 ? `
+                    <div class="trainer-expenses" style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 4px;">
+                      <div style="font-size: 0.85rem; color: var(--text-gray); margin-bottom: 5px;">Wydatki szkoleniowca:</div>
+                      ${trainer.expenses.map(expense => `
+                        <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 0.8rem;">
+                          <span>${expense.name}</span>
+                          <span style="color: var(--error);">- ${parseFloat(expense.amount).toFixed(2)} ${expense.currency || trainer.currency}</span>
+                        </div>
+                      `).join('')}
+                      <div style="border-top: 1px solid var(--border-dark); margin-top: 5px; padding-top: 5px; font-weight: bold; font-size: 0.85rem;">
+                        Wydatki: ${trainer.totalExpenses.toFixed(2)} ${trainer.currency}
+                      </div>
+                    </div>
+                  ` : ''}
                 </div>
               `;
             }).join('');
