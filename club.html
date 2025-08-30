@@ -133,6 +133,15 @@
         font-weight: bold;
         text-align: center;
       }
+      /* Alternating row colors for all tables */
+      #membersTable tbody tr:nth-child(even),
+      #campDetailsContainer table tbody tr:nth-child(even) {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+      #membersTable tbody tr:nth-child(odd),
+      #campDetailsContainer table tbody tr:nth-child(odd) {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
       .action-buttons {
         display: inline-flex;
         gap: 4px;
@@ -335,6 +344,7 @@
           <table id="membersTable">
             <thead>
               <tr>
+                <th style="text-align:center;width:50px">Lp.</th>
                 <th style="text-align:left">Imię i nazwisko</th>
                 <th style="text-align:center">ID</th>
                 <th style="text-align:left">Email</th>
@@ -394,6 +404,24 @@
       </div>
     </div>
 
+    <!-- Add external participant modal -->
+    <div id="addParticipantModal" class="modal" aria-hidden="true">
+      <div class="modal-content">
+        <button class="modal-close" id="addParticipantModalClose">&times;</button>
+        <div class="modal-header"><h3>Dodaj uczestnika</h3></div>
+        <form id="addParticipantForm">
+          <div class="form-group">
+            <label>Imię i nazwisko uczestnika</label>
+            <input class="form-control" id="participantName" name="participantName" required placeholder="Wpisz imię i nazwisko" />
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button type="button" id="cancelAddParticipant" class="btn">Anuluj</button>
+            <button type="submit" class="btn btn-primary">Dodaj uczestnika</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Campy ST section (hidden by default) -->
     <main id="campySection" class="main-content" style="display:none">
       <!-- Month selection view -->
@@ -418,6 +446,7 @@
         <div class="header">
           <h2 id="campTitle">Szczegóły campu</h2>
           <div class="user-info">
+            <button id="addParticipantBtn" class="btn btn-primary" style="margin-right:8px"><i class="fa fa-plus"></i>Dodaj uczestnika</button>
             <button id="backToListBtn" class="btn btn-outline"><i class="fa fa-arrow-left"></i>Powrót do listy</button>
           </div>
         </div>
@@ -507,15 +536,17 @@
       function escapeHtml(text){ if(text===null||text===undefined) return ''; return String(text).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" })[c]); }
 
       async function fetchMembers(){
-        membersTableBody.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
+        membersTableBody.innerHTML = '<tr><td colspan="8">Ładowanie...</td></tr>';
         // existing schema uses columns: id (text primary key), name, email, phone, style, karnet
         const { data, error } = await supabase.from('members').select('id,name,email,phone,style,karnet').order('name', {ascending:true});
-        if(error){ membersTableBody.innerHTML = `<tr><td colspan="6">Błąd: ${error.message}</td></tr>`; return; }
-        if(!data || data.length===0){ membersTableBody.innerHTML = '<tr><td colspan="6">Brak członków</td></tr>'; return; }
+        if(error){ membersTableBody.innerHTML = `<tr><td colspan="8">Błąd: ${error.message}</td></tr>`; return; }
+        if(!data || data.length===0){ membersTableBody.innerHTML = '<tr><td colspan="8">Brak członków</td></tr>'; return; }
         membersTableBody.innerHTML = '';
-        for(const m of data){
+        for(let i = 0; i < data.length; i++){
+          const m = data[i];
           const tr = document.createElement('tr');
           tr.innerHTML = `
+            <td style="text-align:center;padding:8px">${i + 1}</td>
             <td style="text-align:left;padding:8px">${escapeHtml(m.name)}</td>
             <td style="text-align:center;padding:8px">${escapeHtml(m.id)}</td>
             <td style="text-align:left;padding:8px">${escapeHtml(m.email || '')}</td>
@@ -621,6 +652,73 @@
           document.getElementById('campDetailsView').style.display = 'none';
           document.getElementById('monthView').style.display = 'block';
         });
+
+        // Setup add participant modal
+        const addParticipantBtn = document.getElementById('addParticipantBtn');
+        const addParticipantModal = document.getElementById('addParticipantModal');
+        const addParticipantModalClose = document.getElementById('addParticipantModalClose');
+        const cancelAddParticipant = document.getElementById('cancelAddParticipant');
+        const addParticipantForm = document.getElementById('addParticipantForm');
+
+        if(addParticipantBtn && addParticipantModal){
+          addParticipantBtn.addEventListener('click', () => {
+            addParticipantModal.classList.add('active');
+          });
+
+          addParticipantModalClose.addEventListener('click', () => {
+            addParticipantModal.classList.remove('active');
+            addParticipantForm.reset();
+          });
+
+          cancelAddParticipant.addEventListener('click', () => {
+            addParticipantModal.classList.remove('active');
+            addParticipantForm.reset();
+          });
+
+          addParticipantForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const participantName = document.getElementById('participantName').value.trim();
+
+            if(!participantName){
+              alert('Wpisz imię i nazwisko uczestnika');
+              return;
+            }
+
+            try {
+              // Get current training ID
+              const currentTrainingId = window.currentTrainingId;
+              if(!currentTrainingId){
+                alert('Błąd: Nie znaleziono ID treningu');
+                return;
+              }
+
+              // Add participant to training_participants
+              const { data, error } = await supabase
+                .from('training_participants')
+                .insert([{
+                  training_id: currentTrainingId,
+                  participant_name: participantName
+                }])
+                .select();
+
+              if(error){
+                alert('Błąd dodawania uczestnika: ' + error.message);
+                return;
+              }
+
+              // Close modal and refresh camp details
+              addParticipantModal.classList.remove('active');
+              addParticipantForm.reset();
+
+              // Refresh camp details to show new participant
+              await renderCampFromDB(currentTrainingId);
+
+            } catch(err){
+              console.error('Error adding participant:', err);
+              alert('Błąd dodawania uczestnika: ' + err.message);
+            }
+          });
+        }
       }
 
       // Generate month options for the next 12 months starting from current
@@ -1331,6 +1429,7 @@
         const container = document.createElement('div');
         container.className = 'content-box';
         const theadCols = [
+          '<th style="text-align:center;width:50px"><div class="header-main">Lp.</div></th>',
           '<th><div class="header-main">Imię i nazwisko</div></th>',
           `<th><div class="header-main">Camp</div><div class="header-sub">do zapłaty ${training.price || 0} ${training.currency || 'PLN'}</div></th>`,
           `<th><div class="header-main">Camp</div><div class="header-sub">zaplacono</div></th>`
@@ -1352,7 +1451,7 @@
             <table>
               <thead><tr>${theadCols.join('')}</tr></thead>
               <tbody>
-                ${parts.map(p=>{
+                ${parts.map((p, index) => {
                   const campDue = training.price || 0;
                   const campPaid = p.camp_amount || '';
                   const obozCells = trainerInfo.map(ti=>{
@@ -1369,14 +1468,14 @@
                     return `<td style="padding:4px;text-align:center">
                       <div class="lesson-input-group">
                         <button class="btn btn-small lesson-minus" data-part-id="${p.id}" data-trainer-id="${ti.id}">-</button>
-                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:40px;margin:0;text-align:center" value="${lessons||''}" />
+                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:35px;margin:0;text-align:center" value="${lessons||''}" />
                         <button class="btn btn-small lesson-plus" data-part-id="${p.id}" data-trainer-id="${ti.id}">+</button>
                       </div>
                     </td>
-                    <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:80px;margin:0 auto;background:#ffffff;color:#000000;text-align:center" value="${due||0}" /> ${ti.currency}</td>
+                    <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:60px;margin:0 auto;background:#ffffff;color:#000000;text-align:center" value="${due||0}" /> ${ti.currency}</td>
                     <td style="padding:4px;text-align:center">
                       <div class="payment-controls">
-                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid ${paidClass}" style="width:70px;margin:0 2px" value="${finalObozPaid||''}" />
+                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid ${paidClass}" style="width:60px;margin:0 2px" value="${finalObozPaid||''}" />
                         <button class="btn btn-small oboz-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
                         <button class="btn btn-small btn-delete oboz-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>
                       </div>
@@ -1391,11 +1490,11 @@
                   const storedCampPaid = p.camp_status === 'paid' ? (p.camp_amount || '') : (localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || '');
                   const isUnconfirmedPaid = storedCampPaid && p.camp_status !== 'paid';
                   const campPaidClass = p.camp_status === 'paid' ? 'status-paid' : (storedCampPaid ? 'status-unpaid' : '');
-                  return `<tr data-part-id="${p.id}"><td style="padding:4px">${escapeHtml(p.participant_name)}</td><td style="padding:4px;text-align:center">
-                    <input data-part-id="${p.id}" data-due="${campDue}" class="form-control camp-due" style="width:80px;margin:0 auto;${campDueStyle}" value="${storedCampDue}" data-training-id="${trainingId}" />
+                  return `<tr data-part-id="${p.id}"><td style="padding:4px;text-align:center">${index + 1}</td><td style="padding:4px">${escapeHtml(p.participant_name)}</td><td style="padding:4px;text-align:center">
+                    <input data-part-id="${p.id}" data-due="${campDue}" class="form-control camp-due" style="width:60px;margin:0 auto;${campDueStyle}" value="${storedCampDue}" data-training-id="${trainingId}" />
                   </td><td style="padding:4px;text-align:center">
                     <div class="payment-controls">
-                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:70px;margin:0 2px" value="${storedCampPaid||''}" />
+                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px" value="${storedCampPaid||''}" />
                       <button class="btn btn-small camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>
                       <button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>
                     </div>
