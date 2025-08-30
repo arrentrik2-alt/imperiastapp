@@ -793,18 +793,24 @@
         const trainingId = parts[0]?.training_id || trainingIdParam || '';
 
         // Load expenses from localStorage for each trainer
+        console.log('Loading expenses for trainingId:', trainingId);
         trainerInfo.forEach(t => {
           const expensesKey = `trainer_expenses_${trainingId}_${t.id}`;
+          console.log('Loading expenses for trainer:', t.name, 'with key:', expensesKey);
           const storedExpenses = localStorage.getItem(expensesKey);
+          console.log('Stored expenses data:', storedExpenses);
           if (storedExpenses) {
             try {
               trainerStats[t.id].expenses = JSON.parse(storedExpenses);
               trainerStats[t.id].totalExpenses = trainerStats[t.id].expenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0);
+              console.log('Loaded expenses for trainer', t.name, ':', trainerStats[t.id].expenses);
             } catch (e) {
               console.error('Error parsing stored expenses:', e);
               trainerStats[t.id].expenses = [];
               trainerStats[t.id].totalExpenses = 0;
             }
+          } else {
+            console.log('No stored expenses found for trainer:', t.name);
           }
         });
 
@@ -1856,34 +1862,59 @@
 
       // Global functions for expense management
       function addExpense(trainerId, name, amount) {
-        console.log('addExpense called with:', { trainerId, name, amount });
+        console.log('=== addExpense called with:', { trainerId, name, amount });
         const currentTrainingId = window.currentTrainingId || localStorage.getItem('currentTrainingId');
-        console.log('currentTrainingId:', currentTrainingId);
+        console.log('currentTrainingId in addExpense:', currentTrainingId);
+
+        if (!trainerId || trainerId === 'undefined') {
+          console.error('ERROR: trainerId is invalid:', trainerId);
+          return;
+        }
+
         const expensesKey = `trainer_expenses_${currentTrainingId}_${trainerId}`;
+        console.log('expensesKey:', expensesKey);
+
         const storedExpenses = localStorage.getItem(expensesKey);
         let expenses = [];
 
         if (storedExpenses) {
           try {
             expenses = JSON.parse(storedExpenses);
+            console.log('Existing expenses loaded:', expenses);
           } catch (e) {
             console.error('Error parsing stored expenses:', e);
             expenses = [];
           }
+        } else {
+          console.log('No existing expenses found, starting with empty array');
         }
 
-        expenses.push({
+        const newExpense = {
           name: name,
           amount: amount,
           date: new Date().toISOString()
-        });
+        };
+        console.log('Adding new expense:', newExpense);
 
-        console.log('Saving expenses to localStorage:', { expensesKey, expenses });
+        expenses.push(newExpense);
+        console.log('Updated expenses array:', expenses);
+
+        console.log('Saving to localStorage with key:', expensesKey);
         localStorage.setItem(expensesKey, JSON.stringify(expenses));
 
         // Verify save
         const saved = localStorage.getItem(expensesKey);
         console.log('Verified saved data:', saved);
+
+        // Check all localStorage keys related to this training
+        console.log('=== All localStorage keys for this training ===');
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.includes(currentTrainingId)) {
+            console.log(key, ':', localStorage.getItem(key));
+          }
+        }
+        console.log('=== End localStorage dump ===');
 
         // Re-render camp details to update summary
         console.log('Calling renderCampFromDB with:', currentTrainingId);
