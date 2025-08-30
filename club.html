@@ -1978,19 +1978,34 @@
 
               // If trainerId is not found on button, try to find the form and extract trainerId from its ID
               let form;
+              console.log('Looking for form with trainerId:', trainerId);
+
               if (trainerId && trainerId !== 'undefined') {
                 form = document.getElementById(`expense-form-${trainerId}`);
+                console.log('Found form by trainerId:', !!form, 'form ID:', form?.id);
               } else {
+                console.log('trainerId is invalid, trying fallback method');
                 // Find the form by looking for the closest expense form container
                 const formContainer = btn.closest('.add-expense-form');
+                console.log('Closest form container found:', !!formContainer);
+
                 if (formContainer) {
                   form = formContainer;
-                  // Extract trainerId from form ID (format: expense-form-TRAINER_ID)
                   const formId = formContainer.id;
+                  console.log('Form container ID:', formId);
+
                   if (formId && formId.startsWith('expense-form-')) {
                     trainerId = formId.replace('expense-form-', '');
                     console.log('Extracted trainerId from form ID:', trainerId);
+                  } else {
+                    console.log('Form ID does not have expected format');
                   }
+                } else {
+                  console.log('Could not find .add-expense-form container');
+                  // Try to find any form with expense-form- prefix
+                  const allExpenseForms = document.querySelectorAll('[id^="expense-form-"]');
+                  console.log('All expense forms found:', allExpenseForms.length);
+                  allExpenseForms.forEach(form => console.log('Form ID:', form.id));
                 }
               }
 
