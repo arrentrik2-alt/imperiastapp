@@ -1069,7 +1069,16 @@
               <form id="campForm">
                 <div class="form-group"><label>Nazwa campu</label><input class="form-control" id="campName" name="campName" required/></div>
                 <div class="form-group"><label>Data</label><input class="form-control" id="campDate" name="campDate" type="date" required/></div>
-                <div class="form-group"><label>Kwota campu</label><input class="form-control" id="campAmount" name="campAmount" type="number" required/></div>
+                <div class="form-group">
+                  <label>Kwota campu</label>
+                  <div style="display:flex;gap:8px;">
+                    <input class="form-control" id="campAmount" name="campAmount" type="number" required style="flex:1;" />
+                    <select class="form-control" id="campCurrency" name="campCurrency" style="width:80px;">
+                      <option value="PLN">PLN</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                  </div>
+                </div>
                 <div id="trainersContainer"></div>
                 <div style="display:flex;gap:8px;margin-top:12px">
                   <button type="button" id="addTrainerBtn" class="btn">Dodaj szkoleniowca</button>
@@ -1118,6 +1127,7 @@
           const name = document.getElementById('campName').value.trim();
           const date = document.getElementById('campDate').value;
           const amount = parseFloat(document.getElementById('campAmount').value);
+          const currency = document.getElementById('campCurrency').value;
           if(!name || !date || !amount) { alert('Uzupełnij pola campu'); return; }
 
           const trainers = Array.from(trainersContainer.querySelectorAll('.form-group')).map(g=>({
@@ -1130,7 +1140,7 @@
           if(trainers.length === 0){ alert('Dodaj przynajmniej jednego szkoleniowca'); return; }
 
           // create training record
-          const { data: training, error: trainingErr } = await supabase.from('trainings').insert([{ name, type: 'camp_st', date, price: amount }]).select().single();
+          const { data: training, error: trainingErr } = await supabase.from('trainings').insert([{ name, type: 'camp_st', date, price: amount, currency }]).select().single();
           if(trainingErr || !training){ alert('Błąd tworzenia campu: '+(trainingErr?trainingErr.message:'')); campModal.remove(); return; }
 
           // create trainers (or find existing) and training_trainers entries
@@ -1413,56 +1423,13 @@
             </div>
           </div>
 
-          <div class="summary-section">
-            <h4>Kalkulator Excel</h4>
-            <div id="excelCalculator" style="margin-top: 15px;">
-              <div class="excel-toolbar" style="margin-bottom: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <button id="clearExcelBtn" class="btn btn-small" style="padding: 4px 8px;">
-                  <i class="fa fa-trash"></i> Wyczyść
-                </button>
-                <button id="saveExcelBtn" class="btn btn-small btn-primary" style="padding: 4px 8px;">
-                  <i class="fa fa-save"></i> Zapisz
-                </button>
-                <button id="loadExcelBtn" class="btn btn-small" style="padding: 4px 8px;">
-                  <i class="fa fa-upload"></i> Wczytaj
-                </button>
-                <input id="formulaInput" type="text" placeholder="Wpisz formułę (np. =A1+B1)" style="flex: 1; min-width: 200px; padding: 4px 8px; border: 1px solid var(--border-dark); background: rgba(255,255,255,0.03); color: var(--text-light); border-radius: 3px;" />
-                <span id="formulaResult" style="padding: 4px 8px; background: var(--secondary-bg); border-radius: 3px; min-width: 100px; text-align: center;">=</span>
-              </div>
-              <div class="excel-table-container" style="overflow-x: auto;">
-                <table id="excelTable" class="excel-table" style="border-collapse: collapse; width: 100%; min-width: 600px;">
-                  <thead>
-                    <tr>
-                      <th style="width: 40px; padding: 8px; background: var(--gold); color: var(--primary-bg); border: 1px solid var(--border-dark);"></th>
-                      <th style="padding: 8px; background: var(--gold); color: var(--primary-bg); border: 1px solid var(--border-dark);">A</th>
-                      <th style="padding: 8px; background: var(--gold); color: var(--primary-bg); border: 1px solid var(--border-dark);">B</th>
-                      <th style="padding: 8px; background: var(--gold); color: var(--primary-bg); border: 1px solid var(--border-dark);">C</th>
-                      <th style="padding: 8px; background: var(--gold); color: var(--primary-bg); border: 1px solid var(--border-dark);">D</th>
-                      <th style="padding: 8px; background: var(--gold); color: var(--primary-bg); border: 1px solid var(--border-dark);">E</th>
-                      <th style="padding: 8px; background: var(--gold); color: var(--primary-bg); border: 1px solid var(--border-dark);">F</th>
-                      <th style="padding: 8px; background: var(--gold); color: var(--primary-bg); border: 1px solid var(--border-dark);">G</th>
-                      <th style="padding: 8px; background: var(--gold); color: var(--primary-bg); border: 1px solid var(--border-dark);">H</th>
-                    </tr>
-                  </thead>
-                  <tbody id="excelTableBody">
-                    <!-- Tabela zostanie wypełniona przez JavaScript -->
-                  </tbody>
-                </table>
-              </div>
-              <div class="excel-info" style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 4px; font-size: 0.85rem;">
-                <strong>Obsługiwane funkcje:</strong>
-                <br>• Podstawowe operacje: +, -, *, /
-                <br>• Formuły: =A1+B1, =SUM(A1:A5), =AVG(B1:B3), =MIN(C1:C3), =MAX(D1:D5)
-                <br>• Kliknij komórkę i wpisz wartość lub formułę
-                <br>• Naciśnij Enter aby zatwierdzić, Escape aby anulować
-              </div>
-            </div>
-          </div>
+
         `;
 
         const campDetailsContainer = document.getElementById('campDetailsContainer');
         if(campDetailsContainer) {
           campDetailsContainer.innerHTML = '';
+          campDetailsContainer.setAttribute('data-training-currency', training.currency || 'PLN');
           campDetailsContainer.appendChild(container);
           campDetailsContainer.appendChild(summaryDiv);
 
@@ -2067,18 +2034,25 @@
           EUR: { campPrice: 0, campPaid: 0, lessonsAmount: 0, lessonsPaid: 0 }
         };
 
-        // Get camp amounts (assuming camp is in PLN for now, but could be extended)
+        // Get camp amounts (using training currency)
         const campDueElements = document.querySelectorAll('input.camp-due');
         const campPaidElements = document.querySelectorAll('input.camp-paid');
 
+        // Get training currency from the training data (assuming it's available globally or from DOM)
+        let trainingCurrency = 'PLN'; // Default
+        const trainingInfo = document.querySelector('#campDetailsContainer [data-training-currency]');
+        if (trainingInfo) {
+          trainingCurrency = trainingInfo.getAttribute('data-training-currency') || 'PLN';
+        }
+
         campDueElements.forEach(input => {
           const value = parseFloat(input.value || 0);
-          currencyData.PLN.campPrice += value;
+          currencyData[trainingCurrency].campPrice += value;
         });
 
         campPaidElements.forEach(input => {
           const value = parseFloat(input.value || 0);
-          currencyData.PLN.campPaid += value;
+          currencyData[trainingCurrency].campPaid += value;
         });
 
         // Calculate lessons amounts from trainer data by currency
@@ -2481,416 +2455,7 @@
         initializeExpenseListeners();
       }
 
-      // ===== KALKULATOR EXCEL =====
-      class ExcelCalculator {
-        constructor() {
-          this.rows = 20;
-          this.cols = 8;
-          this.data = {};
-          this.currentCell = null;
-          this.isEditing = false;
-          this.undoStack = [];
-          this.redoStack = [];
-          this.init();
-        }
 
-        init() {
-          this.createTable();
-          this.attachEventListeners();
-          this.loadFromStorage();
-        }
-
-        createTable() {
-          const tbody = document.getElementById('excelTableBody');
-          if (!tbody) return;
-
-          tbody.innerHTML = '';
-
-          for (let row = 1; row <= this.rows; row++) {
-            const tr = document.createElement('tr');
-
-            // Row header
-            const th = document.createElement('th');
-            th.className = 'excel-row-header';
-            th.textContent = row;
-            tr.appendChild(th);
-
-            // Data cells
-            for (let col = 0; col < this.cols; col++) {
-              const td = document.createElement('td');
-              td.className = 'excel-cell-container';
-              td.setAttribute('data-row', row);
-              td.setAttribute('data-col', col);
-
-              const input = document.createElement('div');
-              input.className = 'excel-cell';
-              input.contentEditable = 'true';
-              input.setAttribute('data-row', row);
-              input.setAttribute('data-col', col);
-              input.setAttribute('data-formula', '');
-              input.textContent = '';
-
-              td.appendChild(input);
-              tr.appendChild(td);
-            }
-
-            tbody.appendChild(tr);
-          }
-        }
-
-        attachEventListeners() {
-          // Cell editing
-          document.getElementById('excelTable').addEventListener('click', (e) => {
-            if (e.target.classList.contains('excel-cell')) {
-              this.startEditing(e.target);
-            }
-          });
-
-          document.getElementById('excelTable').addEventListener('dblclick', (e) => {
-            if (e.target.classList.contains('excel-cell')) {
-              this.startEditing(e.target);
-            }
-          });
-
-          // Keyboard navigation and editing
-          document.addEventListener('keydown', (e) => {
-            if (this.isEditing && this.currentCell) {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                this.saveCellValue();
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                this.cancelEditing();
-              }
-            }
-          });
-
-          // Formula input
-          const formulaInput = document.getElementById('formulaInput');
-          if (formulaInput) {
-            formulaInput.addEventListener('keydown', (e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                if (this.currentCell) {
-                  this.currentCell.setAttribute('data-formula', formulaInput.value);
-                  this.updateCellValue(this.currentCell);
-                  this.saveToStorage();
-                }
-              }
-            });
-          }
-
-          // Toolbar buttons
-          document.getElementById('clearExcelBtn').addEventListener('click', () => {
-            if (confirm('Czy na pewno chcesz wyczyścić całą tabelę?')) {
-              this.clearAll();
-            }
-          });
-
-          document.getElementById('saveExcelBtn').addEventListener('click', () => {
-            this.saveToStorage();
-            alert('Tabela została zapisana!');
-          });
-
-          document.getElementById('loadExcelBtn').addEventListener('click', () => {
-            this.loadFromStorage();
-            alert('Tabela została wczytana!');
-          });
-        }
-
-        startEditing(cell) {
-          if (this.isEditing) {
-            this.saveCellValue();
-          }
-
-          this.currentCell = cell;
-          this.isEditing = true;
-          cell.classList.add('editing');
-          cell.focus();
-
-          // Update formula input
-          const formulaInput = document.getElementById('formulaInput');
-          const formulaResult = document.getElementById('formulaResult');
-
-          if (formulaInput && formulaResult) {
-            const formula = cell.getAttribute('data-formula') || '';
-            formulaInput.value = formula;
-            formulaResult.textContent = cell.textContent || '';
-          }
-        }
-
-        saveCellValue() {
-          if (!this.currentCell) return;
-
-          const value = this.currentCell.textContent;
-          const formula = this.currentCell.getAttribute('data-formula') || '';
-
-          // Save to undo stack
-          this.saveToUndoStack();
-
-          if (formula.startsWith('=')) {
-            this.currentCell.setAttribute('data-formula', formula);
-            this.updateCellValue(this.currentCell);
-          } else {
-            this.currentCell.setAttribute('data-formula', '');
-            this.currentCell.textContent = value;
-          }
-
-          this.currentCell.classList.remove('editing');
-          this.isEditing = false;
-          this.saveToStorage();
-          this.updateDependencies();
-        }
-
-        cancelEditing() {
-          if (!this.currentCell) return;
-
-          this.currentCell.classList.remove('editing');
-          this.currentCell.textContent = this.currentCell.getAttribute('data-original-value') || '';
-          this.isEditing = false;
-        }
-
-        updateCellValue(cell) {
-          const formula = cell.getAttribute('data-formula');
-          if (!formula || !formula.startsWith('=')) {
-            return;
-          }
-
-          try {
-            const result = this.evaluateFormula(formula.substring(1));
-            cell.textContent = result;
-          } catch (e) {
-            cell.textContent = '#ERROR!';
-            console.error('Formula error:', e);
-          }
-        }
-
-        evaluateFormula(formula) {
-          // Replace cell references with their values
-          const cellRefRegex = /([A-Z]+)(\d+)/g;
-
-          formula = formula.replace(cellRefRegex, (match, col, row) => {
-            const colIndex = col.charCodeAt(0) - 65; // A=0, B=1, etc.
-            const rowIndex = parseInt(row) - 1;
-
-            if (colIndex >= 0 && colIndex < this.cols && rowIndex >= 0 && rowIndex < this.rows) {
-              const cell = document.querySelector(`.excel-cell[data-row="${rowIndex + 1}"][data-col="${colIndex}"]`);
-              if (cell) {
-                const value = cell.textContent;
-                return isNaN(value) ? 0 : parseFloat(value);
-              }
-            }
-            return 0;
-          });
-
-          // Handle functions
-          if (formula.includes('SUM(')) {
-            return this.handleSumFunction(formula);
-          }
-          if (formula.includes('AVG(')) {
-            return this.handleAvgFunction(formula);
-          }
-          if (formula.includes('MIN(')) {
-            return this.handleMinFunction(formula);
-          }
-          if (formula.includes('MAX(')) {
-            return this.handleMaxFunction(formula);
-          }
-
-          // Basic arithmetic
-          return eval(formula);
-        }
-
-        handleSumFunction(formula) {
-          const rangeMatch = formula.match(/SUM\(([A-Z]\d+):([A-Z]\d+)\)/);
-          if (rangeMatch) {
-            const [startCol, startRow] = this.parseCellReference(rangeMatch[1]);
-            const [endCol, endRow] = this.parseCellReference(rangeMatch[2]);
-
-            let sum = 0;
-            for (let row = startRow; row <= endRow; row++) {
-              for (let col = startCol; col <= endCol; col++) {
-                const cell = document.querySelector(`.excel-cell[data-row="${row}"][data-col="${col}"]`);
-                if (cell) {
-                  const value = parseFloat(cell.textContent) || 0;
-                  sum += value;
-                }
-              }
-            }
-            return sum;
-          }
-          return 0;
-        }
-
-        handleAvgFunction(formula) {
-          const rangeMatch = formula.match(/AVG\(([A-Z]\d+):([A-Z]\d+)\)/);
-          if (rangeMatch) {
-            const [startCol, startRow] = this.parseCellReference(rangeMatch[1]);
-            const [endCol, endRow] = this.parseCellReference(rangeMatch[2]);
-
-            let sum = 0;
-            let count = 0;
-            for (let row = startRow; row <= endRow; row++) {
-              for (let col = startCol; col <= endCol; col++) {
-                const cell = document.querySelector(`.excel-cell[data-row="${row}"][data-col="${col}"]`);
-                if (cell) {
-                  const value = parseFloat(cell.textContent);
-                  if (!isNaN(value)) {
-                    sum += value;
-                    count++;
-                  }
-                }
-              }
-            }
-            return count > 0 ? sum / count : 0;
-          }
-          return 0;
-        }
-
-        handleMinFunction(formula) {
-          const rangeMatch = formula.match(/MIN\(([A-Z]\d+):([A-Z]\d+)\)/);
-          if (rangeMatch) {
-            const [startCol, startRow] = this.parseCellReference(rangeMatch[1]);
-            const [endCol, endRow] = this.parseCellReference(rangeMatch[2]);
-
-            let min = Infinity;
-            for (let row = startRow; row <= endRow; row++) {
-              for (let col = startCol; col <= endCol; col++) {
-                const cell = document.querySelector(`.excel-cell[data-row="${row}"][data-col="${col}"]`);
-                if (cell) {
-                  const value = parseFloat(cell.textContent);
-                  if (!isNaN(value) && value < min) {
-                    min = value;
-                  }
-                }
-              }
-            }
-            return min === Infinity ? 0 : min;
-          }
-          return 0;
-        }
-
-        handleMaxFunction(formula) {
-          const rangeMatch = formula.match(/MAX\(([A-Z]\d+):([A-Z]\d+)\)/);
-          if (rangeMatch) {
-            const [startCol, startRow] = this.parseCellReference(rangeMatch[1]);
-            const [endCol, endRow] = this.parseCellReference(rangeMatch[2]);
-
-            let max = -Infinity;
-            for (let row = startRow; row <= endRow; row++) {
-              for (let col = startCol; col <= endCol; col++) {
-                const cell = document.querySelector(`.excel-cell[data-row="${row}"][data-col="${col}"]`);
-                if (cell) {
-                  const value = parseFloat(cell.textContent);
-                  if (!isNaN(value) && value > max) {
-                    max = value;
-                  }
-                }
-              }
-            }
-            return max === -Infinity ? 0 : max;
-          }
-          return 0;
-        }
-
-        parseCellReference(ref) {
-          const col = ref.charCodeAt(0) - 65; // A=0, B=1, etc.
-          const row = parseInt(ref.substring(1)) - 1; // Convert to 0-based
-          return [col, row];
-        }
-
-        updateDependencies() {
-          // Update all cells that might depend on changed values
-          const cells = document.querySelectorAll('.excel-cell[data-formula]');
-          cells.forEach(cell => {
-            if (cell.getAttribute('data-formula')) {
-              this.updateCellValue(cell);
-            }
-          });
-        }
-
-        saveToUndoStack() {
-          const cells = document.querySelectorAll('.excel-cell');
-          const state = {};
-
-          cells.forEach(cell => {
-            const row = cell.getAttribute('data-row');
-            const col = cell.getAttribute('data-col');
-            const key = `${row}-${col}`;
-
-            state[key] = {
-              value: cell.textContent,
-              formula: cell.getAttribute('data-formula') || ''
-            };
-          });
-
-          this.undoStack.push(state);
-          if (this.undoStack.length > 50) {
-            this.undoStack.shift();
-          }
-        }
-
-        saveToStorage() {
-          const cells = document.querySelectorAll('.excel-cell');
-          const data = {};
-
-          cells.forEach(cell => {
-            const row = cell.getAttribute('data-row');
-            const col = cell.getAttribute('data-col');
-            const key = `${row}-${col}`;
-
-            data[key] = {
-              value: cell.textContent,
-              formula: cell.getAttribute('data-formula') || ''
-            };
-          });
-
-          localStorage.setItem('excelCalculator', JSON.stringify(data));
-        }
-
-        loadFromStorage() {
-          const stored = localStorage.getItem('excelCalculator');
-          if (!stored) return;
-
-          try {
-            const data = JSON.parse(stored);
-            const cells = document.querySelectorAll('.excel-cell');
-
-            cells.forEach(cell => {
-              const row = cell.getAttribute('data-row');
-              const col = cell.getAttribute('data-col');
-              const key = `${row}-${col}`;
-
-              if (data[key]) {
-                cell.textContent = data[key].value;
-                cell.setAttribute('data-formula', data[key].formula);
-              }
-            });
-
-            this.updateDependencies();
-          } catch (e) {
-            console.error('Error loading Excel data:', e);
-          }
-        }
-
-        clearAll() {
-          const cells = document.querySelectorAll('.excel-cell');
-          cells.forEach(cell => {
-            cell.textContent = '';
-            cell.setAttribute('data-formula', '');
-          });
-          this.saveToStorage();
-        }
-      }
-
-      // Initialize Excel Calculator when DOM is ready
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-          new ExcelCalculator();
-        });
-      } else {
-        new ExcelCalculator();
-      }
     </script>
 
 
