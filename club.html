@@ -1293,11 +1293,11 @@
             <h4>Podsumowanie Campu</h4>
             <div class="summary-grid">
               <div class="summary-item">
-                <span class="summary-label">Ogólna kwota:</span>
+                <span class="summary-label">Ogólna kwota campu:</span>
                 <span class="summary-value" id="totalCampAmount">0 PLN</span>
               </div>
               <div class="summary-item">
-                <span class="summary-label">Zapłacona kwota:</span>
+                <span class="summary-label">Zapłacona kwota na camp:</span>
                 <span class="summary-value" id="paidCampAmount">0 PLN</span>
               </div>
             </div>
@@ -1854,24 +1854,28 @@
           expenseForm.reset();
         }
 
-        // Handle add expense button clicks
-        container.addEventListener('click', function(e) {
-          if (e.target.classList.contains('add-expense-btn') || e.target.closest('.add-expense-btn')) {
-            const btn = e.target.classList.contains('add-expense-btn') ? e.target : e.target.closest('.add-expense-btn');
-            const trainerId = btn.getAttribute('data-trainer-id');
-            openExpenseModal(trainerId);
-          }
-
-          // Handle expense delete button clicks
-          if (e.target.classList.contains('btn-delete') && e.target.closest('.expense-item')) {
-            const trainerId = e.target.getAttribute('data-trainer-id');
-            const expenseIndex = parseInt(e.target.getAttribute('data-expense-index'));
-
-            if (confirm('Czy na pewno chcesz usunąć ten wydatek?')) {
-              deleteExpense(trainerId, expenseIndex);
+        // Handle add expense button clicks and expense delete buttons
+        const campDetailsContainerForEvents = document.getElementById('campDetailsContainer');
+        if (campDetailsContainerForEvents) {
+          campDetailsContainerForEvents.addEventListener('click', function(e) {
+            // Handle add expense button clicks
+            if (e.target.classList.contains('add-expense-btn') || e.target.closest('.add-expense-btn')) {
+              const btn = e.target.classList.contains('add-expense-btn') ? e.target : e.target.closest('.add-expense-btn');
+              const trainerId = btn.getAttribute('data-trainer-id');
+              openExpenseModal(trainerId);
             }
-          }
-        });
+
+            // Handle expense delete button clicks
+            if (e.target.classList.contains('btn-delete') && e.target.closest('.expense-item')) {
+              const trainerId = e.target.getAttribute('data-trainer-id');
+              const expenseIndex = parseInt(e.target.getAttribute('data-expense-index'));
+
+              if (confirm('Czy na pewno chcesz usunąć ten wydatek?')) {
+                deleteExpense(trainerId, expenseIndex);
+              }
+            }
+          });
+        }
 
         // Handle expense modal events
         expenseModalClose.addEventListener('click', closeExpenseModal);
