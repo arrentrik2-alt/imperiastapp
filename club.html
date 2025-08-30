@@ -1942,9 +1942,28 @@
             if (e.target.classList.contains('save-expense-btn') || e.target.closest('.save-expense-btn')) {
               e.preventDefault();
               const btn = e.target.classList.contains('save-expense-btn') ? e.target : e.target.closest('.save-expense-btn');
-              const trainerId = btn.getAttribute('data-trainer-id');
+              let trainerId = btn.getAttribute('data-trainer-id');
               console.log('Save button clicked, trainerId from button:', trainerId, 'button element:', btn);
-              const form = document.getElementById(`expense-form-${trainerId}`);
+
+              // If trainerId is not found on button, try to find the form and extract trainerId from its ID
+              let form;
+              if (trainerId && trainerId !== 'undefined') {
+                form = document.getElementById(`expense-form-${trainerId}`);
+              } else {
+                // Find the form by looking for the closest expense form container
+                const formContainer = btn.closest('.add-expense-form');
+                if (formContainer) {
+                  form = formContainer;
+                  // Extract trainerId from form ID (format: expense-form-TRAINER_ID)
+                  const formId = formContainer.id;
+                  if (formId && formId.startsWith('expense-form-')) {
+                    trainerId = formId.replace('expense-form-', '');
+                    console.log('Extracted trainerId from form ID:', trainerId);
+                  }
+                }
+              }
+
+              console.log('Final trainerId:', trainerId, 'Form found:', !!form);
 
               if (form) {
                 const nameInput = form.querySelector('.expense-name-input');
