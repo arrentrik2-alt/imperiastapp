@@ -1195,6 +1195,7 @@
       async function renderCampFromDB(trainingId){
         console.log('renderCampFromDB called with trainingId:', trainingId);
         // Make trainingId available for all event handlers
+        window.currentTrainingId = trainingId;
         let currentTrainingId = trainingId;
 
         // fetch training
@@ -1846,15 +1847,71 @@
           });
         }
 
-        // Expense inline form functionality
-        let currentExpenseTrainerId = null;
 
-        // Handle add expense button clicks and expense delete buttons
+
+
+
+
+      }
+
+      // Global functions for expense management
+      function addExpense(trainerId, name, amount) {
+        const currentTrainingId = window.currentTrainingId || localStorage.getItem('currentTrainingId');
+        const expensesKey = `trainer_expenses_${currentTrainingId}_${trainerId}`;
+        const storedExpenses = localStorage.getItem(expensesKey);
+        let expenses = [];
+
+        if (storedExpenses) {
+          try {
+            expenses = JSON.parse(storedExpenses);
+          } catch (e) {
+            console.error('Error parsing stored expenses:', e);
+            expenses = [];
+          }
+        }
+
+        expenses.push({
+          name: name,
+          amount: amount,
+          date: new Date().toISOString()
+        });
+
+        localStorage.setItem(expensesKey, JSON.stringify(expenses));
+
+        // Re-render camp details to update summary
+        renderCampFromDB(currentTrainingId);
+      }
+
+      // Function to delete expense
+      function deleteExpense(trainerId, expenseIndex) {
+        const currentTrainingId = window.currentTrainingId || localStorage.getItem('currentTrainingId');
+        const expensesKey = `trainer_expenses_${currentTrainingId}_${trainerId}`;
+        const storedExpenses = localStorage.getItem(expensesKey);
+
+        if (storedExpenses) {
+          try {
+            let expenses = JSON.parse(storedExpenses);
+            if (expenseIndex >= 0 && expenseIndex < expenses.length) {
+              expenses.splice(expenseIndex, 1);
+              localStorage.setItem(expensesKey, JSON.stringify(expenses));
+
+              // Re-render camp details to update summary
+              renderCampFromDB(currentTrainingId);
+            }
+          } catch (e) {
+            console.error('Error deleting expense:', e);
+          }
+        }
+      }
+
+      // Initialize expense event listeners
+      function initializeExpenseListeners() {
         const campDetailsContainerForEvents = document.getElementById('campDetailsContainer');
         if (campDetailsContainerForEvents) {
           campDetailsContainerForEvents.addEventListener('click', function(e) {
             // Handle add expense button clicks - show/hide inline form
             if (e.target.classList.contains('add-expense-btn') || e.target.closest('.add-expense-btn')) {
+              e.preventDefault();
               const btn = e.target.classList.contains('add-expense-btn') ? e.target : e.target.closest('.add-expense-btn');
               const trainerId = btn.getAttribute('data-trainer-id');
               const form = document.getElementById(`expense-form-${trainerId}`);
@@ -1875,6 +1932,7 @@
 
             // Handle save expense button clicks
             if (e.target.classList.contains('save-expense-btn') || e.target.closest('.save-expense-btn')) {
+              e.preventDefault();
               const btn = e.target.classList.contains('save-expense-btn') ? e.target : e.target.closest('.save-expense-btn');
               const trainerId = btn.getAttribute('data-trainer-id');
               const form = document.getElementById(`expense-form-${trainerId}`);
@@ -1913,6 +1971,7 @@
 
             // Handle cancel expense button clicks
             if (e.target.classList.contains('cancel-expense-btn') || e.target.closest('.cancel-expense-btn')) {
+              e.preventDefault();
               const btn = e.target.classList.contains('cancel-expense-btn') ? e.target : e.target.closest('.cancel-expense-btn');
               const trainerId = btn.getAttribute('data-trainer-id');
               const form = document.getElementById(`expense-form-${trainerId}`);
@@ -1938,56 +1997,13 @@
             }
           });
         }
+      }
 
-
-
-        // Function to add expense
-        function addExpense(trainerId, name, amount) {
-          const expensesKey = `trainer_expenses_${currentTrainingId}_${trainerId}`;
-          const storedExpenses = localStorage.getItem(expensesKey);
-          let expenses = [];
-
-          if (storedExpenses) {
-            try {
-              expenses = JSON.parse(storedExpenses);
-            } catch (e) {
-              console.error('Error parsing stored expenses:', e);
-              expenses = [];
-            }
-          }
-
-          expenses.push({
-            name: name,
-            amount: amount,
-            date: new Date().toISOString()
-          });
-
-          localStorage.setItem(expensesKey, JSON.stringify(expenses));
-
-          // Re-render camp details to update summary
-          renderCampFromDB(currentTrainingId);
-        }
-
-        // Function to delete expense
-        function deleteExpense(trainerId, expenseIndex) {
-          const expensesKey = `trainer_expenses_${currentTrainingId}_${trainerId}`;
-          const storedExpenses = localStorage.getItem(expensesKey);
-
-          if (storedExpenses) {
-            try {
-              let expenses = JSON.parse(storedExpenses);
-              if (expenseIndex >= 0 && expenseIndex < expenses.length) {
-                expenses.splice(expenseIndex, 1);
-                localStorage.setItem(expensesKey, JSON.stringify(expenses));
-
-                // Re-render camp details to update summary
-                renderCampFromDB(currentTrainingId);
-              }
-            } catch (e) {
-              console.error('Error deleting expense:', e);
-            }
-          }
-        }
+      // Initialize listeners when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeExpenseListeners);
+      } else {
+        initializeExpenseListeners();
       }
     </script>
 
