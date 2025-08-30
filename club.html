@@ -657,7 +657,7 @@
 
         const { data: camps, error } = await supabase
           .from('trainings')
-          .select('id,name,date,price')
+          .select('id,name,date,price,currency')
           .eq('type', 'camp_st')
           .gte('date', startDate)
           .lte('date', endDate)
@@ -737,7 +737,7 @@
             <div class="camp-item ${statusClass}" data-camp-id="${camp.id}">
               <div class="camp-item-info">
                 <h4>${escapeHtml(camp.name)}</h4>
-                <p>Cena: ${camp.price} PLN</p>
+                <p>Cena: ${camp.price} ${camp.currency || 'PLN'}</p>
                 <p class="camp-status">
                   <span class="status-item ${camp.paidCount > 0 ? 'status-paid' : ''}">Zapłaciło osób: ${camp.paidCount}</span><br>
                   <span class="status-item ${camp.unconfirmedCount > 0 ? 'status-unpaid' : 'status-paid'}">Nie zapłaciło osób: ${camp.unconfirmedCount}</span><br>
