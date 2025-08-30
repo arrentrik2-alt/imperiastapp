@@ -1856,7 +1856,9 @@
 
       // Global functions for expense management
       function addExpense(trainerId, name, amount) {
+        console.log('addExpense called with:', { trainerId, name, amount });
         const currentTrainingId = window.currentTrainingId || localStorage.getItem('currentTrainingId');
+        console.log('currentTrainingId:', currentTrainingId);
         const expensesKey = `trainer_expenses_${currentTrainingId}_${trainerId}`;
         const storedExpenses = localStorage.getItem(expensesKey);
         let expenses = [];
@@ -1876,9 +1878,15 @@
           date: new Date().toISOString()
         });
 
+        console.log('Saving expenses to localStorage:', { expensesKey, expenses });
         localStorage.setItem(expensesKey, JSON.stringify(expenses));
 
+        // Verify save
+        const saved = localStorage.getItem(expensesKey);
+        console.log('Verified saved data:', saved);
+
         // Re-render camp details to update summary
+        console.log('Calling renderCampFromDB with:', currentTrainingId);
         renderCampFromDB(currentTrainingId);
       }
 
@@ -1959,6 +1967,7 @@
                   }
 
                   // Add expense
+                  console.log('About to call addExpense with:', { trainerId, name, amount });
                   addExpense(trainerId, name, amount);
 
                   // Clear and hide form
