@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Panel Admina - Klub</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1023,16 +1026,19 @@
           await renderCampFromDB(campId);
 
           // Update title with camp name
-          const { data: camp } = await supabase
+          const { data: camp, error: campError } = await supabase
             .from('trainings')
             .select('name,date')
             .eq('id', campId)
             .single();
 
-          if(camp){
+          if(campError) {
+            console.warn('Błąd ładowania nazwy campu:', campError.message);
+          } else if(camp){
             campTitle.textContent = `${camp.name} - ${new Date(camp.date).toLocaleDateString('pl-PL')}`;
           }
         } catch(error) {
+          console.error('Błąd ładowania campu:', error);
           container.innerHTML = `Błąd ładowania szczegółów campu: ${error.message}`;
         }
       }
@@ -1173,30 +1179,80 @@
         });
       }
       async function renderCampFromDB(trainingId){
+        console.log('=== renderCampFromDB STARTED ===');
         console.log('renderCampFromDB called with trainingId:', trainingId);
+        console.log('Current code version - NO CURRENCY in training_trainers query');
+        console.log('Code timestamp:', new Date().toISOString());
+
+        // Check for any cached code or old versions
+        if (typeof window.oldRenderCampFromDB === 'function') {
+          console.warn('WARNING: Old version of renderCampFromDB found in cache!');
+        }
+
         // Make trainingId available for all event handlers
         window.currentTrainingId = trainingId;
         let currentTrainingId = trainingId;
 
         // fetch training
-        const { data: training } = await supabase.from('trainings').select('*').eq('id', trainingId).single();
-        // fetch training trainers
-        const { data: tlinks } = await supabase.from('training_trainers').select('trainer_id,price,currency').eq('training_id', trainingId);
-        const trainerIds = tlinks.map(t=>t.trainer_id);
-        const { data: trainers } = await supabase.from('trainers').select('id,name,default_price').in('id', trainerIds);
+        const { data: training, error: trainingError } = await supabase.from('trainings').select('*').eq('id', trainingId).single();
+        if (trainingError || !training) {
+          throw new Error(`Błąd ładowania treningu: ${trainingError?.message || 'Trening nie znaleziony'}`);
+        }
 
-        // map trainer id -> info (price from tlinks)
+        // fetch training trainers
+        console.log('=== FETCHING training_trainers for trainingId:', trainingId);
+        console.log('Query URL will be constructed as: training_trainers?select=trainer_id,price&training_id=eq.' + trainingId);
+        const { data: tlinks, error: tlinksError } = await supabase.from('training_trainers').select('trainer_id,price').eq('training_id', trainingId);
+        console.log('Query result - data:', tlinks, 'error:', tlinksError);
+        console.log('Query executed successfully, tlinks is:', Array.isArray(tlinks) ? 'Array with ' + tlinks.length + ' items' : typeof tlinks);
+
+        if (tlinksError) {
+          throw new Error(`Błąd ładowania trenerów treningu: ${tlinksError.message}`);
+        }
+
+        if (!tlinks || tlinks.length === 0) {
+          throw new Error('Brak przypisanych trenerów do tego campu');
+        }
+
+        const trainerIds = tlinks.map(t => t.trainer_id);
+        console.log('Trainer IDs:', trainerIds);
+
+        const { data: trainers, error: trainersError } = await supabase.from('trainers').select('id,name,default_price,currency').in('id', trainerIds);
+        if (trainersError) {
+          throw new Error(`Błąd ładowania danych trenerów: ${trainersError.message}`);
+        }
+
+        if (!trainers || trainers.length === 0) {
+          throw new Error('Nie znaleziono danych trenerów');
+        }
+
+        // map trainer id -> info (price from tlinks, currency from trainers)
         const trainerInfo = trainers.map(tr => {
           const link = tlinks.find(t=>t.trainer_id === tr.id) || {};
-          return { id: tr.id, name: tr.name, price: link.price || tr.default_price || 0, currency: link.currency || 'PLN' };
+          return {
+            id: tr.id,
+            name: tr.name,
+            price: link.price || tr.default_price || 0,
+            currency: tr.currency || 'PLN'
+          };
         }).sort((a, b) => a.name.localeCompare(b.name)); // Sort by name to prevent position changes
 
         // fetch participants
-        const { data: parts } = await supabase.from('training_participants').select('id,member_id,participant_name,camp_amount,camp_status').eq('training_id', trainingId).order('participant_name', {ascending:true});
+        const { data: parts, error: partsError } = await supabase.from('training_participants').select('id,member_id,participant_name,camp_amount,camp_status').eq('training_id', trainingId).order('participant_name', {ascending:true});
+        if (partsError) {
+          throw new Error(`Błąd ładowania uczestników: ${partsError.message}`);
+        }
+
+        if (!parts || parts.length === 0) {
+          throw new Error('Brak zapisanych uczestników do tego campu');
+        }
 
         // for each participant fetch oboz payments
         for(const p of parts){
-          const { data: oboz } = await supabase.from('oboz_lesson_payments').select('id,trainer_id,lessons_count,amount,status,currency').eq('training_participant_id', p.id);
+          const { data: oboz, error: obozError } = await supabase.from('oboz_lesson_payments').select('id,trainer_id,lessons_count,amount,status,currency').eq('training_participant_id', p.id);
+          if (obozError) {
+            console.warn(`Błąd ładowania płatności dla uczestnika ${p.participant_name}:`, obozError.message);
+          }
           p.oboz = oboz || [];
         }
 
