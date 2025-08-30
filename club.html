@@ -850,7 +850,7 @@
           trainerInfo.forEach(ti => {
             console.log(`Processing trainer ${ti.name} for participant ${p.id}`);
 
-            // Check for due amount input field
+            // Check for due amount input field - find by part-id and trainer-id
             const dueInput = containerParam.querySelector(`input.oboz-due[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
             console.log(`Due input for trainer ${ti.id}:`, dueInput, dueInput?.value);
             if (dueInput && dueInput.value) {
@@ -1188,7 +1188,7 @@
                         <button class="btn btn-small lesson-plus" data-part-id="${p.id}" data-trainer-id="${ti.id}">+</button>
                       </div>
                     </td>
-                    <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:80px;margin:0 auto;background:#ffffff;color:#000000;text-align:center" value="${due||0}" /></td>
+                    <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:80px;margin:0 auto;background:#ffffff;color:#000000;text-align:center" value="${due||0}" /></td>
                     <td style="padding:4px;text-align:center">
                       <div class="payment-controls">
                         <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid ${paidClass}" style="width:70px;margin:0 2px" value="${finalObozPaid||''}" />
