@@ -974,12 +974,7 @@
 
               return `
                 <div class="trainer-summary">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h5 style="margin: 0;">${escapeHtml(trainer.name)}</h5>
-                    <button class="btn btn-small" id="addExpenseBtn" data-trainer-id="${trainer.id}" style="padding: 4px 8px; font-size: 0.8rem;">
-                      <i class="fa fa-plus"></i> Dodaj wydatek
-                    </button>
-                  </div>
+                  <h5 style="margin: 0 0 10px 0;">${escapeHtml(trainer.name)}</h5>
                   <div class="trainer-stats">
                     <div class="stat-item">
                       <span class="stat-label">Lekcje:</span>
@@ -1003,6 +998,11 @@
                     </div>
                   </div>
                   ${expensesList}
+                  <div style="margin-top: 10px; text-align: center;">
+                    <button class="btn btn-small add-expense-btn" data-trainer-id="${trainer.id}" style="padding: 4px 8px; font-size: 0.8rem;">
+                      <i class="fa fa-plus"></i> Dodaj wydatek
+                    </button>
+                  </div>
                 </div>
               `;
             }).join('');
@@ -1856,8 +1856,8 @@
 
         // Handle add expense button clicks
         container.addEventListener('click', function(e) {
-          if (e.target.id === 'addExpenseBtn' || e.target.closest('#addExpenseBtn')) {
-            const btn = e.target.id === 'addExpenseBtn' ? e.target : e.target.closest('#addExpenseBtn');
+          if (e.target.classList.contains('add-expense-btn') || e.target.closest('.add-expense-btn')) {
+            const btn = e.target.classList.contains('add-expense-btn') ? e.target : e.target.closest('.add-expense-btn');
             const trainerId = btn.getAttribute('data-trainer-id');
             openExpenseModal(trainerId);
           }
