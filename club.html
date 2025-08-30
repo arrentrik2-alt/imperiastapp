@@ -985,11 +985,11 @@
                     </div>
                     <div class="stat-item">
                       <span class="stat-label">Ogólna kwota:</span>
-                      <span class="stat-value">${trainer.totalDueAmount.toFixed(2)} PLN</span>
+                      <span class="stat-value">${trainer.totalDueAmount.toFixed(2)} ${trainer.currency}</span>
                     </div>
                     <div class="stat-item">
                       <span class="stat-label">Zapłacona kwota:</span>
-                      <span class="stat-value ${trainer.totalPaidAmount > 0 ? 'status-paid' : ''}">${trainer.totalPaidAmount.toFixed(2)} PLN</span>
+                      <span class="stat-value ${trainer.totalPaidAmount > 0 ? 'status-paid' : ''}">${trainer.totalPaidAmount.toFixed(2)} ${trainer.currency}</span>
                     </div>
                     <div class="stat-item">
                       <span class="stat-label">Nie zapłacone:</span>
@@ -1181,14 +1181,14 @@
         // fetch training
         const { data: training } = await supabase.from('trainings').select('*').eq('id', trainingId).single();
         // fetch training trainers
-        const { data: tlinks } = await supabase.from('training_trainers').select('trainer_id,price').eq('training_id', trainingId);
+        const { data: tlinks } = await supabase.from('training_trainers').select('trainer_id,price,currency').eq('training_id', trainingId);
         const trainerIds = tlinks.map(t=>t.trainer_id);
         const { data: trainers } = await supabase.from('trainers').select('id,name,default_price').in('id', trainerIds);
 
         // map trainer id -> info (price from tlinks)
         const trainerInfo = trainers.map(tr => {
           const link = tlinks.find(t=>t.trainer_id === tr.id) || {};
-          return { id: tr.id, name: tr.name, price: link.price || tr.default_price || 0, currency: 'PLN' };
+          return { id: tr.id, name: tr.name, price: link.price || tr.default_price || 0, currency: link.currency || 'PLN' };
         }).sort((a, b) => a.name.localeCompare(b.name)); // Sort by name to prevent position changes
 
         // fetch participants
@@ -1212,7 +1212,7 @@
         // for each trainer: lessons (editable), due (calculated), paid (input + confirm)
         trainerInfo.forEach(t=>{
           theadCols.push(`<th><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Lekcje</div></th>`);
-          theadCols.push(`<th><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Do zapłaty ${t.price} PLN</div></th>`);
+          theadCols.push(`<th><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Do zapłaty ${t.price} ${t.currency}</div></th>`);
           theadCols.push(`<th><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Zaplacono</div></th>`);
         });
         container.innerHTML = `
@@ -1229,32 +1229,31 @@
                 ${parts.map(p=>{
                   const campDue = training.price || 0;
                   const campPaid = p.camp_amount || '';
-                  const obozCells = trainerInfo.map(ti=>{
-                    const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
-                    const lessons = ob.lessons_count || '';
-                    const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : (ti.price * (ob.lessons_count||0));
-                    const paid = (ob.status === 'paid') ? (ob.amount || due) : '';
-                    const paidClass = ob.status === 'paid' ? 'status-paid' : (paid ? 'status-unpaid' : '');
+                                  const obozCells = trainerInfo.map(ti=>{
+                  const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
+                  const lessons = ob.lessons_count || '';
+                  const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : (ti.price * (ob.lessons_count||0));
+                  const paid = (ob.status === 'paid') ? (ob.amount || due) : '';
+                  const paidClass = ob.status === 'paid' ? 'status-paid' : (paid ? 'status-unpaid' : '');
 
-                    // Get stored oboz paid amount from localStorage or use confirmed amount if already paid
-                    const storedObozPaid = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`oboz_paid_${trainingId}_${p.id}_${ti.id}`) || '');
-                    const finalObozPaid = storedObozPaid || paid;
-                    const currency = ob.currency || ti.currency || 'PLN';
-                    return `<td style="padding:4px;text-align:center">
-                      <div class="lesson-input-group">
-                        <button class="btn btn-small lesson-minus" data-part-id="${p.id}" data-trainer-id="${ti.id}">-</button>
-                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:40px;margin:0;text-align:center" value="${lessons||''}" />
-                        <button class="btn btn-small lesson-plus" data-part-id="${p.id}" data-trainer-id="${ti.id}">+</button>
-                      </div>
-                    </td>
-                    <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:80px;margin:0 auto;background:#ffffff;color:#000000;text-align:center" value="${due||0}" /></td>
-                    <td style="padding:4px;text-align:center">
-                      <div class="payment-controls">
-                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid ${paidClass}" style="width:70px;margin:0 2px" value="${finalObozPaid||''}" />
-                        <button class="btn btn-small oboz-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
-                        <button class="btn btn-small btn-delete oboz-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>
-                      </div>
-                    </td>`;
+                  // Get stored oboz paid amount from localStorage or use confirmed amount if already paid
+                  const storedObozPaid = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`oboz_paid_${trainingId}_${p.id}_${ti.id}`) || '');
+                  const finalObozPaid = storedObozPaid || paid;
+                  return `<td style="padding:4px;text-align:center">
+                    <div class="lesson-input-group">
+                      <button class="btn btn-small lesson-minus" data-part-id="${p.id}" data-trainer-id="${ti.id}">-</button>
+                      <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:40px;margin:0;text-align:center" value="${lessons||''}" />
+                      <button class="btn btn-small lesson-plus" data-part-id="${p.id}" data-trainer-id="${ti.id}">+</button>
+                    </div>
+                  </td>
+                  <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${ti.currency}" class="form-control oboz-due" readonly style="width:80px;margin:0 auto;background:#ffffff;color:#000000;text-align:center" value="${due||0}" /> ${ti.currency}</td>
+                  <td style="padding:4px;text-align:center">
+                    <div class="payment-controls">
+                      <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid ${paidClass}" style="width:70px;margin:0 2px" value="${finalObozPaid||''}" />
+                      <button class="btn btn-small oboz-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
+                      <button class="btn btn-small btn-delete oboz-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>
+                    </div>
+                  </td>`;
                   }).join('');
                   // Get stored camp due amount from localStorage or use paid amount if already paid
                   const storedCampDue = p.camp_status === 'paid' ? (p.camp_amount || '') : (localStorage.getItem(`camp_due_${trainingId}_${p.id}`) || '');
@@ -1330,7 +1329,11 @@
                 <h5 style="color: var(--gold); margin-bottom: 10px;">Dodaj wydatek</h5>
                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
                   <input type="text" id="globalExpenseName" class="form-control" placeholder="Nazwa wydatku" style="flex: 1; font-size: 0.9rem;" />
-                  <input type="number" id="globalExpenseAmount" step="0.01" class="form-control" placeholder="Kwota" style="width: 120px; font-size: 0.9rem;" />
+                  <input type="number" id="globalExpenseAmount" step="0.01" class="form-control" placeholder="Kwota" style="width: 100px; font-size: 0.9rem;" />
+                  <select id="globalExpenseCurrency" class="form-control" style="width: 70px; font-size: 0.9rem;">
+                    <option value="PLN">PLN</option>
+                    <option value="EUR">EUR</option>
+                  </select>
                   <button id="addGlobalExpenseBtn" class="btn btn-primary" style="padding: 6px 12px;">
                     <i class="fa fa-plus"></i> Dodaj
                   </button>
@@ -1878,8 +1881,8 @@
       }
 
       // Global functions for expense management
-      function addGlobalExpense(name, amount) {
-        console.log('=== addGlobalExpense called with:', { name, amount });
+      function addGlobalExpense(name, amount, currency = 'PLN') {
+        console.log('=== addGlobalExpense called with:', { name, amount, currency });
         const currentTrainingId = window.currentTrainingId || localStorage.getItem('currentTrainingId');
         console.log('currentTrainingId in addGlobalExpense:', currentTrainingId);
 
@@ -1904,6 +1907,7 @@
         const newExpense = {
           name: name,
           amount: amount,
+          currency: currency,
           date: new Date().toISOString()
         };
         console.log('Adding new expense:', newExpense);
@@ -1956,7 +1960,7 @@
               <strong>${expense.name}</strong>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="color: var(--error); font-weight: bold;">- ${parseFloat(expense.amount).toFixed(2)} PLN</span>
+              <span style="color: var(--error); font-weight: bold;">- ${parseFloat(expense.amount).toFixed(2)} ${expense.currency || 'PLN'}</span>
               <button class="btn btn-small btn-delete delete-expense-btn" data-expense-index="${index}" style="padding: 2px 6px; font-size: 0.7rem;">
                 <i class="fa fa-trash"></i>
               </button>
@@ -1971,35 +1975,32 @@
       function updateFinancialSummary() {
         const currentTrainingId = window.currentTrainingId;
 
-        // Calculate camp price from participants data
-        let campPrice = 0;
-        let totalCampPaid = 0;
-        let totalLessonsAmount = 0;
-        let totalLessonsPaid = 0;
+        // Calculate amounts by currency
+        const currencyData = {
+          PLN: { campPrice: 0, campPaid: 0, lessonsAmount: 0, lessonsPaid: 0 },
+          EUR: { campPrice: 0, campPaid: 0, lessonsAmount: 0, lessonsPaid: 0 }
+        };
 
-        // Get training data to find camp price
-        // For now, we'll use a placeholder - this should be extracted from the actual training data
-        // Let's try to find the camp price from the existing elements or calculate it
+        // Get camp amounts (assuming camp is in PLN for now, but could be extended)
         const campDueElements = document.querySelectorAll('input.camp-due');
         const campPaidElements = document.querySelectorAll('input.camp-paid');
 
         campDueElements.forEach(input => {
           const value = parseFloat(input.value || 0);
-          campPrice += value;
+          currencyData.PLN.campPrice += value;
         });
 
         campPaidElements.forEach(input => {
           const value = parseFloat(input.value || 0);
-          totalCampPaid += value;
+          currencyData.PLN.campPaid += value;
         });
 
-        // Calculate lessons amounts from trainer data
-        // This is more complex - we need to sum all due and paid amounts for all trainers
+        // Calculate lessons amounts from trainer data by currency
         const trainerSummaries = document.querySelectorAll('.trainer-summary');
         trainerSummaries.forEach(summary => {
-          // Try to extract lesson amounts from the summary text
-          // This is a bit hacky but should work
           const statItems = summary.querySelectorAll('.stat-item');
+          let trainerCurrency = 'PLN'; // Default
+
           statItems.forEach(item => {
             const label = item.querySelector('.stat-label');
             const value = item.querySelector('.stat-value');
@@ -2008,63 +2009,154 @@
               const labelText = label.textContent.trim();
               const valueText = value.textContent.trim();
 
+              // Extract currency from the value text (e.g., "150.00 EUR")
+              const currencyMatch = valueText.match(/(PLN|EUR)$/);
+              if (currencyMatch) {
+                trainerCurrency = currencyMatch[1];
+              }
+
               if (labelText === 'Ogólna kwota:') {
-                const amount = parseFloat(valueText.replace(' PLN', ''));
+                const amount = parseFloat(valueText.replace(/\s+(PLN|EUR)$/, ''));
                 if (!isNaN(amount)) {
-                  totalLessonsAmount += amount;
+                  currencyData[trainerCurrency].lessonsAmount += amount;
                 }
               } else if (labelText === 'Zapłacona kwota:') {
-                const amount = parseFloat(valueText.replace(' PLN', ''));
+                const amount = parseFloat(valueText.replace(/\s+(PLN|EUR)$/, ''));
                 if (!isNaN(amount)) {
-                  totalLessonsPaid += amount;
+                  currencyData[trainerCurrency].lessonsPaid += amount;
                 }
               }
             }
           });
         });
 
+        // Get expenses by currency
         const expensesKey = `camp_expenses_${currentTrainingId}`;
         const storedExpenses = localStorage.getItem(expensesKey);
-        let totalExpenses = 0;
+        const expensesByCurrency = { PLN: 0, EUR: 0 };
 
         if (storedExpenses) {
           try {
             const expenses = JSON.parse(storedExpenses);
-            totalExpenses = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0);
+            expenses.forEach(expense => {
+              const currency = expense.currency || 'PLN';
+              expensesByCurrency[currency] += parseFloat(expense.amount || 0);
+            });
           } catch (e) {
             console.error('Error parsing stored expenses:', e);
           }
         }
 
-        // Calculate totals
-        const totalAmount = campPrice + totalLessonsAmount;
-        const totalPaid = totalCampPaid + totalLessonsPaid;
-        const profit = totalPaid - totalExpenses;
+        // Generate HTML for financial summaries
+        const campFinancialSummary = document.getElementById('campFinancialSummary');
+        if (!campFinancialSummary) return;
 
-        // Update the display elements
-        const totalCampLessonsEl = document.getElementById('totalCampLessonsAmount');
-        const paidCampLessonsEl = document.getElementById('paidCampLessonsAmount');
-        const totalExpensesEl = document.getElementById('totalExpensesAmount');
-        const campProfitEl = document.getElementById('campProfit');
+        let summaryHtml = '';
 
-        if (totalCampLessonsEl) totalCampLessonsEl.textContent = `${totalAmount.toFixed(2)} PLN`;
-        if (paidCampLessonsEl) paidCampLessonsEl.textContent = `${totalPaid.toFixed(2)} PLN`;
-        if (totalExpensesEl) totalExpensesEl.textContent = `${totalExpenses.toFixed(2)} PLN`;
-        if (campProfitEl) {
-          campProfitEl.textContent = `${profit.toFixed(2)} PLN`;
-          campProfitEl.className = profit >= 0 ? 'summary-value status-paid' : 'summary-value status-unpaid';
+        // Check which currencies have data (include currencies with expenses)
+        const currenciesWithData = Object.keys(currencyData).filter(currency => {
+          const data = currencyData[currency];
+          const hasFinancialData = data.campPrice > 0 || data.lessonsAmount > 0 || data.campPaid > 0 || data.lessonsPaid > 0;
+          const hasExpenses = expensesByCurrency[currency] > 0;
+          return hasFinancialData || hasExpenses;
+        });
+
+        // Generate summary for each currency
+        currenciesWithData.forEach(currency => {
+          const data = currencyData[currency];
+          const totalAmount = data.campPrice + data.lessonsAmount;
+          const totalPaid = data.campPaid + data.lessonsPaid;
+          const currencyExpenses = expensesByCurrency[currency];
+          const profit = totalPaid - currencyExpenses;
+
+          if (currenciesWithData.length > 1) {
+            summaryHtml += `
+              <h5 style="color: var(--gold); margin: 20px 0 10px 0; border-bottom: 1px solid var(--border-dark); padding-bottom: 5px;">
+                Podsumowanie ${currency}
+              </h5>
+            `;
+          }
+
+          summaryHtml += `
+            <div class="summary-grid" style="margin-bottom: 15px;">
+              <div class="summary-item">
+                <span class="summary-label">Ogólna kwota (camp + lekcje):</span>
+                <span class="summary-value">${totalAmount.toFixed(2)} ${currency}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Zapłacona kwota (camp + lekcje):</span>
+                <span class="summary-value">${totalPaid.toFixed(2)} ${currency}</span>
+              </div>
+            </div>
+            <div class="summary-grid" style="margin-bottom: 15px;">
+              <div class="summary-item">
+                <span class="summary-label">Wydatki:</span>
+                <span class="summary-value">${currencyExpenses.toFixed(2)} ${currency}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Zysk:</span>
+                <span class="summary-value ${profit >= 0 ? 'status-paid' : 'status-unpaid'}">${profit.toFixed(2)} ${currency}</span>
+              </div>
+            </div>
+          `;
+        });
+
+        // Update the expenses list section
+        const expensesListSection = campFinancialSummary.querySelector('.add-expense-section');
+        if (expensesListSection) {
+          const expensesListHtml = generateExpensesListHtml(currentTrainingId);
+          summaryHtml += expensesListHtml;
         }
 
-        console.log('Financial Summary Updated:', {
-          campPrice,
-          totalCampPaid,
-          totalLessonsAmount,
-          totalLessonsPaid,
-          totalExpenses,
-          totalAmount,
-          totalPaid,
-          profit
-        });
+        // Remove old content and add new
+        const oldContent = campFinancialSummary.querySelectorAll(':not(.add-expense-section)');
+        oldContent.forEach(el => el.remove());
+
+        // Insert new summary content before the add-expense-section
+        const addExpenseSection = campFinancialSummary.querySelector('.add-expense-section');
+        if (addExpenseSection) {
+          addExpenseSection.insertAdjacentHTML('beforebegin', summaryHtml);
+        } else {
+          campFinancialSummary.innerHTML = summaryHtml;
+        }
+
+        console.log('Financial Summary Updated:', currencyData);
+      }
+
+      // Function to generate expenses list HTML
+      function generateExpensesListHtml(trainingId) {
+        const expensesKey = `camp_expenses_${trainingId}`;
+        const storedExpenses = localStorage.getItem(expensesKey);
+        let expenses = [];
+
+        if (storedExpenses) {
+          try {
+            expenses = JSON.parse(storedExpenses);
+          } catch (e) {
+            console.error('Error parsing stored expenses:', e);
+            expenses = [];
+          }
+        }
+
+        if (expenses.length === 0) {
+          return '<div id="expensesList"><p style="color: var(--text-gray); font-style: italic;">Brak wydatków</p></div>';
+        }
+
+        const expensesHtml = expenses.map((expense, index) => `
+          <div class="expense-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 5px; background: rgba(255,255,255,0.02); border-radius: 4px;">
+            <div>
+              <strong>${expense.name}</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="color: var(--error); font-weight: bold;">- ${parseFloat(expense.amount).toFixed(2)} ${expense.currency || 'PLN'}</span>
+              <button class="btn btn-small btn-delete delete-expense-btn" data-expense-index="${index}" style="padding: 2px 6px; font-size: 0.7rem;">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `).join('');
+
+        return `<div id="expensesList">${expensesHtml}</div>`;
       }
 
       // Function to delete global expense
@@ -2253,12 +2345,14 @@
               e.preventDefault();
               const nameInput = document.getElementById('globalExpenseName');
               const amountInput = document.getElementById('globalExpenseAmount');
+              const currencySelect = document.getElementById('globalExpenseCurrency');
 
-              if (!nameInput || !amountInput) return;
+              if (!nameInput || !amountInput || !currencySelect) return;
 
               const name = nameInput.value.trim();
               const amountValue = amountInput.value.replace(',', '.');
               const amount = parseFloat(amountValue);
+              const currency = currencySelect.value;
 
               if (!name) {
                 alert('Wprowadź nazwę wydatku');
@@ -2273,11 +2367,12 @@
               }
 
               // Add expense
-              addGlobalExpense(name, amount);
+              addGlobalExpense(name, amount, currency);
 
               // Clear form
               nameInput.value = '';
               amountInput.value = '';
+              currencySelect.value = 'PLN';
             }
 
             // Handle global expense delete button clicks
