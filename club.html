@@ -142,6 +142,47 @@
       #campDetailsContainer table tbody tr:nth-child(odd) {
         background-color: rgba(0, 0, 0, 0.08);
       }
+
+      /* Smooth transitions for better UX */
+      #membersTable tbody tr,
+      #campDetailsContainer table tbody tr,
+      .form-control,
+      .btn {
+        transition: all 0.2s ease-in-out;
+      }
+
+      /* Status indicators with smooth transitions */
+      .status-paid {
+        background-color: #28a745 !important;
+        color: white !important;
+        transition: all 0.3s ease-in-out;
+      }
+
+      .status-unpaid {
+        background-color: #ffc107 !important;
+        color: #000 !important;
+        transition: all 0.3s ease-in-out;
+      }
+
+      /* Loading indicator */
+      .saving-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #007bff;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+        pointer-events: none;
+        z-index: 1000;
+      }
+
+      .saving-indicator.show {
+        opacity: 1;
+      }
       .action-buttons {
         display: inline-flex;
         gap: 4px;
@@ -362,6 +403,11 @@
       </div>
 
     </main>
+
+    <!-- Saving indicator -->
+    <div id="savingIndicator" class="saving-indicator">
+      <i class="fa fa-spinner fa-spin"></i> Zapisywanie...
+    </div>
 
     <div id="memberModal" class="modal" aria-hidden="true">
       <div class="modal-content">
@@ -1693,8 +1739,7 @@
                 loadCampsForMonth(currentMonth);
               }
 
-              // Re-render camp details to get fresh data
-              renderCampFromDB(currentTrainingId);
+              // Update only necessary elements instead of full re-render
             }
           });
         });
@@ -1734,8 +1779,7 @@
                 loadCampsForMonth(currentMonth);
               }
 
-              // Re-render camp details to get fresh data
-              renderCampFromDB(currentTrainingId);
+              // Update only necessary elements instead of full re-render
             }
           });
         });
@@ -1774,8 +1818,7 @@
                 loadCampsForMonth(currentMonth);
               }
 
-              // Re-render camp details to get fresh data
-              renderCampFromDB(currentTrainingId);
+              // Update only necessary elements instead of full re-render
             }
           });
         });
@@ -1818,17 +1861,28 @@
                 loadCampsForMonth(currentMonth);
               }
 
-              // Re-render camp details to get fresh data and update summary
-              renderCampFromDB(currentTrainingId);
+              // Update payment status locally instead of full re-render
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
           });
         });
 
-        // lessons change: recalculate due for trainer cells with debouncing
-        const lessonUpdateTimeouts = new Map(); // Store timeouts for debouncing
+        // lessons change: recalculate due for trainer cells with immediate DB sync and data protection
+        const userEditingFlags = new Map(); // Track which inputs user is currently editing
 
         container.querySelectorAll('.oboz-lessons').forEach(input => {
-          input.addEventListener('input', ()=>{
+          input.addEventListener('focus', () => {
+            // Mark input as being edited by user
+            const inputKey = `${input.getAttribute('data-part-id')}-${input.getAttribute('data-trainer-id')}`;
+            userEditingFlags.set(inputKey, true);
+          });
+
+          input.addEventListener('blur', () => {
+            // Remove editing flag after user stops editing
+            const inputKey = `${input.getAttribute('data-part-id')}-${input.getAttribute('data-trainer-id')}`;
+            setTimeout(() => userEditingFlags.delete(inputKey), 100); // Small delay to allow other operations
+          });
+
+          input.addEventListener('input', async ()=>{
             const obozId = input.getAttribute('data-oboz-id') || '';
             const partId = input.getAttribute('data-part-id');
             const trainerId = input.getAttribute('data-trainer-id');
@@ -1847,68 +1901,61 @@
             dueInput.style.background = '#ffcdd2';
             dueInput.style.color = '#000';
 
-            // Clear existing timeout for this input
-            const timeoutKey = `${partId}-${trainerId}`;
-            if (lessonUpdateTimeouts.has(timeoutKey)) {
-              clearTimeout(lessonUpdateTimeouts.get(timeoutKey));
-            }
+            // Reset background after calculation is done
+            setTimeout(() => {
+              dueInput.style.background = '';
+              dueInput.style.color = '';
+            }, 1000);
 
-            // Set new timeout for database update (500ms delay)
-            const timeoutId = setTimeout(async () => {
-              try {
-                // update DB lessons_count and amount if we have a record
-                if(obozId){
-                  const { error } = await supabase.from('oboz_lesson_payments').update({ lessons_count: lessons, amount: newDue }).eq('id', obozId);
-                  if(error) console.error('Error updating lessons:', error);
-                } else if(lessons > 0) {
-                  // create new payment record if lessons > 0 and no record exists yet
-                  const currency = dueInput.getAttribute('data-currency') || 'PLN';
-                  const insertObj = {
-                    training_participant_id: partId,
-                    trainer_id: trainerId,
-                    lessons_count: lessons,
-                    amount: newDue,
-                    currency: currency,
-                    status: 'unset'
-                  };
-                  const { data: newRow, error: insErr } = await supabase.from('oboz_lesson_payments').insert([insertObj]).select().single();
-                  if(!insErr && newRow){
-                    // update data-oboz-id on all related elements
-                    const newObozId = newRow.id;
-                    input.setAttribute('data-oboz-id', newObozId);
-                    dueInput.setAttribute('data-oboz-id', newObozId);
+            // Show saving indicator
+            const savingIndicator = document.getElementById('savingIndicator');
+            savingIndicator.classList.add('show');
 
-                    const paidInput = container.querySelector(`input.oboz-paid[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-                    if(paidInput) paidInput.setAttribute('data-oboz-id', newObozId);
+            // Immediate database sync - no debouncing
+            try {
+              // update DB lessons_count and amount if we have a record
+              if(obozId){
+                const { error } = await supabase.from('oboz_lesson_payments').update({ lessons_count: lessons, amount: newDue }).eq('id', obozId);
+                if(error) console.error('Error updating lessons:', error);
+              } else if(lessons > 0) {
+                // create new payment record if lessons > 0 and no record exists yet
+                const currency = dueInput.getAttribute('data-currency') || 'PLN';
+                const insertObj = {
+                  training_participant_id: partId,
+                  trainer_id: trainerId,
+                  lessons_count: lessons,
+                  amount: newDue,
+                  currency: currency,
+                  status: 'unset'
+                };
+                const { data: newRow, error: insErr } = await supabase.from('oboz_lesson_payments').insert([insertObj]).select().single();
+                if(!insErr && newRow){
+                  // update data-oboz-id on all related elements
+                  const newObozId = newRow.id;
+                  input.setAttribute('data-oboz-id', newObozId);
+                  dueInput.setAttribute('data-oboz-id', newObozId);
 
-                    const confirmBtn = container.querySelector(`button.oboz-confirm[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-                    if(confirmBtn) confirmBtn.setAttribute('data-oboz-id', newObozId);
+                  const paidInput = container.querySelector(`input.oboz-paid[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+                  if(paidInput) paidInput.setAttribute('data-oboz-id', newObozId);
 
-                    const deleteBtn = container.querySelector(`button.oboz-delete[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-                    if(deleteBtn) deleteBtn.setAttribute('data-oboz-id', newObozId);
-                  }
+                  const confirmBtn = container.querySelector(`button.oboz-confirm[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+                  if(confirmBtn) confirmBtn.setAttribute('data-oboz-id', newObozId);
+
+                  const deleteBtn = container.querySelector(`button.oboz-delete[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+                  if(deleteBtn) deleteBtn.setAttribute('data-oboz-id', newObozId);
                 }
-
-                // Update summary after lesson change (only once after debounce)
-                const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-                updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-
-                // Refresh camp list to update status (only once after debounce) - optimized
-                const currentMonth = document.getElementById('monthSelect').value;
-                if(currentMonth){
-                  // Only refresh if we actually need to update the status
-                  setTimeout(() => loadCampsForMonth(currentMonth), 100);
-                }
-
-              } catch (error) {
-                console.error('Error in lesson update:', error);
               }
 
-              // Remove timeout from map
-              lessonUpdateTimeouts.delete(timeoutKey);
-            }, 500); // 500ms debounce delay
+              // Update summary after lesson change (but preserve user input)
+              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
 
-            lessonUpdateTimeouts.set(timeoutKey, timeoutId);
+            } catch (error) {
+              console.error('Error in lesson update:', error);
+            } finally {
+              // Hide saving indicator
+              setTimeout(() => savingIndicator.classList.remove('show'), 200);
+            }
           });
         });
 
@@ -1970,8 +2017,7 @@
                 loadCampsForMonth(currentMonth2);
               }
 
-              // Re-render camp details to get fresh data
-              renderCampFromDB(currentTrainingId);
+              // Update only necessary elements instead of full re-render
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
           });
         });
@@ -2165,7 +2211,6 @@
         // Update expenses display and financial summary
         updateExpensesDisplay();
         updateFinancialSummary();
-        renderCampFromDB(currentTrainingId);
       }
 
 
@@ -2393,7 +2438,6 @@
 
               // Update expenses display
               updateExpensesDisplay();
-              renderCampFromDB(currentTrainingId);
             }
           } catch (e) {
             console.error('Error deleting expense:', e);
