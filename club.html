@@ -792,27 +792,24 @@
         // Get training ID from parts (parts don't have training_id, so we need to pass it as parameter)
         const trainingId = parts[0]?.training_id || trainingIdParam || '';
 
-        // Load expenses from localStorage for each trainer
-        console.log('Loading expenses for trainingId:', trainingId);
-        trainerInfo.forEach(t => {
-          const expensesKey = `trainer_expenses_${trainingId}_${t.id}`;
-          console.log('Loading expenses for trainer:', t.name, 'with key:', expensesKey);
-          const storedExpenses = localStorage.getItem(expensesKey);
-          console.log('Stored expenses data:', storedExpenses);
-          if (storedExpenses) {
-            try {
-              trainerStats[t.id].expenses = JSON.parse(storedExpenses);
-              trainerStats[t.id].totalExpenses = trainerStats[t.id].expenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0);
-              console.log('Loaded expenses for trainer', t.name, ':', trainerStats[t.id].expenses);
-            } catch (e) {
-              console.error('Error parsing stored expenses:', e);
-              trainerStats[t.id].expenses = [];
-              trainerStats[t.id].totalExpenses = 0;
-            }
-          } else {
-            console.log('No stored expenses found for trainer:', t.name);
+        // Load global expenses
+        console.log('Loading global expenses for trainingId:', trainingId);
+        const globalExpensesKey = `camp_expenses_${trainingId}`;
+        const storedGlobalExpenses = localStorage.getItem(globalExpensesKey);
+        console.log('Stored global expenses data:', storedGlobalExpenses);
+
+        let globalExpenses = [];
+        if (storedGlobalExpenses) {
+          try {
+            globalExpenses = JSON.parse(storedGlobalExpenses);
+            console.log('Loaded global expenses:', globalExpenses);
+          } catch (e) {
+            console.error('Error parsing stored global expenses:', e);
+            globalExpenses = [];
           }
-        });
+        }
+
+        // No need to distribute expenses to trainers anymore - they are global
 
         parts.forEach(p => {
           console.log('Processing participant:', p.id);
@@ -998,31 +995,8 @@
                       <span class="stat-label">Nie zapłacone:</span>
                       <span class="stat-value ${trainer.unpaidLessons > 0 ? 'status-unpaid' : 'status-paid'}">${Math.round(trainer.unpaidLessons / 2)}</span>
                     </div>
-                    <div class="stat-item">
-                      <span class="stat-label">Zysk:</span>
-                      <span class="stat-value ${trainer.profit >= 0 ? 'status-paid' : 'status-unpaid'}">${trainer.profit.toFixed(2)} PLN</span>
-                    </div>
                   </div>
-                  ${expensesList}
-                  <div style="margin-top: 10px;">
-                    <div class="add-expense-form" id="expense-form-${trainer.id}" style="display: none; margin-bottom: 8px;">
-                      <div style="display: flex; gap: 8px; align-items: center;">
-                        <input type="text" class="form-control expense-name-input" placeholder="Nazwa wydatku" style="flex: 1; font-size: 0.85rem; padding: 4px 8px;" />
-                        <input type="number" step="0.01" class="form-control expense-amount-input" placeholder="Kwota" style="width: 100px; font-size: 0.85rem; padding: 4px 8px;" />
-                        <button class="btn btn-small btn-primary save-expense-btn" data-trainer-id="${trainer.id}" style="padding: 4px 8px; font-size: 0.8rem;">
-                          <i class="fa fa-save"></i> Zapisz
-                        </button>
-                        <button class="btn btn-small cancel-expense-btn" data-trainer-id="${trainer.id}" style="padding: 4px 8px; font-size: 0.8rem;">
-                          <i class="fa fa-times"></i> Anuluj
-                        </button>
-                      </div>
-                    </div>
-                    <div style="text-align: center;">
-                      <button class="btn btn-small add-expense-btn" data-trainer-id="${trainer.id}" style="padding: 4px 8px; font-size: 0.8rem;">
-                        <i class="fa fa-plus"></i> Dodaj wydatek
-                      </button>
-                    </div>
-                  </div>
+
                 </div>
               `;
             }).join('');
@@ -1327,6 +1301,43 @@
             <h4>Podsumowanie Szkoleniowców</h4>
             <div id="trainerSummaries"></div>
           </div>
+
+          <div class="summary-section">
+            <h4>Podsumowanie Finansowe Campu</h4>
+            <div id="campFinancialSummary" style="margin-top: 15px;">
+              <div class="summary-grid" style="margin-bottom: 15px;">
+                <div class="summary-item">
+                  <span class="summary-label">Ogólna kwota (camp + lekcje):</span>
+                  <span class="summary-value" id="totalCampLessonsAmount">0 PLN</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Zapłacona kwota (camp + lekcje):</span>
+                  <span class="summary-value" id="paidCampLessonsAmount">0 PLN</span>
+                </div>
+              </div>
+              <div class="summary-grid" style="margin-bottom: 15px;">
+                <div class="summary-item">
+                  <span class="summary-label">Wydatki:</span>
+                  <span class="summary-value" id="totalExpensesAmount">0 PLN</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Zysk:</span>
+                  <span class="summary-value" id="campProfit">0 PLN</span>
+                </div>
+              </div>
+              <div id="expensesList" style="margin-bottom: 15px;"></div>
+              <div class="add-expense-section" style="border-top: 1px solid var(--border-dark); padding-top: 15px;">
+                <h5 style="color: var(--gold); margin-bottom: 10px;">Dodaj wydatek</h5>
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                  <input type="text" id="globalExpenseName" class="form-control" placeholder="Nazwa wydatku" style="flex: 1; font-size: 0.9rem;" />
+                  <input type="number" id="globalExpenseAmount" step="0.01" class="form-control" placeholder="Kwota" style="width: 120px; font-size: 0.9rem;" />
+                  <button id="addGlobalExpenseBtn" class="btn btn-primary" style="padding: 6px 12px;">
+                    <i class="fa fa-plus"></i> Dodaj
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         `;
 
         const campDetailsContainer = document.getElementById('campDetailsContainer');
@@ -1337,6 +1348,12 @@
 
           // Calculate and update summary
           updateCampSummary(parts, trainerInfo, trainingId, container);
+
+          // Update expenses display and financial summary
+          setTimeout(() => {
+            updateExpensesDisplay();
+            updateFinancialSummary();
+          }, 100);
         }
 
         // Set visual status for existing payments
@@ -1861,17 +1878,12 @@
       }
 
       // Global functions for expense management
-      function addExpense(trainerId, name, amount) {
-        console.log('=== addExpense called with:', { trainerId, name, amount });
+      function addGlobalExpense(name, amount) {
+        console.log('=== addGlobalExpense called with:', { name, amount });
         const currentTrainingId = window.currentTrainingId || localStorage.getItem('currentTrainingId');
-        console.log('currentTrainingId in addExpense:', currentTrainingId);
+        console.log('currentTrainingId in addGlobalExpense:', currentTrainingId);
 
-        if (!trainerId || trainerId === 'undefined') {
-          console.error('ERROR: trainerId is invalid:', trainerId);
-          return;
-        }
-
-        const expensesKey = `trainer_expenses_${currentTrainingId}_${trainerId}`;
+        const expensesKey = `camp_expenses_${currentTrainingId}`;
         console.log('expensesKey:', expensesKey);
 
         const storedExpenses = localStorage.getItem(expensesKey);
@@ -1906,25 +1918,159 @@
         const saved = localStorage.getItem(expensesKey);
         console.log('Verified saved data:', saved);
 
-        // Check all localStorage keys related to this training
-        console.log('=== All localStorage keys for this training ===');
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.includes(currentTrainingId)) {
-            console.log(key, ':', localStorage.getItem(key));
-          }
-        }
-        console.log('=== End localStorage dump ===');
-
-        // Re-render camp details to update summary
-        console.log('Calling renderCampFromDB with:', currentTrainingId);
+        // Update expenses display and financial summary
+        updateExpensesDisplay();
+        updateFinancialSummary();
         renderCampFromDB(currentTrainingId);
       }
 
-      // Function to delete expense
-      function deleteExpense(trainerId, expenseIndex) {
+
+
+      // Function to update expenses display
+      function updateExpensesDisplay() {
+        const currentTrainingId = window.currentTrainingId;
+        const expensesKey = `camp_expenses_${currentTrainingId}`;
+        const storedExpenses = localStorage.getItem(expensesKey);
+
+        let expenses = [];
+        if (storedExpenses) {
+          try {
+            expenses = JSON.parse(storedExpenses);
+          } catch (e) {
+            console.error('Error parsing stored expenses:', e);
+            expenses = [];
+          }
+        }
+
+        const expensesListDiv = document.getElementById('expensesList');
+        if (!expensesListDiv) return;
+
+        if (expenses.length === 0) {
+          expensesListDiv.innerHTML = '<p style="color: var(--text-gray); font-style: italic;">Brak wydatków</p>';
+          return;
+        }
+
+        const expensesHtml = expenses.map((expense, index) => `
+          <div class="expense-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 5px; background: rgba(255,255,255,0.02); border-radius: 4px;">
+            <div>
+              <strong>${expense.name}</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="color: var(--error); font-weight: bold;">- ${parseFloat(expense.amount).toFixed(2)} PLN</span>
+              <button class="btn btn-small btn-delete delete-expense-btn" data-expense-index="${index}" style="padding: 2px 6px; font-size: 0.7rem;">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `).join('');
+
+        expensesListDiv.innerHTML = expensesHtml;
+      }
+
+      // Function to update financial summary
+      function updateFinancialSummary() {
+        const currentTrainingId = window.currentTrainingId;
+
+        // Calculate camp price from participants data
+        let campPrice = 0;
+        let totalCampPaid = 0;
+        let totalLessonsAmount = 0;
+        let totalLessonsPaid = 0;
+
+        // Get training data to find camp price
+        // For now, we'll use a placeholder - this should be extracted from the actual training data
+        // Let's try to find the camp price from the existing elements or calculate it
+        const campDueElements = document.querySelectorAll('input.camp-due');
+        const campPaidElements = document.querySelectorAll('input.camp-paid');
+
+        campDueElements.forEach(input => {
+          const value = parseFloat(input.value || 0);
+          campPrice += value;
+        });
+
+        campPaidElements.forEach(input => {
+          const value = parseFloat(input.value || 0);
+          totalCampPaid += value;
+        });
+
+        // Calculate lessons amounts from trainer data
+        // This is more complex - we need to sum all due and paid amounts for all trainers
+        const trainerSummaries = document.querySelectorAll('.trainer-summary');
+        trainerSummaries.forEach(summary => {
+          // Try to extract lesson amounts from the summary text
+          // This is a bit hacky but should work
+          const statItems = summary.querySelectorAll('.stat-item');
+          statItems.forEach(item => {
+            const label = item.querySelector('.stat-label');
+            const value = item.querySelector('.stat-value');
+
+            if (label && value) {
+              const labelText = label.textContent.trim();
+              const valueText = value.textContent.trim();
+
+              if (labelText === 'Ogólna kwota:') {
+                const amount = parseFloat(valueText.replace(' PLN', ''));
+                if (!isNaN(amount)) {
+                  totalLessonsAmount += amount;
+                }
+              } else if (labelText === 'Zapłacona kwota:') {
+                const amount = parseFloat(valueText.replace(' PLN', ''));
+                if (!isNaN(amount)) {
+                  totalLessonsPaid += amount;
+                }
+              }
+            }
+          });
+        });
+
+        const expensesKey = `camp_expenses_${currentTrainingId}`;
+        const storedExpenses = localStorage.getItem(expensesKey);
+        let totalExpenses = 0;
+
+        if (storedExpenses) {
+          try {
+            const expenses = JSON.parse(storedExpenses);
+            totalExpenses = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0);
+          } catch (e) {
+            console.error('Error parsing stored expenses:', e);
+          }
+        }
+
+        // Calculate totals
+        const totalAmount = campPrice + totalLessonsAmount;
+        const totalPaid = totalCampPaid + totalLessonsPaid;
+        const profit = totalPaid - totalExpenses;
+
+        // Update the display elements
+        const totalCampLessonsEl = document.getElementById('totalCampLessonsAmount');
+        const paidCampLessonsEl = document.getElementById('paidCampLessonsAmount');
+        const totalExpensesEl = document.getElementById('totalExpensesAmount');
+        const campProfitEl = document.getElementById('campProfit');
+
+        if (totalCampLessonsEl) totalCampLessonsEl.textContent = `${totalAmount.toFixed(2)} PLN`;
+        if (paidCampLessonsEl) paidCampLessonsEl.textContent = `${totalPaid.toFixed(2)} PLN`;
+        if (totalExpensesEl) totalExpensesEl.textContent = `${totalExpenses.toFixed(2)} PLN`;
+        if (campProfitEl) {
+          campProfitEl.textContent = `${profit.toFixed(2)} PLN`;
+          campProfitEl.className = profit >= 0 ? 'summary-value status-paid' : 'summary-value status-unpaid';
+        }
+
+        console.log('Financial Summary Updated:', {
+          campPrice,
+          totalCampPaid,
+          totalLessonsAmount,
+          totalLessonsPaid,
+          totalExpenses,
+          totalAmount,
+          totalPaid,
+          profit
+        });
+      }
+
+      // Function to delete global expense
+      function deleteGlobalExpense(expenseIndex) {
         const currentTrainingId = window.currentTrainingId || localStorage.getItem('currentTrainingId');
-        const expensesKey = `trainer_expenses_${currentTrainingId}_${trainerId}`;
+        const expensesKey = `camp_expenses_${currentTrainingId}`;
         const storedExpenses = localStorage.getItem(expensesKey);
 
         if (storedExpenses) {
@@ -1934,7 +2080,8 @@
               expenses.splice(expenseIndex, 1);
               localStorage.setItem(expensesKey, JSON.stringify(expenses));
 
-              // Re-render camp details to update summary
+              // Update expenses display
+              updateExpensesDisplay();
               renderCampFromDB(currentTrainingId);
             }
           } catch (e) {
@@ -1945,6 +2092,10 @@
 
       // Initialize expense event listeners
       function initializeExpenseListeners() {
+        // Load existing expenses on page load
+        updateExpensesDisplay();
+        updateFinancialSummary();
+
         const campDetailsContainerForEvents = document.getElementById('campDetailsContainer');
         if (campDetailsContainerForEvents) {
           campDetailsContainerForEvents.addEventListener('click', function(e) {
@@ -2097,13 +2248,44 @@
               }
             }
 
-            // Handle expense delete button clicks
-            if (e.target.classList.contains('btn-delete') && e.target.closest('.expense-item')) {
-              const trainerId = e.target.getAttribute('data-trainer-id');
+            // Handle global add expense button click
+            if (e.target.id === 'addGlobalExpenseBtn' || e.target.closest('#addGlobalExpenseBtn')) {
+              e.preventDefault();
+              const nameInput = document.getElementById('globalExpenseName');
+              const amountInput = document.getElementById('globalExpenseAmount');
+
+              if (!nameInput || !amountInput) return;
+
+              const name = nameInput.value.trim();
+              const amountValue = amountInput.value.replace(',', '.');
+              const amount = parseFloat(amountValue);
+
+              if (!name) {
+                alert('Wprowadź nazwę wydatku');
+                nameInput.focus();
+                return;
+              }
+
+              if (!amount || amount <= 0 || isNaN(amount)) {
+                alert('Wprowadź prawidłową kwotę wydatku');
+                amountInput.focus();
+                return;
+              }
+
+              // Add expense
+              addGlobalExpense(name, amount);
+
+              // Clear form
+              nameInput.value = '';
+              amountInput.value = '';
+            }
+
+            // Handle global expense delete button clicks
+            if (e.target.classList.contains('delete-expense-btn')) {
               const expenseIndex = parseInt(e.target.getAttribute('data-expense-index'));
 
               if (confirm('Czy na pewno chcesz usunąć ten wydatek?')) {
-                deleteExpense(trainerId, expenseIndex);
+                deleteGlobalExpense(expenseIndex);
               }
             }
           });
