@@ -980,25 +980,25 @@
                 </div>` : '';
 
               return `
-                <div class="trainer-summary">
+              <div class="trainer-summary">
                   <h5 style="margin: 0 0 10px 0;">${escapeHtml(trainer.name)}</h5>
-                  <div class="trainer-stats">
-                    <div class="stat-item">
-                      <span class="stat-label">Lekcje:</span>
-                      <span class="stat-value">${Math.round(trainer.totalLessons / 2)}</span>
-                    </div>
-                    <div class="stat-item">
-                      <span class="stat-label">Ogólna kwota:</span>
+                <div class="trainer-stats">
+                  <div class="stat-item">
+                    <span class="stat-label">Lekcje:</span>
+                    <span class="stat-value">${Math.round(trainer.totalLessons / 2)}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Ogólna kwota:</span>
                       <span class="stat-value">${trainer.totalDueAmount.toFixed(2)} ${trainer.currency}</span>
-                    </div>
-                    <div class="stat-item">
-                      <span class="stat-label">Zapłacona kwota:</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Zapłacona kwota:</span>
                       <span class="stat-value ${trainer.totalPaidAmount > 0 ? 'status-paid' : ''}">${trainer.totalPaidAmount.toFixed(2)} ${trainer.currency}</span>
-                    </div>
-                    <div class="stat-item">
-                      <span class="stat-label">Nie zapłacone:</span>
-                      <span class="stat-value ${trainer.unpaidLessons > 0 ? 'status-unpaid' : 'status-paid'}">${Math.round(trainer.unpaidLessons / 2)}</span>
-                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Nie zapłacone:</span>
+                    <span class="stat-value ${trainer.unpaidLessons > 0 ? 'status-unpaid' : 'status-paid'}">${Math.round(trainer.unpaidLessons / 2)}</span>
+                  </div>
                   </div>
 
                   ${trainer.expenses && trainer.expenses.length > 0 ? `
@@ -1008,11 +1008,11 @@
                         <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 0.8rem;">
                           <span>${expense.name}</span>
                           <span style="color: var(--error);">- ${parseFloat(expense.amount).toFixed(2)} ${expense.currency || trainer.currency}</span>
-                        </div>
+                </div>
                       `).join('')}
                       <div style="border-top: 1px solid var(--border-dark); margin-top: 5px; padding-top: 5px; font-weight: bold; font-size: 0.85rem;">
                         Wydatki: ${trainer.totalExpenses.toFixed(2)} ${trainer.currency}
-                      </div>
+              </div>
                     </div>
                   ` : ''}
                 </div>
@@ -1146,24 +1146,43 @@
           // create trainers (or find existing) and training_trainers entries
           const createdTrainers = [];
           for(const t of trainers){
-            // try find
-            let { data: found } = await supabase.from('trainers').select('*').eq('name', t.name).limit(1).single();
+            // try find existing trainer
+            let { data: found, error: findErr } = await supabase.from('trainers').select('*').eq('name', t.name).limit(1);
             let trainerId;
-            if(found && found.id){
-              trainerId = found.id;
+
+            if(findErr){
+              console.error('Error finding trainer:', findErr);
+              alert('Błąd podczas szukania trenera: ' + findErr.message);
+              continue;
+            }
+
+            if(found && found.length > 0){
+              trainerId = found[0].id;
               // Update currency if different
-              if(found.currency !== t.currency) {
-                console.log(`Updating currency for trainer ${t.name} from ${found.currency} to ${t.currency}`);
+              if(found[0].currency !== t.currency) {
+                console.log(`Updating currency for trainer ${t.name} from ${found[0].currency} to ${t.currency}`);
                 await supabase.from('trainers').update({ currency: t.currency }).eq('id', trainerId);
               }
             }
             else {
+              // Create new trainer
               const { data: newTrainer, error: trErr } = await supabase.from('trainers').insert([{ name: t.name, default_price: t.amount, currency: t.currency }]).select().single();
-              if(trErr){ alert('Błąd tworzenia trenera: '+trErr.message); continue; }
+              if(trErr){
+                console.error('Error creating trainer:', trErr);
+                alert('Błąd tworzenia trenera: '+trErr.message);
+                continue;
+              }
               trainerId = newTrainer.id;
             }
+
             // link to training
-            await supabase.from('training_trainers').insert([{ training_id: training.id, trainer_id: trainerId, price: t.amount }]);
+            const { error: linkErr } = await supabase.from('training_trainers').insert([{ training_id: training.id, trainer_id: trainerId, price: t.amount }]);
+            if(linkErr){
+              console.error('Error linking trainer to training:', linkErr);
+              alert('Błąd łączenia trenera z campem: '+linkErr.message);
+              continue;
+            }
+
             createdTrainers.push(Object.assign({ id: trainerId }, t));
           }
 
