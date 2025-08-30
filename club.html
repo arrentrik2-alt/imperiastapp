@@ -1128,6 +1128,9 @@
           const date = document.getElementById('campDate').value;
           const amount = parseFloat(document.getElementById('campAmount').value);
           const currency = document.getElementById('campCurrency').value;
+
+          console.log('Creating camp with currency:', currency);
+
           if(!name || !date || !amount) { alert('Uzupełnij pola campu'); return; }
 
           const trainers = Array.from(trainersContainer.querySelectorAll('.form-group')).map(g=>({
@@ -1142,6 +1145,9 @@
           // create training record
           const { data: training, error: trainingErr } = await supabase.from('trainings').insert([{ name, type: 'camp_st', date, price: amount, currency }]).select().single();
           if(trainingErr || !training){ alert('Błąd tworzenia campu: '+(trainingErr?trainingErr.message:'')); campModal.remove(); return; }
+
+          console.log('Created training:', training);
+          console.log('Training currency from DB:', training.currency);
 
           // create trainers (or find existing) and training_trainers entries
           const createdTrainers = [];
@@ -1249,6 +1255,9 @@
         if (trainingError || !training) {
           throw new Error(`Błąd ładowania treningu: ${trainingError?.message || 'Trening nie znaleziony'}`);
         }
+
+        console.log('Loaded training:', training);
+        console.log('Training currency:', training.currency);
 
         // fetch training trainers
         console.log('=== FETCHING training_trainers for trainingId:', trainingId);
@@ -1448,7 +1457,9 @@
         const campDetailsContainer = document.getElementById('campDetailsContainer');
         if(campDetailsContainer) {
           campDetailsContainer.innerHTML = '';
-          campDetailsContainer.setAttribute('data-training-currency', training.currency || 'PLN');
+          const trainingCurrency = training.currency || 'PLN';
+          console.log('Setting data-training-currency to:', trainingCurrency);
+          campDetailsContainer.setAttribute('data-training-currency', trainingCurrency);
           campDetailsContainer.appendChild(container);
           campDetailsContainer.appendChild(summaryDiv);
 
@@ -2059,10 +2070,12 @@
 
         // Get training currency from the training data (assuming it's available globally or from DOM)
         let trainingCurrency = 'PLN'; // Default
-        const trainingInfo = document.querySelector('#campDetailsContainer [data-training-currency]');
-        if (trainingInfo) {
-          trainingCurrency = trainingInfo.getAttribute('data-training-currency') || 'PLN';
+        const campDetailsContainer = document.getElementById('campDetailsContainer');
+        if (campDetailsContainer) {
+          trainingCurrency = campDetailsContainer.getAttribute('data-training-currency') || 'PLN';
         }
+
+        console.log('updateFinancialSummary - trainingCurrency:', trainingCurrency);
 
         campDueElements.forEach(input => {
           const value = parseFloat(input.value || 0);
