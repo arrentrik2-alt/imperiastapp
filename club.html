@@ -237,6 +237,21 @@
         margin: 0 0 10px 0;
         font-size: 1rem;
       }
+
+      /* Expense styles */
+      .expenses-list {
+        margin-top: 10px;
+        padding: 8px;
+        background: rgba(255,255,255,0.02);
+        border-radius: 4px;
+      }
+      .expense-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 2px 0;
+        font-size: 0.8rem;
+      }
       .trainer-stats {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -765,7 +780,10 @@
             participants: 0,
             paidParticipants: 0,
             totalDueAmount: 0,    // Ogólna kwota do zapłaty za lekcje
-            totalPaidAmount: 0    // Suma kwot w kolumnie zapłacono
+            totalPaidAmount: 0,   // Suma kwot w kolumnie zapłacono
+            expenses: [],          // Lista wydatków
+            totalExpenses: 0,      // Suma wszystkich wydatków
+            profit: 0              // Zysk = zapłacona kwota - wydatki
           };
         });
 
@@ -773,6 +791,22 @@
 
         // Get training ID from parts (parts don't have training_id, so we need to pass it as parameter)
         const trainingId = parts[0]?.training_id || trainingIdParam || '';
+
+        // Load expenses from localStorage for each trainer
+        trainerInfo.forEach(t => {
+          const expensesKey = `trainer_expenses_${trainingId}_${t.id}`;
+          const storedExpenses = localStorage.getItem(expensesKey);
+          if (storedExpenses) {
+            try {
+              trainerStats[t.id].expenses = JSON.parse(storedExpenses);
+              trainerStats[t.id].totalExpenses = trainerStats[t.id].expenses.reduce((sum, expense) => sum + parseFloat(expense.amount || 0), 0);
+            } catch (e) {
+              console.error('Error parsing stored expenses:', e);
+              trainerStats[t.id].expenses = [];
+              trainerStats[t.id].totalExpenses = 0;
+            }
+          }
+        });
 
         parts.forEach(p => {
           console.log('Processing participant:', p.id);
@@ -876,6 +910,11 @@
           });
         });
 
+        // Calculate profit for each trainer (paid amount - total expenses)
+        trainerInfo.forEach(t => {
+          trainerStats[t.id].profit = trainerStats[t.id].totalPaidAmount - trainerStats[t.id].totalExpenses;
+        });
+
         // Update summary display
         const totalCampEl = document.getElementById('totalCampAmount');
         const paidCampEl = document.getElementById('paidCampAmount');
@@ -915,33 +954,58 @@
         if (trainerSummariesEl) {
           const trainerSummaryHtml = Object.values(trainerStats)
             .filter(t => t.totalLessons > 0)
-            .map(trainer => `
-              <div class="trainer-summary">
-                <h5>${escapeHtml(trainer.name)}</h5>
-                <div class="trainer-stats">
-                  <div class="stat-item">
-                    <span class="stat-label">Lekcje:</span>
-                    <span class="stat-value">${Math.round(trainer.totalLessons / 2)}</span>
+            .map(trainer => {
+              const expensesList = trainer.expenses.length > 0 ?
+                `<div class="expenses-list" style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 4px;">
+                  <div style="font-size: 0.85rem; color: var(--text-gray); margin-bottom: 5px;">Wydatki:</div>
+                  ${trainer.expenses.map((expense, index) => `
+                    <div class="expense-item" style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 0.8rem;">
+                      <span>${escapeHtml(expense.name)}</span>
+                      <div>
+                        <span style="color: var(--error);">- ${parseFloat(expense.amount).toFixed(2)} PLN</span>
+                        <button class="btn btn-small btn-delete" style="margin-left: 5px; padding: 1px 4px; font-size: 0.7rem;" data-trainer-id="${trainer.id}" data-expense-index="${index}">×</button>
+                      </div>
+                    </div>
+                  `).join('')}
+                  <div style="border-top: 1px solid var(--border-dark); margin-top: 5px; padding-top: 5px; font-weight: bold; font-size: 0.85rem;">
+                    Suma wydatków: ${trainer.totalExpenses.toFixed(2)} PLN
                   </div>
-                  <div class="stat-item">
-                    <span class="stat-label">Ogólna kwota:</span>
-                    <span class="stat-value">${trainer.totalDueAmount.toFixed(2)} PLN</span>
+                </div>` : '';
+
+              return `
+                <div class="trainer-summary">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h5 style="margin: 0;">${escapeHtml(trainer.name)}</h5>
+                    <button class="btn btn-small" id="addExpenseBtn" data-trainer-id="${trainer.id}" style="padding: 4px 8px; font-size: 0.8rem;">
+                      <i class="fa fa-plus"></i> Dodaj wydatek
+                    </button>
                   </div>
-                  <div class="stat-item">
-                    <span class="stat-label">Zapłacona kwota:</span>
-                    <span class="stat-value ${trainer.totalPaidAmount > 0 ? 'status-paid' : ''}">${trainer.totalPaidAmount.toFixed(2)} PLN</span>
+                  <div class="trainer-stats">
+                    <div class="stat-item">
+                      <span class="stat-label">Lekcje:</span>
+                      <span class="stat-value">${Math.round(trainer.totalLessons / 2)}</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Ogólna kwota:</span>
+                      <span class="stat-value">${trainer.totalDueAmount.toFixed(2)} PLN</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Zapłacona kwota:</span>
+                      <span class="stat-value ${trainer.totalPaidAmount > 0 ? 'status-paid' : ''}">${trainer.totalPaidAmount.toFixed(2)} PLN</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Nie zapłacone:</span>
+                      <span class="stat-value ${trainer.unpaidLessons > 0 ? 'status-unpaid' : 'status-paid'}">${Math.round(trainer.unpaidLessons / 2)}</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Zysk:</span>
+                      <span class="stat-value ${trainer.profit >= 0 ? 'status-paid' : 'status-unpaid'}">${trainer.profit.toFixed(2)} PLN</span>
+                    </div>
                   </div>
-                  <div class="stat-item">
-                    <span class="stat-label">Nie zapłacone:</span>
-                    <span class="stat-value ${trainer.unpaidLessons > 0 ? 'status-unpaid' : 'status-paid'}">${Math.round(trainer.unpaidLessons / 2)}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">Zapłacili:</span>
-                    <span class="stat-value ${trainer.participants > trainer.paidParticipants ? 'status-unpaid' : 'status-paid'}">${trainer.paidParticipants}</span>
-                  </div>
+                  ${expensesList}
                 </div>
-              </div>
-            `).join('');
+              `;
+            }).join('');
 
           trainerSummariesEl.innerHTML = trainerSummaryHtml;
         }
@@ -1767,7 +1831,137 @@
             });
           });
         }
+
+        // Expense modal functionality
+        const expenseModal = document.getElementById('expenseModal');
+        const expenseModalClose = document.getElementById('expenseModalClose');
+        const expenseForm = document.getElementById('expenseForm');
+        const expenseCancel = document.getElementById('expenseCancel');
+        let currentExpenseTrainerId = null;
+
+        function openExpenseModal(trainerId) {
+          currentExpenseTrainerId = trainerId;
+          expenseModal.classList.add('active');
+          expenseModal.setAttribute('aria-hidden', 'false');
+          expenseForm.reset();
+          document.getElementById('expenseName').focus();
+        }
+
+        function closeExpenseModal() {
+          expenseModal.classList.remove('active');
+          expenseModal.setAttribute('aria-hidden', 'true');
+          currentExpenseTrainerId = null;
+          expenseForm.reset();
+        }
+
+        // Handle add expense button clicks
+        container.addEventListener('click', function(e) {
+          if (e.target.id === 'addExpenseBtn' || e.target.closest('#addExpenseBtn')) {
+            const btn = e.target.id === 'addExpenseBtn' ? e.target : e.target.closest('#addExpenseBtn');
+            const trainerId = btn.getAttribute('data-trainer-id');
+            openExpenseModal(trainerId);
+          }
+
+          // Handle expense delete button clicks
+          if (e.target.classList.contains('btn-delete') && e.target.closest('.expense-item')) {
+            const trainerId = e.target.getAttribute('data-trainer-id');
+            const expenseIndex = parseInt(e.target.getAttribute('data-expense-index'));
+
+            if (confirm('Czy na pewno chcesz usunąć ten wydatek?')) {
+              deleteExpense(trainerId, expenseIndex);
+            }
+          }
+        });
+
+        // Handle expense modal events
+        expenseModalClose.addEventListener('click', closeExpenseModal);
+        expenseCancel.addEventListener('click', closeExpenseModal);
+
+        expenseForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+
+          const name = document.getElementById('expenseName').value.trim();
+          const amount = parseFloat(document.getElementById('expenseAmount').value);
+
+          if (!name || !amount || amount <= 0) {
+            alert('Wprowadź prawidłową nazwę i kwotę wydatku');
+            return;
+          }
+
+          addExpense(currentExpenseTrainerId, name, amount);
+          closeExpenseModal();
+        });
+
+        // Function to add expense
+        function addExpense(trainerId, name, amount) {
+          const expensesKey = `trainer_expenses_${currentTrainingId}_${trainerId}`;
+          const storedExpenses = localStorage.getItem(expensesKey);
+          let expenses = [];
+
+          if (storedExpenses) {
+            try {
+              expenses = JSON.parse(storedExpenses);
+            } catch (e) {
+              console.error('Error parsing stored expenses:', e);
+              expenses = [];
+            }
+          }
+
+          expenses.push({
+            name: name,
+            amount: amount,
+            date: new Date().toISOString()
+          });
+
+          localStorage.setItem(expensesKey, JSON.stringify(expenses));
+
+          // Re-render camp details to update summary
+          renderCampFromDB(currentTrainingId);
+        }
+
+        // Function to delete expense
+        function deleteExpense(trainerId, expenseIndex) {
+          const expensesKey = `trainer_expenses_${currentTrainingId}_${trainerId}`;
+          const storedExpenses = localStorage.getItem(expensesKey);
+
+          if (storedExpenses) {
+            try {
+              let expenses = JSON.parse(storedExpenses);
+              if (expenseIndex >= 0 && expenseIndex < expenses.length) {
+                expenses.splice(expenseIndex, 1);
+                localStorage.setItem(expensesKey, JSON.stringify(expenses));
+
+                // Re-render camp details to update summary
+                renderCampFromDB(currentTrainingId);
+              }
+            } catch (e) {
+              console.error('Error deleting expense:', e);
+            }
+          }
+        }
       }
     </script>
+
+    <!-- Expense Modal -->
+    <div id="expenseModal" class="modal" aria-hidden="true">
+      <div class="modal-content">
+        <button class="modal-close" id="expenseModalClose">&times;</button>
+        <div class="modal-header"><h3>Dodaj wydatek</h3></div>
+        <form id="expenseForm">
+          <div class="form-group">
+            <label>Nazwa wydatku</label>
+            <input class="form-control" id="expenseName" name="expenseName" required placeholder="np. Transport, Wyżywienie, itp." />
+          </div>
+          <div class="form-group">
+            <label>Kwota wydatku (PLN)</label>
+            <input class="form-control" id="expenseAmount" name="expenseAmount" type="number" step="0.01" required placeholder="0.00" />
+          </div>
+          <div class="form-actions">
+            <button type="button" id="expenseCancel" class="btn">Anuluj</button>
+            <button type="submit" class="btn btn-primary">Dodaj</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </body>
 </html>
