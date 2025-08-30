@@ -1259,6 +1259,9 @@
         console.log('Loaded training:', training);
         console.log('Training currency:', training.currency);
 
+        // Define training currency for use throughout the function
+        const trainingCurrency = training.currency || 'PLN';
+
         // fetch training trainers
         console.log('=== FETCHING training_trainers for trainingId:', trainingId);
         console.log('Query URL will be constructed as: training_trainers?select=trainer_id,price&training_id=eq.' + trainingId);
@@ -1457,7 +1460,6 @@
         const campDetailsContainer = document.getElementById('campDetailsContainer');
         if(campDetailsContainer) {
           campDetailsContainer.innerHTML = '';
-          const trainingCurrency = training.currency || 'PLN';
           console.log('Setting data-training-currency to:', trainingCurrency);
           campDetailsContainer.setAttribute('data-training-currency', trainingCurrency);
           campDetailsContainer.appendChild(container);
