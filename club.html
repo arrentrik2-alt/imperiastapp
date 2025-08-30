@@ -1973,43 +1973,79 @@
             if (e.target.classList.contains('save-expense-btn') || e.target.closest('.save-expense-btn')) {
               e.preventDefault();
               const btn = e.target.classList.contains('save-expense-btn') ? e.target : e.target.closest('.save-expense-btn');
+              console.log('Save button clicked, button element:', btn);
+              console.log('Button attributes:', Array.from(btn.attributes).map(attr => `${attr.name}=${attr.value}`));
+
+              // Method 1: Try to get trainerId from button data attribute
               let trainerId = btn.getAttribute('data-trainer-id');
-              console.log('Save button clicked, trainerId from button:', trainerId, 'button element:', btn);
+              console.log('Method 1 - trainerId from button data attribute:', trainerId);
 
-              // If trainerId is not found on button, try to find the form and extract trainerId from its ID
-              let form;
-              console.log('Looking for form with trainerId:', trainerId);
+              // Method 2: Try to find trainerId from parent elements
+              if (!trainerId || trainerId === 'undefined') {
+                console.log('Method 1 failed, trying Method 2');
 
-              if (trainerId && trainerId !== 'undefined') {
-                form = document.getElementById(`expense-form-${trainerId}`);
-                console.log('Found form by trainerId:', !!form, 'form ID:', form?.id);
-              } else {
-                console.log('trainerId is invalid, trying fallback method');
-                // Find the form by looking for the closest expense form container
-                const formContainer = btn.closest('.add-expense-form');
-                console.log('Closest form container found:', !!formContainer);
+                // Look up the DOM tree to find trainer summary
+                let currentElement = btn;
+                let foundTrainerId = null;
 
-                if (formContainer) {
-                  form = formContainer;
-                  const formId = formContainer.id;
-                  console.log('Form container ID:', formId);
+                // Go up 10 levels max to find trainer summary
+                for (let i = 0; i < 10 && currentElement; i++) {
+                  currentElement = currentElement.parentElement;
+                  console.log(`Level ${i}:`, currentElement?.tagName, currentElement?.className, currentElement?.id);
 
-                  if (formId && formId.startsWith('expense-form-')) {
-                    trainerId = formId.replace('expense-form-', '');
-                    console.log('Extracted trainerId from form ID:', trainerId);
-                  } else {
-                    console.log('Form ID does not have expected format');
+                  if (currentElement && currentElement.classList && currentElement.classList.contains('trainer-summary')) {
+                    // Found trainer summary, now find the add-expense-btn within it to get trainerId
+                    const addBtn = currentElement.querySelector('.add-expense-btn');
+                    if (addBtn) {
+                      foundTrainerId = addBtn.getAttribute('data-trainer-id');
+                      console.log('Found trainerId from add-expense-btn in trainer summary:', foundTrainerId);
+                      break;
+                    }
                   }
-                } else {
-                  console.log('Could not find .add-expense-form container');
-                  // Try to find any form with expense-form- prefix
-                  const allExpenseForms = document.querySelectorAll('[id^="expense-form-"]');
-                  console.log('All expense forms found:', allExpenseForms.length);
-                  allExpenseForms.forEach(form => console.log('Form ID:', form.id));
+                }
+
+                if (foundTrainerId) {
+                  trainerId = foundTrainerId;
                 }
               }
 
-              console.log('Final trainerId:', trainerId, 'Form found:', !!form);
+              // Method 3: Find all expense forms and check which one contains the button
+              if (!trainerId || trainerId === 'undefined') {
+                console.log('Method 2 failed, trying Method 3');
+
+                const allExpenseForms = document.querySelectorAll('.add-expense-form');
+                console.log('All expense forms found:', allExpenseForms.length);
+
+                for (let form of allExpenseForms) {
+                  if (form.contains(btn)) {
+                    const formId = form.id;
+                    console.log('Button is inside form:', formId);
+
+                    if (formId && formId.startsWith('expense-form-')) {
+                      trainerId = formId.replace('expense-form-', '');
+                      console.log('Extracted trainerId from form ID:', trainerId);
+                      break;
+                    }
+                  }
+                }
+              }
+
+              console.log('Final trainerId result:', trainerId);
+
+              if (!trainerId || trainerId === 'undefined') {
+                console.error('CRITICAL ERROR: Could not determine trainerId for save button!');
+                console.log('DOM structure around button:');
+                let element = btn;
+                for (let i = 0; i < 5; i++) {
+                  console.log(`Parent ${i}:`, element?.tagName, element?.className, element?.id);
+                  element = element?.parentElement;
+                }
+                return;
+              }
+
+              // Now find the form
+              const form = document.getElementById(`expense-form-${trainerId}`);
+              console.log('Found form for trainerId', trainerId, ':', !!form);
 
               if (form) {
                 const nameInput = form.querySelector('.expense-name-input');
