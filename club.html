@@ -1943,6 +1943,7 @@
               e.preventDefault();
               const btn = e.target.classList.contains('save-expense-btn') ? e.target : e.target.closest('.save-expense-btn');
               const trainerId = btn.getAttribute('data-trainer-id');
+              console.log('Save button clicked, trainerId from button:', trainerId, 'button element:', btn);
               const form = document.getElementById(`expense-form-${trainerId}`);
 
               if (form) {
