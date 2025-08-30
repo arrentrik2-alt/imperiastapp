@@ -1504,8 +1504,12 @@
           const isLastTrainer = index === trainerInfo.length - 1;
           theadCols.push(`<th><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Lekcje</div></th>`);
           theadCols.push(`<th><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Do zapłaty ${t.price} ${t.currency}</div></th>`);
-          theadCols.push(`<th class="${isLastTrainer ? '' : 'border-right-gold'}"><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Zaplacono</div></th>`);
+          theadCols.push(`<th class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}"><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Zaplacono</div></th>`);
         });
+
+        // Add total columns
+        theadCols.push(`<th class="border-right-gold"><div class="header-main">Razem</div><div class="header-sub">PLN</div></th>`);
+        theadCols.push(`<th><div class="header-main">Razem</div><div class="header-sub">EUR</div></th>`);
         container.innerHTML = `
           <div class="content-header">
             <h3>${escapeHtml(training.name)} — ${escapeHtml(training.date)}</h3>
@@ -1549,15 +1553,39 @@
                       </div>
                     </td>`;
                   }).join('');
-                  // Get stored camp due amount from localStorage or use paid amount if already paid
-                  const storedCampDue = p.camp_status === 'paid' ? (p.camp_amount || '') : (localStorage.getItem(`camp_due_${trainingId}_${p.id}`) || '');
+                  // Get stored camp due amount from localStorage or use confirmed amount if already paid
+                  const storedCampDue = localStorage.getItem(`camp_due_${trainingId}_${p.id}`) || (p.camp_status === 'paid' ? (p.camp_amount || '') : '');
                   const isUnconfirmedCamp = storedCampDue && p.camp_status !== 'paid';
                   const campDueStyle = isUnconfirmedCamp ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : '';
 
                   // Get stored camp paid amount from localStorage or use confirmed amount if already paid
-                  const storedCampPaid = p.camp_status === 'paid' ? (p.camp_amount || '') : (localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || '');
+                  const storedCampPaid = localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || (p.camp_status === 'paid' ? (p.camp_amount || '') : '');
                   const isUnconfirmedPaid = storedCampPaid && p.camp_status !== 'paid';
                   const campPaidClass = p.camp_status === 'paid' ? 'status-paid' : (storedCampPaid ? 'status-unpaid' : '');
+                  // Calculate totals for this participant
+                  let totalPLN = 0;
+                  let totalEUR = 0;
+
+                  // Add camp amount in training currency
+                  const campAmount = parseFloat(storedCampDue) || 0;
+                  if (training.currency === 'PLN') {
+                    totalPLN += campAmount;
+                  } else {
+                    totalEUR += campAmount;
+                  }
+
+                  // Add trainer lesson amounts
+                  trainerInfo.forEach(ti => {
+                    const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
+                    const lessons = ob.lessons_count || 0;
+                    const trainerAmount = lessons * ti.price;
+                    if (ti.currency === 'PLN') {
+                      totalPLN += trainerAmount;
+                    } else {
+                      totalEUR += trainerAmount;
+                    }
+                  });
+
                   return `<tr data-part-id="${p.id}"><td style="padding:4px;text-align:center" class="border-right-gold">${index + 1}</td><td style="padding:4px" class="border-right-gold">${escapeHtml(p.participant_name)}</td><td style="padding:4px;text-align:center">
                     <input data-part-id="${p.id}" data-due="${campDue}" class="form-control camp-due" style="width:60px;margin:0 auto;${campDueStyle}" value="${storedCampDue}" data-training-id="${trainingId}" />
                   </td><td style="padding:4px;text-align:center" class="border-right-gold">
@@ -1566,7 +1594,7 @@
                       <button class="btn btn-small camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>
                       <button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>
                     </div>
-                  </td>${obozCells}</tr>`;
+                  </td>${obozCells}<td style="padding:4px;text-align:center;font-weight:bold" class="border-right-gold">${totalPLN.toFixed(2)} PLN</td><td style="padding:4px;text-align:center;font-weight:bold">${totalEUR.toFixed(2)} EUR</td></tr>`;
                 }).join('')}
               </tbody>
             </table>
@@ -1754,12 +1782,9 @@
               // Update summary after camp due change
               const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
               updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+              updateFinancialSummary();
 
-              // Refresh camp list to update status
-              const currentMonth = document.getElementById('monthSelect').value;
-              if(currentMonth){
-                loadCampsForMonth(currentMonth);
-              }
+              // Camp list status will be updated when needed
 
               // Update only necessary elements instead of full re-render
             }
@@ -1795,11 +1820,7 @@
               const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
               updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
 
-              // Refresh camp list to update status
-              const currentMonth = document.getElementById('monthSelect').value;
-              if(currentMonth){
-                loadCampsForMonth(currentMonth);
-              }
+              // Camp list status will be updated when needed
 
               // Update only necessary elements instead of full re-render
             }
@@ -1833,12 +1854,9 @@
               // Update summary after camp paid change
               const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
               updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+              updateFinancialSummary();
 
-              // Refresh camp list to update status
-              const currentMonth = document.getElementById('monthSelect').value;
-              if(currentMonth){
-                loadCampsForMonth(currentMonth);
-              }
+              // Camp list status will be updated when needed
 
               // Update only necessary elements instead of full re-render
             }
@@ -1877,13 +1895,10 @@
 
               btn.disabled = true;
 
-              // Refresh camp list to update status
-              const currentMonth = document.getElementById('monthSelect').value;
-              if(currentMonth){
-                loadCampsForMonth(currentMonth);
-              }
+              // Camp list status will be updated when needed
 
               // Update payment status locally instead of full re-render
+              updateFinancialSummary();
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
           });
         });
@@ -2033,13 +2048,7 @@
               const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
               updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
 
-              // Refresh camp list to update status
-              const currentMonth2 = document.getElementById('monthSelect').value;
-              if(currentMonth2){
-                loadCampsForMonth(currentMonth2);
-              }
-
-              // Update only necessary elements instead of full re-render
+              // Camp list status will be updated when needed
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
           });
         });
@@ -2084,14 +2093,10 @@
             if(lessonsInput) lessonsInput.setAttribute('data-oboz-id','');
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
 
-            // Refresh camp list to update status
-            const currentMonth = document.getElementById('monthSelect').value;
-            if(currentMonth){
-              loadCampsForMonth(currentMonth);
-            }
-
-            // Re-render camp details to get fresh data and update summary
-            renderCampFromDB(currentTrainingId);
+            // Update summary and financial summary
+            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+            updateFinancialSummary();
           });
         });
 
@@ -2121,14 +2126,10 @@
             }
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
 
-            // Refresh camp list to update status
-            const currentMonth = document.getElementById('monthSelect').value;
-            if(currentMonth){
-              loadCampsForMonth(currentMonth);
-            }
-
-            // Re-render camp details to get fresh data and update summary
-            renderCampFromDB(currentTrainingId);
+            // Update summary and financial summary
+            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+            updateFinancialSummary();
           });
         });
 
