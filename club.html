@@ -1229,31 +1229,32 @@
                 ${parts.map(p=>{
                   const campDue = training.price || 0;
                   const campPaid = p.camp_amount || '';
-                                  const obozCells = trainerInfo.map(ti=>{
-                  const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
-                  const lessons = ob.lessons_count || '';
-                  const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : (ti.price * (ob.lessons_count||0));
-                  const paid = (ob.status === 'paid') ? (ob.amount || due) : '';
-                  const paidClass = ob.status === 'paid' ? 'status-paid' : (paid ? 'status-unpaid' : '');
+                  const obozCells = trainerInfo.map(ti=>{
+                    const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
+                    const lessons = ob.lessons_count || '';
+                    const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : (ti.price * (ob.lessons_count||0));
+                    const paid = (ob.status === 'paid') ? (ob.amount || due) : '';
+                    const paidClass = ob.status === 'paid' ? 'status-paid' : (paid ? 'status-unpaid' : '');
 
-                  // Get stored oboz paid amount from localStorage or use confirmed amount if already paid
-                  const storedObozPaid = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`oboz_paid_${trainingId}_${p.id}_${ti.id}`) || '');
-                  const finalObozPaid = storedObozPaid || paid;
-                  return `<td style="padding:4px;text-align:center">
-                    <div class="lesson-input-group">
-                      <button class="btn btn-small lesson-minus" data-part-id="${p.id}" data-trainer-id="${ti.id}">-</button>
-                      <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:40px;margin:0;text-align:center" value="${lessons||''}" />
-                      <button class="btn btn-small lesson-plus" data-part-id="${p.id}" data-trainer-id="${ti.id}">+</button>
-                    </div>
-                  </td>
-                  <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${ti.currency}" class="form-control oboz-due" readonly style="width:80px;margin:0 auto;background:#ffffff;color:#000000;text-align:center" value="${due||0}" /> ${ti.currency}</td>
-                  <td style="padding:4px;text-align:center">
-                    <div class="payment-controls">
-                      <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid ${paidClass}" style="width:70px;margin:0 2px" value="${finalObozPaid||''}" />
-                      <button class="btn btn-small oboz-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
-                      <button class="btn btn-small btn-delete oboz-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>
-                    </div>
-                  </td>`;
+                    // Get stored oboz paid amount from localStorage or use confirmed amount if already paid
+                    const storedObozPaid = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`oboz_paid_${trainingId}_${p.id}_${ti.id}`) || '');
+                    const finalObozPaid = storedObozPaid || paid;
+                    const currency = ob.currency || ti.currency || 'PLN';
+                    return `<td style="padding:4px;text-align:center">
+                      <div class="lesson-input-group">
+                        <button class="btn btn-small lesson-minus" data-part-id="${p.id}" data-trainer-id="${ti.id}">-</button>
+                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:40px;margin:0;text-align:center" value="${lessons||''}" />
+                        <button class="btn btn-small lesson-plus" data-part-id="${p.id}" data-trainer-id="${ti.id}">+</button>
+                      </div>
+                    </td>
+                    <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:80px;margin:0 auto;background:#ffffff;color:#000000;text-align:center" value="${due||0}" /> ${ti.currency}</td>
+                    <td style="padding:4px;text-align:center">
+                      <div class="payment-controls">
+                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid ${paidClass}" style="width:70px;margin:0 2px" value="${finalObozPaid||''}" />
+                        <button class="btn btn-small oboz-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
+                        <button class="btn btn-small btn-delete oboz-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>
+                      </div>
+                    </td>`;
                   }).join('');
                   // Get stored camp due amount from localStorage or use paid amount if already paid
                   const storedCampDue = p.camp_status === 'paid' ? (p.camp_amount || '') : (localStorage.getItem(`camp_due_${trainingId}_${p.id}`) || '');
@@ -1933,42 +1934,11 @@
       // Function to update expenses display
       function updateExpensesDisplay() {
         const currentTrainingId = window.currentTrainingId;
-        const expensesKey = `camp_expenses_${currentTrainingId}`;
-        const storedExpenses = localStorage.getItem(expensesKey);
-
-        let expenses = [];
-        if (storedExpenses) {
-          try {
-            expenses = JSON.parse(storedExpenses);
-          } catch (e) {
-            console.error('Error parsing stored expenses:', e);
-            expenses = [];
-          }
-        }
-
         const expensesListDiv = document.getElementById('expensesList');
         if (!expensesListDiv) return;
 
-        if (expenses.length === 0) {
-          expensesListDiv.innerHTML = '<p style="color: var(--text-gray); font-style: italic;">Brak wydatków</p>';
-          return;
-        }
-
-        const expensesHtml = expenses.map((expense, index) => `
-          <div class="expense-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 5px; background: rgba(255,255,255,0.02); border-radius: 4px;">
-            <div>
-              <strong>${expense.name}</strong>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="color: var(--error); font-weight: bold;">- ${parseFloat(expense.amount).toFixed(2)} ${expense.currency || 'PLN'}</span>
-              <button class="btn btn-small btn-delete delete-expense-btn" data-expense-index="${index}" style="padding: 2px 6px; font-size: 0.7rem;">
-                <i class="fa fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        `).join('');
-
-        expensesListDiv.innerHTML = expensesHtml;
+        const expensesListHtml = generateExpensesListHtml(currentTrainingId);
+        expensesListDiv.outerHTML = expensesListHtml;
       }
 
       // Function to update financial summary
@@ -1998,6 +1968,7 @@
         // Calculate lessons amounts from trainer data by currency
         const trainerSummaries = document.querySelectorAll('.trainer-summary');
         trainerSummaries.forEach(summary => {
+          // Try to extract lesson amounts from the summary text
           const statItems = summary.querySelectorAll('.stat-item');
           let trainerCurrency = 'PLN'; // Default
 
