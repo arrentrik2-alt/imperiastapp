@@ -812,7 +812,7 @@
 
         // No need to distribute expenses to trainers anymore - they are global
 
-        parts.forEach(p => {
+        (parts || []).forEach(p => {
           console.log('Processing participant:', p.id);
           console.log('Current trainer stats before processing this participant:', JSON.stringify(trainerStats));
           // Calculate camp amounts - check all entered values (both confirmed and unconfirmed)
@@ -833,7 +833,7 @@
           }
 
           // Calculate lesson amounts per trainer from database
-          p.oboz.forEach(ob => {
+          (p.oboz || []).forEach(ob => {
             if (ob.lessons_count) {
               const lessonCount = parseInt(ob.lessons_count) || 0;
               totalLessons += lessonCount;
@@ -1183,12 +1183,12 @@
         const { data: training } = await supabase.from('trainings').select('*').eq('id', trainingId).single();
         // fetch training trainers
         const { data: tlinks } = await supabase.from('training_trainers').select('trainer_id,price,currency').eq('training_id', trainingId);
-        const trainerIds = tlinks.map(t=>t.trainer_id);
+        const trainerIds = (tlinks || []).map(t=>t.trainer_id);
         const { data: trainers } = await supabase.from('trainers').select('id,name,default_price').in('id', trainerIds);
 
         // map trainer id -> info (price from tlinks)
-        const trainerInfo = trainers.map(tr => {
-          const link = tlinks.find(t=>t.trainer_id === tr.id) || {};
+        const trainerInfo = (trainers || []).map(tr => {
+          const link = (tlinks || []).find(t=>t.trainer_id === tr.id) || {};
           return { id: tr.id, name: tr.name, price: link.price || tr.default_price || 0, currency: link.currency || 'PLN' };
         }).sort((a, b) => a.name.localeCompare(b.name)); // Sort by name to prevent position changes
 
@@ -1227,10 +1227,10 @@
             <table>
               <thead><tr>${theadCols.join('')}</tr></thead>
               <tbody>
-                ${parts.map(p=>{
+                ${(parts || []).map(p=>{
                   const campDue = training.price || 0;
                   const campPaid = p.camp_amount || '';
-                  const obozCells = trainerInfo.map(ti=>{
+                  const obozCells = (trainerInfo || []).map(ti=>{
                     const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
                     const lessons = ob.lessons_count || '';
                     const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : (ti.price * (ob.lessons_count||0));
@@ -1362,7 +1362,7 @@
         }
 
         // Set visual status for existing payments
-        parts.forEach(p => {
+        (parts || []).forEach(p => {
           // Set camp payment status
           if (p.camp_status === 'paid') {
             const paidInput = container.querySelector(`input.camp-paid[data-part-id="${p.id}"]`);
@@ -1407,7 +1407,7 @@
           }
 
           // Set lesson payment status
-          p.oboz.forEach(ob => {
+          (p.oboz || []).forEach(ob => {
             if (ob.status === 'paid') {
               const paidInput = container.querySelector(`input.oboz-paid[data-oboz-id="${ob.id}"]`);
               const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${ob.id}"]`);
@@ -1896,7 +1896,8 @@
 
         if (storedExpenses) {
           try {
-            expenses = JSON.parse(storedExpenses);
+            const parsedExpenses = JSON.parse(storedExpenses);
+            expenses = Array.isArray(parsedExpenses) ? parsedExpenses : [];
             console.log('Existing expenses loaded:', expenses);
           } catch (e) {
             console.error('Error parsing stored expenses:', e);
@@ -2009,7 +2010,7 @@
         if (storedExpenses) {
           try {
             const expenses = JSON.parse(storedExpenses);
-            expenses.forEach(expense => {
+            (expenses || []).forEach(expense => {
               const currency = expense.currency || 'PLN';
               expensesByCurrency[currency] += parseFloat(expense.amount || 0);
             });
@@ -2139,7 +2140,7 @@
         if (storedExpenses) {
           try {
             let expenses = JSON.parse(storedExpenses);
-            if (expenseIndex >= 0 && expenseIndex < expenses.length) {
+            if (Array.isArray(expenses) && expenseIndex >= 0 && expenseIndex < expenses.length) {
               expenses.splice(expenseIndex, 1);
               localStorage.setItem(expensesKey, JSON.stringify(expenses));
 
