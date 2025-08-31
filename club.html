@@ -1307,13 +1307,23 @@
           try {
             if (members && members.length > 0) {
               // keep member_id exactly as provided in `members` (stored as text in members.id)
-              const participantRows = members.map(m => ({
-                camp_id: createdCamp.id,
-                member_id: m.id != null ? String(m.id) : null,
-                participant_name: m.name,
-                camp_amount: 0,
-                camp_status: 'unset'
-              }));
+              // Validate UUID format for member_id to avoid Postgres 22P02 errors
+              const isUuid = (val) => {
+                if (!val) return false;
+                return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
+              };
+
+              const participantRows = members.map(m => {
+                const rawId = m.id != null ? String(m.id) : null;
+                return {
+                  camp_id: createdCamp.id,
+                  member_id: isUuid(rawId) ? rawId : null,
+                  participant_name: m.name,
+                  camp_amount: 0,
+                  camp_status: 'unset'
+                };
+              });
+
               const { data: insertedParts, error: partsErr } = await supabase.from('participants_camps').insert(participantRows).select();
               if (partsErr) console.warn('Błąd dodawania uczestników do public.participants_camps:', partsErr);
             }
