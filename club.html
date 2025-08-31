@@ -1169,25 +1169,19 @@
 
         // Load and render camp details
         try {
-          const camp = await renderCampFromDB(campId);
+          await renderCampFromDB(campId);
 
-          // Update title with camp name (use returned camp if available)
-          if(camp && camp.name){
+          // Update title with camp name
+          const { data: camp, error: campError } = await supabase
+            .from('camps.camps')
+            .select('name,date')
+            .eq('id', campId)
+            .single();
+
+          if(campError) {
+            console.warn('Błąd ładowania nazwy campu:', campError.message);
+          } else if(camp){
             campTitle.textContent = `${camp.name} - ${new Date(camp.date).toLocaleDateString('pl-PL')}`;
-          } else {
-            // fallback: try to fetch directly from public 'camps' table
-            try{
-              const { data: fetchedCamp, error: campError } = await supabase
-                .from('camps')
-                .select('name,date')
-                .eq('id', campId)
-                .single();
-              if(!campError && fetchedCamp){
-                campTitle.textContent = `${fetchedCamp.name} - ${new Date(fetchedCamp.date).toLocaleDateString('pl-PL')}`;
-              }
-            } catch(e) {
-              console.warn('Nie udało się pobrać nazwy campu fallbackem:', e);
-            }
           }
         } catch(error) {
           console.error('Błąd ładowania campu:', error);
@@ -1578,31 +1572,90 @@
           </div>
           <div style="overflow:auto">
             <table>
-              <thead>
-                <tr>
-                  <th style="text-align:center;width:50px"><div class="header-main">Lp.</div></th>
-                  <th><div class="header-main">Imię i nazwisko</div></th>
-                  <th><div class="header-main">Camp</div><div class="header-sub">${escapeHtml(String(camp.amount || 0))} ${escapeHtml(camp.currency || 'PLN')}</div></th>
-                  ${trainerInfo.map(t => `<th><div class="header-main">Lekcje ${escapeHtml(t.name)}</div><div class="header-sub">${t.price || 0} ${t.currency || 'PLN'}</div></th>`).join('')}
-                </tr>
-              </thead>
+              <thead><tr>${theadCols.join('')}</tr></thead>
               <tbody>
                 ${parts.map((p, index) => {
-                  const storedCampPaid = localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || (p.camp_status === 'paid' ? (p.camp_amount || '') : '');
-                  const campPaidClass = p.camp_status === 'paid' ? 'status-paid' : (storedCampPaid ? 'status-unpaid' : '');
-                  const campInputValue = p.camp_status === 'paid' ? (p.camp_amount || '') : (storedCampPaid || '');
-                  const trainerCells = trainerInfo.map(ti => {
-                    const ob = (p.oboz||[]).find(o => o.trainer_id === ti.id) || {};
-                    const storedTrainer = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`trainer_amount_${trainingId}_${p.id}_${ti.id}`) || (ob.amount || ''));
-                    const btnHtml = ob.status === 'paid' ? `<button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>` : `<button class="btn btn-small trainer-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>`;
-                    return `<td style="padding:4px;text-align:center"><div class="payment-controls"><input type="number" step="0.01" min="0" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control trainer-amount ${ob.status === 'paid' ? 'status-paid' : (storedTrainer ? 'status-unpaid' : '')}" style="width:60px;margin:0 2px;text-align:center" value="${storedTrainer||''}" />${btnHtml}</div></td>`;
+                  const campDue = camp.amount || camp.price || 0;
+                  const campPaid = p.camp_amount || '';
+                  const obozCells = trainerInfo.map((ti, trainerIndex) => {
+                    const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
+                    const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : 0;
+                    // Get stored amount from localStorage or use confirmed amount if already paid
+                    const storedAmount = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`trainer_amount_${trainingId}_${p.id}_${ti.id}`) || '');
+                    const finalAmount = storedAmount || due;
+                    const currency = ob.currency || ti.currency || 'PLN';
+                    const isLastTrainer = trainerIndex === trainerInfo.length - 1;
+
+                    return `<td style="padding:4px;text-align:center" class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}">
+                      <div class="payment-controls">
+                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-currency="${currency}" class="form-control trainer-amount ${ob.status === 'paid' ? 'status-paid' : (finalAmount > 0 ? 'status-unpaid' : '')}" style="width:60px;margin:0 2px;${ob.status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : (finalAmount > 0 ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : '')}text-align:center" value="${finalAmount||''}" />
+                        ${ob.status === 'paid' ?
+                          `<button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>` :
+                          `<button class="btn btn-small trainer-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>`
+                        }
+                      </div>
+                    </td>`;
                   }).join('');
+                  // Get stored camp paid amount from localStorage or use confirmed amount if already paid
+                  const storedCampPaid = localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || (p.camp_status === 'paid' ? (p.camp_amount || '') : '');
+                  const isUnconfirmedPaid = storedCampPaid && p.camp_status !== 'paid';
+                  const campPaidClass = p.camp_status === 'paid' ? 'status-paid' : (storedCampPaid ? 'status-unpaid' : '');
+                  // Calculate totals for this participant
+                  let totalPLN = 0;
+                  let totalEUR = 0;
 
-                  const campBtnHtml = p.camp_status === 'paid' ? `<button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>` : `<button class="btn btn-small camp-confirm" data-part-id="${p.id}">OK</button>`;
+                  // Add camp amount in training currency
+                  const campAmount = parseFloat(storedCampPaid) || 0;
+                  if (trainingCurrency === 'PLN') {
+                    totalPLN += campAmount;
+                  } else {
+                    totalEUR += campAmount;
+                  }
 
-                  return `<tr data-part-id="${p.id}"><td style="text-align:center;padding:4px">${index + 1}</td><td style="padding:4px">${escapeHtml(p.participant_name)}</td><td style="text-align:center;padding:4px"><div class="payment-controls"><input type="number" step="0.01" min="0" data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;text-align:center" value="${campInputValue||''}" />${campBtnHtml}</div></td>${trainerCells}</tr>`;
+                  // Add trainer lesson amounts
+                  trainerInfo.forEach(ti => {
+                    const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
+                    const lessons = ob.lessons_count || 0;
+                    const trainerAmount = lessons * ti.price;
+                    if (ti.currency === 'PLN') {
+                      totalPLN += trainerAmount;
+                    } else {
+                      totalEUR += trainerAmount;
+                    }
+                  });
+
+                  return `<tr data-part-id="${p.id}"><td style="padding:4px;text-align:center" class="border-right-gold">${index + 1}</td><td style="padding:4px" class="border-right-gold">${escapeHtml(p.participant_name)}</td>                  <td style="padding:4px;text-align:center" class="border-right-gold">
+                    <div class="payment-controls">
+                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;${p.camp_status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : ''}text-align:center" value="${p.camp_status === 'paid' ? (p.camp_amount || '') : (storedCampPaid || '')}" />
+                      ${p.camp_status === 'paid' ?
+                        `<button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>` :
+                        `<button class="btn btn-small camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>`
+                      }
+                    </div>
+                  </td>${obozCells}<td style="padding:4px;text-align:center;font-weight:bold" class="border-right-gold">${totalPLN.toFixed(2)} PLN</td><td style="padding:4px;text-align:center;font-weight:bold">${totalEUR.toFixed(2)} EUR</td></tr>`;
                 }).join('')}
               </tbody>
+              <tfoot>
+                <tr style="background: rgba(212, 175, 55, 0.1); border-top: 2px solid var(--gold);">
+                  <td colspan="2" style="padding:8px;text-align:center;font-weight:bold;color:var(--gold);">PODSUMOWANIE</td>
+                  <td style="padding:4px;text-align:center;border-right:2px solid var(--gold);">
+                    <div style="font-size:0.8rem;">
+                      <div>Ogólna: <span id="totalCampAmountFooter">0</span></div>
+                      <div>Zapłacona: <span id="paidCampAmountFooter">0</span></div>
+                    </div>
+                  </td>
+                  ${trainerInfo.map((t, index) => `
+                    <td style="padding:4px;text-align:center;${index === trainerInfo.length - 1 ? 'border-right:2px solid var(--gold);' : ''}">
+                      <div style="font-size:0.8rem;">
+                        <div>Ogólna: <span id="totalDue-${t.id}">0</span></div>
+                        <div>Zapłacona: <span id="totalPaid-${t.id}">0</span></div>
+                      </div>
+                    </td>
+                  `).join('')}
+                  <td style="padding:4px;text-align:center;font-weight:bold;border-right:2px solid var(--gold);" id="totalPLNFooter">0.00 PLN</td>
+                  <td style="padding:4px;text-align:center;font-weight:bold;" id="totalEURFooter">0.00 EUR</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         `;
@@ -2414,7 +2467,6 @@
 
 
 
-        return camp;
       }
 
       // Global functions for expense management
