@@ -1095,111 +1095,65 @@
           trainerStats[t.id].profit = trainerStats[t.id].totalPaidAmount - trainerStats[t.id].totalExpenses;
         });
 
-        // Update summary display
-        const totalCampEl = document.getElementById('totalCampAmount');
-        const paidCampEl = document.getElementById('paidCampAmount');
-        const totalLessonsEl = document.getElementById('totalLessons');
-        const unpaidLessonsEl = document.getElementById('unpaidLessons');
-        const trainerSummariesEl = document.getElementById('trainerSummaries');
+        // Update footer summary display
+        const totalCampFooterEl = document.getElementById('totalCampAmountFooter');
+        const paidCampFooterEl = document.getElementById('paidCampAmountFooter');
+        const totalPLNFooterEl = document.getElementById('totalPLNFooter');
+        const totalEURFooterEl = document.getElementById('totalEURFooter');
 
-        // Debug logging to check if elements exist
-        console.log('Summary elements found:', {
-          totalCampEl: !!totalCampEl,
-          paidCampEl: !!paidCampEl,
-          totalLessonsEl: !!totalLessonsEl,
-          unpaidLessonsEl: !!unpaidLessonsEl,
-          trainerSummariesEl: !!trainerSummariesEl
+        // Update camp summaries in footer
+        if (totalCampFooterEl) {
+          totalCampFooterEl.textContent = `${totalCampAmount} ${trainingCurrency}`;
+        }
+        if (paidCampFooterEl) {
+          paidCampFooterEl.textContent = `${paidCampAmount} ${trainingCurrency}`;
+        }
+
+        // Update trainer summaries in footer
+        trainerInfo.forEach(t => {
+          const lessonsEl = document.getElementById(`lessons-${t.id}`);
+          const totalDueEl = document.getElementById(`totalDue-${t.id}`);
+          const totalPaidEl = document.getElementById(`totalPaid-${t.id}`);
+
+          if (lessonsEl) {
+            lessonsEl.textContent = Math.round(trainerStats[t.id].totalLessons / 2);
+          }
+          if (totalDueEl) {
+            totalDueEl.textContent = `${trainerStats[t.id].totalDueAmount.toFixed(2)} ${t.currency}`;
+          }
+          if (totalPaidEl) {
+            totalPaidEl.textContent = `${trainerStats[t.id].totalPaidAmount.toFixed(2)} ${t.currency}`;
+          }
         });
 
-        console.log('Found elements:', {
-          totalCampEl: !!totalCampEl,
-          paidCampEl: !!paidCampEl,
-          totalLessonsEl: !!totalLessonsEl,
-          unpaidLessonsEl: !!unpaidLessonsEl,
-          trainerSummariesEl: !!trainerSummariesEl
+        // Calculate and update total PLN/EUR in footer
+        let totalPLN = 0;
+        let totalEUR = 0;
+
+        // Add camp amounts
+        if (trainingCurrency === 'PLN') {
+          totalPLN += totalCampAmount;
+        } else {
+          totalEUR += totalCampAmount;
+        }
+
+        // Add trainer amounts
+        trainerInfo.forEach(t => {
+          if (t.currency === 'PLN') {
+            totalPLN += trainerStats[t.id].totalDueAmount;
+          } else {
+            totalEUR += trainerStats[t.id].totalDueAmount;
+          }
         });
 
-        console.log('Updating summary:', { totalCampAmount, paidCampAmount, totalLessons, unpaidLessons });
-        console.log('Final trainer stats:', trainerStats);
-
-        if (totalCampEl) {
-          totalCampEl.textContent = `${totalCampAmount} ${trainingCurrency}`;
-          console.log('Updated totalCampEl:', totalCampEl.textContent);
+        if (totalPLNFooterEl) {
+          totalPLNFooterEl.textContent = `${totalPLN.toFixed(2)} PLN`;
         }
-        if (paidCampEl) {
-          paidCampEl.textContent = `${paidCampAmount} ${trainingCurrency}`;
-          console.log('Updated paidCampEl:', paidCampEl.textContent);
-        }
-        if (totalLessonsEl) {
-          totalLessonsEl.textContent = Math.round(totalLessons / 2);
-          console.log('Updated totalLessonsEl:', totalLessonsEl.textContent);
-        }
-        if (unpaidLessonsEl) {
-          unpaidLessonsEl.textContent = Math.round(unpaidLessons / 2);
-          console.log('Updated unpaidLessonsEl:', unpaidLessonsEl.textContent);
+        if (totalEURFooterEl) {
+          totalEURFooterEl.textContent = `${totalEUR.toFixed(2)} EUR`;
         }
 
-        // Generate trainer summaries
-        if (trainerSummariesEl) {
-          const trainerSummaryHtml = Object.values(trainerStats)
-            .filter(t => t.totalLessons > 0)
-            .map(trainer => {
-              const expensesList = trainer.expenses.length > 0 ?
-                `<div class="expenses-list" style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 4px;">
-                  <div style="font-size: 0.85rem; color: var(--text-gray); margin-bottom: 5px;">Wydatki:</div>
-                  ${trainer.expenses.map((expense, index) => `
-                    <div class="expense-item" style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 0.8rem;">
-                      <span>${escapeHtml(expense.name)}</span>
-                      <div>
-                        <span style="color: var(--error);">- ${parseFloat(expense.amount).toFixed(2)} PLN</span>
-                        <button class="btn btn-small btn-delete" style="margin-left: 5px; padding: 1px 4px; font-size: 0.7rem;" data-trainer-id="${trainer.id}" data-expense-index="${index}">×</button>
-                      </div>
-                    </div>
-                  `).join('')}
-                  <div style="border-top: 1px solid var(--border-dark); margin-top: 5px; padding-top: 5px; font-weight: bold; font-size: 0.85rem;">
-                    Suma wydatków: ${trainer.totalExpenses.toFixed(2)} PLN
-                  </div>
-                </div>` : '';
 
-              return `
-              <div class="trainer-summary">
-                  <h5 style="margin: 0 0 10px 0;">${escapeHtml(trainer.name)}</h5>
-                <div class="trainer-stats">
-                  <div class="stat-item">
-                    <span class="stat-label">Lekcje:</span>
-                    <span class="stat-value">${Math.round(trainer.totalLessons / 2)}</span>
-                  </div>
-
-                  <div class="stat-item">
-                    <span class="stat-label">Ogólna kwota:</span>
-                      <span class="stat-value">${trainer.totalDueAmount.toFixed(2)} ${trainer.currency}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">Zapłacona kwota:</span>
-                      <span class="stat-value ${trainer.totalPaidAmount > 0 ? 'status-paid' : ''}">${trainer.totalPaidAmount.toFixed(2)} ${trainer.currency}</span>
-                  </div>
-                  </div>
-
-                  ${trainer.expenses && trainer.expenses.length > 0 ? `
-                    <div class="trainer-expenses" style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 4px;">
-                      <div style="font-size: 0.85rem; color: var(--text-gray); margin-bottom: 5px;">Wydatki szkoleniowca:</div>
-                      ${trainer.expenses.map(expense => `
-                        <div style="display: flex; justify-content: space-between; padding: 2px 0; font-size: 0.8rem;">
-                          <span>${expense.name}</span>
-                          <span style="color: var(--error);">- ${parseFloat(expense.amount).toFixed(2)} ${expense.currency || trainer.currency}</span>
-                </div>
-                      `).join('')}
-                      <div style="border-top: 1px solid var(--border-dark); margin-top: 5px; padding-top: 5px; font-weight: bold; font-size: 0.85rem;">
-                        Wydatki: ${trainer.totalExpenses.toFixed(2)} ${trainer.currency}
-              </div>
-                    </div>
-                  ` : ''}
-                </div>
-              `;
-            }).join('');
-
-          trainerSummariesEl.innerHTML = trainerSummaryHtml;
-        }
       }
 
       // Show camp details
@@ -1603,6 +1557,32 @@
                   </td>${obozCells}<td style="padding:4px;text-align:center;font-weight:bold" class="border-right-gold">${totalPLN.toFixed(2)} PLN</td><td style="padding:4px;text-align:center;font-weight:bold">${totalEUR.toFixed(2)} EUR</td></tr>`;
                 }).join('')}
               </tbody>
+              <tfoot>
+                <tr style="background: rgba(212, 175, 55, 0.1); border-top: 2px solid var(--gold);">
+                  <td colspan="2" style="padding:8px;text-align:center;font-weight:bold;color:var(--gold);">PODSUMOWANIE</td>
+                  <td style="padding:4px;text-align:center;border-right:2px solid var(--gold);">
+                    <div style="font-size:0.8rem;">
+                      <div>Ogólna: <span id="totalCampAmountFooter">0</span></div>
+                      <div>Zapłacona: <span id="paidCampAmountFooter">0</span></div>
+                    </div>
+                  </td>
+                  ${trainerInfo.map((t, index) => `
+                    <td style="padding:4px;text-align:center;">
+                      <div style="font-size:0.8rem;">
+                        <div>Lekcje: <span id="lessons-${t.id}">0</span></div>
+                      </div>
+                    </td>
+                    <td style="padding:4px;text-align:center;${index === trainerInfo.length - 1 ? 'border-right:2px solid var(--gold);' : ''}">
+                      <div style="font-size:0.8rem;">
+                        <div>Ogólna: <span id="totalDue-${t.id}">0</span></div>
+                        <div>Zapłacona: <span id="totalPaid-${t.id}">0</span></div>
+                      </div>
+                    </td>
+                  `).join('')}
+                  <td style="padding:4px;text-align:center;font-weight:bold;border-right:2px solid var(--gold);" id="totalPLNFooter">0.00 PLN</td>
+                  <td style="padding:4px;text-align:center;font-weight:bold;" id="totalEURFooter">0.00 EUR</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         `;
