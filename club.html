@@ -2408,25 +2408,38 @@
 
       // Check which currency columns actually exist in the table
       const cells = participantRow.querySelectorAll('td');
+      console.log(`[UPDATE] Found ${cells.length} cells in row for ${participant.name}`);
+
+      // Log all cell classes for debugging
+      cells.forEach((cell, index) => {
+        console.log(`[UPDATE] Cell ${index}: ${cell.className || 'no-class'}, text: "${cell.textContent}"`);
+      });
+
       let cellIndex = 3; // Start after participant name, camp payment
 
       if (camp.trainers && camp.trainers.length > 0) {
         cellIndex += camp.trainers.length;
+        console.log(`[UPDATE] Added ${camp.trainers.length} trainer cells, cellIndex now: ${cellIndex}`);
       }
 
       // Skip attention and comment cells
       cellIndex += 2;
+      console.log(`[UPDATE] After skipping attention/comment, cellIndex: ${cellIndex}`);
 
       // Check if PLN column exists and update it
       const plnCell = cells[cellIndex];
+      console.log(`[UPDATE] PLN cell at index ${cellIndex}:`, plnCell ? `class: ${plnCell.className}, current text: "${plnCell.textContent}"` : 'not found');
       if (plnCell && plnCell.classList.contains('total-pln')) {
+        console.log(`[UPDATE] Updating PLN cell with value: ${totalPLN.toFixed(2)}`);
         plnCell.textContent = totalPLN.toFixed(2);
         cellIndex++;
       }
 
       // Check if EUR column exists and update it
       const eurCell = cells[cellIndex];
+      console.log(`[UPDATE] EUR cell at index ${cellIndex}:`, eurCell ? `class: ${eurCell.className}, current text: "${eurCell.textContent}"` : 'not found');
       if (eurCell && eurCell.classList.contains('total-eur')) {
+        console.log(`[UPDATE] Updating EUR cell with value: ${totalEUR.toFixed(2)}`);
         eurCell.textContent = totalEUR.toFixed(2);
       }
     }
