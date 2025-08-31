@@ -348,6 +348,17 @@
         color: white !important;
         border: 1px solid #dc2626 !important;
       }
+
+      /* Pending payment highlight for entire table cell */
+      .pending-payment {
+        background-color: #b91c1c !important;
+        color: #ffffff !important;
+      }
+      .pending-payment input {
+        background: transparent !important;
+        color: #ffffff !important;
+        border-color: #dc2626 !important;
+      }
       .form-control { width: 100%; padding: 10px; background-color: rgba(255,255,255,0.03); border: 1px solid var(--border-dark); border-radius: 4px; color: var(--text-light); }
       .form-control:focus { outline: none; border-color: var(--gold); }
       /* Modal (reuse admin styles) */
@@ -1680,6 +1691,9 @@
                 input.style.background = '#b91c1c';
                 input.style.color = '#ffffff';
                 input.style.borderColor = '#dc2626';
+                // Also add pending highlight to the whole cell
+                const td = input.closest('td');
+                if (td) td.classList.add('pending-payment');
               } else {
                 localStorage.removeItem(`camp_paid_${window.currentTrainingId}_${partId}`);
                 // Remove highlight when empty
@@ -1687,6 +1701,8 @@
                 input.style.background = '';
                 input.style.color = '';
                 input.style.borderColor = '';
+                const td = input.closest('td');
+                if (td) td.classList.remove('pending-payment');
               }
 
                           // Update summary after camp paid change
@@ -1721,6 +1737,9 @@
                 paidInput.style.background = '';
               paidInput.style.borderColor = '';
                 paidInput.style.color = '';
+              // Remove pending highlight from the cell
+              const td = paidInput.closest('td');
+              if (td) td.classList.remove('pending-payment');
 
               // Clear localStorage values since payment is now confirmed
               localStorage.removeItem(`camp_due_${currentTrainingId}_${partId}`);
