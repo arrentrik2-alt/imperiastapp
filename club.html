@@ -1271,7 +1271,15 @@
           if(memErr){ alert('Błąd pobierania członków: '+memErr.message); return; }
 
           // create camp in DB (public.camps)
-          const { data: createdCamp, error: campErr } = await supabase.from('public.camps').insert([{ name, date, amount, currency, created_by: supabase.auth.user()?.id || null }]).select().single();
+          // supabase-js v2 uses auth.getUser() async method
+          let userId = null;
+          try {
+            const { data: { user } = {} } = await supabase.auth.getUser();
+            userId = user?.id || null;
+          } catch (e) {
+            userId = null;
+          }
+          const { data: createdCamp, error: campErr } = await supabase.from('public.camps').insert([{ name, date, amount, currency, created_by: userId }]).select().single();
           if(campErr || !createdCamp){ alert('Błąd tworzenia campu w DB: '+(campErr?campErr.message:'')); return; }
 
           // create or find trainers and link to camp
