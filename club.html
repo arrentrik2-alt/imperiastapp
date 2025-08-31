@@ -1149,10 +1149,7 @@
                     <span class="stat-label">Lekcje:</span>
                     <span class="stat-value">${Math.round(trainer.totalLessons / 2)}</span>
                   </div>
-                  <div class="stat-item">
-                    <span class="stat-label">Ogólna kwota:</span>
-                      <span class="stat-value">${trainer.totalDueAmount.toFixed(2)} ${trainer.currency}</span>
-                  </div>
+
                   <div class="stat-item">
                     <span class="stat-label">Zapłacona kwota:</span>
                       <span class="stat-value ${trainer.totalPaidAmount > 0 ? 'status-paid' : ''}">${trainer.totalPaidAmount.toFixed(2)} ${trainer.currency}</span>
@@ -1527,7 +1524,7 @@
                     const lessons = ob.lessons_count || '';
                     const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : (ti.price * (ob.lessons_count||0));
                     const paid = (ob.status === 'paid') ? (ob.amount || due) : '';
-                    const paidClass = ob.status === 'paid' ? 'status-paid' : (paid ? 'status-unpaid' : '');
+                    const paidClass = ob.status === 'paid' ? 'status-paid' : '';
 
                     // Get stored oboz paid amount from localStorage or use confirmed amount if already paid
                     const storedObozPaid = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`oboz_paid_${trainingId}_${p.id}_${ti.id}`) || '');
@@ -1542,7 +1539,7 @@
                         <button class="btn btn-small lesson-plus" data-part-id="${p.id}" data-trainer-id="${ti.id}">+</button>
                       </div>
                     </td>
-                    <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:60px;margin:0 auto;background:#ffffff;color:#000000;text-align:center" value="${due||0}" /></td>
+                    <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:60px;margin:0 auto;${due > 0 ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : 'background:#ffffff;color:#000000;'}text-align:center" value="${due||0}" /></td>
                     <td style="padding:4px;text-align:center" class="${isLastTrainer ? '' : 'border-right-gold'}">
                       <div class="payment-controls">
                         <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid ${paidClass}" style="width:60px;margin:0 2px" value="${finalObozPaid||''}" />
@@ -1599,10 +1596,6 @@
           <div class="summary-section">
             <h4>Podsumowanie Campu</h4>
             <div class="summary-grid">
-              <div class="summary-item">
-                <span class="summary-label">Ogólna kwota campu:</span>
-                <span class="summary-value" id="totalCampAmount">0 ${trainingCurrency}</span>
-              </div>
               <div class="summary-item">
                 <span class="summary-label">Zapłacona kwota na camp:</span>
                 <span class="summary-value" id="paidCampAmount">0 ${trainingCurrency}</span>
@@ -1712,10 +1705,11 @@
                 confirmBtn.disabled = true;
               }
             } else if (ob.amount && ob.lessons_count) {
-              // Unconfirmed payment
+              // Unconfirmed payment - add green highlight
               const paidInput = container.querySelector(`input.oboz-paid[data-oboz-id="${ob.id}"]`);
               if (paidInput && !paidInput.classList.contains('status-paid')) {
-                paidInput.classList.add('status-unpaid');
+                paidInput.style.background = '#28a745';
+                paidInput.style.color = '#ffffff';
               }
             }
           });
@@ -1726,7 +1720,6 @@
             if (storedObozPaid) {
               const paidInput = container.querySelector(`input.oboz-paid[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
               if (paidInput && !paidInput.classList.contains('status-paid')) {
-                paidInput.classList.add('status-unpaid');
                 paidInput.style.background = '#28a745';
                 paidInput.style.color = '#ffffff';
               }
@@ -1785,9 +1778,8 @@
             if (partId && trainerId) {
               if (value) {
                 localStorage.setItem(`oboz_paid_${currentTrainingId}_${partId}_${trainerId}`, value);
-                // Add green highlight for entered amounts
+                // Add green highlight for entered amounts (only if not already paid)
                 if (!input.classList.contains('status-paid')) {
-                  input.classList.add('status-unpaid');
                   input.style.background = '#28a745';
                   input.style.color = '#ffffff';
                 }
@@ -1919,14 +1911,17 @@
             const price = parseFloat(dueInput.getAttribute('data-price')) || 0;
             const newDue = lessons * price;
             dueInput.value = newDue;
-            dueInput.style.background = '#ffcdd2';
-            dueInput.style.color = '#000';
 
-            // Reset background after calculation is done
-            setTimeout(() => {
-              dueInput.style.background = '';
-              dueInput.style.color = '';
-            }, 1000);
+            // Set red highlight if there's amount due, otherwise white
+            if (newDue > 0) {
+              dueInput.style.background = '#b91c1c';
+              dueInput.style.color = '#ffffff';
+              dueInput.style.borderColor = '#dc2626';
+            } else {
+              dueInput.style.background = '#ffffff';
+              dueInput.style.color = '#000000';
+              dueInput.style.borderColor = '';
+            }
 
             // Show saving indicator
             const savingIndicator = document.getElementById('savingIndicator');
@@ -2084,6 +2079,17 @@
               dueInput.value = recalculatedAmount;
               dueInput.classList.remove('status-paid');
               dueInput.setAttribute('data-oboz-id','');
+
+              // Set red highlight if there's amount due, otherwise white
+              if (recalculatedAmount > 0) {
+                dueInput.style.background = '#b91c1c';
+                dueInput.style.color = '#ffffff';
+                dueInput.style.borderColor = '#dc2626';
+              } else {
+                dueInput.style.background = '#ffffff';
+                dueInput.style.color = '#000000';
+                dueInput.style.borderColor = '';
+              }
             }
             if(lessonsInput) lessonsInput.setAttribute('data-oboz-id','');
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
@@ -2401,10 +2407,9 @@
         });
 
         // Generate summary for each currency
-        currenciesWithData.forEach(currency => {
-          const data = currencyData[currency];
-          const totalAmount = data.campPrice + data.lessonsAmount;
-          const totalPaid = data.campPaid + data.lessonsPaid;
+                  currenciesWithData.forEach(currency => {
+            const data = currencyData[currency];
+            const totalPaid = data.campPaid + data.lessonsPaid;
           const currencyExpenses = expensesByCurrency[currency];
           const profit = totalPaid - currencyExpenses;
 
@@ -2416,12 +2421,8 @@
             `;
           }
 
-          summaryHtml += `
-            <div class="summary-grid" style="margin-bottom: 15px;">
-              <div class="summary-item">
-                <span class="summary-label">Ogólna kwota (camp + lekcje):</span>
-                <span class="summary-value">${totalAmount.toFixed(2)} ${currency}</span>
-              </div>
+                      summaryHtml += `
+              <div class="summary-grid" style="margin-bottom: 15px;">
               <div class="summary-item">
                 <span class="summary-label">Zapłacona kwota (camp + lekcje):</span>
                 <span class="summary-value">${totalPaid.toFixed(2)} ${currency}</span>
