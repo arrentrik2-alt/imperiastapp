@@ -2424,21 +2424,35 @@
 
       // Check if PLN column exists and update it
       const plnCell = cells[cellIndex];
+      console.log(`[UPDATE] Checking PLN cell at index ${cellIndex}:`, plnCell ? `classes: ${plnCell.className}, text: "${plnCell.textContent}"` : 'null');
       if (plnCell && plnCell.classList.contains('total-pln')) {
         console.log(`[UPDATE] Updating PLN cell (index ${cellIndex}) with value: ${totalPLN.toFixed(2)}`);
         plnCell.textContent = totalPLN.toFixed(2);
         cellIndex++;
       } else {
         console.log(`[UPDATE] PLN cell not found at index ${cellIndex} or doesn't have total-pln class`);
+        // Try to find PLN cell by searching all cells
+        const foundPlnCell = Array.from(cells).find(cell => cell.classList.contains('total-pln'));
+        if (foundPlnCell) {
+          console.log(`[UPDATE] Found PLN cell by search, updating with value: ${totalPLN.toFixed(2)}`);
+          foundPlnCell.textContent = totalPLN.toFixed(2);
+        }
       }
 
       // Check if EUR column exists and update it
       const eurCell = cells[cellIndex];
+      console.log(`[UPDATE] Checking EUR cell at index ${cellIndex}:`, eurCell ? `classes: ${eurCell.className}, text: "${eurCell.textContent}"` : 'null');
       if (eurCell && eurCell.classList.contains('total-eur')) {
         console.log(`[UPDATE] Updating EUR cell (index ${cellIndex}) with value: ${totalEUR.toFixed(2)}`);
         eurCell.textContent = totalEUR.toFixed(2);
       } else {
         console.log(`[UPDATE] EUR cell not found at index ${cellIndex} or doesn't have total-eur class`);
+        // Try to find EUR cell by searching all cells
+        const foundEurCell = Array.from(cells).find(cell => cell.classList.contains('total-eur'));
+        if (foundEurCell) {
+          console.log(`[UPDATE] Found EUR cell by search, updating with value: ${totalEUR.toFixed(2)}`);
+          foundEurCell.textContent = totalEUR.toFixed(2);
+        }
       }
     }
 
