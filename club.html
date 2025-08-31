@@ -834,7 +834,6 @@
 
         if (error) throw error;
 
-        alert('Członek został dodany pomyślnie!');
         closeModalFunc();
         await loadMembers();
 
@@ -939,7 +938,6 @@
 
         if (error) throw error;
 
-        alert('Członek został usunięty pomyślnie!');
         await loadMembers();
 
       } catch (err) {
@@ -1014,7 +1012,6 @@
 
         if (error) throw error;
 
-        alert('Dane członka zostały zaktualizowane!');
         editMemberModal.classList.remove('active');
         editMemberForm.reset();
         await loadMembers();
