@@ -447,18 +447,38 @@
     .camp-details-table th {
       background-color: var(--gold);
       color: var(--primary-bg);
-      padding: 8px 4px;
+      padding: 12px 4px;
       text-align: center;
       font-weight: bold;
       border: 1px solid var(--border-dark);
       white-space: nowrap;
+      font-size: 0.8rem;
+      line-height: 1.2;
+    }
+
+    .camp-details-table th .amount-badge {
+      background-color: rgba(0, 0, 0, 0.3);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 2px;
+      display: inline-block;
+    }
+
+    .camp-details-table th small {
+      color: rgba(0, 0, 0, 0.7);
+      font-size: 0.7rem;
+      font-weight: 500;
     }
 
     .camp-details-table td {
-      padding: 6px 4px;
+      padding: 8px 4px;
       border: 1px solid var(--border-dark);
       text-align: center;
       color: var(--text-light);
+      vertical-align: middle;
     }
 
     .camp-details-table tr:hover {
@@ -469,6 +489,14 @@
       text-align: left;
       padding-left: 8px;
       font-weight: 500;
+    }
+
+    /* Payment cell styles */
+    .payment-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
     }
 
     .payment-input {
@@ -485,6 +513,59 @@
     .payment-input:focus {
       outline: none;
       border-color: var(--gold);
+    }
+
+    .payment-input.unconfirmed {
+      background-color: rgba(220, 53, 69, 0.1);
+      border-color: var(--error);
+      color: var(--error);
+    }
+
+    .payment-input.confirmed {
+      background-color: rgba(40, 167, 69, 0.1);
+      border-color: var(--success);
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .confirm-payment-btn, .remove-payment-btn {
+      padding: 2px 4px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .confirm-payment-btn {
+      background-color: var(--success);
+      color: white;
+    }
+
+    .confirm-payment-btn:hover {
+      background-color: #218838;
+    }
+
+    .confirm-payment-btn i {
+      font-size: 0.6rem;
+      margin-right: 2px;
+    }
+
+    .remove-payment-btn {
+      background-color: var(--error);
+      color: white;
+    }
+
+    .remove-payment-btn:hover {
+      background-color: #c82333;
+    }
+
+    .remove-payment-btn i {
+      font-size: 0.6rem;
+      margin-right: 2px;
     }
 
     .amount-badge {
@@ -1440,6 +1521,38 @@
       }
     }
 
+    // Payment storage - using localStorage for now
+    function getPaymentKey(campId, participantId, columnType, trainerIndex = null) {
+      return `payment_${campId}_${participantId}_${columnType}${trainerIndex !== null ? `_${trainerIndex}` : ''}`;
+    }
+
+    function getPaymentStatus(campId, participantId, columnType, trainerIndex = null) {
+      const key = getPaymentKey(campId, participantId, columnType, trainerIndex) + '_status';
+      return localStorage.getItem(key) === 'confirmed';
+    }
+
+    function savePayment(campId, participantId, columnType, amount, trainerIndex = null) {
+      const key = getPaymentKey(campId, participantId, columnType, trainerIndex);
+      localStorage.setItem(key, amount);
+    }
+
+    function removePayment(campId, participantId, columnType, trainerIndex = null) {
+      const key = getPaymentKey(campId, participantId, columnType, trainerIndex);
+      const statusKey = key + '_status';
+      localStorage.removeItem(key);
+      localStorage.removeItem(statusKey);
+    }
+
+    function confirmPayment(campId, participantId, columnType, trainerIndex = null) {
+      const key = getPaymentKey(campId, participantId, columnType, trainerIndex) + '_status';
+      localStorage.setItem(key, 'confirmed');
+    }
+
+    function getSavedPayment(campId, participantId, columnType, trainerIndex = null) {
+      const key = getPaymentKey(campId, participantId, columnType, trainerIndex);
+      return localStorage.getItem(key) || '';
+    }
+
     // Create camp details table
     function createCampDetailsTable(camp, participants) {
       let tableHtml = `
@@ -1447,13 +1560,13 @@
           <thead>
             <tr>
               <th style="width: 200px; text-align: left;">Uczestnik</th>
-              <th style="width: 100px;">Camp<br><span class="amount-badge">${camp.amount} ${camp.currency}</span></th>
+              <th style="width: 120px;">Camp<br><span class="amount-badge">${camp.amount} ${camp.currency}</span></th>
       `;
 
       // Add columns for each trainer
       if (camp.trainers && camp.trainers.length > 0) {
-        camp.trainers.forEach(trainer => {
-          tableHtml += `<th style="width: 100px;">Lekcje<br><span class="amount-badge">${trainer.amount} ${trainer.currency}</span><br><small>${trainer.name}</small></th>`;
+        camp.trainers.forEach((trainer, index) => {
+          tableHtml += `<th style="width: 120px;">Lekcje ${trainer.name}<br><span class="amount-badge">${trainer.amount} ${trainer.currency}</span></th>`;
         });
       }
 
@@ -1465,22 +1578,25 @@
 
       // Add rows for each participant
       participants.forEach(participant => {
-        tableHtml += `
-          <tr>
-            <td class="participant-name">${participant.name}</td>
-            <td><input type="number" class="payment-input" step="0.01" min="0" placeholder="0.00"></td>
-        `;
+        tableHtml += `<tr><td class="participant-name">${participant.name}</td>`;
 
-        // Add input fields for each trainer
+        // Camp payment cell
+        const campPayment = getSavedPayment(camp.id, participant.id, 'camp');
+        const campConfirmed = getPaymentStatus(camp.id, participant.id, 'camp');
+        const campCellHtml = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
+        tableHtml += campCellHtml;
+
+        // Add cells for each trainer
         if (camp.trainers && camp.trainers.length > 0) {
-          camp.trainers.forEach(() => {
-            tableHtml += `<td><input type="number" class="payment-input" step="0.01" min="0" placeholder="0.00"></td>`;
+          camp.trainers.forEach((trainer, trainerIndex) => {
+            const trainerPayment = getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex);
+            const trainerConfirmed = getPaymentStatus(camp.id, participant.id, 'trainer', trainerIndex);
+            const trainerCellHtml = createPaymentCell(camp.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIndex);
+            tableHtml += trainerCellHtml;
           });
         }
 
-        tableHtml += `
-          </tr>
-        `;
+        tableHtml += `</tr>`;
       });
 
       tableHtml += `
@@ -1489,6 +1605,45 @@
       `;
 
       return tableHtml;
+    }
+
+    // Create payment cell with input and buttons
+    function createPaymentCell(campId, participantId, columnType, savedAmount, isConfirmed, trainerIndex = null) {
+      const cellId = `cell_${campId}_${participantId}_${columnType}${trainerIndex !== null ? `_${trainerIndex}` : ''}`;
+      const inputId = `input_${cellId}`;
+      const confirmBtnId = `confirm_${cellId}`;
+      const removeBtnId = `remove_${cellId}`;
+
+      let inputClass = 'payment-input';
+      let confirmBtnStyle = '';
+      let removeBtnStyle = 'display: none;';
+
+      if (savedAmount && !isConfirmed) {
+        inputClass += ' unconfirmed';
+        confirmBtnStyle = '';
+        removeBtnStyle = 'display: none;';
+      } else if (savedAmount && isConfirmed) {
+        inputClass += ' confirmed';
+        confirmBtnStyle = 'display: none;';
+        removeBtnStyle = '';
+      } else {
+        confirmBtnStyle = 'display: none;';
+        removeBtnStyle = 'display: none;';
+      }
+
+      return `
+        <td>
+          <div class="payment-cell">
+            <input type="number" id="${inputId}" class="${inputClass}" step="0.01" min="0" placeholder="0.00" value="${savedAmount}" data-camp-id="${campId}" data-participant-id="${participantId}" data-column-type="${columnType}" ${trainerIndex !== null ? `data-trainer-index="${trainerIndex}"` : ''}>
+            <button type="button" id="${confirmBtnId}" class="confirm-payment-btn" style="${confirmBtnStyle}" data-camp-id="${campId}" data-participant-id="${participantId}" data-column-type="${columnType}" ${trainerIndex !== null ? `data-trainer-index="${trainerIndex}"` : ''}>
+              <i class="fas fa-check"></i>
+            </button>
+            <button type="button" id="${removeBtnId}" class="remove-payment-btn" style="${removeBtnStyle}" data-camp-id="${campId}" data-participant-id="${participantId}" data-column-type="${columnType}" ${trainerIndex !== null ? `data-trainer-index="${trainerIndex}"` : ''}>
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </td>
+      `;
     }
 
     // Create new camp
@@ -1625,10 +1780,118 @@
       setActiveNav('members');
     });
 
+    // Payment event handlers
+    function setupPaymentEventListeners() {
+      // Payment input change handler
+      document.addEventListener('input', (e) => {
+        if (e.target.classList.contains('payment-input')) {
+          handlePaymentInput(e.target);
+        }
+      });
+
+      // Confirm payment button handler
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('.confirm-payment-btn')) {
+          const button = e.target.closest('.confirm-payment-btn');
+          handleConfirmPayment(button);
+        }
+      });
+
+      // Remove payment button handler
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('.remove-payment-btn')) {
+          const button = e.target.closest('.remove-payment-btn');
+          handleRemovePayment(button);
+        }
+      });
+    }
+
+    function handlePaymentInput(input) {
+      const campId = input.getAttribute('data-camp-id');
+      const participantId = input.getAttribute('data-participant-id');
+      const columnType = input.getAttribute('data-column-type');
+      const trainerIndex = input.getAttribute('data-trainer-index');
+      const value = input.value.trim();
+
+      const cell = input.closest('.payment-cell');
+      const confirmBtn = cell.querySelector('.confirm-payment-btn');
+      const removeBtn = cell.querySelector('.remove-payment-btn');
+
+      if (value && value !== '0' && value !== '0.00') {
+        // Has value - show confirm button, hide remove button, make input red
+        input.classList.add('unconfirmed');
+        input.classList.remove('confirmed');
+        confirmBtn.style.display = '';
+        removeBtn.style.display = 'none';
+
+        // Save payment temporarily
+        savePayment(campId, participantId, columnType, value, trainerIndex);
+      } else {
+        // No value - hide both buttons, remove styling
+        input.classList.remove('unconfirmed', 'confirmed');
+        confirmBtn.style.display = 'none';
+        removeBtn.style.display = 'none';
+
+        // Remove payment from storage
+        removePayment(campId, participantId, columnType, trainerIndex);
+      }
+    }
+
+    function handleConfirmPayment(button) {
+      const campId = button.getAttribute('data-camp-id');
+      const participantId = button.getAttribute('data-participant-id');
+      const columnType = button.getAttribute('data-column-type');
+      const trainerIndex = button.getAttribute('data-trainer-index');
+
+      const cell = button.closest('.payment-cell');
+      const input = cell.querySelector('.payment-input');
+      const confirmBtn = cell.querySelector('.confirm-payment-btn');
+      const removeBtn = cell.querySelector('.remove-payment-btn');
+
+      // Mark as confirmed
+      confirmPayment(campId, participantId, columnType, trainerIndex);
+
+      // Update UI
+      input.classList.remove('unconfirmed');
+      input.classList.add('confirmed');
+      confirmBtn.style.display = 'none';
+      removeBtn.style.display = '';
+    }
+
+    function handleRemovePayment(button) {
+      const campId = button.getAttribute('data-camp-id');
+      const participantId = button.getAttribute('data-participant-id');
+      const columnType = button.getAttribute('data-column-type');
+      const trainerIndex = button.getAttribute('data-trainer-index');
+
+      const cell = button.closest('.payment-cell');
+      const input = cell.querySelector('.payment-input');
+      const confirmBtn = cell.querySelector('.confirm-payment-btn');
+      const removeBtn = cell.querySelector('.remove-payment-btn');
+
+      // Remove payment from storage
+      removePayment(campId, participantId, columnType, trainerIndex);
+
+      // Update UI - go back to unconfirmed state if there's a value
+      const value = input.value.trim();
+      if (value && value !== '0' && value !== '0.00') {
+        input.classList.add('unconfirmed');
+        input.classList.remove('confirmed');
+        confirmBtn.style.display = '';
+        removeBtn.style.display = 'none';
+      } else {
+        input.classList.remove('unconfirmed', 'confirmed');
+        confirmBtn.style.display = 'none';
+        removeBtn.style.display = 'none';
+        input.value = '';
+      }
+    }
+
     // Initialize app
     document.addEventListener('DOMContentLoaded', () => {
       loadMembers();
       setActiveNav('members'); // Start with members page
+      setupPaymentEventListeners(); // Setup payment event listeners
     });
   </script>
 </body>
