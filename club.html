@@ -343,6 +343,47 @@
       font-weight: 500;
     }
 
+    .action-buttons {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+    }
+
+    .btn-action {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .btn-action i {
+      margin-right: 3px;
+      font-size: 0.7rem;
+    }
+
+    .btn-edit {
+      background-color: var(--gold);
+      color: var(--primary-bg);
+    }
+
+    .btn-edit:hover {
+      background-color: #c19b2e;
+    }
+
+    .btn-delete {
+      background-color: var(--error);
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background-color: #c82333;
+    }
+
     .empty-state {
       text-align: center;
       padding: 40px 20px;
@@ -442,6 +483,11 @@
       .members-table td:nth-child(5) {
         display: none;
       }
+
+      .members-table th:nth-child(8),
+      .members-table td:nth-child(8) {
+        display: none;
+      }
     }
   </style>
 </head>
@@ -502,13 +548,14 @@
         <table class="members-table" id="members-table">
           <thead>
             <tr>
-              <th style="width: 60px;">Lp.</th>
-              <th style="width: 100px;">Imię i nazwisko</th>
+              <th style="width: 50px;">Lp.</th>
+              <th style="width: 120px;">Imię i nazwisko</th>
               <th style="width: 80px;">ID</th>
-              <th style="width: 200px;">Email</th>
+              <th style="width: 180px;">Email</th>
               <th style="width: 120px;">Telefon</th>
-              <th style="width: 80px;">Styl</th>
+              <th style="width: 70px;">Styl</th>
               <th style="width: 80px;">Karnet</th>
+              <th style="width: 100px;">Akcje</th>
             </tr>
           </thead>
           <tbody id="members-list">
@@ -534,8 +581,8 @@
         </div>
 
         <div class="form-group">
-          <label for="member-email">Email *</label>
-          <input type="email" id="member-email" name="member-email" class="form-control" required>
+          <label for="member-email">Email</label>
+          <input type="email" id="member-email" name="member-email" class="form-control">
         </div>
 
         <div class="form-group">
@@ -567,6 +614,61 @@
           <button type="button" class="btn btn-outline" id="cancel-add-member">Anuluj</button>
           <button type="submit" class="btn btn-primary" id="submit-add-member">
             <i class="fas fa-save"></i> Dodaj członka
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Member Modal -->
+  <div class="modal" id="edit-member-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-edit-modal">&times;</button>
+      <div class="modal-header">
+        <h3>Edytuj członka</h3>
+      </div>
+
+      <form id="edit-member-form">
+        <input type="hidden" id="edit-member-id" name="edit-member-id">
+        <div class="form-group">
+          <label for="edit-member-name">Imię i nazwisko *</label>
+          <input type="text" id="edit-member-name" name="edit-member-name" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-member-email">Email</label>
+          <input type="email" id="edit-member-email" name="edit-member-email" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="edit-member-phone">Telefon</label>
+          <input type="tel" id="edit-member-phone" name="edit-member-phone" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="edit-member-style">Styl tańca *</label>
+          <select id="edit-member-style" name="edit-member-style" class="form-control" required>
+            <option value="">Wybierz styl</option>
+            <option value="st">ST (Standard)</option>
+            <option value="la">LA (Latin)</option>
+            <option value="10t">10T (10 Tańców)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-member-karnet">Karnet *</label>
+          <select id="edit-member-karnet" name="edit-member-karnet" class="form-control" required>
+            <option value="">Wybierz karnet</option>
+            <option value="1-styl">1 Styl</option>
+            <option value="2-style">2 Style</option>
+            <option value="vip">VIP</option>
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" id="cancel-edit-member">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="submit-edit-member">
+            <i class="fas fa-save"></i> Zapisz zmiany
           </button>
         </div>
       </form>
@@ -613,7 +715,7 @@
       try {
         membersList.innerHTML = `
           <tr>
-            <td colspan="7" style="text-align: center; padding: 40px;">
+            <td colspan="8" style="text-align: center; padding: 40px;">
               <div class="loading"></div>
             </td>
           </tr>
@@ -629,7 +731,7 @@
         if (members.length === 0) {
           membersList.innerHTML = `
             <tr>
-              <td colspan="7" style="text-align: center; padding: 40px;">
+              <td colspan="8" style="text-align: center; padding: 40px;">
                 <div class="empty-state">
                   <i class="fas fa-users"></i>
                   <p>Brak członków w klubie</p>
@@ -651,7 +753,7 @@
         console.error('Błąd ładowania członków:', err);
         membersList.innerHTML = `
           <tr>
-            <td colspan="7" style="text-align: center; padding: 40px;">
+            <td colspan="8" style="text-align: center; padding: 40px;">
               <div class="empty-state">
                 <p>Błąd ładowania członków</p>
               </div>
@@ -669,10 +771,20 @@
         <td><span class="member-number">${number}</span></td>
         <td><span class="member-name">${member.name}</span></td>
         <td><span class="member-id">#${member.id}</span></td>
-        <td><span class="member-email">${member.email}</span></td>
+        <td><span class="member-email">${member.email || '-'}</span></td>
         <td><span class="member-phone">${member.phone || '-'}</span></td>
         <td><span class="member-style">${member.style.toUpperCase()}</span></td>
         <td><span class="member-karnet">${member.karnet}</span></td>
+        <td>
+          <div class="action-buttons">
+            <button class="btn-action btn-edit" onclick="editMember('${member.id}')" title="Edytuj">
+              <i class="fas fa-edit"></i> Edytuj
+            </button>
+            <button class="btn-action btn-delete" onclick="deleteMember('${member.id}', '${member.name}')" title="Usuń">
+              <i class="fas fa-trash"></i> Usuń
+            </button>
+          </div>
+        </td>
       `;
 
       return row;
@@ -735,7 +847,7 @@
       };
 
       // Basic validation
-      if (!memberData.name || !memberData.email || !memberData.style || !memberData.karnet) {
+      if (!memberData.name || !memberData.style || !memberData.karnet) {
         alert('Proszę wypełnić wszystkie wymagane pola');
         return;
       }
@@ -760,6 +872,137 @@
       document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
       navMembers.classList.add('active');
       // For now, members is the only section
+    });
+
+    // Edit member functions
+    function editMember(memberId) {
+      // Find member by ID
+      supabase
+        .from('members')
+        .select('*')
+        .eq('id', memberId)
+        .single()
+        .then(({ data: member, error }) => {
+          if (error) {
+            console.error('Błąd ładowania członka:', error);
+            alert('Błąd ładowania danych członka');
+            return;
+          }
+
+          // Fill edit form
+          document.getElementById('edit-member-id').value = member.id;
+          document.getElementById('edit-member-name').value = member.name;
+          document.getElementById('edit-member-email').value = member.email || '';
+          document.getElementById('edit-member-phone').value = member.phone || '';
+          document.getElementById('edit-member-style').value = member.style;
+          document.getElementById('edit-member-karnet').value = member.karnet;
+
+          // Show modal
+          document.getElementById('edit-member-modal').classList.add('active');
+        });
+    }
+
+    // Delete member function
+    async function deleteMember(memberId, memberName) {
+      if (!confirm(`Czy na pewno chcesz usunąć członka "${memberName}"?\n\nTa operacja jest nieodwracalna.`)) {
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('members')
+          .delete()
+          .eq('id', memberId);
+
+        if (error) throw error;
+
+        alert('Członek został usunięty pomyślnie!');
+        await loadMembers();
+
+      } catch (err) {
+        console.error('Błąd usuwania członka:', err);
+        alert('Błąd usuwania członka: ' + (err.message || 'Nieznany błąd'));
+      }
+    }
+
+    // Edit member form handlers
+    const editMemberModal = document.getElementById('edit-member-modal');
+    const closeEditModal = document.getElementById('close-edit-modal');
+    const cancelEditMember = document.getElementById('cancel-edit-member');
+    const editMemberForm = document.getElementById('edit-member-form');
+
+    // Modal close handlers
+    closeEditModal.addEventListener('click', () => {
+      editMemberModal.classList.remove('active');
+      editMemberForm.reset();
+    });
+
+    cancelEditMember.addEventListener('click', () => {
+      editMemberModal.classList.remove('active');
+      editMemberForm.reset();
+    });
+
+    // Close modal when clicking outside
+    editMemberModal.addEventListener('click', (e) => {
+      if (e.target === editMemberModal) {
+        editMemberModal.classList.remove('active');
+        editMemberForm.reset();
+      }
+    });
+
+    // Edit form submission
+    editMemberForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(editMemberForm);
+      const memberData = {
+        id: formData.get('edit-member-id'),
+        name: formData.get('edit-member-name').trim(),
+        email: formData.get('edit-member-email').trim(),
+        phone: formData.get('edit-member-phone').trim(),
+        style: formData.get('edit-member-style'),
+        karnet: formData.get('edit-member-karnet')
+      };
+
+      // Basic validation
+      if (!memberData.name || !memberData.style || !memberData.karnet) {
+        alert('Proszę wypełnić wszystkie wymagane pola');
+        return;
+      }
+
+      // Show loading state
+      const submitBtn = document.getElementById('submit-edit-member');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<div class="loading"></div> Zapisywanie...';
+      submitBtn.disabled = true;
+
+      try {
+        const { error } = await supabase
+          .from('members')
+          .update({
+            name: memberData.name,
+            email: memberData.email || null,
+            phone: memberData.phone || null,
+            style: memberData.style,
+            karnet: memberData.karnet,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', memberData.id);
+
+        if (error) throw error;
+
+        alert('Dane członka zostały zaktualizowane!');
+        editMemberModal.classList.remove('active');
+        editMemberForm.reset();
+        await loadMembers();
+
+      } catch (err) {
+        console.error('Błąd aktualizacji członka:', err);
+        alert('Błąd aktualizacji członka: ' + (err.message || 'Nieznany błąd'));
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
     });
 
     // Initialize app
