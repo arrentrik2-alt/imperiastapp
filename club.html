@@ -832,9 +832,11 @@
           .gte('date', startDate)
           .lte('date', endDate)
             .order('date', { ascending: false }));
+          console.log('loadCampsForMonth query result:', { startDate, endDate, camps, error });
         } catch (e) {
           // network / schema errors
           error = e;
+          console.error('loadCampsForMonth caught error:', e);
         }
 
         // Fallback: try public.camps (table named 'camps' in public schema) if schema not exposed
