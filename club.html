@@ -1501,11 +1501,13 @@
                     }
                   });
 
-                  return `<tr data-part-id="${p.id}"><td style="padding:4px;text-align:center" class="border-right-gold">${index + 1}</td><td style="padding:4px" class="border-right-gold">${escapeHtml(p.participant_name)}</td><td style="padding:4px;text-align:center" class="border-right-gold">
+                  return `<tr data-part-id="${p.id}"><td style="padding:4px;text-align:center" class="border-right-gold">${index + 1}</td><td style="padding:4px" class="border-right-gold">${escapeHtml(p.participant_name)}</td>                  <td style="padding:4px;text-align:center" class="border-right-gold">
                     <div class="payment-controls">
-                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;${storedCampPaid && p.camp_status !== 'paid' ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : ''}" value="${storedCampPaid||''}" />
-                      <button class="btn btn-small camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>
-                      <button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>
+                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;${storedCampPaid && p.camp_status !== 'paid' ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : (p.camp_status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : 'background:#ffffff;color:#000000;')}text-align:center" value="${p.camp_status === 'paid' ? (p.camp_amount || '') : (storedCampPaid || '')}" />
+                      ${p.camp_status === 'paid' ?
+                        `<button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>` :
+                        `<button class="btn btn-small camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>`
+                      }
                     </div>
                   </td>${obozCells}<td style="padding:4px;text-align:center;font-weight:bold" class="border-right-gold">${totalPLN.toFixed(2)} PLN</td><td style="padding:4px;text-align:center;font-weight:bold">${totalEUR.toFixed(2)} EUR</td></tr>`;
                 }).join('')}
@@ -1577,7 +1579,8 @@
               paidInput.classList.remove('status-unpaid');
             }
             if (confirmBtn) {
-              confirmBtn.disabled = true;
+              // Replace confirm button with delete button for paid payments
+              confirmBtn.outerHTML = `<button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>`;
             }
           } else {
             // Check if there's an unconfirmed amount in camp paid
@@ -1721,7 +1724,37 @@
               localStorage.removeItem(`camp_due_${currentTrainingId}_${partId}`);
               localStorage.removeItem(`camp_paid_${currentTrainingId}_${partId}`);
 
-              btn.disabled = true;
+              // Change OK button to delete button
+              btn.outerHTML = `<button class="btn btn-small btn-delete camp-delete" data-part-id="${partId}">×</button>`;
+
+              // Add event listener to the new delete button
+              const newDeleteBtn = container.querySelector(`button.camp-delete[data-part-id="${partId}"]`);
+              if (newDeleteBtn) {
+                newDeleteBtn.addEventListener('click', async () => {
+                  if (!confirm('Usunąć płatność campu dla tego uczestnika?')) return;
+                  // reset participant camp_amount and status
+                  const { error } = await supabase.from('training_participants').update({ camp_amount: 0, camp_status: 'unset' }).eq('id', partId);
+                  if (error) { alert('Błąd usuwania: ' + error.message); return; }
+
+                  const paidInput = container.querySelector(`input.camp-paid[data-part-id="${partId}"]`);
+                  if (paidInput) {
+                    paidInput.value = '';
+                    paidInput.classList.remove('status-paid', 'status-unpaid');
+                    paidInput.style.background = '';
+                    paidInput.style.borderColor = '';
+                    paidInput.style.color = '';
+                  }
+
+                  // Change delete button back to confirm button
+                  newDeleteBtn.outerHTML = `<button class="btn btn-small camp-confirm" data-part-id="${partId}" data-due="${btn.getAttribute('data-due') || 0}">OK</button>`;
+
+                  // Update summary and financial summary
+                  const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+                  updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+                  updateFinancialSummary();
+                  updateParticipantTotals(partId);
+                });
+              }
 
               // Update payment status locally instead of full re-render
               updateFinancialSummary();
@@ -2012,7 +2045,9 @@
               paidInput.style.borderColor = '';
               paidInput.style.color = '';
             }
-            if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
+
+            // Change delete button back to confirm button
+            btn.outerHTML = `<button class="btn btn-small camp-confirm" data-part-id="${partId}" data-due="${btn.getAttribute('data-due') || 0}">OK</button>`;
 
             // Update summary and financial summary
             const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
