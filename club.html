@@ -1045,10 +1045,10 @@
             console.log(`Processing trainer ${ti.name} for participant ${p.id}`);
 
             // Check for due amount input field - find by part-id and trainer-id
-            const dueInput = containerParam.querySelector(`input.oboz-due[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
-            console.log(`Due input for trainer ${ti.id}:`, dueInput, dueInput?.value);
-            if (dueInput && dueInput.value) {
-              const dueAmount = parseFloat(dueInput.value) || 0;
+            const dueAmountInput = containerParam.querySelector(`input.oboz-due[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+            console.log(`Due input for trainer ${ti.id}:`, dueAmountInput, dueAmountInput?.value);
+            if (dueAmountInput && dueAmountInput.value) {
+              const dueAmount = parseFloat(dueAmountInput.value) || 0;
               console.log(`Due amount for trainer ${ti.id}:`, dueAmount);
               if (dueAmount > 0) {
                 trainerStats[ti.id].totalDueAmount += dueAmount;
@@ -1057,10 +1057,10 @@
             }
 
             // Check if payment is confirmed (green highlight)
-            const dueInput = containerParam.querySelector(`input.oboz-due[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
-            console.log(`Due input for trainer ${ti.id}:`, dueInput, dueInput?.value);
-            if (dueInput && dueInput.classList.contains('status-paid')) {
-              const paidAmount = parseFloat(dueInput.value) || 0;
+            const paidDueInput = containerParam.querySelector(`input.oboz-due[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+            console.log(`Due input for trainer ${ti.id}:`, paidDueInput, paidDueInput?.value);
+            if (paidDueInput && paidDueInput.classList.contains('status-paid')) {
+              const paidAmount = parseFloat(paidDueInput.value) || 0;
               console.log(`Paid amount for trainer ${ti.id}:`, paidAmount);
               if (paidAmount > 0) {
                 trainerStats[ti.id].totalPaidAmount += paidAmount;
@@ -1846,25 +1846,25 @@
             const lessons = parseInt(input.value,10) || 0;
 
             // find corresponding due input (try oboz-id first, then part-id + trainer-id)
-            let dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`);
-            if(!dueInput && partId && trainerId) {
-              dueInput = container.querySelector(`input.oboz-due[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+            let lessonDueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`);
+            if(!lessonDueInput && partId && trainerId) {
+              lessonDueInput = container.querySelector(`input.oboz-due[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
             }
-            if(!dueInput) return; // can't find due input
+            if(!lessonDueInput) return; // can't find due input
 
-            const price = parseFloat(dueInput.getAttribute('data-price')) || 0;
+            const price = parseFloat(lessonDueInput.getAttribute('data-price')) || 0;
             const newDue = lessons * price;
-            dueInput.value = newDue;
+            lessonDueInput.value = newDue;
 
             // Set red highlight if there's amount due, otherwise white
             if (newDue > 0) {
-              dueInput.style.background = '#b91c1c';
-              dueInput.style.color = '#ffffff';
-              dueInput.style.borderColor = '#dc2626';
+              lessonDueInput.style.background = '#b91c1c';
+              lessonDueInput.style.color = '#ffffff';
+              lessonDueInput.style.borderColor = '#dc2626';
             } else {
-              dueInput.style.background = '#ffffff';
-              dueInput.style.color = '#000000';
-              dueInput.style.borderColor = '';
+              lessonDueInput.style.background = '#ffffff';
+              lessonDueInput.style.color = '#000000';
+              lessonDueInput.style.borderColor = '';
             }
 
             // Show saving indicator
@@ -1895,8 +1895,7 @@
                   input.setAttribute('data-oboz-id', newObozId);
                   dueInput.setAttribute('data-oboz-id', newObozId);
 
-                  const paidInput = container.querySelector(`input.oboz-paid[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-                  if(paidInput) paidInput.setAttribute('data-oboz-id', newObozId);
+
 
                   const confirmBtn = container.querySelector(`button.oboz-confirm[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
                   if(confirmBtn) confirmBtn.setAttribute('data-oboz-id', newObozId);
