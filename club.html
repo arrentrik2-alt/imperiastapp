@@ -828,7 +828,7 @@
         try {
           ({ data: camps, error } = await supabase
             .from('camps')
-            .select('id,name,date,amount as price,currency')
+            .select('id,name,date,amount,currency')
           .gte('date', startDate)
           .lte('date', endDate)
             .order('date', { ascending: false }));
@@ -842,7 +842,7 @@
           try {
             ({ data: camps, error } = await supabase
               .from('camps')
-              .select('id,name,date,amount as price,currency')
+              .select('id,name,date,amount,currency')
               .gte('date', startDate)
               .lte('date', endDate)
               .order('date', { ascending: false }));
@@ -925,7 +925,7 @@
             <div class="camp-item ${statusClass}" data-camp-id="${camp.id}">
               <div class="camp-item-info">
                 <h4>${escapeHtml(camp.name)}</h4>
-                <p>Cena: ${camp.price} ${camp.currency || 'PLN'}</p>
+                <p>Cena: ${camp.amount || camp.price || 0} ${camp.currency || 'PLN'}</p>
                 <p class="camp-status">
                   <span class="status-item ${camp.paidCount > 0 ? 'status-paid' : ''}">Zapłaciło osób: ${camp.paidCount}</span><br>
                   <span class="status-item ${camp.unconfirmedCount > 0 ? 'status-unpaid' : 'status-paid'}">Nie zapłaciło osób: ${camp.unconfirmedCount}</span><br>
