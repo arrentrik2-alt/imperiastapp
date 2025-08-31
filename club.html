@@ -1837,6 +1837,7 @@
 
         // Add camp payment to totals
         const campAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'camp')) || 0;
+        console.log(`Camp ${camp.name} - currency: ${camp.currency}, amount: ${campAmount}`);
         if (camp.currency === 'PLN') {
           totalPLN += campAmount;
         } else if (camp.currency === 'EUR') {
@@ -1847,6 +1848,7 @@
         if (camp.trainers && camp.trainers.length > 0) {
           camp.trainers.forEach((trainer, trainerIndex) => {
             const trainerAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
+            console.log(`Trainer ${trainerIndex} (${trainer.name}) - currency: ${trainer.currency}, amount: ${trainerAmount}`);
             if (trainer.currency === 'PLN') {
               totalPLN += trainerAmount;
             } else if (trainer.currency === 'EUR') {
@@ -1854,6 +1856,8 @@
             }
           });
         }
+
+        console.log(`Participant ${participant.name} - Total PLN: ${totalPLN}, Total EUR: ${totalEUR}`);
 
         // Add total columns based on available currencies
         if (hasPLNPayments) {
@@ -2380,6 +2384,7 @@
 
       // Add camp payment to totals
       const campAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'camp')) || 0;
+      console.log(`[UPDATE] Camp ${camp.name} - currency: ${camp.currency}, amount: ${campAmount}`);
       if (camp.currency === 'PLN') {
         totalPLN += campAmount;
       } else if (camp.currency === 'EUR') {
@@ -2390,6 +2395,7 @@
       if (camp.trainers && camp.trainers.length > 0) {
         camp.trainers.forEach((trainer, trainerIndex) => {
           const trainerAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
+          console.log(`[UPDATE] Trainer ${trainerIndex} (${trainer.name}) - currency: ${trainer.currency}, amount: ${trainerAmount}`);
           if (trainer.currency === 'PLN') {
             totalPLN += trainerAmount;
           } else if (trainer.currency === 'EUR') {
@@ -2398,10 +2404,9 @@
         });
       }
 
-      // Update total cells
-      const hasPLNPayments = camp.currency === 'PLN' || (camp.trainers && camp.trainers.some(t => t.currency === 'PLN'));
-      const hasEURPayments = camp.currency === 'EUR' || (camp.trainers && camp.trainers.some(t => t.currency === 'EUR'));
+      console.log(`[UPDATE] Participant ${participant.name} - Total PLN: ${totalPLN}, Total EUR: ${totalEUR}`);
 
+      // Check which currency columns actually exist in the table
       const cells = participantRow.querySelectorAll('td');
       let cellIndex = 3; // Start after participant name, camp payment
 
@@ -2412,19 +2417,17 @@
       // Skip attention and comment cells
       cellIndex += 2;
 
-      if (hasPLNPayments) {
-        const plnCell = cells[cellIndex];
-        if (plnCell) {
-          plnCell.textContent = totalPLN.toFixed(2);
-        }
+      // Check if PLN column exists and update it
+      const plnCell = cells[cellIndex];
+      if (plnCell && plnCell.classList.contains('total-pln')) {
+        plnCell.textContent = totalPLN.toFixed(2);
         cellIndex++;
       }
 
-      if (hasEURPayments) {
-        const eurCell = cells[cellIndex];
-        if (eurCell) {
-          eurCell.textContent = totalEUR.toFixed(2);
-        }
+      // Check if EUR column exists and update it
+      const eurCell = cells[cellIndex];
+      if (eurCell && eurCell.classList.contains('total-eur')) {
+        eurCell.textContent = totalEUR.toFixed(2);
       }
     }
 
