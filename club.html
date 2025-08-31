@@ -1056,11 +1056,11 @@
               }
             }
 
-            // Check for paid amount input field (only from "Zapłacono" column)
-            const paidInput = containerParam.querySelector(`input.oboz-paid[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
-            console.log(`Paid input for trainer ${ti.id}:`, paidInput, paidInput?.value);
-            if (paidInput && paidInput.value !== undefined && paidInput.value !== null && paidInput.value !== '') {
-              const paidAmount = parseFloat(paidInput.value) || 0;
+            // Check if payment is confirmed (green highlight)
+            const dueInput = containerParam.querySelector(`input.oboz-due[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+            console.log(`Due input for trainer ${ti.id}:`, dueInput, dueInput?.value);
+            if (dueInput && dueInput.classList.contains('status-paid')) {
+              const paidAmount = parseFloat(dueInput.value) || 0;
               console.log(`Paid amount for trainer ${ti.id}:`, paidAmount);
               if (paidAmount > 0) {
                 trainerStats[ti.id].totalPaidAmount += paidAmount;
@@ -1494,12 +1494,11 @@
           '<th class="border-right-gold"><div class="header-main">Imię i nazwisko</div></th>',
           `<th class="border-right-gold"><div class="header-main">Camp</div><div class="header-sub">zaplacono ${training.currency || 'PLN'}</div></th>`
         ];
-        // for each trainer: lessons (editable), due (calculated), paid (input + confirm)
+        // for each trainer: lessons (editable), due (calculated + confirm)
         trainerInfo.forEach((t, index)=>{
           const isLastTrainer = index === trainerInfo.length - 1;
           theadCols.push(`<th><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Lekcje</div></th>`);
-          theadCols.push(`<th><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Do zapłaty ${t.price} ${t.currency}</div></th>`);
-          theadCols.push(`<th class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}"><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Zaplacono</div></th>`);
+          theadCols.push(`<th class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}"><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Do zapłaty ${t.price} ${t.currency}</div></th>`);
         });
 
         // Add total columns
@@ -1539,10 +1538,9 @@
                         <button class="btn btn-small lesson-plus" data-part-id="${p.id}" data-trainer-id="${ti.id}">+</button>
                       </div>
                     </td>
-                    <td style="padding:4px;text-align:center"><input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due" readonly style="width:60px;margin:0 auto;${due > 0 ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : 'background:#ffffff;color:#000000;'}text-align:center" value="${due||0}" /></td>
-                    <td style="padding:4px;text-align:center" class="${isLastTrainer ? '' : 'border-right-gold'}">
+                    <td style="padding:4px;text-align:center" class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}">
                       <div class="payment-controls">
-                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-paid ${paidClass}" style="width:60px;margin:0 2px" value="${finalObozPaid||''}" />
+                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due ${ob.status === 'paid' ? 'status-paid' : (due > 0 ? 'status-unpaid' : '')}" readonly style="width:60px;margin:0 auto;${ob.status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : (due > 0 ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : 'background:#ffffff;color:#000000;')}text-align:center" value="${due||0}" />
                         <button class="btn btn-small oboz-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
                         <button class="btn btn-small btn-delete oboz-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>
                       </div>
@@ -1690,41 +1688,24 @@
           // Set lesson payment status
           p.oboz.forEach(ob => {
             if (ob.status === 'paid') {
-              const paidInput = container.querySelector(`input.oboz-paid[data-oboz-id="${ob.id}"]`);
               const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${ob.id}"]`);
               const confirmBtn = container.querySelector(`button.oboz-confirm[data-oboz-id="${ob.id}"]`);
 
-              if (paidInput) {
-                paidInput.classList.add('status-paid');
-                paidInput.classList.remove('status-unpaid');
-              }
               if (dueInput) {
                 dueInput.classList.add('status-paid');
+                dueInput.classList.remove('status-unpaid');
+                // Add green highlight for confirmed payment
+                dueInput.style.background = '#28a745';
+                dueInput.style.color = '#ffffff';
+                dueInput.style.borderColor = '#28a745';
               }
               if (confirmBtn) {
                 confirmBtn.disabled = true;
               }
-            } else if (ob.amount && ob.lessons_count) {
-              // Unconfirmed payment - add green highlight
-              const paidInput = container.querySelector(`input.oboz-paid[data-oboz-id="${ob.id}"]`);
-              if (paidInput && !paidInput.classList.contains('status-paid')) {
-                paidInput.style.background = '#28a745';
-                paidInput.style.color = '#ffffff';
-              }
             }
           });
 
-          // Check for stored oboz paid amounts in localStorage
-          trainerInfo.forEach(ti => {
-            const storedObozPaid = localStorage.getItem(`oboz_paid_${currentTrainingId}_${p.id}_${ti.id}`);
-            if (storedObozPaid) {
-              const paidInput = container.querySelector(`input.oboz-paid[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
-              if (paidInput && !paidInput.classList.contains('status-paid')) {
-                paidInput.style.background = '#28a745';
-                paidInput.style.color = '#ffffff';
-              }
-            }
-          });
+
         });
 
         // attach handlers
@@ -1767,44 +1748,7 @@
           });
         });
 
-        // Save oboz paid amount to localStorage when changed (for trainer lessons)
-        container.querySelectorAll('.oboz-paid').forEach(input => {
-          input.addEventListener('input', () => {
-            const partId = input.getAttribute('data-part-id');
-            const trainerId = input.getAttribute('data-trainer-id');
-            const value = input.value;
 
-            // Update localStorage for oboz paid amounts
-            if (partId && trainerId) {
-              if (value) {
-                localStorage.setItem(`oboz_paid_${currentTrainingId}_${partId}_${trainerId}`, value);
-                // Add green highlight for entered amounts (only if not already paid)
-                if (!input.classList.contains('status-paid')) {
-                  input.style.background = '#28a745';
-                  input.style.color = '#ffffff';
-                }
-              } else {
-                localStorage.removeItem(`oboz_paid_${currentTrainingId}_${partId}_${trainerId}`);
-                // Remove highlight when empty
-                input.classList.remove('status-paid', 'status-unpaid');
-                input.style.background = '';
-                input.style.color = '';
-              }
-
-                            // Update summary after oboz paid change
-              setTimeout(() => {
-                const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-                updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-                updateFinancialSummary();
-                updateParticipantTotals(partId);
-              }, 50);
-
-              // Camp list status will be updated when needed
-
-              // Update only necessary elements instead of full re-render
-            }
-          });
-        });
 
         // Save camp paid amount to localStorage when changed
         container.querySelectorAll('.camp-paid').forEach(input => {
@@ -1986,45 +1930,40 @@
           btn.addEventListener('click', async ()=>{
             let obozId = btn.getAttribute('data-oboz-id') || '';
             const partId = btn.getAttribute('data-part-id');
-            // find paid/due inputs by either oboz-id or by part+trainer
-            const paidInput = container.querySelector(`input.oboz-paid[data-oboz-id="${obozId}"]`) || container.querySelector(`input.oboz-paid[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+            const trainerId = btn.getAttribute('data-trainer-id');
+            // find due input by either oboz-id or by part+trainer
             const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`) || container.querySelector(`input.oboz-due[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-            const trainerId = paidInput ? paidInput.getAttribute('data-trainer-id') : null;
             // find lessons input
             const lessonsInput = container.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
             const lessons = parseInt(lessonsInput?.value,10) || 0;
             const due = parseFloat(dueInput?.value) || 0;
-            const paid = parseFloat(paidInput?.value) || 0;
-            const EPS = 0.01;
-            if(Math.abs(paid - due) < EPS){
+
+            if(due > 0){
               if(obozId){
                 // update existing payment
-              const { error } = await supabase.from('oboz_lesson_payments').update({ amount: paid, status: 'paid' }).eq('id', obozId);
+              const { error } = await supabase.from('oboz_lesson_payments').update({ amount: due, status: 'paid' }).eq('id', obozId);
               if(error){ alert('Błąd zapisu: '+error.message); return; }
               } else {
                 // insert new payment
-                const insertObj = { training_participant_id: partId, trainer_id: trainerId, lessons_count: lessons, amount: paid, currency: dueInput?.getAttribute('data-currency') || 'PLN', status: 'paid' };
+                const insertObj = { training_participant_id: partId, trainer_id: trainerId, lessons_count: lessons, amount: due, currency: dueInput?.getAttribute('data-currency') || 'PLN', status: 'paid' };
                 const { data: newRow, error: insErr } = await supabase.from('oboz_lesson_payments').insert([insertObj]).select().single();
                 if(insErr || !newRow){ alert('Błąd zapisu: '+(insErr?insErr.message:'')); return; }
                 obozId = newRow.id;
                 // update data-oboz-id on inputs/buttons so future actions reference the new row
-                if(paidInput) paidInput.setAttribute('data-oboz-id', obozId);
                 if(dueInput) dueInput.setAttribute('data-oboz-id', obozId);
                 if(lessonsInput) lessonsInput.setAttribute('data-oboz-id', obozId);
                 const delBtn = container.querySelector(`button.oboz-delete[data-part-id="${partId}"]`);
                 if(delBtn) delBtn.setAttribute('data-oboz-id', obozId);
                 btn.setAttribute('data-oboz-id', obozId);
               }
-              if(paidInput){
-                paidInput.classList.add('status-paid');
-                paidInput.classList.remove('status-unpaid');
-                // Remove green highlight since payment is confirmed
-                if(paidInput.style.background.includes('#28a745')) {
-                  paidInput.style.background = '';
-                  paidInput.style.color = '';
-                }
+              if(dueInput){
+                dueInput.classList.add('status-paid');
+                dueInput.classList.remove('status-unpaid');
+                // Add green highlight for confirmed payment
+                dueInput.style.background = '#28a745';
+                dueInput.style.color = '#ffffff';
+                dueInput.style.borderColor = '#28a745';
               }
-              if(dueInput){ dueInput.classList.add('status-paid'); }
               btn.disabled = true;
 
               // Clear localStorage values since payment is now confirmed
@@ -2050,14 +1989,31 @@
             const partId = btn.getAttribute('data-part-id');
             const trainerId = btn.getAttribute('data-trainer-id');
             // find related inputs
-            const paidInput = container.querySelector(`input.oboz-paid[data-oboz-id="${obozId}"]`) || container.querySelector(`input.oboz-paid[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
             const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`) || container.querySelector(`input.oboz-due[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
             const lessonsInput = container.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
             const confirmBtn = container.querySelector(`button.oboz-confirm[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
             if(!obozId){
               // nothing in DB, just reset UI
-              if(paidInput){ paidInput.value = ''; paidInput.style.background=''; paidInput.style.color=''; paidInput.setAttribute('data-oboz-id',''); }
-              if(dueInput){ dueInput.value = 0; dueInput.style.background=''; dueInput.style.color=''; dueInput.setAttribute('data-oboz-id',''); }
+              if(dueInput){
+                // Recalculate amount based on current lessons count
+                const lessonsCount = lessonsInput ? parseInt(lessonsInput.value) || 0 : 0;
+                const price = parseFloat(dueInput.getAttribute('data-price')) || 0;
+                const recalculatedAmount = lessonsCount * price;
+                dueInput.value = recalculatedAmount;
+                dueInput.classList.remove('status-paid');
+                dueInput.setAttribute('data-oboz-id','');
+
+                // Set red highlight if there's amount due, otherwise white
+                if (recalculatedAmount > 0) {
+                  dueInput.style.background = '#b91c1c';
+                  dueInput.style.color = '#ffffff';
+                  dueInput.style.borderColor = '#dc2626';
+                } else {
+                  dueInput.style.background = '#ffffff';
+                  dueInput.style.color = '#000000';
+                  dueInput.style.borderColor = '';
+                }
+              }
               if(lessonsInput) lessonsInput.setAttribute('data-oboz-id','');
               if(confirmBtn) confirmBtn.disabled = false;
               return;
@@ -2066,11 +2022,6 @@
             const { error } = await supabase.from('oboz_lesson_payments').delete().eq('id', obozId);
             if(error){ alert('Błąd usuwania: '+error.message); return; }
             // clear UI and unset oboz ids
-            if(paidInput){
-              paidInput.value = '';
-              paidInput.classList.remove('status-paid', 'status-unpaid');
-              paidInput.setAttribute('data-oboz-id','');
-            }
             if(dueInput){
               // Recalculate amount based on current lessons count
               const lessonsCount = lessonsInput ? parseInt(lessonsInput.value) || 0 : 0;
