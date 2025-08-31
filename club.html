@@ -769,6 +769,9 @@
               // Refresh camp details to show new participant
               await renderCampFromDB(currentTrainingId);
 
+              // Update financial summary
+              setTimeout(() => updateFinancialSummary(), 100);
+
             } catch(err){
               console.error('Error adding participant:', err);
               alert('Błąd dodawania uczestnika: ' + err.message);
@@ -1594,7 +1597,7 @@
                       <button class="btn btn-small camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>
                       <button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>
                     </div>
-                  </td>${obozCells}<td style="padding:4px;text-align:center;font-weight:bold" class="border-right-gold total-pln-cell">${totalPLN.toFixed(2)} PLN</td><td style="padding:4px;text-align:center;font-weight:bold; total-eur-cell">${totalEUR.toFixed(2)} EUR</td></tr>`;
+                  </td>${obozCells}<td style="padding:4px;text-align:center;font-weight:bold" class="border-right-gold">${totalPLN.toFixed(2)} PLN</td><td style="padding:4px;text-align:center;font-weight:bold">${totalEUR.toFixed(2)} EUR</td></tr>`;
                 }).join('')}
               </tbody>
             </table>
@@ -1668,47 +1671,9 @@
             updateExpensesDisplay();
             updateFinancialSummary();
 
-            // Update participant total
-            updateParticipantTotals(partId);
+            // Initialize participant totals
+            parts.forEach(p => updateParticipantTotals(p.id));
           }, 100);
-
-          // Function to update participant totals
-          function updateParticipantTotals(partId) {
-            const participantRow = container.querySelector(`tr[data-part-id="${partId}"]`);
-            if (!participantRow) return;
-
-            // Calculate totals for this participant
-            let totalPLN = 0;
-            let totalEUR = 0;
-
-            // Add camp amount in training currency
-            const campDueInput = participantRow.querySelector('input.camp-due');
-            const campAmount = campDueInput ? parseFloat(campDueInput.value) || 0 : 0;
-            if (training.currency === 'PLN') {
-              totalPLN += campAmount;
-            } else {
-              totalEUR += campAmount;
-            }
-
-            // Add trainer lesson amounts
-            trainerInfo.forEach(ti => {
-              const lessonInput = participantRow.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${ti.id}"]`);
-              const lessons = lessonInput ? parseInt(lessonInput.value) || 0 : 0;
-              const trainerAmount = lessons * ti.price;
-              if (ti.currency === 'PLN') {
-                totalPLN += trainerAmount;
-              } else {
-                totalEUR += trainerAmount;
-              }
-            });
-
-            // Update total columns
-            const plnTotalCell = participantRow.querySelector('.total-pln-cell');
-            const eurTotalCell = participantRow.querySelector('.total-eur-cell');
-
-            if (plnTotalCell) plnTotalCell.textContent = `${totalPLN.toFixed(2)} PLN`;
-            if (eurTotalCell) eurTotalCell.textContent = `${totalEUR.toFixed(2)} EUR`;
-          }
         }
 
         // Set visual status for existing payments
@@ -1820,16 +1785,14 @@
                 input.style.borderColor = '';
               }
 
-              // Update summary after camp due change
-              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-              updateFinancialSummary();
+                          // Update summary after camp due change
+            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+            updateFinancialSummary();
 
             // Update participant total
+            const partId = input.getAttribute('data-part-id');
             updateParticipantTotals(partId);
-
-              // Update totals for all participants (camp amount changed)
-              parts.forEach(p => updateParticipantTotals(p.id));
 
               // Camp list status will be updated when needed
 
@@ -1867,10 +1830,6 @@
               const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
               updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
 
-              // Update participant total
-              const partId = input.getAttribute('data-part-id');
-              updateParticipantTotals(partId);
-
               // Camp list status will be updated when needed
 
               // Update only necessary elements instead of full re-render
@@ -1902,16 +1861,14 @@
                 input.style.color = '';
               }
 
-              // Update summary after camp paid change
-              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-              updateFinancialSummary();
+                          // Update summary after camp paid change
+            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+            updateFinancialSummary();
 
             // Update participant total
+            const partId = input.getAttribute('data-part-id');
             updateParticipantTotals(partId);
-
-              // Update participant total
-              updateParticipantTotals(partId);
 
               // Camp list status will be updated when needed
 
@@ -1956,9 +1913,6 @@
 
               // Update payment status locally instead of full re-render
               updateFinancialSummary();
-
-            // Update participant total
-            updateParticipantTotals(partId);
 
               // Update participant total
               updateParticipantTotals(partId);
@@ -2046,12 +2000,14 @@
                 }
               }
 
-              // Update summary after lesson change (but preserve user input)
-              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+                          // Update summary after lesson change (but preserve user input)
+            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+            updateFinancialSummary();
 
-              // Update participant totals
-              updateParticipantTotals(partId);
+            // Update participant total
+            const partId = input.getAttribute('data-part-id');
+            updateParticipantTotals(partId);
 
             } catch (error) {
               console.error('Error in lesson update:', error);
@@ -2205,6 +2161,45 @@
           });
         });
 
+        // Function to update participant totals in real-time
+        function updateParticipantTotals(partId) {
+          const participantRow = container.querySelector(`tr[data-part-id="${partId}"]`);
+          if (!participantRow) return;
+
+          // Calculate totals for this participant
+          let totalPLN = 0;
+          let totalEUR = 0;
+
+          // Add camp amount in training currency
+          const campDueInput = participantRow.querySelector('input.camp-due');
+          const campAmount = campDueInput ? parseFloat(campDueInput.value) || 0 : 0;
+          const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+          if (trainingCurrency === 'PLN') {
+            totalPLN += campAmount;
+          } else {
+            totalEUR += campAmount;
+          }
+
+          // Add trainer lesson amounts
+          trainerInfo.forEach(ti => {
+            const lessonInput = participantRow.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${ti.id}"]`);
+            const lessons = lessonInput ? parseInt(lessonInput.value) || 0 : 0;
+            const trainerAmount = lessons * ti.price;
+            if (ti.currency === 'PLN') {
+              totalPLN += trainerAmount;
+            } else {
+              totalEUR += trainerAmount;
+            }
+          });
+
+          // Update total columns
+          const totalCells = participantRow.querySelectorAll('td:last-child, td:nth-last-child(2)');
+          if (totalCells.length >= 2) {
+            totalCells[totalCells.length - 2].textContent = `${totalPLN.toFixed(2)} PLN`;
+            totalCells[totalCells.length - 1].textContent = `${totalEUR.toFixed(2)} EUR`;
+          }
+        }
+
         // Add +/- button functionality for lesson inputs
         container.querySelectorAll('.lesson-plus').forEach(btn => {
           btn.addEventListener('click', function() {
@@ -2216,6 +2211,13 @@
               input.value = currentValue + 1;
               // Trigger input event to recalculate amounts
               input.dispatchEvent(new Event('input', { bubbles: true }));
+
+              // Update participant total and financial summary immediately
+              const partId = input.getAttribute('data-part-id');
+              setTimeout(() => {
+                updateParticipantTotals(partId);
+                updateFinancialSummary();
+              }, 50);
             }
           });
         });
@@ -2231,6 +2233,10 @@
                 input.value = currentValue - 1;
                 // Trigger input event to recalculate amounts
                 input.dispatchEvent(new Event('input', { bubbles: true }));
+
+                // Update participant total immediately
+                const partId = input.getAttribute('data-part-id');
+                setTimeout(() => updateParticipantTotals(partId), 50);
               }
             }
           });
