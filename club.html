@@ -689,10 +689,14 @@
 
       createCampBtn.addEventListener('click', ()=> openCampModal());
 
-      // Initialize camp view (simplified)
+      // Initialize camp view
       async function initializeCampView(){
-        // keep create modal behavior only
-        // remove complex list/details initialization
+        // populate month dropdown
+        try {
+          loadMonthOptions();
+        } catch (e) {
+          console.warn('Error initializing camp view:', e);
+        }
       }
 
       // Setup navigation between views
