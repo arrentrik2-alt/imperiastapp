@@ -974,9 +974,24 @@
 
         // No need to distribute expenses to trainers anymore - they are global
 
+        // Reset trainer stats before recalculating
+        trainerInfo.forEach(t => {
+          trainerStats[t.id] = {
+            name: t.name,
+            currency: t.currency,
+            totalLessons: 0,
+            unpaidLessons: 0,
+            participants: 0,
+            paidParticipants: 0,
+            totalDueAmount: 0,
+            totalPaidAmount: 0,
+            expenses: trainerStats[t.id]?.expenses || [],
+            totalExpenses: trainerStats[t.id]?.totalExpenses || 0,
+            profit: 0
+          };
+        });
+
         parts.forEach(p => {
-          console.log('Processing participant:', p.id);
-          console.log('Current trainer stats before processing this participant:', JSON.stringify(trainerStats));
           // Calculate camp amounts - check all entered values (both confirmed and unconfirmed)
           const campPaidValue = localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || '';
           const confirmedAmount = p.camp_status === 'paid' ? parseFloat(p.camp_amount) || 0 : 0;
@@ -992,99 +1007,45 @@
             paidCampAmount += confirmedAmount;
           }
 
-          // Calculate lesson amounts per trainer from database
+          // Calculate trainer amounts from database
           p.oboz.forEach(ob => {
-            if (ob.lessons_count) {
-              const lessonCount = parseInt(ob.lessons_count) || 0;
-              totalLessons += lessonCount;
+            if (trainerStats[ob.trainer_id]) {
+              trainerStats[ob.trainer_id].participants++;
 
-              if (trainerStats[ob.trainer_id]) {
-                trainerStats[ob.trainer_id].totalLessons += lessonCount;
-                trainerStats[ob.trainer_id].participants++;
+              // Use amount from database if available
+              const amount = ob.amount || 0;
+              if (amount > 0) {
+                trainerStats[ob.trainer_id].totalDueAmount += amount;
 
-                // Calculate amount for this trainer
-                const trainer = trainerInfo.find(t => t.id === ob.trainer_id);
-                if (trainer) {
-                  const amount = lessonCount * trainer.price;
-                  trainerStats[ob.trainer_id].totalDueAmount += amount;
-
-                  if (ob.status === 'paid') {
-                    trainerStats[ob.trainer_id].paidParticipants++;
-                    trainerStats[ob.trainer_id].totalPaidAmount += amount;
-                  } else {
-                    unpaidLessons += lessonCount;
-                    trainerStats[ob.trainer_id].unpaidLessons += lessonCount;
-                  }
+                if (ob.status === 'paid') {
+                  trainerStats[ob.trainer_id].paidParticipants++;
+                  trainerStats[ob.trainer_id].totalPaidAmount += amount;
                 }
               }
             }
           });
 
-          // Also check for lessons entered in input fields but not yet confirmed
-          // This ensures that entered but unconfirmed lessons are counted as unpaid
+          // Check for current values in input fields
           trainerInfo.forEach(ti => {
-            const lessonInput = containerParam.querySelector(`input.oboz-lessons[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
-            if (lessonInput && lessonInput.value) {
-              const inputLessonCount = parseInt(lessonInput.value) || 0;
-              const existingDbEntry = p.oboz.find(ob => ob.trainer_id === ti.id);
+            const amountInput = containerParam.querySelector(`input.trainer-amount[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+            const storedAmount = localStorage.getItem(`trainer_amount_${trainingId}_${p.id}_${ti.id}`) || '';
 
-              // If there's a lesson count in input but no confirmed payment, count it as unpaid
-              if (inputLessonCount > 0 && (!existingDbEntry || existingDbEntry.status !== 'paid')) {
-                // Check if this input value is different from what's in database
-                const dbLessonCount = existingDbEntry ? (parseInt(existingDbEntry.lessons_count) || 0) : 0;
+            if (amountInput && amountInput.value) {
+              const inputAmount = parseFloat(amountInput.value) || 0;
+              if (inputAmount > 0 && trainerStats[ti.id]) {
+                // Add input amount to total due
+                trainerStats[ti.id].totalDueAmount += inputAmount;
 
-                if (inputLessonCount > dbLessonCount) {
-                  const additionalLessons = inputLessonCount - dbLessonCount;
-
-                  // Add to total lessons
-                  totalLessons += additionalLessons;
-
-                  if (trainerStats[ti.id]) {
-                    trainerStats[ti.id].totalLessons += additionalLessons;
-                    trainerStats[ti.id].participants = Math.max(trainerStats[ti.id].participants, 1);
-
-                    // Calculate amount for additional lessons
-                    const additionalAmount = additionalLessons * ti.price;
-                    trainerStats[ti.id].totalDueAmount += additionalAmount;
-
-                    // Count as unpaid since not confirmed
-                    unpaidLessons += additionalLessons;
-                    trainerStats[ti.id].unpaidLessons += additionalLessons;
-                  }
+                // If payment is confirmed, also add to paid
+                if (amountInput.classList.contains('status-paid')) {
+                  trainerStats[ti.id].totalPaidAmount += inputAmount;
                 }
               }
-            }
-          });
-
-          // Calculate trainer amounts (due and paid)
-          trainerInfo.forEach(ti => {
-            console.log(`Processing trainer ${ti.name} for participant ${p.id}`);
-
-            // Check for due amount input field - only add if different from database amount
-            const dueAmountInput = containerParam.querySelector(`input.oboz-due[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
-            console.log(`Due input for trainer ${ti.id}:`, dueAmountInput, dueAmountInput?.value);
-            if (dueAmountInput && dueAmountInput.value) {
-              const inputAmount = parseFloat(dueAmountInput.value) || 0;
-              const existingDbEntry = p.oboz.find(ob => ob.trainer_id === ti.id);
-              const dbAmount = existingDbEntry ? (parseInt(existingDbEntry.lessons_count) || 0) * ti.price : 0;
-
-              // Only add the difference between input and database
-              const difference = inputAmount - dbAmount;
-              if (difference > 0) {
-                trainerStats[ti.id].totalDueAmount += difference;
-                console.log(`Added difference ${difference} to totalDueAmount for trainer ${ti.id}, now: ${trainerStats[ti.id].totalDueAmount}`);
-              }
-            }
-
-            // Check if payment is confirmed (green highlight)
-            const paidDueInput = containerParam.querySelector(`input.oboz-due[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
-            console.log(`Due input for trainer ${ti.id}:`, paidDueInput, paidDueInput?.value);
-            if (paidDueInput && paidDueInput.classList.contains('status-paid')) {
-              const paidAmount = parseFloat(paidDueInput.value) || 0;
-              console.log(`Paid amount for trainer ${ti.id}:`, paidAmount);
-              if (paidAmount > 0) {
-                trainerStats[ti.id].totalPaidAmount += paidAmount;
-                console.log(`Added ${paidAmount} to totalPaidAmount for trainer ${ti.id}, now: ${trainerStats[ti.id].totalPaidAmount}`);
+            } else if (storedAmount) {
+              // Handle stored amounts from localStorage
+              const storedAmountValue = parseFloat(storedAmount) || 0;
+              if (storedAmountValue > 0 && trainerStats[ti.id]) {
+                trainerStats[ti.id].totalDueAmount += storedAmountValue;
               }
             }
           });
@@ -1103,25 +1064,21 @@
 
         // Update camp summaries in footer
         if (totalCampFooterEl) {
-          totalCampFooterEl.textContent = `${totalCampAmount} ${trainingCurrency}`;
+          totalCampFooterEl.textContent = `${totalCampAmount.toFixed(2)} ${trainingCurrency}`;
         }
         if (paidCampFooterEl) {
-          paidCampFooterEl.textContent = `${paidCampAmount} ${trainingCurrency}`;
+          paidCampFooterEl.textContent = `${paidCampAmount.toFixed(2)} ${trainingCurrency}`;
         }
 
         // Update trainer summaries in footer
         trainerInfo.forEach(t => {
-          const lessonsEl = document.getElementById(`lessons-${t.id}`);
           const totalDueEl = document.getElementById(`totalDue-${t.id}`);
           const totalPaidEl = document.getElementById(`totalPaid-${t.id}`);
 
-          if (lessonsEl) {
-            lessonsEl.textContent = Math.round(trainerStats[t.id].totalLessons / 2);
-          }
-          if (totalDueEl) {
+          if (totalDueEl && trainerStats[t.id]) {
             totalDueEl.textContent = `${trainerStats[t.id].totalDueAmount.toFixed(2)} ${t.currency}`;
           }
-          if (totalPaidEl) {
+          if (totalPaidEl && trainerStats[t.id]) {
             totalPaidEl.textContent = `${trainerStats[t.id].totalPaidAmount.toFixed(2)} ${t.currency}`;
           }
         });
@@ -1137,13 +1094,21 @@
           totalEUR += totalCampAmount;
         }
 
-        // Add trainer amounts
-        trainerInfo.forEach(t => {
-          if (t.currency === 'PLN') {
-            totalPLN += trainerStats[t.id].totalDueAmount;
-          } else {
-            totalEUR += trainerStats[t.id].totalDueAmount;
-          }
+        // Add trainer amounts (only from input fields, not from database)
+        parts.forEach(p => {
+          trainerInfo.forEach(ti => {
+            const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+            if (amountInput && amountInput.value) {
+              const inputAmount = parseFloat(amountInput.value) || 0;
+              if (inputAmount > 0) {
+                if (ti.currency === 'PLN') {
+                  totalPLN += inputAmount;
+                } else {
+                  totalEUR += inputAmount;
+                }
+              }
+            }
+          });
         });
 
         if (totalPLNFooterEl) {
@@ -1468,11 +1433,10 @@
           '<th class="border-right-gold"><div class="header-main">Imię i nazwisko</div></th>',
           `<th class="border-right-gold"><div class="header-main">Camp</div><div class="header-sub">zaplacono ${training.currency || 'PLN'}</div></th>`
         ];
-        // for each trainer: lessons (editable), due (calculated + confirm)
+        // for each trainer: amount input + confirm button
         trainerInfo.forEach((t, index)=>{
           const isLastTrainer = index === trainerInfo.length - 1;
-          theadCols.push(`<th><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Lekcje</div></th>`);
-          theadCols.push(`<th class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}"><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Do zapłaty ${t.price} ${t.currency}</div></th>`);
+          theadCols.push(`<th class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}"><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Kwota ${t.currency}</div></th>`);
         });
 
         // Add total columns
@@ -1494,29 +1458,18 @@
                   const campPaid = p.camp_amount || '';
                   const obozCells = trainerInfo.map((ti, trainerIndex) => {
                     const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
-                    const lessons = ob.lessons_count || '';
-                    const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : (ti.price * (ob.lessons_count||0));
-                    const paid = (ob.status === 'paid') ? (ob.amount || due) : '';
-                    const paidClass = ob.status === 'paid' ? 'status-paid' : '';
-
-                    // Get stored oboz paid amount from localStorage or use confirmed amount if already paid
-                    const storedObozPaid = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`oboz_paid_${trainingId}_${p.id}_${ti.id}`) || '');
-                    const finalObozPaid = storedObozPaid || paid;
+                    const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : 0;
+                    // Get stored amount from localStorage or use confirmed amount if already paid
+                    const storedAmount = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`trainer_amount_${trainingId}_${p.id}_${ti.id}`) || '');
+                    const finalAmount = storedAmount || due;
                     const currency = ob.currency || ti.currency || 'PLN';
                     const isLastTrainer = trainerIndex === trainerInfo.length - 1;
 
-                    return `<td style="padding:4px;text-align:center">
-                      <div class="lesson-input-group">
-                        <button class="btn btn-small lesson-minus" data-part-id="${p.id}" data-trainer-id="${ti.id}">-</button>
-                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control oboz-lessons" style="width:35px;margin:0;text-align:center" value="${lessons||''}" />
-                        <button class="btn btn-small lesson-plus" data-part-id="${p.id}" data-trainer-id="${ti.id}">+</button>
-                      </div>
-                    </td>
-                    <td style="padding:4px;text-align:center" class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}">
+                    return `<td style="padding:4px;text-align:center" class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}">
                       <div class="payment-controls">
-                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-price="${ti.price}" data-currency="${currency}" class="form-control oboz-due ${ob.status === 'paid' ? 'status-paid' : (due > 0 ? 'status-unpaid' : '')}" readonly style="width:60px;margin:0 auto;${ob.status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : (due > 0 ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : 'background:#ffffff;color:#000000;')}text-align:center" value="${due||0}" />
-                        <button class="btn btn-small oboz-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
-                        <button class="btn btn-small btn-delete oboz-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>
+                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-currency="${currency}" class="form-control trainer-amount ${ob.status === 'paid' ? 'status-paid' : (finalAmount > 0 ? 'status-unpaid' : '')}" style="width:60px;margin:0 2px;${ob.status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : (finalAmount > 0 ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : 'background:#ffffff;color:#000000;')}text-align:center" value="${finalAmount||''}" />
+                        <button class="btn btn-small trainer-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
+                        <button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>
                       </div>
                     </td>`;
                   }).join('');
@@ -1567,11 +1520,6 @@
                     </div>
                   </td>
                   ${trainerInfo.map((t, index) => `
-                    <td style="padding:4px;text-align:center;">
-                      <div style="font-size:0.8rem;">
-                        <div>Lekcje: <span id="lessons-${t.id}">0</span></div>
-                      </div>
-                    </td>
                     <td style="padding:4px;text-align:center;${index === trainerInfo.length - 1 ? 'border-right:2px solid var(--gold);' : ''}">
                       <div style="font-size:0.8rem;">
                         <div>Ogólna: <span id="totalDue-${t.id}">0</span></div>
@@ -1608,11 +1556,10 @@
           campDetailsContainer.appendChild(summaryDiv);
 
           // Calculate and update summary
-          setTimeout(() => updateCampSummary(parts, trainerInfo, trainingId, container, trainingCurrency), 50);
+          updateCampSummary(parts, trainerInfo, trainingId, container, trainingCurrency);
 
           // Update financial summary
-          setTimeout(() => {
-            updateFinancialSummary();
+          updateFinancialSummary();
 
             // Initialize participant totals
             parts.forEach(p => updateParticipantTotals(p.id));
@@ -1649,19 +1596,19 @@
             }
           }
 
-          // Set lesson payment status
+          // Set trainer payment status
           p.oboz.forEach(ob => {
             if (ob.status === 'paid') {
-              const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${ob.id}"]`);
-              const confirmBtn = container.querySelector(`button.oboz-confirm[data-oboz-id="${ob.id}"]`);
+              const amountInput = container.querySelector(`input.trainer-amount[data-oboz-id="${ob.id}"]`);
+              const confirmBtn = container.querySelector(`button.trainer-confirm[data-oboz-id="${ob.id}"]`);
 
-              if (dueInput) {
-                dueInput.classList.add('status-paid');
-                dueInput.classList.remove('status-unpaid');
+              if (amountInput) {
+                amountInput.classList.add('status-paid');
+                amountInput.classList.remove('status-unpaid');
                 // Add green highlight for confirmed payment
-                dueInput.style.background = '#28a745';
-                dueInput.style.color = '#ffffff';
-                dueInput.style.borderColor = '#28a745';
+                amountInput.style.background = '#28a745';
+                amountInput.style.color = '#ffffff';
+                amountInput.style.borderColor = '#28a745';
               }
               if (confirmBtn) {
                 confirmBtn.disabled = true;
@@ -1870,11 +1817,9 @@
               }
 
                           // Update summary after lesson change (but preserve user input)
-              setTimeout(() => {
-                const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-                updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-                updateFinancialSummary();
-              }, 50);
+              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+              updateFinancialSummary();
 
             // Update participant total
             const partId = input.getAttribute('data-part-id');
@@ -1885,6 +1830,42 @@
             } finally {
               // Hide saving indicator
               setTimeout(() => savingIndicator.classList.remove('show'), 200);
+            }
+          });
+        });
+
+        // Handle trainer amount input changes
+        container.querySelectorAll('.trainer-amount').forEach(input => {
+          input.addEventListener('input', () => {
+            const partId = input.getAttribute('data-part-id');
+            const trainerId = input.getAttribute('data-trainer-id');
+            const value = input.value;
+
+            if (partId && trainerId) {
+              if (value) {
+                // Store amount in localStorage
+                localStorage.setItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`, value);
+                // Add red highlight for entered amounts (unconfirmed)
+                if (!input.classList.contains('status-paid')) {
+                  input.style.background = '#b91c1c';
+                  input.style.color = '#ffffff';
+                  input.style.borderColor = '#dc2626';
+                }
+              } else {
+                // Clear localStorage if empty
+                localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
+                // Remove highlight when empty
+                input.classList.remove('status-paid', 'status-unpaid');
+                input.style.background = '';
+                input.style.color = '';
+                input.style.borderColor = '';
+              }
+
+              // Update summary immediately
+              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+              updateFinancialSummary();
+              updateParticipantTotals(partId);
             }
           });
         });
@@ -1933,12 +1914,10 @@
               localStorage.removeItem(`oboz_paid_${currentTrainingId}_${partId}_${trainerId}`);
 
               // Update summary after camp payment confirmation
-              setTimeout(() => {
-                const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-                updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-                updateFinancialSummary();
-                updateParticipantTotals(partId);
-              }, 50);
+              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+              updateFinancialSummary();
+              updateParticipantTotals(partId);
 
               // Camp list status will be updated when needed
             } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
@@ -2009,12 +1988,10 @@
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
 
             // Update summary and financial summary
-            setTimeout(() => {
-              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-              updateFinancialSummary();
-              updateParticipantTotals(partId);
-            }, 50);
+            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+            updateFinancialSummary();
+            updateParticipantTotals(partId);
           });
         });
 
@@ -2039,12 +2016,126 @@
             if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
 
             // Update summary and financial summary
-            setTimeout(() => {
+            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+            updateFinancialSummary();
+            updateParticipantTotals(partId);
+          });
+        });
+
+        // Handle trainer confirm buttons
+        container.querySelectorAll('.trainer-confirm').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const obozId = btn.getAttribute('data-oboz-id') || '';
+            const partId = btn.getAttribute('data-part-id');
+            const trainerId = btn.getAttribute('data-trainer-id');
+
+            // Find amount input
+            const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+            const amount = parseFloat(amountInput?.value) || 0;
+
+            if (amount > 0) {
+              if (obozId) {
+                // Update existing payment
+                const { error } = await supabase.from('oboz_lesson_payments').update({ amount: amount, status: 'paid' }).eq('id', obozId);
+                if (error) { alert('Błąd zapisu: ' + error.message); return; }
+              } else {
+                // Insert new payment
+                const currency = amountInput?.getAttribute('data-currency') || 'PLN';
+                const insertObj = {
+                  training_participant_id: partId,
+                  trainer_id: trainerId,
+                  lessons_count: 1, // Default value since we don't track lessons anymore
+                  amount: amount,
+                  currency: currency,
+                  status: 'paid'
+                };
+                const { data: newRow, error: insErr } = await supabase.from('oboz_lesson_payments').insert([insertObj]).select().single();
+                if (insErr || !newRow) { alert('Błąd zapisu: ' + (insErr ? insErr.message : '')); return; }
+                // Update data-oboz-id
+                if (amountInput) amountInput.setAttribute('data-oboz-id', newRow.id);
+                if (btn) btn.setAttribute('data-oboz-id', newRow.id);
+              }
+
+              // Update UI
+              if (amountInput) {
+                amountInput.classList.add('status-paid');
+                amountInput.classList.remove('status-unpaid');
+                // Add green highlight
+                amountInput.style.background = '#28a745';
+                amountInput.style.color = '#ffffff';
+                amountInput.style.borderColor = '#28a745';
+              }
+              btn.disabled = true;
+
+              // Clear localStorage
+              localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
+
+              // Update summaries
               const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
               updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
               updateFinancialSummary();
               updateParticipantTotals(partId);
-            }, 50);
+            } else {
+              alert('Wprowadź kwotę przed potwierdzeniem');
+            }
+          });
+        });
+
+        // Handle trainer delete buttons
+        container.querySelectorAll('.trainer-delete').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const obozId = btn.getAttribute('data-oboz-id') || '';
+            const partId = btn.getAttribute('data-part-id');
+            const trainerId = btn.getAttribute('data-trainer-id');
+
+            if (!obozId) {
+              // No database record, just reset UI
+              const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+              if (amountInput) {
+                amountInput.value = '';
+                amountInput.classList.remove('status-paid', 'status-unpaid');
+                amountInput.style.background = '';
+                amountInput.style.color = '';
+                amountInput.style.borderColor = '';
+              }
+              localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
+              if (btn) btn.disabled = false;
+              // Update summaries
+              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+              updateFinancialSummary();
+              updateParticipantTotals(partId);
+              return;
+            }
+
+            if (!confirm('Usunąć płatność dla tego szkoleniowca?')) return;
+
+            // Delete from database
+            const { error } = await supabase.from('oboz_lesson_payments').delete().eq('id', obozId);
+            if (error) { alert('Błąd usuwania: ' + error.message); return; }
+
+            // Reset UI
+            const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+            if (amountInput) {
+              amountInput.value = '';
+              amountInput.classList.remove('status-paid', 'status-unpaid');
+              amountInput.style.background = '';
+              amountInput.style.color = '';
+              amountInput.style.borderColor = '';
+              amountInput.setAttribute('data-oboz-id', '');
+            }
+            localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
+            if (btn) {
+              btn.disabled = false;
+              btn.setAttribute('data-oboz-id', '');
+            }
+
+            // Update summaries
+            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+            updateFinancialSummary();
+            updateParticipantTotals(partId);
           });
         });
 
@@ -2067,11 +2158,10 @@
             totalEUR += campAmount;
           }
 
-          // Add trainer lesson amounts
+          // Add trainer amounts
           trainerInfo.forEach(ti => {
-            const lessonInput = participantRow.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${ti.id}"]`);
-            const lessons = lessonInput ? parseInt(lessonInput.value) || 0 : 0;
-            const trainerAmount = lessons * ti.price;
+            const amountInput = participantRow.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${ti.id}"]`);
+            const trainerAmount = amountInput ? parseFloat(amountInput.value) || 0 : 0;
             if (ti.currency === 'PLN') {
               totalPLN += trainerAmount;
             } else {
@@ -2101,12 +2191,11 @@
 
               // Update participant total and financial summary immediately
               const partId = input.getAttribute('data-part-id');
-              setTimeout(() => {
-                const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-                updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-                updateFinancialSummary();
-                updateParticipantTotals(partId);
-              }, 50);
+              // Call immediately to ensure data is updated
+              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+              updateFinancialSummary();
+              updateParticipantTotals(partId);
             }
           });
         });
@@ -2125,12 +2214,11 @@
 
                 // Update participant total immediately
                 const partId = input.getAttribute('data-part-id');
-                setTimeout(() => {
-                  const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-                  updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-                  updateFinancialSummary();
-                  updateParticipantTotals(partId);
-                }, 50);
+                // Call immediately to ensure data is updated
+                const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+                updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+                updateFinancialSummary();
+                updateParticipantTotals(partId);
               }
             }
           });
