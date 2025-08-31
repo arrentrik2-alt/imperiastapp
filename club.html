@@ -1,2950 +1,702 @@
 <!DOCTYPE html>
 <html lang="pl">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>Panel Admina - Klub</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-      :root {
-        --primary-bg: #121212;
-        --secondary-bg: #1e1e1e;
-        --gold: #d4af37;
-        --gold-light: #f1e5b9;
-        --text-light: #f5f5f5;
-        --text-gray: #b0b0b0;
-        --border-dark: #333;
-        --success: #28a745;
-        --error: #dc3545;
-      }
-      * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-      body { background-color: var(--primary-bg); color: var(--text-light); min-height: 100vh; display: flex; overflow-x: hidden; }
-      .sidebar { width: 250px; background-color: var(--secondary-bg); height: 100vh; position: fixed; left: 0; top: 0; padding: 20px 0; border-right: 1px solid var(--border-dark); transition: all 0.3s ease; z-index: 1000; }
-      .sidebar.collapsed { width: 70px; }
-      .sidebar.collapsed .logo h1 { display: none; }
-      .sidebar.collapsed .nav-links a span { display: none; }
-      .sidebar.collapsed .nav-links a i { margin-right: 0; }
-      .logo { text-align: center; padding: 0 20px 20px; border-bottom: 1px solid var(--border-dark); margin-bottom: 20px; }
-      .logo h1 { color: var(--gold); font-size: 1.5rem; font-weight: bold; }
-      .nav-links { list-style: none; padding: 0 15px; }
-      .nav-links li { margin-bottom: 5px; }
-      .nav-links a { display: flex; align-items: center; padding: 12px 15px; text-decoration: none; color: var(--text-gray); border-radius: 5px; transition: all 0.3s ease; }
-      .nav-links a:hover, .nav-links a.active { background-color: rgba(212, 175, 55, 0.1); color: var(--gold); }
-      .nav-links a i { margin-right: 10px; font-size: 1.1rem; }
-      .main-content { flex: 1; margin-left: 250px; padding: 20px; overflow-x: hidden; transition: margin-left 0.3s ease; }
-      .main-content.sidebar-collapsed { margin-left: 70px; }
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klub Tańca - Studio Tańca Imperia</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-bg: #121212;
+      --secondary-bg: #1e1e1e;
+      --gold: #d4af37;
+      --gold-light: #f1e5b9;
+      --text-light: #f5f5f5;
+      --text-gray: #b0b0b0;
+      --border-dark: #333;
+      --success: #28a745;
+      --error: #dc3545;
+    }
 
-      /* Camp section full width when sidebar collapsed */
-      .sidebar.collapsed ~ .main-content { margin-left: 70px; }
-      .sidebar.collapsed ~ .main-content #campySection {
-        margin-left: 0;
-        width: 100vw;
-        max-width: none;
-      }
-      .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid var(--border-dark); }
-      .header h2 { color: var(--gold); font-size: 1.8rem; }
-      .user-info { display: flex; align-items: center; }
-      .user-info span { margin-right: 15px; color: var(--text-gray); }
-      .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; transition: all 0.3s ease; display: inline-flex; align-items: center; }
-      .btn i { margin-right: 5px; }
-      .btn-primary { background-color: var(--gold); color: var(--primary-bg); }
-      .btn-primary:hover { background-color: #c19b2e; }
-      .btn-outline { background-color: transparent; border: 1px solid var(--gold); color: var(--gold); }
-      .btn-outline:hover { background-color: rgba(212, 175, 55, 0.1); }
-      .content-box { background-color: var(--secondary-bg); border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border-dark); }
-      .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-      .content-header h3 { color: var(--gold); font-size: 1.3rem; }
-      /* Table */
-      table { width: 100%; border-collapse: collapse; }
-      table th, table td { border-bottom: 1px solid var(--border-dark); color: var(--text-light); }
-      table thead th { text-align: center; padding: 8px 4px; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 
-      /* Header styling */
-      .header-main {
-        font-size: 1.1rem;
-        font-weight: bold;
-        color: var(--gold);
-        margin-bottom: 2px;
-      }
-      .header-sub {
-        font-size: 0.8rem;
-        color: var(--text-gray);
-        font-weight: normal;
+    body {
+      background-color: var(--primary-bg);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background-color: var(--secondary-bg);
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      padding: 20px 0;
+      border-right: 1px solid var(--border-dark);
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    .logo {
+      text-align: center;
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border-dark);
+      margin-bottom: 20px;
+    }
+
+    .logo h1 {
+      color: var(--gold);
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    .nav-links {
+      list-style: none;
+      padding: 0 15px;
+    }
+
+    .nav-links li {
+      margin-bottom: 5px;
+    }
+
+    .nav-links a {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      text-decoration: none;
+      color: var(--text-gray);
+      border-radius: 5px;
+      transition: all 0.3s ease;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      background-color: rgba(212, 175, 55, 0.1);
+      color: var(--gold);
+    }
+
+    .nav-links a i {
+      margin-right: 10px;
+      font-size: 1.1rem;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      margin-left: 250px;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border-dark);
+    }
+
+    .header h2 {
+      color: var(--gold);
+      font-size: 1.8rem;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+    }
+
+    .user-info span {
+      margin-right: 15px;
+      color: var(--text-gray);
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .btn i {
+      margin-right: 5px;
+    }
+
+    .btn-primary {
+      background-color: var(--gold);
+      color: var(--primary-bg);
+    }
+
+    .btn-primary:hover {
+      background-color: #c19b2e;
+    }
+
+    .btn-outline {
+      background-color: transparent;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+    }
+
+    .btn-outline:hover {
+      background-color: rgba(212, 175, 55, 0.1);
+    }
+
+    /* Content Box */
+    .content-box {
+      background-color: var(--secondary-bg);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-dark);
+    }
+
+    .content-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .content-header h3 {
+      color: var(--gold);
+      font-size: 1.3rem;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--secondary-bg);
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 80vh;
+      overflow: auto;
+      padding: 25px;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: none;
+      border: none;
+      color: var(--text-gray);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .modal-close:hover {
+      color: var(--text-light);
+    }
+
+    .modal-header {
+      margin-bottom: 20px;
+      padding-right: 30px;
+    }
+
+    .modal-header h3 {
+      color: var(--gold);
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text-gray);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 10px;
+      background-color: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--border-dark);
+      border-radius: 4px;
+      color: var(--text-light);
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+      gap: 10px;
+    }
+
+    /* Members List */
+    .members-list {
+      margin-top: 20px;
+    }
+
+    .member-card {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 15px;
+      border: 1px solid var(--border-dark);
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .member-card:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+    }
+
+    .member-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .member-number {
+      background-color: var(--gold);
+      color: var(--primary-bg);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin-right: 10px;
+      min-width: 30px;
+      text-align: center;
+    }
+
+    .member-id {
+      color: var(--gold);
+      font-weight: bold;
+      margin-right: 10px;
+    }
+
+    .member-name {
+      color: var(--text-light);
+      font-weight: bold;
+      flex: 1;
+    }
+
+    .member-details {
+      color: var(--text-gray);
+      font-size: 0.9rem;
+    }
+
+    .member-detail {
+      display: inline-block;
+      margin-right: 15px;
+    }
+
+    .member-detail i {
+      margin-right: 5px;
+      color: var(--gold);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-gray);
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      color: var(--gold);
+      margin-bottom: 15px;
+    }
+
+    .empty-state p {
+      margin-bottom: 20px;
+    }
+
+    /* Loading spinner */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: var(--gold);
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 992px) {
+      .sidebar {
+        width: 70px;
       }
 
-      /* Payment controls */
-      .payment-controls {
-        display: inline-flex;
-        align-items: center;
-        gap: 2px;
-      }
-      .btn-small {
-        padding: 4px 6px;
-        font-size: 0.8rem;
-        min-width: 30px;
-      }
-      .btn-delete {
-        background-color: #dc3545;
-        color: white;
-        border: 1px solid #dc3545;
-      }
-      .btn-delete:hover {
-        background-color: #c82333;
-        border-color: #bd2130;
+      .sidebar .logo-text, .sidebar .link-text {
+        display: none;
       }
 
-      /* Lesson input group with +/- buttons */
-      .lesson-input-group {
-        display: inline-flex;
-        align-items: center;
-        gap: 2px;
-      }
-      .lesson-input-group input {
-        text-align: center;
-        padding: 4px 2px;
-      }
-      .lesson-plus, .lesson-minus {
-        padding: 2px 6px;
-        font-size: 12px;
-        line-height: 1;
-        min-width: 20px;
-        height: 24px;
-        cursor: pointer;
-        border: 1px solid var(--border-dark);
-        background-color: var(--secondary-bg);
-        color: var(--text-light);
-        border-radius: 3px;
-      }
-      .lesson-plus:hover, .lesson-minus:hover {
-        background-color: var(--gold);
-        color: var(--primary-bg);
-      }
-
-      /* Members table styling */
-      #membersTable th, #membersTable td {
-        padding: 8px;
-        border-bottom: 1px solid var(--border-dark);
-      }
-      #membersTable thead th {
-        color: var(--gold);
-        font-weight: bold;
-        text-align: center;
-      }
-      /* Alternating row colors for all tables */
-      #membersTable tbody tr:nth-child(even),
-      #campDetailsContainer table tbody tr:nth-child(even) {
-        background-color: rgba(255, 255, 255, 0.15);
-      }
-      #membersTable tbody tr:nth-child(odd),
-      #campDetailsContainer table tbody tr:nth-child(odd) {
-        background-color: rgba(0, 0, 0, 0.08);
-      }
-
-      /* Smooth transitions for better UX */
-      #membersTable tbody tr,
-      #campDetailsContainer table tbody tr,
-      .form-control,
-      .btn {
-        transition: all 0.2s ease-in-out;
-      }
-
-      /* Status indicators with smooth transitions */
-      .status-paid {
-        background-color: #28a745 !important;
-        color: white !important;
-        transition: all 0.3s ease-in-out;
-      }
-
-      .status-unpaid {
-        background-color: #ffc107 !important;
-        color: #000 !important;
-        transition: all 0.3s ease-in-out;
-      }
-
-      /* Loading indicator */
-      .saving-indicator {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #007bff;
-        color: white;
-        padding: 8px 16px;
-        border-radius: 4px;
-        font-size: 14px;
-        opacity: 0;
-        transition: opacity 0.3s ease-in-out;
-        pointer-events: none;
-        z-index: 1000;
-      }
-
-      .saving-indicator.show {
-        opacity: 1;
-      }
-
-      /* Payment section borders for better visibility */
-      .border-right-gold {
-        border-right: 2px solid var(--gold) !important;
-      }
-
-      #campDetailsContainer table th.border-right-gold,
-      #campDetailsContainer table td.border-right-gold {
-        border-right: 2px solid var(--gold) !important;
-      }
-      .action-buttons {
-        display: inline-flex;
-        gap: 4px;
-        align-items: center;
-      }
-
-      /* Camp list styling */
-      .camp-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 16px;
-        margin-bottom: 8px;
-        background-color: var(--secondary-bg);
-        border: 1px solid var(--border-dark);
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-      }
-      .camp-item:hover {
-        background-color: rgba(212, 175, 55, 0.1);
-        border-color: var(--gold);
-      }
-      .camp-item-info h4 {
-        margin: 0 0 4px 0;
-        color: var(--gold);
-        font-size: 1.1rem;
-      }
-      .camp-item-info p {
-        margin: 0;
-        color: var(--text-gray);
-        font-size: 0.9rem;
-      }
-      .camp-status {
-        margin-top: 8px;
-        padding: 8px;
-        background-color: rgba(255,255,255,0.05);
-        border-radius: 4px;
-        font-size: 0.85rem;
-        line-height: 1.4;
-      }
-      .status-item {
-        display: inline-block;
-        padding: 2px 6px;
-        border-radius: 3px;
-        margin: 1px 0;
-        font-size: 0.8rem;
-        font-weight: bold;
-      }
-      .camp-item-date {
-        color: var(--text-light);
-        font-weight: bold;
-        text-align: right;
-      }
-
-      /* Camp summary styling */
-      .camp-summary {
-        margin-top: 30px;
-        padding: 20px;
-        background-color: var(--secondary-bg);
-        border-radius: 8px;
-        border: 1px solid var(--border-dark);
-      }
-      .summary-section {
-        margin-bottom: 20px;
-      }
-      .summary-section h4 {
-        color: var(--gold);
-        margin-bottom: 15px;
-        font-size: 1.2rem;
-      }
-      .summary-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-      }
-      .summary-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+      .sidebar .logo {
         padding: 10px;
-        background-color: rgba(255,255,255,0.03);
-        border-radius: 4px;
-      }
-      .summary-label {
-        color: var(--text-gray);
-        font-weight: 500;
-      }
-      .summary-value {
-        color: var(--text-light);
-        font-weight: bold;
-        font-size: 1.1rem;
       }
 
-      /* Trainer summaries */
-      .trainer-summary {
-        margin-bottom: 15px;
-        padding: 12px;
-        background-color: rgba(255,255,255,0.03);
-        border-radius: 6px;
-        border: 1px solid var(--border-dark);
-      }
-      .trainer-summary h5 {
-        color: var(--gold);
-        margin: 0 0 10px 0;
-        font-size: 1rem;
+      .nav-links {
+        padding: 0 10px;
       }
 
-      /* Expense styles */
-      .expenses-list {
-        margin-top: 10px;
-        padding: 8px;
-        background: rgba(255,255,255,0.02);
-        border-radius: 4px;
-      }
-      .expense-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 2px 0;
-        font-size: 0.8rem;
-      }
-      .trainer-stats {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
-      .stat-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 4px 8px;
-        background-color: rgba(255,255,255,0.02);
-        border-radius: 4px;
-      }
-      .stat-label {
-        color: var(--text-gray);
-        font-size: 0.9rem;
-      }
-      .stat-value {
-        color: var(--text-light);
-        font-weight: bold;
-        font-size: 0.9rem;
+      .nav-links a {
+        justify-content: center;
+        padding: 15px 10px;
       }
 
-      /* Payment status colors */
-      .status-paid {
-        background-color: #28a745 !important;
-        color: white !important;
-      }
-      .status-unpaid {
-        background-color: #b91c1c !important;
-        color: white !important;
-        border: 1px solid #dc2626 !important;
+      .nav-links a i {
+        margin-right: 0;
+        font-size: 1.3rem;
       }
 
-      /* Pending payment highlight for entire table cell */
-      .pending-payment {
-        background-color: #b91c1c !important;
-        color: #ffffff !important;
+      .main-content {
+        margin-left: 70px;
       }
-      .pending-payment input {
-        background: transparent !important;
-        color: #ffffff !important;
-        border-color: #dc2626 !important;
+    }
+
+    @media (max-width: 576px) {
+      .sidebar {
+        width: 0;
+        overflow: hidden;
       }
-      .form-control { width: 100%; padding: 10px; background-color: rgba(255,255,255,0.03); border: 1px solid var(--border-dark); border-radius: 4px; color: var(--text-light); }
-      .form-control:focus { outline: none; border-color: var(--gold); }
-      /* Modal (reuse admin styles) */
-      .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
-      .modal.active { display: flex; }
-      .modal-content { background: var(--secondary-bg); border: 1px solid var(--border-dark); border-radius: 8px; max-width: 500px; width: 100%; max-height: 80vh; overflow: auto; padding: 25px; position: relative; }
-      .modal-close { position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--text-gray); font-size: 1.5rem; cursor: pointer; }
-      .modal-close:hover { color: var(--text-light); }
-      .form-actions { display: flex; justify-content: flex-end; margin-top: 20px; gap: 10px; }
-      @media (max-width: 992px) { .sidebar { width: 70px; } .main-content { margin-left: 70px; } }
-    </style>
-  </head>
-  <body>
-    <aside class="sidebar" id="sidebar">
-      <div class="logo">
-        <h1>Klub</h1>
-        <button id="sidebarToggle" class="btn btn-outline" style="position: absolute; top: 10px; right: 10px; padding: 5px 8px; font-size: 0.8rem;">
-          <i class="fa fa-bars"></i>
+
+      .main-content {
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <h1><span class="logo-text">Studio Tańca Imperia</span></h1>
+    </div>
+
+    <ul class="nav-links">
+      <li>
+        <a href="#" id="nav-members" class="active">
+          <i class="fas fa-users"></i>
+          <span class="link-text">Członkowie</span>
+        </a>
+      </li>
+      <li>
+        <a href="#" id="nav-schedule">
+          <i class="fas fa-calendar"></i>
+          <span class="link-text">Harmonogram</span>
+        </a>
+      </li>
+      <li>
+        <a href="#" id="nav-profile">
+          <i class="fas fa-user"></i>
+          <span class="link-text">Profil</span>
+        </a>
+      </li>
+      <li>
+        <a href="#" id="logoutBtn">
+          <i class="fas fa-sign-out-alt"></i>
+          <span class="link-text">Wyloguj</span>
+        </a>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="header">
+      <h2>Panel Członkowski</h2>
+      <div class="user-info">
+        <span>Witaj w klubie!</span>
+      </div>
+    </div>
+
+    <!-- Members Section -->
+    <div class="content-box" id="members-section">
+      <div class="content-header">
+        <h3>Członkowie Klubu</h3>
+        <button class="btn btn-primary" id="add-member-btn">
+          <i class="fas fa-plus"></i> Dodaj członka
         </button>
       </div>
-      <ul class="nav-links">
-        <li><a href="club.html" id="membersLink"><i class="fa fa-user"></i><span class="link-text">Członkowie</span></a></li>
-        <li><a href="#" id="campyLink"><i class="fa fa-campground"></i><span class="link-text">Campy ST</span></a></li>
-      </ul>
-    </aside>
 
-    <main class="main-content">
-      <div class="header">
-        <h2>Klub — zarządzanie członkami</h2>
-        <div class="user-info">
-          <span>Zalogowany: Admin</span>
-          <button id="addMemberBtn" class="btn btn-primary"><i class="fa fa-plus"></i>Dodaj członka</button>
-        </div>
-      </div>
-
-      <div class="content-box">
-        <div class="content-header">
-          <h3>Lista członków</h3>
-          <div>
-            <button id="refreshBtn" class="btn btn-outline">Odśwież</button>
-          </div>
-        </div>
-
-        <div style="overflow:auto">
-          <table id="membersTable">
-            <thead>
-              <tr>
-                <th style="text-align:center;width:50px">Lp.</th>
-                <th style="text-align:left">Imię i nazwisko</th>
-                <th style="text-align:center">ID</th>
-                <th style="text-align:left">Email</th>
-                <th style="text-align:center">Telefon</th>
-                <th style="text-align:center">Styl</th>
-                <th style="text-align:center">Karnet</th>
-                <th style="text-align:center">Akcje</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- JS inject -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </main>
-
-    <!-- Saving indicator -->
-    <div id="savingIndicator" class="saving-indicator">
-      <i class="fa fa-spinner fa-spin"></i> Zapisywanie...
-    </div>
-
-    <div id="memberModal" class="modal" aria-hidden="true">
-      <div class="modal-content">
-        <button class="modal-close" id="modalClose">&times;</button>
-        <div class="modal-header"><h3>Dodaj członka</h3></div>
-        <form id="memberForm">
-          <div class="form-group">
-            <label>Imię i nazwisko</label>
-            <input class="form-control" id="fullname" name="fullname" required />
-          </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input class="form-control" id="email" name="email" type="email" />
-          </div>
-          <div class="form-group">
-            <label>Telefon</label>
-            <input class="form-control" id="phone" name="phone" />
-          </div>
-          <div class="form-group">
-            <label>Styl</label>
-            <select class="form-control" id="style" name="style">
-              <option value="LA">LA</option>
-              <option value="ST">ST</option>
-              <option value="10t">10t</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Karnet</label>
-            <select class="form-control" id="karnet" name="karnet">
-              <option value="200">200</option>
-              <option value="250">250</option>
-              <option value="290">290</option>
-            </select>
-          </div>
-          <div class="form-actions">
-            <button type="button" id="cancelBtn" class="btn">Anuluj</button>
-            <button type="submit" class="btn btn-primary">Zapisz</button>
-          </div>
-        </form>
+      <div class="members-list" id="members-list">
+        <!-- Members will be loaded here -->
       </div>
     </div>
+  </main>
 
-    <!-- Add external participant modal -->
-    <div id="addParticipantModal" class="modal" aria-hidden="true">
-      <div class="modal-content">
-        <button class="modal-close" id="addParticipantModalClose">&times;</button>
-        <div class="modal-header"><h3>Dodaj uczestnika</h3></div>
-        <form id="addParticipantForm">
-          <div class="form-group">
-            <label>Imię i nazwisko uczestnika</label>
-            <input class="form-control" id="participantName" name="participantName" required placeholder="Wpisz imię i nazwisko" />
-          </div>
-          <div style="display:flex;gap:8px;margin-top:12px">
-            <button type="button" id="cancelAddParticipant" class="btn">Anuluj</button>
-            <button type="submit" class="btn btn-primary">Dodaj uczestnika</button>
-          </div>
-        </form>
+  <!-- Add Member Modal -->
+  <div class="modal" id="add-member-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-modal">&times;</button>
+      <div class="modal-header">
+        <h3>Dodaj nowego członka</h3>
       </div>
+
+      <form id="add-member-form">
+        <div class="form-group">
+          <label for="member-name">Imię i nazwisko *</label>
+          <input type="text" id="member-name" name="member-name" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="member-email">Email *</label>
+          <input type="email" id="member-email" name="member-email" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="member-phone">Telefon</label>
+          <input type="tel" id="member-phone" name="member-phone" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="member-style">Styl tańca *</label>
+          <select id="member-style" name="member-style" class="form-control" required>
+            <option value="">Wybierz styl</option>
+            <option value="st">ST (Standard)</option>
+            <option value="la">LA (Latin)</option>
+            <option value="10t">10T (10 Tańców)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="member-karnet">Karnet *</label>
+          <select id="member-karnet" name="member-karnet" class="form-control" required>
+            <option value="">Wybierz karnet</option>
+            <option value="1-styl">1 Styl</option>
+            <option value="2-style">2 Style</option>
+            <option value="vip">VIP</option>
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" id="cancel-add-member">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="submit-add-member">
+            <i class="fas fa-save"></i> Dodaj członka
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
 
-    <!-- Campy ST section (clean skeleton for rebuild) -->
-    <main id="campySection" class="main-content" style="display:none">
-      <div id="monthView">
-      <div class="header">
-          <h2>Campy ST (w budowie)</h2>
-        <div class="user-info">
-            <!-- minimal controls preserved for compatibility -->
-            <select id="monthSelect" class="form-control" style="margin-right:8px"></select>
-          <button id="createCampBtn" class="btn btn-primary" style="margin-left:8px"><i class="fa fa-plus"></i>Stwórz camp</button>
-        </div>
-      </div>
+  <!-- Scripts -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-      <div class="content-box">
-          <div id="campListContainer">
-            <div id="campList">Strona campów została wyczyszczona. Zbudujemy ją od zera.</div>
-          </div>
-        </div>
-      </div>
+    const supabaseUrl = 'https://xsowdwnpguftmlvsogdb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI';
 
-      <div id="campDetailsView" style="display:none">
-        <div class="header">
-          <h2 id="campTitle">Szczegóły campu</h2>
-          <div class="user-info">
-            <button id="addParticipantBtn" class="btn btn-primary" style="margin-right:8px"><i class="fa fa-plus"></i>Dodaj uczestnika</button>
-            <button id="backToListBtn" class="btn btn-outline"><i class="fa fa-arrow-left"></i>Powrót do listy</button>
-          </div>
-        </div>
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-        <div class="content-box">
-          <div id="campDetailsContainer">Szczegóły będą tu dodane od zera.</div>
-        </div>
-      </div>
-    </main>
+    // DOM Elements
+    const addMemberBtn = document.getElementById('add-member-btn');
+    const addMemberModal = document.getElementById('add-member-modal');
+    const closeModal = document.getElementById('close-modal');
+    const cancelAddMember = document.getElementById('cancel-add-member');
+    const addMemberForm = document.getElementById('add-member-form');
+    const membersList = document.getElementById('members-list');
 
-    <script type="module">
-      import { supabase } from './supabaseClient.js';
+    // Navigation
+    const navMembers = document.getElementById('nav-members');
 
-      const membersTableBody = document.querySelector('#membersTable tbody');
-      const memberModal = document.getElementById('memberModal');
-      const addMemberBtn = document.getElementById('addMemberBtn');
-      const cancelBtn = document.getElementById('cancelBtn');
-      const modalClose = document.getElementById('modalClose');
-      const memberForm = document.getElementById('memberForm');
-      const refreshBtn = document.getElementById('refreshBtn');
-      let currentEditId = null;
+    // Generate 6-digit member ID
+    function generateMemberId() {
+      return Math.floor(100000 + Math.random() * 900000).toString();
+    }
 
-      // Sidebar functionality
-      const sidebar = document.getElementById('sidebar');
-      const mainContent = document.querySelector('.main-content');
-      const sidebarToggle = document.getElementById('sidebarToggle');
-      const membersLink = document.getElementById('membersLink');
+    // Modal functions
+    function openModal() {
+      addMemberModal.classList.add('active');
+    }
 
-      function toggleSidebar() {
-        sidebar.classList.toggle('collapsed');
-        mainContent.classList.toggle('sidebar-collapsed');
+    function closeModalFunc() {
+      addMemberModal.classList.remove('active');
+      addMemberForm.reset();
+    }
 
-        // Save state to localStorage
-        const isCollapsed = sidebar.classList.contains('collapsed');
-        localStorage.setItem('sidebarCollapsed', isCollapsed);
-      }
+    // Load members from database
+    async function loadMembers() {
+      try {
+        membersList.innerHTML = '<div class="loading"></div>';
 
-      function updateSidebarActiveState(currentPage) {
-        // Remove active class from all links
-        document.querySelectorAll('.nav-links a').forEach(link => {
-          link.classList.remove('active');
-        });
+        const { data: members, error } = await supabase
+          .from('members')
+          .select('*')
+          .order('name', { ascending: true });
 
-        // Add active class to current page link
-        if (currentPage === 'members') {
-          membersLink.classList.add('active');
-        } else if (currentPage === 'camps') {
-          document.getElementById('campyLink').classList.add('active');
-        }
+        if (error) throw error;
 
-        // Auto-collapse sidebar when switching pages
-        if (!sidebar.classList.contains('collapsed')) {
-          toggleSidebar();
-        }
-      }
-
-      // Initialize sidebar state
-      function initializeSidebar() {
-        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-        if (isCollapsed) {
-          sidebar.classList.add('collapsed');
-          mainContent.classList.add('sidebar-collapsed');
-        }
-
-        sidebarToggle.addEventListener('click', toggleSidebar);
-
-        // Determine current page
-        const currentPath = window.location.pathname;
-        if (currentPath.includes('club.html')) {
-          updateSidebarActiveState('members');
-        }
-      }
-
-      // Initialize on page load
-      document.addEventListener('DOMContentLoaded', initializeSidebar);
-
-      function openModal(){ memberModal.classList.add('active'); memberModal.setAttribute('aria-hidden','false'); }
-      function closeModal(){ memberModal.classList.remove('active'); memberModal.setAttribute('aria-hidden','true'); memberForm.reset(); }
-
-      addMemberBtn.addEventListener('click', openModal);
-      cancelBtn.addEventListener('click', closeModal);
-      modalClose.addEventListener('click', closeModal);
-      refreshBtn.addEventListener('click', fetchMembers);
-
-      function generate6DigitId(){ return Math.floor(100000 + Math.random()*900000).toString(); }
-
-      function escapeHtml(text){ if(text===null||text===undefined) return ''; return String(text).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" })[c]); }
-
-      async function fetchMembers(){
-        membersTableBody.innerHTML = '<tr><td colspan="8">Ładowanie...</td></tr>';
-        // existing schema uses columns: id (text primary key), name, email, phone, style, karnet
-        const { data, error } = await supabase.from('members').select('id,name,email,phone,style,karnet').order('name', {ascending:true});
-        if(error){ membersTableBody.innerHTML = `<tr><td colspan="8">Błąd: ${error.message}</td></tr>`; return; }
-        if(!data || data.length===0){ membersTableBody.innerHTML = '<tr><td colspan="8">Brak członków</td></tr>'; return; }
-        membersTableBody.innerHTML = '';
-        for(let i = 0; i < data.length; i++){
-          const m = data[i];
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td style="text-align:center;padding:8px">${i + 1}</td>
-            <td style="text-align:left;padding:8px">${escapeHtml(m.name)}</td>
-            <td style="text-align:center;padding:8px">${escapeHtml(m.id)}</td>
-            <td style="text-align:left;padding:8px">${escapeHtml(m.email || '')}</td>
-            <td style="text-align:center;padding:8px">${escapeHtml(m.phone || '')}</td>
-            <td style="text-align:center;padding:8px">${escapeHtml(m.style)}</td>
-            <td style="text-align:center;padding:8px">${escapeHtml(String(m.karnet))}</td>
-            <td style="text-align:center;padding:8px">
-              <div class="action-buttons">
-                <button class="btn btn-small" data-action="edit" data-id="${escapeHtml(m.id)}" title="Edytuj"><i class="fa fa-pen"></i></button>
-                <button class="btn btn-small btn-delete" data-action="delete" data-id="${escapeHtml(m.id)}" title="Usuń"><i class="fa fa-trash"></i></button>
-              </div>
-            </td>
+        if (members.length === 0) {
+          membersList.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-users"></i>
+              <p>Brak członków w klubie</p>
+              <p>Kliknij "Dodaj członka" aby dodać pierwszego członka</p>
+            </div>
           `;
-          membersTableBody.appendChild(tr);
-        }
-
-        // attach delegation handlers for edit/delete
-        membersTableBody.querySelectorAll('button[data-action]').forEach(btn => {
-          btn.addEventListener('click', async (ev) => {
-            const action = btn.getAttribute('data-action');
-            const id = btn.getAttribute('data-id');
-            if(action === 'edit'){
-              // fetch single member
-              const { data: row, error: rowErr } = await supabase.from('members').select('id,name,email,phone,style,karnet').eq('id', id).single();
-              if(rowErr){ alert('Błąd ładowania: '+rowErr.message); return; }
-              // populate form
-              memberForm.fullname.value = row.name || '';
-              memberForm.email.value = row.email || '';
-              memberForm.phone.value = row.phone || '';
-              memberForm.style.value = row.style || '';
-              memberForm.karnet.value = row.karnet || '';
-              currentEditId = id;
-              openModal();
-            } else if(action === 'delete'){
-              if(!confirm('Na pewno usunąć członka?')) return;
-              const { error: delErr } = await supabase.from('members').delete().eq('id', id);
-              if(delErr){ alert('Błąd usuwania: '+delErr.message); return; }
-              fetchMembers();
-            }
-          });
-        });
-      }
-
-      memberForm.addEventListener('submit', async (e)=>{
-        e.preventDefault();
-        const form = new FormData(memberForm);
-        const name = (form.get('fullname') || '').toString().trim();
-        const email = (form.get('email') || '').toString().trim();
-        const phone = (form.get('phone') || '').toString().trim();
-        const style = form.get('style');
-        const karnet = parseInt(form.get('karnet'), 10);
-        if(!name){ alert('Podaj imię i nazwisko'); return; }
-        let resp;
-        if(currentEditId){
-          // update
-          resp = await supabase.from('members').update({ name, email, phone, style, karnet }).eq('id', currentEditId);
-        } else {
-          // create
-          const id = generate6DigitId();
-          resp = await supabase.from('members').insert([{ id, name, email, phone, style, karnet }]);
-        }
-        const { error } = resp;
-        if(error){
-          alert('Błąd zapisu: '+error.message);
-          console.error('Supabase error:', error);
-          return;
-        }
-        currentEditId = null;
-        closeModal();
-        fetchMembers();
-      });
-
-      // initial load
-      fetchMembers();
-
-      // --- campy st logic ---
-      const campyLink = document.getElementById('campyLink');
-      const clubMain = document.querySelector('main.main-content');
-      const campySection = document.getElementById('campySection');
-      const createCampBtn = document.getElementById('createCampBtn');
-
-      document.getElementById('campyLink').addEventListener('click', (e)=>{
-        e.preventDefault();
-        const clubMain = document.querySelector('main.main-content');
-        const campySection = document.getElementById('campySection');
-        clubMain.style.display = 'none';
-        campySection.style.display = 'block';
-        updateSidebarActiveState('camps');
-        initializeCampView();
-      });
-
-      createCampBtn.addEventListener('click', ()=> openCampModal());
-
-      // Initialize camp view
-      async function initializeCampView(){
-        loadMonthOptions();
-        setupCampNavigation();
-      }
-
-      // Setup navigation between views
-      function setupCampNavigation(){
-        document.getElementById('backToListBtn').addEventListener('click', () => {
-          document.getElementById('campDetailsView').style.display = 'none';
-          document.getElementById('monthView').style.display = 'block';
-        });
-
-        // Setup add participant modal
-        const addParticipantBtn = document.getElementById('addParticipantBtn');
-        const addParticipantModal = document.getElementById('addParticipantModal');
-        const addParticipantModalClose = document.getElementById('addParticipantModalClose');
-        const cancelAddParticipant = document.getElementById('cancelAddParticipant');
-        const addParticipantForm = document.getElementById('addParticipantForm');
-
-        if(addParticipantBtn && addParticipantModal){
-          addParticipantBtn.addEventListener('click', () => {
-            addParticipantModal.classList.add('active');
-          });
-
-          addParticipantModalClose.addEventListener('click', () => {
-            addParticipantModal.classList.remove('active');
-            addParticipantForm.reset();
-          });
-
-          cancelAddParticipant.addEventListener('click', () => {
-            addParticipantModal.classList.remove('active');
-            addParticipantForm.reset();
-          });
-
-          addParticipantForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const participantName = document.getElementById('participantName').value.trim();
-
-            if(!participantName){
-              alert('Wpisz imię i nazwisko uczestnika');
-              return;
-            }
-
-            try {
-              // Get current training ID
-              const currentTrainingId = window.currentTrainingId;
-              if(!currentTrainingId){
-                alert('Błąd: Nie znaleziono ID treningu');
-                return;
-              }
-
-              // Add participant to training_participants
-              const { data, error } = await supabase
-                .from('camps.participants')
-                .insert([{
-                  camp_id: currentTrainingId,
-                  participant_name: participantName
-                }])
-                .select();
-
-              if(error){
-                alert('Błąd dodawania uczestnika: ' + error.message);
-                return;
-              }
-
-              // Close modal and refresh camp details
-              addParticipantModal.classList.remove('active');
-              addParticipantForm.reset();
-
-              // Refresh camp details to show new participant
-              await renderCampFromDB(currentTrainingId);
-
-              // Update financial summary
-              setTimeout(() => {
-                updateFinancialSummary();
-              }, 100);
-
-            } catch(err){
-              console.error('Error adding participant:', err);
-              alert('Błąd dodawania uczestnika: ' + err.message);
-            }
-          });
-        }
-      }
-
-      // Generate month options for the next 12 months starting from current
-      function loadMonthOptions(){
-        const monthSelect = document.getElementById('monthSelect');
-        const now = new Date();
-        const months = [];
-
-        for(let i = 0; i < 12; i++){
-          const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
-          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-          const monthName = date.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long' });
-          months.push({ key: monthKey, name: monthName });
-        }
-
-        monthSelect.innerHTML = '<option value="">-- wybierz miesiąc --</option>' +
-          months.map(m => `<option value="${m.key}">${m.name}</option>`).join('');
-
-        monthSelect.addEventListener('change', () => {
-          const selectedMonth = monthSelect.value;
-          if(selectedMonth){
-            loadCampsForMonth(selectedMonth);
-          } else {
-            document.getElementById('campList').innerHTML = 'Wybierz miesiąc aby zobaczyć dostępne campy';
-          }
-        });
-      }
-
-      // Load camps for selected month
-      async function loadCampsForMonth(monthKey){
-        const [year, month] = monthKey.split('-');
-        const startDate = `${year}-${month}-01`;
-        // Compute last day of month in local time to avoid timezone shift when using toISOString
-        const endDateObj = new Date(year, month, 0);
-        const endDate = `${year}-${month}-${String(endDateObj.getDate()).padStart(2,'0')}`; // Last day of month (local)
-
-        let camps, error;
-        try {
-          ({ data: camps, error } = await supabase
-            .from('camps')
-            .select('id,name,date,amount,currency')
-          .gte('date', startDate)
-          .lte('date', endDate)
-            .order('date', { ascending: false }));
-          console.log('loadCampsForMonth query result:', { startDate, endDate, camps, error });
-        } catch (e) {
-          // network / schema errors
-          error = e;
-          console.error('loadCampsForMonth caught error:', e);
-        }
-
-        // Fallback: try public.camps (table named 'camps' in public schema) if schema not exposed
-        if ((error && /schema|Could not find/i.test(error.message || '')) || !camps) {
-          try {
-            ({ data: camps, error } = await supabase
-              .from('camps')
-              .select('id,name,date,amount,currency')
-              .gte('date', startDate)
-              .lte('date', endDate)
-              .order('date', { ascending: false }));
-          } catch (e2) {
-            error = e2;
-          }
-        }
-
-        if(error){
-          document.getElementById('campList').innerHTML = `Błąd ładowania campów: ${error.message}`;
           return;
         }
 
-        if(!camps || camps.length === 0){
-          document.getElementById('campList').innerHTML = 'Brak campów w wybranym miesiącu';
-          return;
-        }
-
-        // Load payment status for each camp
-        const campStatuses = await Promise.all(camps.map(async (camp) => {
-          const { data: participants } = await supabase
-            .from('public.participants_camps')
-            .select('id,camp_amount,camp_status')
-            .eq('camp_id', camp.id);
-
-          // Get all participant IDs
-          const participantIds = participants?.map(p => p.id) || [];
-
-          // Get payments for all participants in this camp
-          const { data: payments } = await supabase
-            .from('public.payments_camps')
-            .select('lessons_count,status,participant_id')
-            .in('participant_id', participantIds);
-
-          let paidCount = 0;
-          let unconfirmedCount = 0;
-          let unpaidLessons = 0;
-
-          participants?.forEach(p => {
-            if (p.camp_status === 'paid') {
-              paidCount++;
-            } else {
-              // Check for entered amounts in localStorage or confirmed amounts
-              const storedAmount = localStorage.getItem(`camp_due_${camp.id}_${p.id}`);
-              const confirmedAmount = p.camp_amount || 0;
-
-              if (storedAmount && storedAmount > 0) {
-                unconfirmedCount++;
-              } else if (confirmedAmount > 0) {
-                // If amount is confirmed but not marked as paid, count as unconfirmed
-                unconfirmedCount++;
-              }
-            }
-          });
-
-          payments?.forEach(payment => {
-            if (payment.lessons_count) {
-              const lessonCount = parseInt(payment.lessons_count) || 0;
-              if (payment.status !== 'paid') {
-                unpaidLessons += lessonCount;
-              }
-            }
-          });
-
-          return {
-            ...camp,
-            paidCount,
-            unconfirmedCount,
-            unpaidLessons: Math.round(unpaidLessons / 2)
-          };
-        }));
-
-        const campListHtml = campStatuses.map(camp => {
-          const totalParticipants = camp.paidCount + camp.unconfirmedCount;
-          const allPaid = camp.unconfirmedCount === 0 && totalParticipants > 0;
-          const hasUnpaid = camp.unconfirmedCount > 0 || camp.unpaidLessons > 0;
-          const statusClass = allPaid ? 'status-paid' : (hasUnpaid ? 'status-unpaid' : '');
-
-          return `
-            <div class="camp-item ${statusClass}" data-camp-id="${camp.id}">
-              <div class="camp-item-info">
-                <h4>${escapeHtml(camp.name)}</h4>
-                <p>Cena: ${camp.amount || camp.price || 0} ${camp.currency || 'PLN'}</p>
-                <p class="camp-status">
-                  <span class="status-item ${camp.paidCount > 0 ? 'status-paid' : ''}">Zapłaciło osób: ${camp.paidCount}</span><br>
-                  <span class="status-item ${camp.unconfirmedCount > 0 ? 'status-unpaid' : 'status-paid'}">Nie zapłaciło osób: ${camp.unconfirmedCount}</span><br>
-                  <span class="status-item ${camp.unpaidLessons > 0 ? 'status-unpaid' : 'status-paid'}">Nie zapłacone lekcje: ${camp.unpaidLessons}</span>
-                </p>
-              </div>
-              <div class="camp-item-date">
-                ${new Date(camp.date).toLocaleDateString('pl-PL')}
-              </div>
-            </div>
-          `;
-        }).join('');
-
-        console.log('Updating camp list with', campStatuses.length, 'camps');
-        document.getElementById('campList').innerHTML = campListHtml;
-        console.log('Camp list updated successfully');
-
-        // Add click handlers for camp items
-        document.querySelectorAll('.camp-item').forEach(item => {
-          item.addEventListener('click', () => {
-            const campId = item.getAttribute('data-camp-id');
-            showCampDetails(campId);
-          });
+        membersList.innerHTML = '';
+        members.forEach((member, index) => {
+          const memberCard = createMemberCard(member, index + 1);
+          membersList.appendChild(memberCard);
         });
+
+      } catch (err) {
+        console.error('Błąd ładowania członków:', err);
+        membersList.innerHTML = '<div class="empty-state"><p>Błąd ładowania członków</p></div>';
+      }
+    }
+
+    // Create member card element
+    function createMemberCard(member, number) {
+      const card = document.createElement('div');
+      card.className = 'member-card';
+
+      card.innerHTML = `
+        <div class="member-header">
+          <div class="member-number">${number}</div>
+          <div class="member-id">#${member.id}</div>
+          <div class="member-name">${member.name}</div>
+        </div>
+        <div class="member-details">
+          <span class="member-detail">
+            <i class="fas fa-envelope"></i>${member.email}
+          </span>
+          ${member.phone ? `<span class="member-detail"><i class="fas fa-phone"></i>${member.phone}</span>` : ''}
+          <span class="member-detail">
+            <i class="fas fa-music"></i>${member.style.toUpperCase()}
+          </span>
+          <span class="member-detail">
+            <i class="fas fa-ticket-alt"></i>${member.karnet}
+          </span>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Add new member
+    async function addMember(memberData) {
+      try {
+        const memberId = generateMemberId();
+
+        const { data, error } = await supabase
+          .from('members')
+          .insert([{
+            id: memberId,
+            name: memberData.name,
+            email: memberData.email,
+            phone: memberData.phone || null,
+            style: memberData.style,
+            karnet: memberData.karnet,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
+          .select();
+
+        if (error) throw error;
+
+        alert('Członek został dodany pomyślnie!');
+        closeModalFunc();
+        await loadMembers();
+
+      } catch (err) {
+        console.error('Błąd dodawania członka:', err);
+        alert('Błąd dodawania członka: ' + (err.message || 'Nieznany błąd'));
+      }
+    }
+
+    // Event listeners
+    addMemberBtn.addEventListener('click', openModal);
+    closeModal.addEventListener('click', closeModalFunc);
+    cancelAddMember.addEventListener('click', closeModalFunc);
+
+    // Close modal when clicking outside
+    addMemberModal.addEventListener('click', (e) => {
+      if (e.target === addMemberModal) {
+        closeModalFunc();
+      }
+    });
+
+    // Form submission
+    addMemberForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(addMemberForm);
+      const memberData = {
+        name: formData.get('member-name').trim(),
+        email: formData.get('member-email').trim(),
+        phone: formData.get('member-phone').trim(),
+        style: formData.get('member-style'),
+        karnet: formData.get('member-karnet')
+      };
+
+      // Basic validation
+      if (!memberData.name || !memberData.email || !memberData.style || !memberData.karnet) {
+        alert('Proszę wypełnić wszystkie wymagane pola');
+        return;
       }
 
-      // Update camp summary
-      function updateCampSummary(parts, trainerInfo, trainingIdParam, containerParam, trainingCurrency = 'PLN') {
-        let totalCampAmount = 0;
-        let paidCampAmount = 0;
-        let totalLessons = 0;
-        let unpaidLessons = 0;
+      // Show loading state
+      const submitBtn = document.getElementById('submit-add-member');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<div class="loading"></div> Dodawanie...';
+      submitBtn.disabled = true;
 
-        // Trainer summaries
-        const trainerStats = {};
-
-        // Initialize trainer stats
-        trainerInfo.forEach(t => {
-          trainerStats[t.id] = {
-            name: t.name,
-            currency: t.currency,
-            totalLessons: 0,
-            unpaidLessons: 0,
-            participants: 0,
-            paidParticipants: 0,
-            totalDueAmount: 0,    // Ogólna kwota do zapłaty za lekcje
-            totalPaidAmount: 0,   // Suma kwot w kolumnie zapłacono
-            expenses: [],          // Lista wydatków
-            totalExpenses: 0,      // Suma wszystkich wydatków
-            profit: 0              // Zysk = zapłacona kwota - wydatki
-          };
-        });
-
-        console.log('Initialized trainer stats:', Object.keys(trainerStats));
-
-        // Get training ID from parts (parts don't have training_id, so we need to pass it as parameter)
-        const trainingId = parts[0]?.training_id || trainingIdParam || '';
-
-        // Load global expenses
-        console.log('Loading global expenses for trainingId:', trainingId);
-        const globalExpensesKey = `camp_expenses_${trainingId}`;
-        const storedGlobalExpenses = localStorage.getItem(globalExpensesKey);
-        console.log('Stored global expenses data:', storedGlobalExpenses);
-
-        let globalExpenses = [];
-        if (storedGlobalExpenses) {
-          try {
-            globalExpenses = JSON.parse(storedGlobalExpenses);
-            console.log('Loaded global expenses:', globalExpenses);
-          } catch (e) {
-            console.error('Error parsing stored global expenses:', e);
-            globalExpenses = [];
-          }
-        }
-
-        // No need to distribute expenses to trainers anymore - they are global
-
-        // Reset trainer stats before recalculating
-        trainerInfo.forEach(t => {
-          trainerStats[t.id] = {
-            name: t.name,
-            currency: t.currency,
-            totalLessons: 0,
-            unpaidLessons: 0,
-            participants: 0,
-            paidParticipants: 0,
-            totalDueAmount: 0,
-            totalPaidAmount: 0,
-            expenses: trainerStats[t.id]?.expenses || [],
-            totalExpenses: trainerStats[t.id]?.totalExpenses || 0,
-            profit: 0
-          };
-        });
-
-        parts.forEach(p => {
-          // Calculate camp amounts - check all entered values (both confirmed and unconfirmed)
-          const campPaidValue = localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || '';
-          const confirmedAmount = p.camp_status === 'paid' ? parseFloat(p.camp_amount) || 0 : 0;
-
-          // Add any entered amount to total (whether confirmed or not)
-          const enteredAmount = campPaidValue ? parseFloat(campPaidValue) : (confirmedAmount > 0 ? confirmedAmount : 0);
-          if (enteredAmount > 0) {
-            totalCampAmount += enteredAmount;
-          }
-
-          // Add only confirmed amounts to paid total
-          if (confirmedAmount > 0) {
-            paidCampAmount += confirmedAmount;
-          }
-
-          // Calculate trainer amounts from database
-          p.oboz.forEach(ob => {
-              if (trainerStats[ob.trainer_id]) {
-                trainerStats[ob.trainer_id].participants++;
-
-              // Use amount from database if available
-              const amount = ob.amount || 0;
-              if (amount > 0) {
-                trainerStats[ob.trainer_id].totalDueAmount += amount;
-
-                if (ob.status === 'paid') {
-                  trainerStats[ob.trainer_id].paidParticipants++;
-                  trainerStats[ob.trainer_id].totalPaidAmount += amount;
-                }
-              }
-            }
-          });
-
-          // Check for current values in input fields
-          trainerInfo.forEach(ti => {
-            const amountInput = containerParam.querySelector(`input.trainer-amount[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
-            const storedAmount = localStorage.getItem(`trainer_amount_${trainingId}_${p.id}_${ti.id}`) || '';
-
-            if (amountInput && amountInput.value) {
-              const inputAmount = parseFloat(amountInput.value) || 0;
-              if (inputAmount > 0 && trainerStats[ti.id]) {
-                // Add input amount to total due
-                trainerStats[ti.id].totalDueAmount += inputAmount;
-
-                // If payment is confirmed, also add to paid
-                if (amountInput.classList.contains('status-paid')) {
-                  trainerStats[ti.id].totalPaidAmount += inputAmount;
-                }
-              }
-            } else if (storedAmount) {
-              // Handle stored amounts from localStorage
-              const storedAmountValue = parseFloat(storedAmount) || 0;
-              if (storedAmountValue > 0 && trainerStats[ti.id]) {
-                trainerStats[ti.id].totalDueAmount += storedAmountValue;
-              }
-            }
-          });
-        });
-
-        // Calculate profit for each trainer (paid amount - total expenses)
-        trainerInfo.forEach(t => {
-          trainerStats[t.id].profit = trainerStats[t.id].totalPaidAmount - trainerStats[t.id].totalExpenses;
-        });
-
-        // Update footer summary display
-        const totalCampFooterEl = document.getElementById('totalCampAmountFooter');
-        const paidCampFooterEl = document.getElementById('paidCampAmountFooter');
-        const totalPLNFooterEl = document.getElementById('totalPLNFooter');
-        const totalEURFooterEl = document.getElementById('totalEURFooter');
-
-        // Update camp summaries in footer
-        if (totalCampFooterEl) {
-          totalCampFooterEl.textContent = `${totalCampAmount.toFixed(2)} ${trainingCurrency}`;
-        }
-        if (paidCampFooterEl) {
-          paidCampFooterEl.textContent = `${paidCampAmount.toFixed(2)} ${trainingCurrency}`;
-        }
-
-        // Update trainer summaries in footer
-        trainerInfo.forEach(t => {
-          const totalDueEl = document.getElementById(`totalDue-${t.id}`);
-          const totalPaidEl = document.getElementById(`totalPaid-${t.id}`);
-
-          if (totalDueEl && trainerStats[t.id]) {
-            totalDueEl.textContent = `${trainerStats[t.id].totalDueAmount.toFixed(2)} ${t.currency}`;
-          }
-          if (totalPaidEl && trainerStats[t.id]) {
-            totalPaidEl.textContent = `${trainerStats[t.id].totalPaidAmount.toFixed(2)} ${t.currency}`;
-          }
-        });
-
-        // Calculate and update total PLN/EUR in footer
-        let totalPLN = 0;
-        let totalEUR = 0;
-
-        // Add camp amounts
-        if (trainingCurrency === 'PLN') {
-          totalPLN += totalCampAmount;
-        } else {
-          totalEUR += totalCampAmount;
-        }
-
-        // Add trainer amounts (only from input fields, not from database)
-        parts.forEach(p => {
-          trainerInfo.forEach(ti => {
-            const amountInput = containerParam.querySelector(`input.trainer-amount[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
-            if (amountInput && amountInput.value) {
-              const inputAmount = parseFloat(amountInput.value) || 0;
-              if (inputAmount > 0) {
-                if (ti.currency === 'PLN') {
-                  totalPLN += inputAmount;
-                } else {
-                  totalEUR += inputAmount;
-                }
-              }
-            }
-          });
-        });
-
-        if (totalPLNFooterEl) {
-          totalPLNFooterEl.textContent = `${totalPLN.toFixed(2)} PLN`;
-        }
-        if (totalEURFooterEl) {
-          totalEURFooterEl.textContent = `${totalEUR.toFixed(2)} EUR`;
-        }
-
-
+      try {
+        await addMember(memberData);
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
       }
-
-      // Show camp details
-      async function showCampDetails(campId){
-        document.getElementById('monthView').style.display = 'none';
-        document.getElementById('campDetailsView').style.display = 'block';
-
-        // Update camp title
-        const campTitle = document.getElementById('campTitle');
-        campTitle.textContent = 'Ładowanie...';
-
-        // Clear previous content
-        const container = document.getElementById('campDetailsContainer');
-        container.innerHTML = 'Ładowanie szczegółów campu...';
-
-        // Load and render camp details
-        try {
-          await renderCampFromDB(campId);
-
-          // Update title with camp name
-          const { data: camp, error: campError } = await supabase
-            .from('camps.camps')
-            .select('name,date')
-            .eq('id', campId)
-            .single();
-
-          if(campError) {
-            console.warn('Błąd ładowania nazwy campu:', campError.message);
-          } else if(camp){
-            campTitle.textContent = `${camp.name} - ${new Date(camp.date).toLocaleDateString('pl-PL')}`;
-          }
-        } catch(error) {
-          console.error('Błąd ładowania campu:', error);
-          container.innerHTML = `Błąd ładowania szczegółów campu: ${error.message}`;
-        }
-      }
-
-      // simple modal for creating camp + trainers
-      function openCampModal(){
-        // build modal HTML dynamically
-        const html = `
-          <div class="modal active" id="campModal">
-            <div class="modal-content">
-              <button class="modal-close" id="campModalClose">&times;</button>
-              <div class="modal-header"><h3>Stwórz camp ST</h3></div>
-              <form id="campForm">
-                <div class="form-group"><label>Nazwa campu</label><input class="form-control" id="campName" name="campName" required/></div>
-                <div class="form-group"><label>Data</label><input class="form-control" id="campDate" name="campDate" type="date" required/></div>
-                <div class="form-group">
-                  <label>Kwota campu</label>
-                  <div style="display:flex;gap:8px;">
-                    <input class="form-control" id="campAmount" name="campAmount" type="number" required style="flex:1;" />
-                    <select class="form-control" id="campCurrency" name="campCurrency" style="width:80px;">
-                      <option value="PLN">PLN</option>
-                      <option value="EUR">EUR</option>
-                    </select>
-                  </div>
-                </div>
-                <div id="trainersContainer"></div>
-                <div style="display:flex;gap:8px;margin-top:12px">
-                  <button type="button" id="addTrainerBtn" class="btn">Dodaj szkoleniowca</button>
-                  <div style="flex:1"></div>
-                  <button type="button" id="campCancel" class="btn">Anuluj</button>
-                  <button type="submit" class="btn btn-primary">Utwórz camp</button>
-                </div>
-              </form>
-            </div>
-          </div>`;
-        document.body.insertAdjacentHTML('beforeend', html);
-        const campModal = document.getElementById('campModal');
-        const campModalClose = document.getElementById('campModalClose');
-        const campForm = document.getElementById('campForm');
-        const campCancel = document.getElementById('campCancel');
-        const addTrainerBtn = document.getElementById('addTrainerBtn');
-        const trainersContainer = document.getElementById('trainersContainer');
-
-        campModalClose.addEventListener('click', ()=> campModal.remove());
-        campCancel.addEventListener('click', ()=> campModal.remove());
-
-        function addTrainerRow(){
-          const idx = trainersContainer.children.length;
-          const row = document.createElement('div');
-          row.className = 'form-group';
-          row.innerHTML = `
-            <label>Szkoleniowiec ${idx+1}</label>
-            <input class="form-control trainer-name" placeholder="Imię i nazwisko" />
-            <div style="display:flex;gap:8px;margin-top:6px">
-              <input class="form-control trainer-amount" type="number" placeholder="Kwota za lekcję" />
-              <select class="form-control trainer-currency">
-                <option value="PLN">PLN</option>
-                <option value="EUR">EUR</option>
-              </select>
-            </div>
-          `;
-          trainersContainer.appendChild(row);
-        }
-
-        addTrainerBtn.addEventListener('click', addTrainerRow);
-        // add one trainer by default
-        addTrainerRow();
-
-        campForm.addEventListener('submit', async (e)=>{
-          e.preventDefault();
-          const name = document.getElementById('campName').value.trim();
-          const date = document.getElementById('campDate').value;
-          const amount = parseFloat(document.getElementById('campAmount').value);
-          const currency = document.getElementById('campCurrency').value;
-
-          if(!name || !date || !amount) { alert('Uzupełnij pola campu'); return; }
-
-          const trainers = Array.from(trainersContainer.querySelectorAll('.form-group')).map(g=>({
-            name: (g.querySelector('.trainer-name')||{}).value || '',
-            amount: parseFloat((g.querySelector('.trainer-amount')||{}).value) || 0,
-            currency: (g.querySelector('.trainer-currency')||{}).value || currency
-          })).filter(t=>t.name);
-
-          if(trainers.length === 0){ alert('Dodaj przynajmniej jednego szkoleniowca'); return; }
-
-          // fetch members with style ST or 10t
-          const { data: members, error: memErr } = await supabase.from('members').select('id,name,style').in('style', ['ST','10t']).order('name', {ascending:true});
-          if(memErr){ alert('Błąd pobierania członków: '+memErr.message); return; }
-
-          // create camp in DB (public.camps)
-          // supabase-js v2 uses auth.getUser() async method
-          let userId = null;
-          try {
-            const { data: { user } = {} } = await supabase.auth.getUser();
-            userId = user?.id || null;
-          } catch (e) {
-            userId = null;
-          }
-          const { data: createdCamp, error: campErr } = await supabase.from('camps').insert([{ name, date, amount, currency, created_by: userId }]).select().single();
-          if(campErr || !createdCamp){ alert('Błąd tworzenia campu w DB: '+(campErr?campErr.message:'')); return; }
-
-          // create or find trainers and link to camp
-          const createdTrainers = [];
-          for(const t of trainers){
-            let trainerId = null;
-            // try find by name
-            const { data: found, error: findErr } = await supabase.from('trainers_camps').select('*').ilike('name', t.name).limit(1);
-            if(findErr){ console.warn('Błąd szukania trenera lokalnego:', findErr); }
-            if(found && found.length > 0){ trainerId = found[0].id; }
-            else {
-              const { data: newTrainer, error: trErr } = await supabase.from('trainers_camps').insert([{ name: t.name, default_price: t.amount, currency: t.currency }]).select().single();
-              if(trErr){ console.warn('Błąd tworzenia trenera:', trErr); continue; }
-              trainerId = newTrainer.id;
-            }
-
-            // link trainer to camp
-            const { error: linkErr } = await supabase.from('camp_trainers_public').insert([{ camp_id: createdCamp.id, trainer_id: trainerId, price: t.amount }]);
-            if(linkErr){ console.warn('Błąd linkowania trenera do campu:', linkErr); }
-            createdTrainers.push({ id: trainerId, name: t.name, amount: t.amount, currency: t.currency });
-          }
-
-          // Build table HTML
-          // Insert participants for this camp into DB (members filtered earlier)
-          try {
-            if (members && members.length > 0) {
-              // keep member_id exactly as provided in `members` (stored as text in members.id)
-              const participantRows = members.map(m => ({
-                camp_id: createdCamp.id,
-                member_id: m.id != null ? String(m.id) : null,
-                participant_name: m.name,
-                camp_amount: 0,
-                camp_status: 'unset'
-              }));
-              const { data: insertedParts, error: partsErr } = await supabase.from('participants_camps').insert(participantRows).select();
-              if (partsErr) console.warn('Błąd dodawania uczestników do public.participants_camps:', partsErr);
-            }
-          } catch (e) { console.warn('Error inserting participants:', e); }
-
-          const campId = 'clientcamp_' + Date.now();
-          const container = document.createElement('div');
-          container.className = 'content-box';
-
-          const theadCols = [];
-          theadCols.push('<th style="text-align:center;width:50px" class="border-right-gold"><div class="header-main">Lp.</div></th>');
-          theadCols.push('<th class="border-right-gold"><div class="header-main">Imię i nazwisko</div></th>');
-          theadCols.push(`<th class="border-right-gold"><div class="header-main">Camp</div><div class="header-sub">${amount} ${currency}</div></th>`);
-          trainers.forEach(t=>{
-            theadCols.push(`<th class="border-right-gold"><div class="header-main">Lekcje ${escapeHtml(t.name)}</div><div class="header-sub">${t.amount} ${t.currency}</div></th>`);
-          });
-
-          const tbody = members.map((m,idx) => {
-            const trainerCells = trainers.map((t,ti)=>{
-              return `<td style="padding:4px;text-align:center" class="border-right-gold"><div class="payment-controls"><input data-member-id="${m.id}" data-trainer-index="${ti}" class="form-control trainer-amount" style="width:60px;margin:0 2px;text-align:center" value="" /><button class="btn btn-small trainer-confirm" data-member-id="${m.id}" data-trainer-index="${ti}">OK</button></div></td>`;
-            }).join('');
-
-            return `<tr data-member-id="${m.id}"><td style="padding:4px;text-align:center" class="border-right-gold">${idx + 1}</td><td style="padding:4px" class="border-right-gold">${escapeHtml(m.name)}</td><td style="padding:4px;text-align:center" class="border-right-gold"><div class="payment-controls"><input data-member-id="${m.id}" class="form-control camp-paid" style="width:60px;margin:0 2px;text-align:center" value="" /><button class="btn btn-small camp-confirm" data-member-id="${m.id}">OK</button></div></td>${trainerCells}</tr>`;
-          }).join('');
-
-          container.innerHTML = `
-            <div class="content-header">
-              <h3>${escapeHtml(name)} — ${escapeHtml(date)}</h3>
-            </div>
-            <div style="overflow:auto">
-              <table>
-                <thead><tr>${theadCols.join('')}</tr></thead>
-                <tbody>${tbody}</tbody>
-              </table>
-            </div>
-          `;
-
-          // Insert into DOM and show details view
-          const campDetailsContainer = document.getElementById('campDetailsContainer');
-          if(campDetailsContainer){
-            campDetailsContainer.innerHTML = '';
-            campDetailsContainer.appendChild(container);
-          }
-          document.getElementById('monthView').style.display = 'none';
-          document.getElementById('campDetailsView').style.display = 'block';
-          document.getElementById('campTitle').textContent = `${name} - ${new Date(date).toLocaleDateString('pl-PL')}`;
-
-          // Attach handlers for immediate red highlight and confirm
-          container.querySelectorAll('.camp-paid').forEach(input => {
-            input.addEventListener('input', () => {
-              const td = input.closest('td');
-              if(input.value){
-                td.classList.add('pending-payment');
-                input.style.background = '#b91c1c';
-                input.style.color = '#ffffff';
-                input.style.borderColor = '#dc2626';
-              } else {
-                td.classList.remove('pending-payment');
-                input.style.background = '';
-                input.style.color = '';
-                input.style.borderColor = '';
-              }
-            });
-          });
-
-          container.querySelectorAll('.camp-confirm').forEach(btn => {
-            btn.addEventListener('click', () => {
-              const memberId = btn.getAttribute('data-member-id');
-              const input = container.querySelector(`input.camp-paid[data-member-id="${memberId}"]`);
-              const val = parseFloat(input.value) || 0;
-              if(val > 0){
-                input.classList.add('status-paid');
-                input.classList.remove('status-unpaid');
-                const td = input.closest('td'); if(td) td.classList.remove('pending-payment');
-                input.style.background = '#28a745'; input.style.color = '#ffffff'; input.style.borderColor = '#28a745';
-                btn.outerHTML = `<button class="btn btn-small btn-delete camp-delete" data-member-id="${memberId}">×</button>`;
-              } else { alert('Wprowadź kwotę płatności aby potwierdzić'); }
-            });
-          });
-
-          container.querySelectorAll('.trainer-amount').forEach(input => {
-            input.addEventListener('input', () => {
-              const td = input.closest('td');
-              if(input.value){
-                td.classList.add('pending-payment');
-                input.style.background = '#b91c1c';
-                input.style.color = '#ffffff';
-                input.style.borderColor = '#dc2626';
-          } else {
-                td.classList.remove('pending-payment');
-                input.style.background = '';
-                input.style.color = '';
-                input.style.borderColor = '';
-              }
-            });
-          });
-
-          container.querySelectorAll('.trainer-confirm').forEach(btn => {
-            btn.addEventListener('click', () => {
-              const memberId = btn.getAttribute('data-member-id');
-              const trainerIndex = btn.getAttribute('data-trainer-index');
-              const input = container.querySelector(`input.trainer-amount[data-member-id="${memberId}"][data-trainer-index="${trainerIndex}"]`);
-              const val = parseFloat(input.value) || 0;
-              if(val > 0){
-                input.classList.add('status-paid');
-                input.classList.remove('status-unpaid');
-                const td = input.closest('td'); if(td) td.classList.remove('pending-payment');
-                input.style.background = '#28a745'; input.style.color = '#ffffff'; input.style.borderColor = '#28a745';
-                btn.outerHTML = `<button class="btn btn-small btn-delete trainer-delete" data-member-id="${memberId}" data-trainer-index="${trainerIndex}">×</button>`;
-              } else { alert('Wprowadź kwotę przed potwierdzeniem'); }
-            });
-          });
-
-          // close modal
-          campModal.remove();
-
-          // After creating camp in DB, refresh camp list for the month of the created camp
-          try {
-            const createdMonthKey = `${new Date(date).getFullYear()}-${String(new Date(date).getMonth() + 1).padStart(2,'0')}`;
-            console.log('Camp created, trying to refresh camp list for month:', createdMonthKey, 'createdCampId:', createdCamp?.id);
-
-            // Switch back to month view so list is visible
-            const monthViewEl = document.getElementById('monthView');
-            const detailsViewEl = document.getElementById('campDetailsView');
-            if(monthViewEl && detailsViewEl){
-              detailsViewEl.style.display = 'none';
-              monthViewEl.style.display = 'block';
-            }
-
-            const monthSelect = document.getElementById('monthSelect');
-            if(monthSelect){
-              monthSelect.value = createdMonthKey;
-            }
-
-            // call loadCampsForMonth even if monthSelect not present
-            if(typeof loadCampsForMonth === 'function'){
-              // small delay to ensure UI updated
-              setTimeout(() => { loadCampsForMonth(createdMonthKey); console.log('Called loadCampsForMonth for', createdMonthKey); }, 80);
-            } else {
-              console.warn('loadCampsForMonth is not defined');
-            }
-          } catch(e){
-            console.warn('Nie udało się odświeżyć listy campów automatycznie:', e);
-          }
-        });
-      }
-      async function renderCampFromDB(trainingId){
-        console.log('=== renderCampFromDB STARTED ===');
-        console.log('renderCampFromDB called with trainingId:', trainingId);
-        console.log('Current code version - NO CURRENCY in training_trainers query');
-        console.log('Code timestamp:', new Date().toISOString());
-
-        // Check for any cached code or old versions
-        if (typeof window.oldRenderCampFromDB === 'function') {
-          console.warn('WARNING: Old version of renderCampFromDB found in cache!');
-        }
-
-        // Make trainingId available for all event handlers
-        window.currentTrainingId = trainingId;
-        let currentTrainingId = trainingId;
-
-        // fetch camp (new schema)
-        const { data: camp, error: campError } = await supabase.from('camps').select('*').eq('id', trainingId).single();
-        if (campError || !camp) {
-          throw new Error(`Błąd ładowania campu: ${campError?.message || 'Camp nie znaleziony'}`);
-        }
-
-        console.log('Loaded camp:', camp);
-        console.log('Camp currency:', camp.currency);
-
-        // Define training/camp currency for use throughout the function
-        const trainingCurrency = camp.currency || 'PLN';
-
-        // fetch camp trainers
-        console.log('=== FETCHING camp_trainers for campId:', trainingId);
-        const { data: tlinks, error: tlinksError } = await supabase.from('camp_trainers_public').select('trainer_id,price,id').eq('camp_id', trainingId).order('id', { ascending: true });
-        if (tlinksError) {
-          throw new Error(`Błąd ładowania trenerów campu: ${tlinksError.message}`);
-        }
-
-        if (!tlinks || tlinks.length === 0) {
-          throw new Error('Brak przypisanych trenerów do tego campu');
-        }
-
-        const trainerIds = tlinks.map(t => t.trainer_id);
-        console.log('Trainer IDs:', trainerIds);
-
-        const { data: trainers, error: trainersError } = await supabase.from('trainers_camps').select('id,name,default_price,currency').in('id', trainerIds);
-        if (trainersError) {
-          throw new Error(`Błąd ładowania danych trenerów: ${trainersError.message}`);
-        }
-
-        if (!trainers || trainers.length === 0) {
-          throw new Error('Nie znaleziono danych trenerów');
-        }
-
-        // map trainer id -> info (price from tlinks, currency from trainers)
-        const trainerInfo = trainers.map(tr => {
-          const link = tlinks.find(t=>t.trainer_id === tr.id) || {};
-          const trainerData = {
-            id: tr.id,
-            name: tr.name,
-            price: link.price || tr.default_price || 0,
-            currency: tr.currency || 'PLN'
-          };
-          return trainerData;
-        }).sort((a, b) => a.name.localeCompare(b.name)); // Sort by name to prevent position changes
-
-        // fetch participants from new schema
-        const { data: parts, error: partsError } = await supabase.from('participants_camps').select('id,member_id,participant_name,camp_amount,camp_status').eq('camp_id', trainingId).order('participant_name', {ascending:true});
-        if (partsError) {
-          throw new Error(`Błąd ładowania uczestników: ${partsError.message}`);
-        }
-
-        if (!parts || parts.length === 0) {
-          throw new Error('Brak zapisanych uczestników do tego campu');
-        }
-
-        // for each participant fetch payments
-        for(const p of parts){
-          const { data: oboz, error: obozError } = await supabase.from('payments_camps').select('id,trainer_id,lessons_count,amount,status,currency').eq('participant_id', p.id);
-          if (obozError) {
-            console.warn(`Błąd ładowania płatności dla uczestnika ${p.participant_name}:`, obozError.message);
-          }
-          p.oboz = oboz || [];
-        }
-
-        // build table
-        const campId = 'camp_' + trainingId;
-        const container = document.createElement('div');
-        container.className = 'content-box';
-        const theadCols = [
-          '<th style="text-align:center;width:50px" class="border-right-gold"><div class="header-main">Lp.</div></th>',
-          '<th class="border-right-gold"><div class="header-main">Imię i nazwisko</div></th>',
-          `<th class="border-right-gold"><div class="header-main">Camp</div><div class="header-sub">zaplacono ${training.currency || 'PLN'}</div></th>`
-        ];
-        // for each trainer: amount input + confirm button
-        trainerInfo.forEach((t, index)=>{
-          const isLastTrainer = index === trainerInfo.length - 1;
-          theadCols.push(`<th class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}"><div class="header-main">${escapeHtml(t.name)}</div><div class="header-sub">Kwota ${t.currency}</div></th>`);
-        });
-
-        // Add total columns
-        theadCols.push(`<th class="border-right-gold"><div class="header-main">Razem</div><div class="header-sub">PLN</div></th>`);
-        theadCols.push(`<th><div class="header-main">Razem</div><div class="header-sub">EUR</div></th>`);
-        container.innerHTML = `
-          <div class="content-header">
-            <h3>${escapeHtml(training.name)} — ${escapeHtml(training.date)}</h3>
-            <div style="margin-top: 10px;">
-              <input type="text" id="participantSearch" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;" />
-            </div>
-          </div>
-          <div style="overflow:auto">
-            <table>
-              <thead><tr>${theadCols.join('')}</tr></thead>
-              <tbody>
-                ${parts.map((p, index) => {
-                  const campDue = training.price || 0;
-                  const campPaid = p.camp_amount || '';
-                  const obozCells = trainerInfo.map((ti, trainerIndex) => {
-                    const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
-                    const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : 0;
-                    // Get stored amount from localStorage or use confirmed amount if already paid
-                    const storedAmount = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`trainer_amount_${trainingId}_${p.id}_${ti.id}`) || '');
-                    const finalAmount = storedAmount || due;
-                    const currency = ob.currency || ti.currency || 'PLN';
-                    const isLastTrainer = trainerIndex === trainerInfo.length - 1;
-
-                    return `<td style="padding:4px;text-align:center" class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}">
-                      <div class="payment-controls">
-                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-currency="${currency}" class="form-control trainer-amount ${ob.status === 'paid' ? 'status-paid' : (finalAmount > 0 ? 'status-unpaid' : '')}" style="width:60px;margin:0 2px;${ob.status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : (finalAmount > 0 ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : '')}text-align:center" value="${finalAmount||''}" />
-                        ${ob.status === 'paid' ?
-                          `<button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>` :
-                          `<button class="btn btn-small trainer-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>`
-                        }
-                      </div>
-                    </td>`;
-                  }).join('');
-                  // Get stored camp paid amount from localStorage or use confirmed amount if already paid
-                  const storedCampPaid = localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || (p.camp_status === 'paid' ? (p.camp_amount || '') : '');
-                  const isUnconfirmedPaid = storedCampPaid && p.camp_status !== 'paid';
-                  const campPaidClass = p.camp_status === 'paid' ? 'status-paid' : (storedCampPaid ? 'status-unpaid' : '');
-                  // Calculate totals for this participant
-                  let totalPLN = 0;
-                  let totalEUR = 0;
-
-                  // Add camp amount in training currency
-                  const campAmount = parseFloat(storedCampPaid) || 0;
-                  if (training.currency === 'PLN') {
-                    totalPLN += campAmount;
-                  } else {
-                    totalEUR += campAmount;
-                  }
-
-                  // Add trainer lesson amounts
-                  trainerInfo.forEach(ti => {
-                    const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
-                    const lessons = ob.lessons_count || 0;
-                    const trainerAmount = lessons * ti.price;
-                    if (ti.currency === 'PLN') {
-                      totalPLN += trainerAmount;
-                    } else {
-                      totalEUR += trainerAmount;
-                    }
-                  });
-
-                  return `<tr data-part-id="${p.id}"><td style="padding:4px;text-align:center" class="border-right-gold">${index + 1}</td><td style="padding:4px" class="border-right-gold">${escapeHtml(p.participant_name)}</td>                  <td style="padding:4px;text-align:center" class="border-right-gold">
-                    <div class="payment-controls">
-                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;${p.camp_status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : ''}text-align:center" value="${p.camp_status === 'paid' ? (p.camp_amount || '') : (storedCampPaid || '')}" />
-                      ${p.camp_status === 'paid' ?
-                        `<button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>` :
-                        `<button class="btn btn-small camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>`
-                      }
-                    </div>
-                  </td>${obozCells}<td style="padding:4px;text-align:center;font-weight:bold" class="border-right-gold">${totalPLN.toFixed(2)} PLN</td><td style="padding:4px;text-align:center;font-weight:bold">${totalEUR.toFixed(2)} EUR</td></tr>`;
-                }).join('')}
-              </tbody>
-              <tfoot>
-                <tr style="background: rgba(212, 175, 55, 0.1); border-top: 2px solid var(--gold);">
-                  <td colspan="2" style="padding:8px;text-align:center;font-weight:bold;color:var(--gold);">PODSUMOWANIE</td>
-                  <td style="padding:4px;text-align:center;border-right:2px solid var(--gold);">
-                    <div style="font-size:0.8rem;">
-                      <div>Ogólna: <span id="totalCampAmountFooter">0</span></div>
-                      <div>Zapłacona: <span id="paidCampAmountFooter">0</span></div>
-                    </div>
-                  </td>
-                  ${trainerInfo.map((t, index) => `
-                    <td style="padding:4px;text-align:center;${index === trainerInfo.length - 1 ? 'border-right:2px solid var(--gold);' : ''}">
-                      <div style="font-size:0.8rem;">
-                        <div>Ogólna: <span id="totalDue-${t.id}">0</span></div>
-                        <div>Zapłacona: <span id="totalPaid-${t.id}">0</span></div>
-                      </div>
-                    </td>
-                  `).join('')}
-                  <td style="padding:4px;text-align:center;font-weight:bold;border-right:2px solid var(--gold);" id="totalPLNFooter">0.00 PLN</td>
-                  <td style="padding:4px;text-align:center;font-weight:bold;" id="totalEURFooter">0.00 EUR</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        `;
-
-        // Add summary section
-        const summaryDiv = document.createElement('div');
-        summaryDiv.className = 'camp-summary';
-        summaryDiv.innerHTML = `
-          <div class="summary-section">
-            <h4>Podsumowanie Finansowe Campu</h4>
-            <div id="campFinancialSummary" style="margin-top: 15px;"></div>
-          </div>
-
-
-        `;
-
-        const campDetailsContainer = document.getElementById('campDetailsContainer');
-        if(campDetailsContainer) {
-          campDetailsContainer.innerHTML = '';
-          console.log('Setting data-training-currency to:', trainingCurrency);
-          campDetailsContainer.setAttribute('data-training-currency', trainingCurrency);
-          campDetailsContainer.appendChild(container);
-          campDetailsContainer.appendChild(summaryDiv);
-
-          // Calculate and update summary
-          updateCampSummary(parts, trainerInfo, trainingId, container, trainingCurrency);
-
-          // Update financial summary
-            updateFinancialSummary();
-
-            // Initialize participant totals
-            parts.forEach(p => updateParticipantTotals(p.id));
-        }
-
-        // Set visual status for existing payments
-        parts.forEach(p => {
-          // Set camp payment status
-          if (p.camp_status === 'paid') {
-            const paidInput = container.querySelector(`input.camp-paid[data-part-id="${p.id}"]`);
-            const confirmBtn = container.querySelector(`button.camp-confirm[data-part-id="${p.id}"]`);
-
-            if (paidInput) {
-              paidInput.classList.add('status-paid');
-              paidInput.classList.remove('status-unpaid');
-            }
-            if (confirmBtn) {
-              // Replace confirm button with delete button for paid payments
-              confirmBtn.outerHTML = `<button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>`;
-            }
-          } else {
-            // Check if there's an unconfirmed amount in camp paid
-            const storedCampPaid = localStorage.getItem(`camp_paid_${window.currentTrainingId}_${p.id}`);
-
-            if (storedCampPaid) {
-              const paidInput = container.querySelector(`input.camp-paid[data-part-id="${p.id}"]`);
-
-              if (paidInput && !paidInput.classList.contains('status-paid')) {
-                  paidInput.classList.add('status-unpaid');
-                paidInput.style.background = '#b91c1c';
-                paidInput.style.borderColor = '#dc2626';
-                  paidInput.style.color = '#ffffff';
-              }
-            }
-          }
-
-          // Set trainer payment status
-          p.oboz.forEach(ob => {
-            if (ob.status === 'paid') {
-              const amountInput = container.querySelector(`input.trainer-amount[data-oboz-id="${ob.id}"]`);
-              const confirmBtn = container.querySelector(`button.trainer-confirm[data-oboz-id="${ob.id}"]`);
-
-              if (amountInput) {
-                amountInput.classList.add('status-paid');
-                amountInput.classList.remove('status-unpaid');
-                // Add green highlight for confirmed payment
-                amountInput.style.background = '#28a745';
-                amountInput.style.color = '#ffffff';
-                amountInput.style.borderColor = '#28a745';
-              }
-              if (confirmBtn) {
-                // Replace confirm button with delete button for paid payments
-                confirmBtn.outerHTML = `<button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id}" data-part-id="${confirmBtn.getAttribute('data-part-id')}" data-trainer-id="${confirmBtn.getAttribute('data-trainer-id')}">×</button>`;
-              }
-            }
-          });
-
-
-        });
-
-        // attach handlers
-
-        // Save camp due amount to localStorage when changed
-        container.querySelectorAll('.camp-due').forEach(input => {
-          input.addEventListener('input', () => {
-            const partId = input.getAttribute('data-part-id');
-            const trainingId = input.getAttribute('data-training-id');
-            const value = input.value;
-
-            // Update localStorage
-            if (trainingId && partId) {
-              if (value) {
-                localStorage.setItem(`camp_due_${trainingId}_${partId}`, value);
-                // Add red highlight for unconfirmed amounts
-                input.style.background = '#b91c1c';
-                input.style.borderColor = '#dc2626';
-                input.style.color = '#ffffff';
-              } else {
-                localStorage.removeItem(`camp_due_${trainingId}_${partId}`);
-                // Remove red highlight when empty
-                input.style.background = '';
-                input.style.borderColor = '';
-              }
-
-                          // Update summary after camp due change
-            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-            updateFinancialSummary();
-
-            // Update participant total
-            const partId = input.getAttribute('data-part-id');
-            updateParticipantTotals(partId);
-
-              // Camp list status will be updated when needed
-
-              // Update only necessary elements instead of full re-render
-            }
-          });
-        });
-
-
-
-        // Save camp paid amount to localStorage when changed
-        container.querySelectorAll('.camp-paid').forEach(input => {
-          input.addEventListener('input', () => {
-            const partId = input.getAttribute('data-part-id');
-            const value = input.value;
-
-            // Update localStorage for camp paid amounts
-            if (partId) {
-              if (value) {
-                localStorage.setItem(`camp_paid_${window.currentTrainingId}_${partId}`, value);
-                // Add red highlight for entered amounts (unconfirmed)
-                input.style.background = '#b91c1c';
-                input.style.color = '#ffffff';
-                input.style.borderColor = '#dc2626';
-                // Also add pending highlight to the whole cell
-                // immediate highlight on parent td
-                const td = input.closest('td');
-                if (td) td.classList.add('pending-payment');
-              } else {
-                localStorage.removeItem(`camp_paid_${window.currentTrainingId}_${partId}`);
-                // Remove highlight when empty
-                input.classList.remove('status-paid', 'status-unpaid');
-                input.style.background = '';
-                input.style.color = '';
-                input.style.borderColor = '';
-                const td = input.closest('td');
-                if (td) td.classList.remove('pending-payment');
-              }
-
-                          // Update summary after camp paid change
-            const partId = input.getAttribute('data-part-id');
-                        setTimeout(() => {
-              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, window.currentTrainingId, container, trainingCurrency);
-            updateFinancialSummary();
-            updateParticipantTotals(partId);
-            }, 50);
-
-              // Camp list status will be updated when needed
-
-              // Update only necessary elements instead of full re-render
-            }
-          });
-        });
-
-        container.querySelectorAll('.camp-confirm').forEach(btn=>{
-          btn.addEventListener('click', async ()=>{
-            const partId = btn.getAttribute('data-part-id');
-            const paidInput = container.querySelector(`input.camp-paid[data-part-id="${partId}"]`);
-            const paid = parseFloat(paidInput.value) || 0;
-
-            if(paid > 0){
-              const { error } = await supabase.from('camps.participants').update({ camp_amount: paid, camp_status: 'paid' }).eq('id', partId);
-              if(error){ alert('Błąd zapisu: '+error.message); return; }
-              // Add status-paid class to inputs immediately
-              paidInput.classList.add('status-paid');
-              paidInput.classList.remove('status-unpaid');
-              // Remove red highlight
-                paidInput.style.background = '';
-              paidInput.style.borderColor = '';
-                paidInput.style.color = '';
-              // Remove pending highlight from the cell
-              const td = paidInput.closest('td');
-              if (td) td.classList.remove('pending-payment');
-
-              // Clear localStorage values since payment is now confirmed
-              localStorage.removeItem(`camp_due_${currentTrainingId}_${partId}`);
-              localStorage.removeItem(`camp_paid_${currentTrainingId}_${partId}`);
-
-              // Change OK button to delete button
-              btn.outerHTML = `<button class="btn btn-small btn-delete camp-delete" data-part-id="${partId}">×</button>`;
-
-              // Add event listener to the new delete button
-              const newDeleteBtn = container.querySelector(`button.camp-delete[data-part-id="${partId}"]`);
-              if (newDeleteBtn) {
-                newDeleteBtn.addEventListener('click', async () => {
-                  if (!confirm('Usunąć płatność campu dla tego uczestnika?')) return;
-                  // reset participant camp_amount and status
-                  const { error } = await supabase.from('training_participants').update({ camp_amount: 0, camp_status: 'unset' }).eq('id', partId);
-                  if (error) { alert('Błąd usuwania: ' + error.message); return; }
-
-                  const paidInput = container.querySelector(`input.camp-paid[data-part-id="${partId}"]`);
-                  if (paidInput) {
-                    paidInput.value = '';
-                    paidInput.classList.remove('status-paid', 'status-unpaid');
-                    paidInput.style.background = '';
-                    paidInput.style.borderColor = '';
-                    paidInput.style.color = '';
-                  }
-
-                  // Change delete button back to confirm button
-                  newDeleteBtn.outerHTML = `<button class="btn btn-small camp-confirm" data-part-id="${partId}" data-due="${btn.getAttribute('data-due') || 0}">OK</button>`;
-
-                  // Update summary and financial summary
-                  const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-                  updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-                  updateFinancialSummary();
-                  updateParticipantTotals(partId);
-                });
-              }
-
-              // Update payment status locally instead of full re-render
-              updateFinancialSummary();
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-
-              // Update participant total
-              updateParticipantTotals(partId);
-            } else { alert('Wprowadź kwotę płatności aby potwierdzić'); }
-          });
-        });
-
-        // lessons change: recalculate due for trainer cells with immediate DB sync and data protection
-        const userEditingFlags = new Map(); // Track which inputs user is currently editing
-
-        container.querySelectorAll('.oboz-lessons').forEach(input => {
-          input.addEventListener('focus', () => {
-            // Mark input as being edited by user
-            const inputKey = `${input.getAttribute('data-part-id')}-${input.getAttribute('data-trainer-id')}`;
-            userEditingFlags.set(inputKey, true);
-          });
-
-          input.addEventListener('blur', () => {
-            // Remove editing flag after user stops editing
-            const inputKey = `${input.getAttribute('data-part-id')}-${input.getAttribute('data-trainer-id')}`;
-            setTimeout(() => userEditingFlags.delete(inputKey), 100); // Small delay to allow other operations
-          });
-
-          input.addEventListener('input', async ()=>{
-            const obozId = input.getAttribute('data-oboz-id') || '';
-            const partId = input.getAttribute('data-part-id');
-            const trainerId = input.getAttribute('data-trainer-id');
-            const lessons = parseInt(input.value,10) || 0;
-
-            // find corresponding due input (try oboz-id first, then part-id + trainer-id)
-            let lessonDueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`);
-            if(!lessonDueInput && partId && trainerId) {
-              lessonDueInput = container.querySelector(`input.oboz-due[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-            }
-            if(!lessonDueInput) return; // can't find due input
-
-            const price = parseFloat(lessonDueInput.getAttribute('data-price')) || 0;
-            const newDue = lessons * price;
-            lessonDueInput.value = newDue;
-
-            // Set red highlight if there's amount due, otherwise white
-            if (newDue > 0) {
-              lessonDueInput.style.background = '#b91c1c';
-              lessonDueInput.style.color = '#ffffff';
-              lessonDueInput.style.borderColor = '#dc2626';
-            } else {
-              lessonDueInput.style.background = '#ffffff';
-              lessonDueInput.style.color = '#000000';
-              lessonDueInput.style.borderColor = '';
-            }
-
-            // Show saving indicator
-            const savingIndicator = document.getElementById('savingIndicator');
-            savingIndicator.classList.add('show');
-
-            // Immediate database sync - no debouncing
-            try {
-              // update DB lessons_count and amount if we have a record
-              if(obozId){
-                const { error } = await supabase.from('camps.payments').update({ lessons_count: lessons, amount: newDue }).eq('id', obozId);
-                if(error) console.error('Error updating lessons:', error);
-              } else if(lessons > 0) {
-                // create new payment record if lessons > 0 and no record exists yet
-                const currency = dueInput.getAttribute('data-currency') || 'PLN';
-                const insertObj = {
-                  participant_id: partId,
-                  trainer_id: trainerId,
-                  lessons_count: lessons,
-                  amount: newDue,
-                  currency: currency,
-                  status: 'unset'
-                };
-                const { data: newRow, error: insErr } = await supabase.from('camps.payments').insert([insertObj]).select().single();
-                if(!insErr && newRow){
-                  // update data-oboz-id on all related elements
-                  const newObozId = newRow.id;
-                  input.setAttribute('data-oboz-id', newObozId);
-                  dueInput.setAttribute('data-oboz-id', newObozId);
-
-
-
-                  const confirmBtn = container.querySelector(`button.oboz-confirm[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-                  if(confirmBtn) confirmBtn.setAttribute('data-oboz-id', newObozId);
-
-                  const deleteBtn = container.querySelector(`button.oboz-delete[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-                  if(deleteBtn) deleteBtn.setAttribute('data-oboz-id', newObozId);
-                }
-              }
-
-                          // Update summary after lesson change (but preserve user input)
-            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-            updateFinancialSummary();
-
-            // Update participant total
-            const partId = input.getAttribute('data-part-id');
-            updateParticipantTotals(partId);
-
-            } catch (error) {
-              console.error('Error in lesson update:', error);
-            } finally {
-              // Hide saving indicator
-              setTimeout(() => savingIndicator.classList.remove('show'), 200);
-            }
-          });
-        });
-
-        // Handle trainer amount input changes
-        container.querySelectorAll('.trainer-amount').forEach(input => {
-          input.addEventListener('input', () => {
-            const partId = input.getAttribute('data-part-id');
-            const trainerId = input.getAttribute('data-trainer-id');
-            const value = input.value;
-
-            if (partId && trainerId) {
-              if (value) {
-                // Store amount in localStorage
-                localStorage.setItem(`trainer_amount_${window.currentTrainingId}_${partId}_${trainerId}`, value);
-                // Add red highlight for entered amounts (unconfirmed)
-                input.style.background = '#b91c1c';
-                input.style.color = '#ffffff';
-                input.style.borderColor = '#dc2626';
-              } else {
-                // Clear localStorage if empty
-                localStorage.removeItem(`trainer_amount_${window.currentTrainingId}_${partId}_${trainerId}`);
-                // Remove highlight when empty
-                input.classList.remove('status-paid', 'status-unpaid');
-                input.style.background = '';
-                input.style.color = '';
-                input.style.borderColor = '';
-              }
-
-              // Update summary immediately
-              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, window.currentTrainingId, container, trainingCurrency);
-              updateFinancialSummary();
-              updateParticipantTotals(partId);
-            }
-          });
-        });
-
-        container.querySelectorAll('.oboz-confirm').forEach(btn=>{
-          btn.addEventListener('click', async ()=>{
-            let obozId = btn.getAttribute('data-oboz-id') || '';
-            const partId = btn.getAttribute('data-part-id');
-            const trainerId = btn.getAttribute('data-trainer-id');
-            // find due input by either oboz-id or by part+trainer
-            const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`) || container.querySelector(`input.oboz-due[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-            // find lessons input
-            const lessonsInput = container.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-            const lessons = parseInt(lessonsInput?.value,10) || 0;
-            const due = parseFloat(dueInput?.value) || 0;
-
-            if(due > 0){
-              if(obozId){
-                // update existing payment
-              const { error } = await supabase.from('camps.payments').update({ amount: due, status: 'paid' }).eq('id', obozId);
-              if(error){ alert('Błąd zapisu: '+error.message); return; }
-              } else {
-                // insert new payment
-                const insertObj = { participant_id: partId, trainer_id: trainerId, lessons_count: lessons, amount: due, currency: dueInput?.getAttribute('data-currency') || 'PLN', status: 'paid' };
-                const { data: newRow, error: insErr } = await supabase.from('camps.payments').insert([insertObj]).select().single();
-                if(insErr || !newRow){ alert('Błąd zapisu: '+(insErr?insErr.message:'')); return; }
-                obozId = newRow.id;
-                // update data-oboz-id on inputs/buttons so future actions reference the new row
-                if(dueInput) dueInput.setAttribute('data-oboz-id', obozId);
-                if(lessonsInput) lessonsInput.setAttribute('data-oboz-id', obozId);
-                const delBtn = container.querySelector(`button.oboz-delete[data-part-id="${partId}"]`);
-                if(delBtn) delBtn.setAttribute('data-oboz-id', obozId);
-                btn.setAttribute('data-oboz-id', obozId);
-              }
-              if(dueInput){
-                dueInput.classList.add('status-paid');
-                dueInput.classList.remove('status-unpaid');
-                // Add green highlight for confirmed payment
-                dueInput.style.background = '#28a745';
-                dueInput.style.color = '#ffffff';
-                dueInput.style.borderColor = '#28a745';
-              }
-              btn.disabled = true;
-
-              // Clear localStorage values since payment is now confirmed
-              localStorage.removeItem(`oboz_paid_${currentTrainingId}_${partId}_${trainerId}`);
-
-              // Update summary after camp payment confirmation
-              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-              updateFinancialSummary();
-              updateParticipantTotals(partId);
-
-              // Camp list status will be updated when needed
-            } else { alert('Kwota musi być równa kwocie do zapłaty aby potwierdzić'); }
-          });
-        });
-
-        // delete handlers for oboz payments
-        container.querySelectorAll('.oboz-delete').forEach(btn=>{
-          btn.addEventListener('click', async ()=>{
-            const obozId = btn.getAttribute('data-oboz-id') || '';
-            const partId = btn.getAttribute('data-part-id');
-            const trainerId = btn.getAttribute('data-trainer-id');
-            // find related inputs
-            const dueInput = container.querySelector(`input.oboz-due[data-oboz-id="${obozId}"]`) || container.querySelector(`input.oboz-due[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-            const lessonsInput = container.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-            const confirmBtn = container.querySelector(`button.oboz-confirm[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-            if(!obozId){
-              // nothing in DB, just reset UI
-              if(dueInput){
-                // Recalculate amount based on current lessons count
-                const lessonsCount = lessonsInput ? parseInt(lessonsInput.value) || 0 : 0;
-                const price = parseFloat(dueInput.getAttribute('data-price')) || 0;
-                const recalculatedAmount = lessonsCount * price;
-                dueInput.value = recalculatedAmount;
-                dueInput.classList.remove('status-paid');
-                dueInput.setAttribute('data-oboz-id','');
-
-                // Set red highlight if there's amount due, otherwise white
-                if (recalculatedAmount > 0) {
-                  dueInput.style.background = '#b91c1c';
-                  dueInput.style.color = '#ffffff';
-                  dueInput.style.borderColor = '#dc2626';
-                } else {
-                  dueInput.style.background = '#ffffff';
-                  dueInput.style.color = '#000000';
-                  dueInput.style.borderColor = '';
-                }
-              }
-              if(lessonsInput) lessonsInput.setAttribute('data-oboz-id','');
-              if(confirmBtn) confirmBtn.disabled = false;
-              return;
-            }
-            if(!confirm('Usunąć tę płatność?')) return;
-            const { error } = await supabase.from('camps.payments').delete().eq('id', obozId);
-            if(error){ alert('Błąd usuwania: '+error.message); return; }
-            // clear UI and unset oboz ids
-            if(dueInput){
-              // Recalculate amount based on current lessons count
-              const lessonsCount = lessonsInput ? parseInt(lessonsInput.value) || 0 : 0;
-              const price = parseFloat(dueInput.getAttribute('data-price')) || 0;
-              const recalculatedAmount = lessonsCount * price;
-              dueInput.value = recalculatedAmount;
-              dueInput.classList.remove('status-paid');
-              dueInput.setAttribute('data-oboz-id','');
-
-              // Set red highlight if there's amount due, otherwise white
-              if (recalculatedAmount > 0) {
-                dueInput.style.background = '#b91c1c';
-                dueInput.style.color = '#ffffff';
-                dueInput.style.borderColor = '#dc2626';
-              } else {
-                dueInput.style.background = '#ffffff';
-                dueInput.style.color = '#000000';
-                dueInput.style.borderColor = '';
-              }
-            }
-            if(lessonsInput) lessonsInput.setAttribute('data-oboz-id','');
-            if(confirmBtn) confirmBtn.disabled = false; // Re-enable confirm button
-
-            // Update summary and financial summary
-            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-            updateFinancialSummary();
-            updateParticipantTotals(partId);
-          });
-        });
-
-        // delete handlers for camp payments (per participant)
-        container.querySelectorAll('.camp-delete').forEach(btn=>{
-          btn.addEventListener('click', async ()=>{
-            const partId = btn.getAttribute('data-part-id');
-            if(!confirm('Usunąć płatność campu dla tego uczestnika?')) return;
-            // reset participant camp_amount and status (new schema)
-            const { error } = await supabase.from('camps.participants').update({ camp_amount: 0, camp_status: 'unset' }).eq('id', partId);
-            if(error){ alert('Błąd usuwania: '+error.message); return; }
-            const paidInput = container.querySelector(`input.camp-paid[data-part-id="${partId}"]`);
-            const confirmBtn = container.querySelector(`button.camp-confirm[data-part-id="${partId}"]`);
-            if(paidInput){
-              paidInput.value='';
-              paidInput.classList.remove('status-paid', 'status-unpaid');
-              // Remove red highlight if it was there
-              paidInput.style.background = '';
-              paidInput.style.borderColor = '';
-              paidInput.style.color = '';
-            }
-
-            // Change delete button back to confirm button
-            btn.outerHTML = `<button class="btn btn-small camp-confirm" data-part-id="${partId}" data-due="${btn.getAttribute('data-due') || 0}">OK</button>`;
-
-            // Update summary and financial summary
-            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-            updateFinancialSummary();
-            updateParticipantTotals(partId);
-          });
-        });
-
-        // Handle trainer confirm buttons
-        container.querySelectorAll('.trainer-confirm').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const obozId = btn.getAttribute('data-oboz-id') || '';
-            const partId = btn.getAttribute('data-part-id');
-            const trainerId = btn.getAttribute('data-trainer-id');
-
-            // Find amount input
-            const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-            const amount = parseFloat(amountInput?.value) || 0;
-
-            if (amount > 0) {
-              if (obozId) {
-                // Update existing payment
-                const { error } = await supabase.from('camps.payments').update({ amount: amount, status: 'paid' }).eq('id', obozId);
-                if (error) { alert('Błąd zapisu: ' + error.message); return; }
-              } else {
-                // Insert new payment
-                const currency = amountInput?.getAttribute('data-currency') || 'PLN';
-                const insertObj = {
-                  participant_id: partId,
-                  trainer_id: trainerId,
-                  lessons_count: 1, // Default value since we don't track lessons anymore
-                  amount: amount,
-                  currency: currency,
-                  status: 'paid'
-                };
-                const { data: newRow, error: insErr } = await supabase.from('camps.payments').insert([insertObj]).select().single();
-                if (insErr || !newRow) { alert('Błąd zapisu: ' + (insErr ? insErr.message : '')); return; }
-                // Update data-oboz-id
-                if (amountInput) amountInput.setAttribute('data-oboz-id', newRow.id);
-                if (btn) btn.setAttribute('data-oboz-id', newRow.id);
-              }
-
-              // Update UI
-              if (amountInput) {
-                amountInput.classList.add('status-paid');
-                amountInput.classList.remove('status-unpaid');
-                // Add green highlight
-                amountInput.style.background = '#28a745';
-                amountInput.style.color = '#ffffff';
-                amountInput.style.borderColor = '#28a745';
-              }
-              // Change OK button to delete button
-              btn.outerHTML = `<button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${obozId}" data-part-id="${partId}" data-trainer-id="${trainerId}">×</button>`;
-
-              // Add event listener to the new delete button
-              const newDeleteBtn = container.querySelector(`button.trainer-delete[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-              if (newDeleteBtn) {
-                newDeleteBtn.addEventListener('click', async () => {
-                  const obozId = newDeleteBtn.getAttribute('data-oboz-id') || '';
-                  const partId = newDeleteBtn.getAttribute('data-part-id');
-                  const trainerId = newDeleteBtn.getAttribute('data-trainer-id');
-
-                  if (!obozId) {
-                    // No database record, just reset UI
-                    const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-                    if (amountInput) {
-                      amountInput.value = '';
-                      amountInput.classList.remove('status-paid', 'status-unpaid');
-                      amountInput.style.background = '';
-                      amountInput.style.color = '';
-                      amountInput.style.borderColor = '';
-                    }
-                    localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
-                    // Update summaries
-                    const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-                    updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-                    updateFinancialSummary();
-                    updateParticipantTotals(partId);
-                    return;
-                  }
-
-                  if (!confirm('Usunąć płatność dla tego szkoleniowca?')) return;
-
-                  // Delete from database
-                  const { error } = await supabase.from('camps.payments').delete().eq('id', obozId);
-                  if (error) { alert('Błąd usuwania: ' + error.message); return; }
-
-                  // Reset UI
-                  const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-                  if (amountInput) {
-                    amountInput.value = '';
-                    amountInput.classList.remove('status-paid', 'status-unpaid');
-                    amountInput.style.background = '';
-                    amountInput.style.color = '';
-                    amountInput.style.borderColor = '';
-                    amountInput.setAttribute('data-oboz-id', '');
-                  }
-
-                  // Change delete button back to confirm button
-                  newDeleteBtn.outerHTML = `<button class="btn btn-small trainer-confirm" data-oboz-id="" data-part-id="${partId}" data-trainer-id="${trainerId}">OK</button>`;
-
-                  // Update summaries
-                  const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-                  updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-                  updateFinancialSummary();
-                  updateParticipantTotals(partId);
-                });
-              }
-
-              // Clear localStorage
-              localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
-
-              // Update summaries
-              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-              updateFinancialSummary();
-              updateParticipantTotals(partId);
-            } else {
-              alert('Wprowadź kwotę przed potwierdzeniem');
-            }
-          });
-        });
-
-        // Handle trainer delete buttons
-        container.querySelectorAll('.trainer-delete').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const obozId = btn.getAttribute('data-oboz-id') || '';
-            const partId = btn.getAttribute('data-part-id');
-            const trainerId = btn.getAttribute('data-trainer-id');
-
-            if (!obozId) {
-              // No database record, just reset UI
-              const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-              if (amountInput) {
-                amountInput.value = '';
-                amountInput.classList.remove('status-paid', 'status-unpaid');
-                amountInput.style.background = '';
-                amountInput.style.color = '';
-                amountInput.style.borderColor = '';
-              }
-              localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
-              if (btn) btn.disabled = false;
-              // Update summaries
-              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-              updateFinancialSummary();
-              updateParticipantTotals(partId);
-              return;
-            }
-
-            if (!confirm('Usunąć płatność dla tego szkoleniowca?')) return;
-
-            // Delete from database
-            const { error } = await supabase.from('camps.payments').delete().eq('id', obozId);
-            if (error) { alert('Błąd usuwania: ' + error.message); return; }
-
-            // Reset UI
-            const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-            if (amountInput) {
-              amountInput.value = '';
-              amountInput.classList.remove('status-paid', 'status-unpaid');
-              amountInput.style.background = '';
-              amountInput.style.color = '';
-              amountInput.style.borderColor = '';
-              amountInput.setAttribute('data-oboz-id', '');
-            }
-            localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
-            if (btn) {
-              // Change delete button back to confirm button
-              btn.outerHTML = `<button class="btn btn-small trainer-confirm" data-oboz-id="" data-part-id="${partId}" data-trainer-id="${trainerId}">OK</button>`;
-            }
-
-            // Update summaries
-            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-            updateFinancialSummary();
-            updateParticipantTotals(partId);
-          });
-        });
-
-        // Function to update participant totals in real-time
-        function updateParticipantTotals(partId) {
-          const participantRow = container.querySelector(`tr[data-part-id="${partId}"]`);
-          if (!participantRow) return;
-
-          // Calculate totals for this participant
-          let totalPLN = 0;
-          let totalEUR = 0;
-
-          // Add camp amount in training currency
-          const campPaidInput = participantRow.querySelector('input.camp-paid');
-          const campAmount = campPaidInput ? parseFloat(campPaidInput.value) || 0 : 0;
-          const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-          if (trainingCurrency === 'PLN') {
-            totalPLN += campAmount;
-          } else {
-            totalEUR += campAmount;
-          }
-
-          // Add trainer amounts
-          trainerInfo.forEach(ti => {
-            const amountInput = participantRow.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${ti.id}"]`);
-            const trainerAmount = amountInput ? parseFloat(amountInput.value) || 0 : 0;
-            if (ti.currency === 'PLN') {
-              totalPLN += trainerAmount;
-            } else {
-              totalEUR += trainerAmount;
-            }
-          });
-
-          // Update total columns
-          const totalCells = participantRow.querySelectorAll('td:last-child, td:nth-last-child(2)');
-          if (totalCells.length >= 2) {
-            totalCells[totalCells.length - 2].textContent = `${totalPLN.toFixed(2)} PLN`;
-            totalCells[totalCells.length - 1].textContent = `${totalEUR.toFixed(2)} EUR`;
-          }
-        }
-
-        // Add +/- button functionality for lesson inputs
-        container.querySelectorAll('.lesson-plus').forEach(btn => {
-          btn.addEventListener('click', function() {
-            const partId = this.getAttribute('data-part-id');
-            const trainerId = this.getAttribute('data-trainer-id');
-            const input = container.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-            if (input) {
-              const currentValue = parseInt(input.value) || 0;
-              input.value = currentValue + 1;
-              // Trigger input event to recalculate amounts
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-
-              // Update participant total and financial summary immediately
-              const partId = input.getAttribute('data-part-id');
-              // Call immediately to ensure data is updated
-              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-                updateFinancialSummary();
-              updateParticipantTotals(partId);
-            }
-          });
-        });
-
-        container.querySelectorAll('.lesson-minus').forEach(btn => {
-          btn.addEventListener('click', function() {
-            const partId = this.getAttribute('data-part-id');
-            const trainerId = this.getAttribute('data-trainer-id');
-            const input = container.querySelector(`input.oboz-lessons[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
-            if (input) {
-              const currentValue = parseInt(input.value) || 0;
-              if (currentValue > 0) {
-                input.value = currentValue - 1;
-                // Trigger input event to recalculate amounts
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-
-                // Update participant total immediately
-                const partId = input.getAttribute('data-part-id');
-                // Call immediately to ensure data is updated
-                const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-                updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-                updateFinancialSummary();
-                updateParticipantTotals(partId);
-              }
-            }
-          });
-        });
-
-        // Add participant search functionality
-        const searchInput = container.querySelector('#participantSearch');
-        if (searchInput) {
-          searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase().trim();
-            const rows = container.querySelectorAll('tbody tr');
-
-            rows.forEach(row => {
-              const participantName = row.querySelector('td:nth-child(2)')?.textContent?.toLowerCase() || '';
-              if (participantName.includes(searchTerm)) {
-                row.style.display = '';
-              } else {
-                row.style.display = 'none';
-              }
-            });
-          });
-        }
-
-
-
-
-
-
-      }
-
-      // Global functions for expense management
-      function addGlobalExpense(name, amount, currency = 'PLN') {
-        console.log('=== addGlobalExpense called with:', { name, amount, currency });
-        const currentTrainingId = window.currentTrainingId || localStorage.getItem('currentTrainingId');
-        console.log('currentTrainingId in addGlobalExpense:', currentTrainingId);
-
-        const expensesKey = `camp_expenses_${currentTrainingId}`;
-        console.log('expensesKey:', expensesKey);
-
-        const storedExpenses = localStorage.getItem(expensesKey);
-        let expenses = [];
-
-        if (storedExpenses) {
-          try {
-            expenses = JSON.parse(storedExpenses);
-            console.log('Existing expenses loaded:', expenses);
-          } catch (e) {
-            console.error('Error parsing stored expenses:', e);
-            expenses = [];
-          }
-        } else {
-          console.log('No existing expenses found, starting with empty array');
-        }
-
-        const newExpense = {
-          name: name,
-          amount: amount,
-          currency: currency,
-          date: new Date().toISOString()
-        };
-        console.log('Adding new expense:', newExpense);
-
-        expenses.push(newExpense);
-        console.log('Updated expenses array:', expenses);
-
-        console.log('Saving to localStorage with key:', expensesKey);
-        localStorage.setItem(expensesKey, JSON.stringify(expenses));
-
-        // Verify save
-        const saved = localStorage.getItem(expensesKey);
-        console.log('Verified saved data:', saved);
-
-        // Update financial summary
-        updateFinancialSummary();
-      }
-
-
-
-      // Function to update expenses display
-      function updateExpensesDisplay() {
-        const currentTrainingId = window.currentTrainingId;
-        const expensesListDiv = document.getElementById('expensesList');
-        if (!expensesListDiv) return;
-
-        const expensesListHtml = generateExpensesListHtml(currentTrainingId);
-        expensesListDiv.outerHTML = expensesListHtml;
-      }
-
-      // Function to update financial summary
-      function updateFinancialSummary() {
-        const currentTrainingId = window.currentTrainingId;
-
-        // Calculate amounts by currency
-        const currencyData = {
-          PLN: { campPrice: 0, campPaid: 0, lessonsAmount: 0, lessonsPaid: 0 },
-          EUR: { campPrice: 0, campPaid: 0, lessonsAmount: 0, lessonsPaid: 0 }
-        };
-
-        // Get camp amounts (using training currency)
-        const campDueElements = document.querySelectorAll('input.camp-due');
-        const campPaidElements = document.querySelectorAll('input.camp-paid');
-
-        // Get training currency from the training data (assuming it's available globally or from DOM)
-        let trainingCurrency = 'PLN'; // Default
-        const campDetailsContainer = document.getElementById('campDetailsContainer');
-        if (campDetailsContainer) {
-          trainingCurrency = campDetailsContainer.getAttribute('data-training-currency') || 'PLN';
-        }
-
-        console.log('updateFinancialSummary - trainingCurrency:', trainingCurrency);
-
-        campDueElements.forEach(input => {
-          const value = parseFloat(input.value || 0);
-          currencyData[trainingCurrency].campPrice += value;
-        });
-
-        campPaidElements.forEach(input => {
-          const value = parseFloat(input.value || 0);
-          currencyData[trainingCurrency].campPaid += value;
-        });
-
-        // Calculate lessons amounts from trainer data by currency
-        const trainerSummaries = document.querySelectorAll('.trainer-summary');
-        trainerSummaries.forEach(summary => {
-          // Try to extract lesson amounts from the summary text
-          const statItems = summary.querySelectorAll('.stat-item');
-          let trainerCurrency = 'PLN'; // Default
-
-          statItems.forEach(item => {
-            const label = item.querySelector('.stat-label');
-            const value = item.querySelector('.stat-value');
-
-            if (label && value) {
-              const labelText = label.textContent.trim();
-              const valueText = value.textContent.trim();
-
-              // Extract currency from the value text (e.g., "150.00 EUR")
-              const currencyMatch = valueText.match(/(PLN|EUR)$/);
-              if (currencyMatch) {
-                trainerCurrency = currencyMatch[1];
-              }
-
-              if (labelText === 'Ogólna kwota:') {
-                const amount = parseFloat(valueText.replace(/\s+(PLN|EUR)$/, ''));
-                if (!isNaN(amount)) {
-                  currencyData[trainerCurrency].lessonsAmount += amount;
-                }
-              } else if (labelText === 'Zapłacona kwota:') {
-                const amount = parseFloat(valueText.replace(/\s+(PLN|EUR)$/, ''));
-                if (!isNaN(amount)) {
-                  currencyData[trainerCurrency].lessonsPaid += amount;
-                }
-              }
-            }
-          });
-        });
-
-        // Get expenses by currency
-        const expensesKey = `camp_expenses_${currentTrainingId}`;
-        const storedExpenses = localStorage.getItem(expensesKey);
-        const expensesByCurrency = { PLN: 0, EUR: 0 };
-
-        if (storedExpenses) {
-          try {
-            const expenses = JSON.parse(storedExpenses);
-            expenses.forEach(expense => {
-              const currency = expense.currency || 'PLN';
-              expensesByCurrency[currency] += parseFloat(expense.amount || 0);
-            });
-          } catch (e) {
-            console.error('Error parsing stored expenses:', e);
-          }
-        }
-
-        // Generate HTML for financial summaries
-        const campFinancialSummary = document.getElementById('campFinancialSummary');
-        if (!campFinancialSummary) return;
-
-        let summaryHtml = '';
-
-        // Check which currencies have data (include currencies with expenses)
-        const currenciesWithData = Object.keys(currencyData).filter(currency => {
-          const data = currencyData[currency];
-          const hasFinancialData = data.campPrice > 0 || data.lessonsAmount > 0 || data.campPaid > 0 || data.lessonsPaid > 0;
-          const hasExpenses = expensesByCurrency[currency] > 0;
-          return hasFinancialData || hasExpenses;
-        });
-
-        // Generate summary for each currency
-        currenciesWithData.forEach(currency => {
-          const data = currencyData[currency];
-          const totalPaid = data.campPaid + data.lessonsPaid;
-          const currencyExpenses = expensesByCurrency[currency];
-          const profit = totalPaid - currencyExpenses;
-
-          if (currenciesWithData.length > 1) {
-            summaryHtml += `
-              <h5 style="color: var(--gold); margin: 20px 0 10px 0; border-bottom: 1px solid var(--border-dark); padding-bottom: 5px;">
-                Podsumowanie ${currency}
-              </h5>
-            `;
-          }
-
-          summaryHtml += `
-            <div class="summary-grid" style="margin-bottom: 15px;">
-              <div class="summary-item">
-                <span class="summary-label">Zapłacona kwota (camp + lekcje):</span>
-                <span class="summary-value">${totalPaid.toFixed(2)} ${currency}</span>
-              </div>
-            </div>
-            <div class="summary-grid" style="margin-bottom: 15px;">
-              <div class="summary-item">
-                <span class="summary-label">Wydatki:</span>
-                <span class="summary-value">${currencyExpenses.toFixed(2)} ${currency}</span>
-              </div>
-              <div class="summary-item">
-                <span class="summary-label">Zysk:</span>
-                <span class="summary-value ${profit >= 0 ? 'status-paid' : 'status-unpaid'}">${profit.toFixed(2)} ${currency}</span>
-              </div>
-            </div>
-          `;
-        });
-
-        // Add expenses list to summary
-          const expensesListHtml = generateExpensesListHtml(currentTrainingId);
-          summaryHtml += expensesListHtml;
-
-        // Set the summary content
-          campFinancialSummary.innerHTML = summaryHtml;
-
-        console.log('Financial Summary Updated:', currencyData);
-      }
-
-      // Function to generate expenses list HTML
-      function generateExpensesListHtml(trainingId) {
-        const expensesKey = `camp_expenses_${trainingId}`;
-        const storedExpenses = localStorage.getItem(expensesKey);
-        let expenses = [];
-
-        if (storedExpenses) {
-          try {
-            expenses = JSON.parse(storedExpenses);
-          } catch (e) {
-            console.error('Error parsing stored expenses:', e);
-            expenses = [];
-          }
-        }
-
-        if (expenses.length === 0) {
-          return '<div id="expensesList"><p style="color: var(--text-gray); font-style: italic;">Brak wydatków</p></div>';
-        }
-
-        const expensesHtml = expenses.map((expense, index) => `
-          <div class="expense-item" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 5px; background: rgba(255,255,255,0.02); border-radius: 4px;">
-            <div>
-              <strong>${expense.name}</strong>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="color: var(--error); font-weight: bold;">- ${parseFloat(expense.amount).toFixed(2)} ${expense.currency || 'PLN'}</span>
-              <button class="btn btn-small btn-delete delete-expense-btn" data-expense-index="${index}" style="padding: 2px 6px; font-size: 0.7rem;">
-                <i class="fa fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        `).join('');
-
-        return `<div id="expensesList">${expensesHtml}</div>`;
-      }
-
-      // Function to delete global expense
-      function deleteGlobalExpense(expenseIndex) {
-        const currentTrainingId = window.currentTrainingId || localStorage.getItem('currentTrainingId');
-        const expensesKey = `camp_expenses_${currentTrainingId}`;
-        const storedExpenses = localStorage.getItem(expensesKey);
-
-        if (storedExpenses) {
-          try {
-            let expenses = JSON.parse(storedExpenses);
-            if (expenseIndex >= 0 && expenseIndex < expenses.length) {
-              expenses.splice(expenseIndex, 1);
-              localStorage.setItem(expensesKey, JSON.stringify(expenses));
-
-              // Update financial summary (includes expenses)
-              updateFinancialSummary();
-            }
-          } catch (e) {
-            console.error('Error deleting expense:', e);
-          }
-        }
-      }
-
-      // Initialize expense event listeners
-      function initializeExpenseListeners() {
-        // Load existing expenses on page load
-        updateExpensesDisplay();
-        updateFinancialSummary();
-
-        const campDetailsContainerForEvents = document.getElementById('campDetailsContainer');
-        if (campDetailsContainerForEvents) {
-          campDetailsContainerForEvents.addEventListener('click', function(e) {
-            // Handle add expense button clicks - show/hide inline form
-            if (e.target.classList.contains('add-expense-btn') || e.target.closest('.add-expense-btn')) {
-              e.preventDefault();
-              const btn = e.target.classList.contains('add-expense-btn') ? e.target : e.target.closest('.add-expense-btn');
-              const trainerId = btn.getAttribute('data-trainer-id');
-              const form = document.getElementById(`expense-form-${trainerId}`);
-
-              if (form) {
-                const isVisible = form.style.display !== 'none';
-                if (isVisible) {
-                  // Hide form
-                  form.style.display = 'none';
-                } else {
-                  // Show form and focus on name input
-                  form.style.display = 'block';
-                  const nameInput = form.querySelector('.expense-name-input');
-                  if (nameInput) nameInput.focus();
-                }
-              }
-            }
-
-            // Handle save expense button clicks
-            if (e.target.classList.contains('save-expense-btn') || e.target.closest('.save-expense-btn')) {
-              e.preventDefault();
-              const btn = e.target.classList.contains('save-expense-btn') ? e.target : e.target.closest('.save-expense-btn');
-              console.log('Save button clicked, button element:', btn);
-              console.log('Button attributes:', Array.from(btn.attributes).map(attr => `${attr.name}=${attr.value}`));
-
-              // Method 1: Try to get trainerId from button data attribute
-              let trainerId = btn.getAttribute('data-trainer-id');
-              console.log('Method 1 - trainerId from button data attribute:', trainerId);
-
-              // Method 2: Try to find trainerId from parent elements
-              if (!trainerId || trainerId === 'undefined') {
-                console.log('Method 1 failed, trying Method 2');
-
-                // Look up the DOM tree to find trainer summary
-                let currentElement = btn;
-                let foundTrainerId = null;
-
-                // Go up 10 levels max to find trainer summary
-                for (let i = 0; i < 10 && currentElement; i++) {
-                  currentElement = currentElement.parentElement;
-                  console.log(`Level ${i}:`, currentElement?.tagName, currentElement?.className, currentElement?.id);
-
-                  if (currentElement && currentElement.classList && currentElement.classList.contains('trainer-summary')) {
-                    // Found trainer summary, now find the add-expense-btn within it to get trainerId
-                    const addBtn = currentElement.querySelector('.add-expense-btn');
-                    if (addBtn) {
-                      foundTrainerId = addBtn.getAttribute('data-trainer-id');
-                      console.log('Found trainerId from add-expense-btn in trainer summary:', foundTrainerId);
-                      break;
-                    }
-                  }
-                }
-
-                if (foundTrainerId) {
-                  trainerId = foundTrainerId;
-                }
-              }
-
-              // Method 3: Find all expense forms and check which one contains the button
-              if (!trainerId || trainerId === 'undefined') {
-                console.log('Method 2 failed, trying Method 3');
-
-                const allExpenseForms = document.querySelectorAll('.add-expense-form');
-                console.log('All expense forms found:', allExpenseForms.length);
-
-                for (let form of allExpenseForms) {
-                  if (form.contains(btn)) {
-                    const formId = form.id;
-                    console.log('Button is inside form:', formId);
-
-                    if (formId && formId.startsWith('expense-form-')) {
-                      trainerId = formId.replace('expense-form-', '');
-                      console.log('Extracted trainerId from form ID:', trainerId);
-                      break;
-                    }
-                  }
-                }
-              }
-
-              console.log('Final trainerId result:', trainerId);
-
-              if (!trainerId || trainerId === 'undefined') {
-                console.error('CRITICAL ERROR: Could not determine trainerId for save button!');
-                console.log('DOM structure around button:');
-                let element = btn;
-                for (let i = 0; i < 5; i++) {
-                  console.log(`Parent ${i}:`, element?.tagName, element?.className, element?.id);
-                  element = element?.parentElement;
-                }
-                return;
-              }
-
-              // Now find the form
-              const form = document.getElementById(`expense-form-${trainerId}`);
-              console.log('Found form for trainerId', trainerId, ':', !!form);
-
-              if (form) {
-                const nameInput = form.querySelector('.expense-name-input');
-                const amountInput = form.querySelector('.expense-amount-input');
-
-                if (nameInput && amountInput) {
-                  const name = nameInput.value.trim();
-                  const amountValue = amountInput.value.replace(',', '.'); // Handle comma as decimal separator
-                  const amount = parseFloat(amountValue);
-
-                  if (!name) {
-                    alert('Wprowadź nazwę wydatku');
-                    nameInput.focus();
-                    return;
-                  }
-
-                  if (!amount || amount <= 0 || isNaN(amount)) {
-                    alert('Wprowadź prawidłową kwotę wydatku');
-                    amountInput.focus();
-                    return;
-                  }
-
-                  // Add expense
-                  console.log('About to call addExpense with:', { trainerId, name, amount });
-                  addExpense(trainerId, name, amount);
-
-                  // Clear and hide form
-                  nameInput.value = '';
-                  amountInput.value = '';
-                  form.style.display = 'none';
-                }
-              }
-            }
-
-            // Handle cancel expense button clicks
-            if (e.target.classList.contains('cancel-expense-btn') || e.target.closest('.cancel-expense-btn')) {
-              e.preventDefault();
-              const btn = e.target.classList.contains('cancel-expense-btn') ? e.target : e.target.closest('.cancel-expense-btn');
-              const trainerId = btn.getAttribute('data-trainer-id');
-              const form = document.getElementById(`expense-form-${trainerId}`);
-
-              if (form) {
-                // Clear and hide form
-                const nameInput = form.querySelector('.expense-name-input');
-                const amountInput = form.querySelector('.expense-amount-input');
-                if (nameInput) nameInput.value = '';
-                if (amountInput) amountInput.value = '';
-                form.style.display = 'none';
-              }
-            }
-
-            // Handle global add expense button click
-            if (e.target.id === 'addGlobalExpenseBtn' || e.target.closest('#addGlobalExpenseBtn')) {
-              e.preventDefault();
-              const nameInput = document.getElementById('globalExpenseName');
-              const amountInput = document.getElementById('globalExpenseAmount');
-              const currencySelect = document.getElementById('globalExpenseCurrency');
-
-              if (!nameInput || !amountInput || !currencySelect) return;
-
-              const name = nameInput.value.trim();
-              const amountValue = amountInput.value.replace(',', '.');
-              const amount = parseFloat(amountValue);
-              const currency = currencySelect.value;
-
-              if (!name) {
-                alert('Wprowadź nazwę wydatku');
-                nameInput.focus();
-                return;
-              }
-
-              if (!amount || amount <= 0 || isNaN(amount)) {
-                alert('Wprowadź prawidłową kwotę wydatku');
-                amountInput.focus();
-                return;
-              }
-
-              // Add expense
-              addGlobalExpense(name, amount, currency);
-
-              // Clear form
-              nameInput.value = '';
-              amountInput.value = '';
-              currencySelect.value = 'PLN';
-            }
-
-            // Handle global expense delete button clicks
-            if (e.target.classList.contains('delete-expense-btn')) {
-              const expenseIndex = parseInt(e.target.getAttribute('data-expense-index'));
-
-              if (confirm('Czy na pewno chcesz usunąć ten wydatek?')) {
-                deleteGlobalExpense(expenseIndex);
-              }
-            }
-          });
-        }
-      }
-
-      // Initialize listeners when DOM is ready
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeExpenseListeners);
-      } else {
-        initializeExpenseListeners();
-      }
-
-
-    </script>
-
-
-  </body>
+    });
+
+    // Navigation
+    navMembers.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
+      navMembers.classList.add('active');
+      // For now, members is the only section
+    });
+
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', () => {
+      loadMembers();
+    });
+  </script>
+</body>
 </html>
