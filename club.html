@@ -1433,14 +1433,27 @@
           // After creating camp in DB, refresh camp list for the month of the created camp
           try {
             const createdMonthKey = `${new Date(date).getFullYear()}-${String(new Date(date).getMonth() + 1).padStart(2,'0')}`;
+            console.log('Camp created, trying to refresh camp list for month:', createdMonthKey, 'createdCampId:', createdCamp?.id);
+
+            // Switch back to month view so list is visible
+            const monthViewEl = document.getElementById('monthView');
+            const detailsViewEl = document.getElementById('campDetailsView');
+            if(monthViewEl && detailsViewEl){
+              detailsViewEl.style.display = 'none';
+              monthViewEl.style.display = 'block';
+            }
+
             const monthSelect = document.getElementById('monthSelect');
-            // If the month select exists, set it to the created month and load camps
             if(monthSelect){
               monthSelect.value = createdMonthKey;
-              // give a tiny delay to ensure UI updated
-              setTimeout(() => {
-                if(typeof loadCampsForMonth === 'function') loadCampsForMonth(createdMonthKey);
-              }, 50);
+            }
+
+            // call loadCampsForMonth even if monthSelect not present
+            if(typeof loadCampsForMonth === 'function'){
+              // small delay to ensure UI updated
+              setTimeout(() => { loadCampsForMonth(createdMonthKey); console.log('Called loadCampsForMonth for', createdMonthKey); }, 80);
+            } else {
+              console.warn('loadCampsForMonth is not defined');
             }
           } catch(e){
             console.warn('Nie udało się odświeżyć listy campów automatycznie:', e);
