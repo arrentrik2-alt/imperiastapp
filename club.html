@@ -514,20 +514,20 @@
       background-color: rgba(212, 175, 55, 0.05);
     }
 
-    /* Payment status highlighting */
-    .camp-details-table tr.payment-unconfirmed-camp {
+    /* Payment status highlighting - excluding first column */
+    .camp-details-table tr.payment-unconfirmed-camp td:not(:first-child) {
       background: linear-gradient(90deg, rgba(220, 53, 69, 0.1) 0%, rgba(220, 53, 69, 0.05) 50%, transparent 100%);
     }
 
-    .camp-details-table tr.payment-confirmed-camp {
+    .camp-details-table tr.payment-confirmed-camp td:not(:first-child) {
       background: linear-gradient(90deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 50%, transparent 100%);
     }
 
-    .camp-details-table tr.payment-unconfirmed-trainer {
+    .camp-details-table tr.payment-unconfirmed-trainer td:not(:first-child) {
       background: linear-gradient(90deg, rgba(220, 53, 69, 0.08) 0%, rgba(220, 53, 69, 0.03) 70%, transparent 100%);
     }
 
-    .camp-details-table tr.payment-confirmed-trainer {
+    .camp-details-table tr.payment-confirmed-trainer td:not(:first-child) {
       background: linear-gradient(90deg, rgba(40, 167, 69, 0.08) 0%, rgba(40, 167, 69, 0.03) 70%, transparent 100%);
     }
 
@@ -574,8 +574,7 @@
     }
 
     .participant-name {
-      text-align: left;
-      padding-left: 8px;
+      text-align: center;
       font-weight: 500;
     }
 
@@ -664,6 +663,52 @@
       font-size: 0.75rem;
       font-weight: 500;
       white-space: nowrap;
+    }
+
+    /* Summary rows styling */
+    .summary-row {
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%);
+      border-top: 2px solid var(--gold);
+      font-weight: 600;
+    }
+
+    .summary-row td {
+      padding: 12px 8px;
+      color: var(--gold);
+      font-size: 0.85rem;
+      text-align: center;
+      border: none;
+    }
+
+    .summary-row .participant-name {
+      text-align: left;
+      font-weight: 700;
+      color: var(--gold);
+      font-size: 0.9rem;
+    }
+
+    .summary-amount {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 4px 8px;
+      color: white;
+      font-weight: 700;
+      font-size: 0.8rem;
+      min-width: 60px;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .summary-amount.total {
+      background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
+      color: var(--primary-bg);
+      font-weight: 800;
+    }
+
+    .summary-amount.paid {
+      background: linear-gradient(135deg, var(--success) 0%, #218838 100%);
+      color: white;
     }
 
     /* Trainer Form Styles */
@@ -1725,6 +1770,41 @@
 
       tableHtml += `
           </tbody>
+          <tfoot>
+      `;
+
+      // Add summary rows
+      const campSummary = calculateColumnSummary(camp.id, 'camp');
+      const trainerSummaries = [];
+
+      if (camp.trainers && camp.trainers.length > 0) {
+        camp.trainers.forEach((trainer, index) => {
+          trainerSummaries.push(calculateColumnSummary(camp.id, 'trainer', index));
+        });
+      }
+
+      // Summary row 1: Kwota ogólna
+      tableHtml += `<tr class="summary-row"><td class="participant-name">Kwota ogólna</td>`;
+      tableHtml += `<td><span class="summary-amount total">${formatCurrency(campSummary.total, camp.currency)}</span></td>`;
+
+      trainerSummaries.forEach(summary => {
+        tableHtml += `<td><span class="summary-amount total">${formatCurrency(summary.total, summary.currency)}</span></td>`;
+      });
+
+      tableHtml += `</tr>`;
+
+      // Summary row 2: Kwota zapłacona
+      tableHtml += `<tr class="summary-row"><td class="participant-name">Kwota zapłacona</td>`;
+      tableHtml += `<td><span class="summary-amount paid">${formatCurrency(campSummary.paid, camp.currency)}</span></td>`;
+
+      trainerSummaries.forEach(summary => {
+        tableHtml += `<td><span class="summary-amount paid">${formatCurrency(summary.paid, summary.currency)}</span></td>`;
+      });
+
+      tableHtml += `</tr>`;
+
+      tableHtml += `
+          </tfoot>
         </table>
       `;
 
@@ -1967,8 +2047,9 @@
         removePayment(campId, participantId, columnType, trainerIndex);
       }
 
-      // Update row styling
+      // Update row styling and summaries
       updateRowStyling(participantId);
+      updateSummaries();
     }
 
     function handleConfirmPayment(button) {
@@ -1994,8 +2075,9 @@
       confirmBtn.style.display = 'none';
       removeBtn.style.display = '';
 
-      // Update row styling
+      // Update row styling and summaries
       updateRowStyling(participantId);
+      updateSummaries();
     }
 
     function handleRemovePayment(button) {
@@ -2030,8 +2112,9 @@
         input.value = '';
       }
 
-      // Update row styling
+      // Update row styling and summaries
       updateRowStyling(participantId);
+      updateSummaries();
     }
 
     function updateRowStyling(participantId) {
@@ -2103,6 +2186,82 @@
       const participants = window.currentParticipants || [];
       const participant = participants.find(p => p.id === participantId);
       return participant ? participant.name : '';
+    }
+
+    // Calculate column summary
+    function calculateColumnSummary(campId, columnType, trainerIndex = null) {
+      const participants = window.currentParticipants || [];
+      let total = 0;
+      let paid = 0;
+      let currency = 'PLN';
+
+      if (columnType === 'camp' && window.currentCamp) {
+        currency = window.currentCamp.currency;
+        participants.forEach(participant => {
+          const amount = parseFloat(getSavedPayment(campId, participant.id, columnType, trainerIndex)) || 0;
+          const isConfirmed = getPaymentStatus(campId, participant.id, columnType, trainerIndex);
+
+          total += amount;
+          if (isConfirmed) {
+            paid += amount;
+          }
+        });
+      } else if (columnType === 'trainer' && window.currentCamp && window.currentCamp.trainers) {
+        const trainer = window.currentCamp.trainers[trainerIndex];
+        if (trainer) {
+          currency = trainer.currency;
+          participants.forEach(participant => {
+            const amount = parseFloat(getSavedPayment(campId, participant.id, columnType, trainerIndex)) || 0;
+            const isConfirmed = getPaymentStatus(campId, participant.id, columnType, trainerIndex);
+
+            total += amount;
+            if (isConfirmed) {
+              paid += amount;
+            }
+          });
+        }
+      }
+
+      return { total, paid, currency };
+    }
+
+    // Format currency
+    function formatCurrency(amount, currency) {
+      return `${amount.toFixed(2)} ${currency}`;
+    }
+
+    // Update summaries function
+    function updateSummaries() {
+      const camp = window.currentCamp;
+      if (!camp || !window.currentParticipants) return;
+
+      // Update camp summary
+      const campSummary = calculateColumnSummary(camp.id, 'camp');
+      const campTotalElement = document.querySelector('.summary-row:nth-child(1) td:nth-child(2) .summary-amount');
+      const campPaidElement = document.querySelector('.summary-row:nth-child(2) td:nth-child(2) .summary-amount');
+
+      if (campTotalElement) {
+        campTotalElement.textContent = formatCurrency(campSummary.total, campSummary.currency);
+      }
+      if (campPaidElement) {
+        campPaidElement.textContent = formatCurrency(campSummary.paid, campSummary.currency);
+      }
+
+      // Update trainer summaries
+      if (camp.trainers && camp.trainers.length > 0) {
+        camp.trainers.forEach((trainer, index) => {
+          const trainerSummary = calculateColumnSummary(camp.id, 'trainer', index);
+          const trainerTotalElement = document.querySelector(`.summary-row:nth-child(1) td:nth-child(${index + 3}) .summary-amount`);
+          const trainerPaidElement = document.querySelector(`.summary-row:nth-child(2) td:nth-child(${index + 3}) .summary-amount`);
+
+          if (trainerTotalElement) {
+            trainerTotalElement.textContent = formatCurrency(trainerSummary.total, trainerSummary.currency);
+          }
+          if (trainerPaidElement) {
+            trainerPaidElement.textContent = formatCurrency(trainerSummary.paid, trainerSummary.currency);
+          }
+        });
+      }
     }
 
     // Initialize app
