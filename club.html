@@ -1303,6 +1303,21 @@
           }
 
           // Build table HTML
+          // Insert participants for this camp into DB (members filtered earlier)
+          try {
+            if (members && members.length > 0) {
+              const participantRows = members.map(m => ({
+                camp_id: createdCamp.id,
+                member_id: m.id,
+                participant_name: m.name,
+                camp_amount: 0,
+                camp_status: 'unset'
+              }));
+              const { data: insertedParts, error: partsErr } = await supabase.from('participants_camps').insert(participantRows).select();
+              if (partsErr) console.warn('Błąd dodawania uczestników do public.participants_camps:', partsErr);
+            }
+          } catch (e) { console.warn('Error inserting participants:', e); }
+
           const campId = 'clientcamp_' + Date.now();
           const container = document.createElement('div');
           container.className = 'content-box';
