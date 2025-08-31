@@ -514,21 +514,21 @@
       background-color: rgba(212, 175, 55, 0.05);
     }
 
-    /* Payment status highlighting - excluding first column */
-    .camp-details-table tr.payment-unconfirmed-camp td:not(:first-child) {
-      background: linear-gradient(90deg, rgba(220, 53, 69, 0.1) 0%, rgba(220, 53, 69, 0.05) 50%, transparent 100%);
+    /* Payment status highlighting - only on payment cells */
+    .camp-details-table tr.payment-unconfirmed-camp .camp-payment-cell {
+      background: linear-gradient(135deg, rgba(220, 53, 69, 0.15) 0%, rgba(220, 53, 69, 0.08) 100%);
     }
 
-    .camp-details-table tr.payment-confirmed-camp td:not(:first-child) {
-      background: linear-gradient(90deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 50%, transparent 100%);
+    .camp-details-table tr.payment-confirmed-camp .camp-payment-cell {
+      background: linear-gradient(135deg, rgba(40, 167, 69, 0.15) 0%, rgba(40, 167, 69, 0.08) 100%);
     }
 
-    .camp-details-table tr.payment-unconfirmed-trainer td:not(:first-child) {
-      background: linear-gradient(90deg, rgba(220, 53, 69, 0.08) 0%, rgba(220, 53, 69, 0.03) 70%, transparent 100%);
+    .camp-details-table tr.payment-unconfirmed-trainer .trainer-payment-cell {
+      background: linear-gradient(135deg, rgba(220, 53, 69, 0.12) 0%, rgba(220, 53, 69, 0.06) 100%);
     }
 
-    .camp-details-table tr.payment-confirmed-trainer td:not(:first-child) {
-      background: linear-gradient(90deg, rgba(40, 167, 69, 0.08) 0%, rgba(40, 167, 69, 0.03) 70%, transparent 100%);
+    .camp-details-table tr.payment-confirmed-trainer .trainer-payment-cell {
+      background: linear-gradient(135deg, rgba(40, 167, 69, 0.12) 0%, rgba(40, 167, 69, 0.06) 100%);
     }
 
     /* Cell-specific highlighting */
@@ -709,6 +709,45 @@
     .summary-amount.paid {
       background: linear-gradient(135deg, var(--success) 0%, #218838 100%);
       color: white;
+    }
+
+    /* Attention and comment columns */
+    .attention-checkbox {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--gold);
+    }
+
+    .comment-input {
+      width: 100px;
+      padding: 4px;
+      border: 1px solid var(--border-dark);
+      border-radius: 3px;
+      background-color: rgba(255, 255, 255, 0.07);
+      color: var(--text-light);
+      font-size: 0.8rem;
+    }
+
+    .comment-input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    /* Total columns styling */
+    .total-pln, .total-eur {
+      font-weight: 700;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .total-pln {
+      color: var(--gold);
+    }
+
+    .total-eur {
+      color: var(--success);
     }
 
     /* Trainer Form Styles */
@@ -1706,6 +1745,23 @@
         });
       }
 
+      // Add attention and comment columns
+      tableHtml += `
+            <th style="width: 50px;">Uwaga</th>
+            <th style="width: 150px;">Komentarz</th>
+      `;
+
+      // Determine which total columns to show
+      const hasPLNPayments = camp.currency === 'PLN' || (camp.trainers && camp.trainers.some(t => t.currency === 'PLN'));
+      const hasEURPayments = camp.currency === 'EUR' || (camp.trainers && camp.trainers.some(t => t.currency === 'EUR'));
+
+      if (hasPLNPayments) {
+        tableHtml += `<th style="width: 80px;">Razem PLN</th>`;
+      }
+      if (hasEURPayments) {
+        tableHtml += `<th style="width: 80px;">Razem EUR</th>`;
+      }
+
       tableHtml += `
             </tr>
           </thead>
@@ -1763,6 +1819,48 @@
             const trainerCellHtml = createPaymentCell(camp.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIndex);
             tableHtml += trainerCellHtml;
           });
+        }
+
+        // Add attention checkbox
+        const attentionKey = `attention_${camp.id}_${participant.id}`;
+        const isAttentionChecked = localStorage.getItem(attentionKey) === 'true';
+        tableHtml += `<td><input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}" ${isAttentionChecked ? 'checked' : ''}></td>`;
+
+        // Add comment field
+        const commentKey = `comment_${camp.id}_${participant.id}`;
+        const savedComment = localStorage.getItem(commentKey) || '';
+        tableHtml += `<td><input type="text" class="comment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" placeholder="Komentarz..." value="${savedComment}"></td>`;
+
+        // Calculate and add total columns
+        let totalPLN = 0;
+        let totalEUR = 0;
+
+        // Add camp payment to totals
+        const campAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'camp')) || 0;
+        if (camp.currency === 'PLN') {
+          totalPLN += campAmount;
+        } else if (camp.currency === 'EUR') {
+          totalEUR += campAmount;
+        }
+
+        // Add trainer payments to totals
+        if (camp.trainers && camp.trainers.length > 0) {
+          camp.trainers.forEach((trainer, trainerIndex) => {
+            const trainerAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
+            if (trainer.currency === 'PLN') {
+              totalPLN += trainerAmount;
+            } else if (trainer.currency === 'EUR') {
+              totalEUR += trainerAmount;
+            }
+          });
+        }
+
+        // Add total columns based on available currencies
+        if (hasPLNPayments) {
+          tableHtml += `<td class="total-pln">${totalPLN.toFixed(2)}</td>`;
+        }
+        if (hasEURPayments) {
+          tableHtml += `<td class="total-eur">${totalEUR.toFixed(2)}</td>`;
         }
 
         tableHtml += `</tr>`;
@@ -2011,6 +2109,39 @@
           handleRemovePayment(button);
         }
       });
+
+      // Attention checkbox handler
+      document.addEventListener('change', (e) => {
+        if (e.target.classList.contains('attention-checkbox')) {
+          const checkbox = e.target;
+          const campId = checkbox.getAttribute('data-camp-id');
+          const participantId = checkbox.getAttribute('data-participant-id');
+          const attentionKey = `attention_${campId}_${participantId}`;
+
+          if (checkbox.checked) {
+            localStorage.setItem(attentionKey, 'true');
+          } else {
+            localStorage.removeItem(attentionKey);
+          }
+        }
+      });
+
+      // Comment input handler
+      document.addEventListener('input', (e) => {
+        if (e.target.classList.contains('comment-input')) {
+          const input = e.target;
+          const campId = input.getAttribute('data-camp-id');
+          const participantId = input.getAttribute('data-participant-id');
+          const commentKey = `comment_${campId}_${participantId}`;
+          const value = input.value.trim();
+
+          if (value) {
+            localStorage.setItem(commentKey, value);
+          } else {
+            localStorage.removeItem(commentKey);
+          }
+        }
+      });
     }
 
     function handlePaymentInput(input) {
@@ -2050,6 +2181,7 @@
       // Update row styling and summaries
       updateRowStyling(participantId);
       updateSummaries();
+      updateParticipantTotals(campId, participantId);
     }
 
     function handleConfirmPayment(button) {
@@ -2078,6 +2210,7 @@
       // Update row styling and summaries
       updateRowStyling(participantId);
       updateSummaries();
+      updateParticipantTotals(campId, participantId);
     }
 
     function handleRemovePayment(button) {
@@ -2095,26 +2228,17 @@
       // Remove payment from storage
       removePayment(campId, participantId, columnType, trainerIndex);
 
-      // Update UI - go back to unconfirmed state if there's a value
-      const value = input.value.trim();
-      if (value && value !== '0' && value !== '0.00') {
-        input.classList.add('unconfirmed');
-        input.classList.remove('confirmed');
-        cell.classList.add('unconfirmed');
-        cell.classList.remove('confirmed');
-        confirmBtn.style.display = '';
-        removeBtn.style.display = 'none';
-      } else {
-        input.classList.remove('unconfirmed', 'confirmed');
-        cell.classList.remove('unconfirmed', 'confirmed');
-        confirmBtn.style.display = 'none';
-        removeBtn.style.display = 'none';
-        input.value = '';
-      }
+      // Clear the input completely
+      input.value = '';
+      input.classList.remove('unconfirmed', 'confirmed');
+      cell.classList.remove('unconfirmed', 'confirmed');
+      confirmBtn.style.display = 'none';
+      removeBtn.style.display = 'none';
 
       // Update row styling and summaries
       updateRowStyling(participantId);
       updateSummaries();
+      updateParticipantTotals(campId, participantId);
     }
 
     function updateRowStyling(participantId) {
@@ -2228,6 +2352,80 @@
     // Format currency
     function formatCurrency(amount, currency) {
       return `${amount.toFixed(2)} ${currency}`;
+    }
+
+    // Update participant totals
+    function updateParticipantTotals(campId, participantId) {
+      const camp = window.currentCamp;
+      if (!camp || !window.currentParticipants) return;
+
+      const participant = window.currentParticipants.find(p => p.id === participantId);
+      if (!participant) return;
+
+      // Find the participant's row
+      const table = document.querySelector('.camp-details-table');
+      if (!table) return;
+
+      const rows = table.querySelectorAll('tbody tr');
+      const participantRow = Array.from(rows).find(row => {
+        const nameCell = row.querySelector('.participant-name');
+        return nameCell && nameCell.textContent.trim() === participant.name;
+      });
+
+      if (!participantRow) return;
+
+      // Calculate totals
+      let totalPLN = 0;
+      let totalEUR = 0;
+
+      // Add camp payment to totals
+      const campAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'camp')) || 0;
+      if (camp.currency === 'PLN') {
+        totalPLN += campAmount;
+      } else if (camp.currency === 'EUR') {
+        totalEUR += campAmount;
+      }
+
+      // Add trainer payments to totals
+      if (camp.trainers && camp.trainers.length > 0) {
+        camp.trainers.forEach((trainer, trainerIndex) => {
+          const trainerAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
+          if (trainer.currency === 'PLN') {
+            totalPLN += trainerAmount;
+          } else if (trainer.currency === 'EUR') {
+            totalEUR += trainerAmount;
+          }
+        });
+      }
+
+      // Update total cells
+      const hasPLNPayments = camp.currency === 'PLN' || (camp.trainers && camp.trainers.some(t => t.currency === 'PLN'));
+      const hasEURPayments = camp.currency === 'EUR' || (camp.trainers && camp.trainers.some(t => t.currency === 'EUR'));
+
+      const cells = participantRow.querySelectorAll('td');
+      let cellIndex = 3; // Start after participant name, camp payment
+
+      if (camp.trainers && camp.trainers.length > 0) {
+        cellIndex += camp.trainers.length;
+      }
+
+      // Skip attention and comment cells
+      cellIndex += 2;
+
+      if (hasPLNPayments) {
+        const plnCell = cells[cellIndex];
+        if (plnCell) {
+          plnCell.textContent = totalPLN.toFixed(2);
+        }
+        cellIndex++;
+      }
+
+      if (hasEURPayments) {
+        const eurCell = cells[cellIndex];
+        if (eurCell) {
+          eurCell.textContent = totalEUR.toFixed(2);
+        }
+      }
     }
 
     // Update summaries function
