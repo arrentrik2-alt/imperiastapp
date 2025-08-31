@@ -1429,6 +1429,22 @@
 
           // close modal
           campModal.remove();
+
+          // After creating camp in DB, refresh camp list for the month of the created camp
+          try {
+            const createdMonthKey = `${new Date(date).getFullYear()}-${String(new Date(date).getMonth() + 1).padStart(2,'0')}`;
+            const monthSelect = document.getElementById('monthSelect');
+            // If the month select exists, set it to the created month and load camps
+            if(monthSelect){
+              monthSelect.value = createdMonthKey;
+              // give a tiny delay to ensure UI updated
+              setTimeout(() => {
+                if(typeof loadCampsForMonth === 'function') loadCampsForMonth(createdMonthKey);
+              }, 50);
+            }
+          } catch(e){
+            console.warn('Nie udało się odświeżyć listy campów automatycznie:', e);
+          }
         });
       }
       async function renderCampFromDB(trainingId){
