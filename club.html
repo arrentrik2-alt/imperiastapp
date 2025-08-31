@@ -1467,7 +1467,7 @@
 
                     return `<td style="padding:4px;text-align:center" class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}">
                       <div class="payment-controls">
-                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-currency="${currency}" class="form-control trainer-amount ${ob.status === 'paid' ? 'status-paid' : (finalAmount > 0 ? 'status-unpaid' : '')}" style="width:60px;margin:0 2px;${ob.status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : (finalAmount > 0 ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : 'background:#ffffff;color:#000000;')}text-align:center" value="${finalAmount||''}" />
+                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-currency="${currency}" class="form-control trainer-amount ${ob.status === 'paid' ? 'status-paid' : (finalAmount > 0 ? 'status-unpaid' : '')}" style="width:60px;margin:0 2px;${ob.status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : (finalAmount > 0 ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : '')}text-align:center" value="${finalAmount||''}" />
                         <button class="btn btn-small trainer-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
                         <button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>
                       </div>
@@ -1503,7 +1503,7 @@
 
                   return `<tr data-part-id="${p.id}"><td style="padding:4px;text-align:center" class="border-right-gold">${index + 1}</td><td style="padding:4px" class="border-right-gold">${escapeHtml(p.participant_name)}</td>                  <td style="padding:4px;text-align:center" class="border-right-gold">
                     <div class="payment-controls">
-                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;${storedCampPaid && p.camp_status !== 'paid' ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : (p.camp_status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : 'background:#ffffff;color:#000000;')}text-align:center" value="${p.camp_status === 'paid' ? (p.camp_amount || '') : (storedCampPaid || '')}" />
+                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;${storedCampPaid && p.camp_status !== 'paid' ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : (p.camp_status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : '')}text-align:center" value="${p.camp_status === 'paid' ? (p.camp_amount || '') : (storedCampPaid || '')}" />
                       ${p.camp_status === 'paid' ?
                         `<button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>` :
                         `<button class="btn btn-small camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>`
@@ -1613,7 +1613,8 @@
                 amountInput.style.borderColor = '#28a745';
               }
               if (confirmBtn) {
-                confirmBtn.disabled = true;
+                // Replace confirm button with delete button for paid payments
+                confirmBtn.outerHTML = `<button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id}" data-part-id="${confirmBtn.getAttribute('data-part-id')}" data-trainer-id="${confirmBtn.getAttribute('data-trainer-id')}">×</button>`;
               }
             }
           });
@@ -2100,7 +2101,63 @@
                 amountInput.style.color = '#ffffff';
                 amountInput.style.borderColor = '#28a745';
               }
-              btn.disabled = true;
+              // Change OK button to delete button
+              btn.outerHTML = `<button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${obozId}" data-part-id="${partId}" data-trainer-id="${trainerId}">×</button>`;
+
+              // Add event listener to the new delete button
+              const newDeleteBtn = container.querySelector(`button.trainer-delete[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+              if (newDeleteBtn) {
+                newDeleteBtn.addEventListener('click', async () => {
+                  const obozId = newDeleteBtn.getAttribute('data-oboz-id') || '';
+                  const partId = newDeleteBtn.getAttribute('data-part-id');
+                  const trainerId = newDeleteBtn.getAttribute('data-trainer-id');
+
+                  if (!obozId) {
+                    // No database record, just reset UI
+                    const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+                    if (amountInput) {
+                      amountInput.value = '';
+                      amountInput.classList.remove('status-paid', 'status-unpaid');
+                      amountInput.style.background = '';
+                      amountInput.style.color = '';
+                      amountInput.style.borderColor = '';
+                    }
+                    localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
+                    // Update summaries
+                    const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+                    updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+                    updateFinancialSummary();
+                    updateParticipantTotals(partId);
+                    return;
+                  }
+
+                  if (!confirm('Usunąć płatność dla tego szkoleniowca?')) return;
+
+                  // Delete from database
+                  const { error } = await supabase.from('oboz_lesson_payments').delete().eq('id', obozId);
+                  if (error) { alert('Błąd usuwania: ' + error.message); return; }
+
+                  // Reset UI
+                  const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${partId}"][data-trainer-id="${trainerId}"]`);
+                  if (amountInput) {
+                    amountInput.value = '';
+                    amountInput.classList.remove('status-paid', 'status-unpaid');
+                    amountInput.style.background = '';
+                    amountInput.style.color = '';
+                    amountInput.style.borderColor = '';
+                    amountInput.setAttribute('data-oboz-id', '');
+                  }
+
+                  // Change delete button back to confirm button
+                  newDeleteBtn.outerHTML = `<button class="btn btn-small trainer-confirm" data-oboz-id="" data-part-id="${partId}" data-trainer-id="${trainerId}">OK</button>`;
+
+                  // Update summaries
+                  const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+                  updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+                  updateFinancialSummary();
+                  updateParticipantTotals(partId);
+                });
+              }
 
               // Clear localStorage
               localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
@@ -2161,8 +2218,8 @@
             }
             localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
             if (btn) {
-              btn.disabled = false;
-              btn.setAttribute('data-oboz-id', '');
+              // Change delete button back to confirm button
+              btn.outerHTML = `<button class="btn btn-small trainer-confirm" data-oboz-id="" data-part-id="${partId}" data-trainer-id="${trainerId}">OK</button>`;
             }
 
             // Update summaries
