@@ -1097,7 +1097,7 @@
         // Add trainer amounts (only from input fields, not from database)
         parts.forEach(p => {
           trainerInfo.forEach(ti => {
-            const amountInput = container.querySelector(`input.trainer-amount[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
+            const amountInput = containerParam.querySelector(`input.trainer-amount[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
             if (amountInput && amountInput.value) {
               const inputAmount = parseFloat(amountInput.value) || 0;
               if (inputAmount > 0) {
