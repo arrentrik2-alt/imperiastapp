@@ -868,7 +868,7 @@
         // Load payment status for each camp
         const campStatuses = await Promise.all(camps.map(async (camp) => {
           const { data: participants } = await supabase
-            .from('public.participants_camps')
+            .from('participants_camps')
             .select('id,camp_amount,camp_status')
             .eq('camp_id', camp.id);
 
@@ -877,7 +877,7 @@
 
           // Get payments for all participants in this camp
           const { data: payments } = await supabase
-            .from('public.payments_camps')
+            .from('payments_camps')
             .select('lessons_count,status,participant_id')
             .in('participant_id', participantIds);
 
@@ -1552,7 +1552,7 @@
         const theadCols = [
           '<th style="text-align:center;width:50px" class="border-right-gold"><div class="header-main">Lp.</div></th>',
           '<th class="border-right-gold"><div class="header-main">Imię i nazwisko</div></th>',
-          `<th class="border-right-gold"><div class="header-main">Camp</div><div class="header-sub">zaplacono ${training.currency || 'PLN'}</div></th>`
+          `<th class="border-right-gold"><div class="header-main">Camp</div><div class="header-sub">zaplacono ${trainingCurrency || 'PLN'}</div></th>`
         ];
         // for each trainer: amount input + confirm button
         trainerInfo.forEach((t, index)=>{
@@ -1565,7 +1565,7 @@
         theadCols.push(`<th><div class="header-main">Razem</div><div class="header-sub">EUR</div></th>`);
         container.innerHTML = `
           <div class="content-header">
-            <h3>${escapeHtml(training.name)} — ${escapeHtml(training.date)}</h3>
+            <h3>${escapeHtml(camp.name)} — ${escapeHtml(camp.date)}</h3>
             <div style="margin-top: 10px;">
               <input type="text" id="participantSearch" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;" />
             </div>
@@ -1575,7 +1575,7 @@
               <thead><tr>${theadCols.join('')}</tr></thead>
               <tbody>
                 ${parts.map((p, index) => {
-                  const campDue = training.price || 0;
+                  const campDue = camp.amount || camp.price || 0;
                   const campPaid = p.camp_amount || '';
                   const obozCells = trainerInfo.map((ti, trainerIndex) => {
                     const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
@@ -1606,7 +1606,7 @@
 
                   // Add camp amount in training currency
                   const campAmount = parseFloat(storedCampPaid) || 0;
-                  if (training.currency === 'PLN') {
+                  if (trainingCurrency === 'PLN') {
                     totalPLN += campAmount;
                   } else {
                     totalEUR += campAmount;
