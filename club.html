@@ -827,10 +827,10 @@
         let camps, error;
         try {
           ({ data: camps, error } = await supabase
-            .from('public.camps')
+            .from('camps')
             .select('id,name,date,amount as price,currency')
-            .gte('date', startDate)
-            .lte('date', endDate)
+          .gte('date', startDate)
+          .lte('date', endDate)
             .order('date', { ascending: false }));
         } catch (e) {
           // network / schema errors
@@ -841,7 +841,7 @@
         if ((error && /schema|Could not find/i.test(error.message || '')) || !camps) {
           try {
             ({ data: camps, error } = await supabase
-              .from('public.camps')
+              .from('camps')
               .select('id,name,date,amount as price,currency')
               .gte('date', startDate)
               .lte('date', endDate)
