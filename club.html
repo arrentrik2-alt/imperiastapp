@@ -1237,109 +1237,130 @@
           const amount = parseFloat(document.getElementById('campAmount').value);
           const currency = document.getElementById('campCurrency').value;
 
-          console.log('Creating camp with currency:', currency);
-
           if(!name || !date || !amount) { alert('Uzupełnij pola campu'); return; }
 
           const trainers = Array.from(trainersContainer.querySelectorAll('.form-group')).map(g=>({
             name: (g.querySelector('.trainer-name')||{}).value || '',
             amount: parseFloat((g.querySelector('.trainer-amount')||{}).value) || 0,
-            lessons: parseInt((g.querySelector('.trainer-lessons')||{}).value,10) || 0,
-            currency: (g.querySelector('.trainer-currency')||{}).value || 'PLN'
+            currency: (g.querySelector('.trainer-currency')||{}).value || currency
           })).filter(t=>t.name);
 
           if(trainers.length === 0){ alert('Dodaj przynajmniej jednego szkoleniowca'); return; }
 
-          // create training record
-          const { data: training, error: trainingErr } = await supabase.from('trainings').insert([{ name, type: 'camp_st', date, price: amount, currency }]).select().single();
-          if(trainingErr || !training){ alert('Błąd tworzenia campu: '+(trainingErr?trainingErr.message:'')); campModal.remove(); return; }
-
-          console.log('Created training:', training);
-          console.log('Training currency from DB:', training.currency);
-
-          // create trainers (or find existing) and training_trainers entries
-          const createdTrainers = [];
-          for(const t of trainers){
-            // try find existing trainer
-            let { data: found, error: findErr } = await supabase.from('trainers').select('*').eq('name', t.name).limit(1);
-            let trainerId;
-
-            if(findErr){
-              console.error('Error finding trainer:', findErr);
-              alert('Błąd podczas szukania trenera: ' + findErr.message);
-              continue;
-            }
-
-            if(found && found.length > 0){
-              trainerId = found[0].id;
-              // Update currency if different
-              if(found[0].currency !== t.currency) {
-                console.log(`Updating currency for trainer ${t.name} from ${found[0].currency} to ${t.currency}`);
-                await supabase.from('trainers').update({ currency: t.currency }).eq('id', trainerId);
-              }
-            }
-            else {
-              // Create new trainer
-              const { data: newTrainer, error: trErr } = await supabase.from('trainers').insert([{ name: t.name, default_price: t.amount, currency: t.currency }]).select().single();
-              if(trErr){
-                console.error('Error creating trainer:', trErr);
-                alert('Błąd tworzenia trenera: '+trErr.message);
-                continue;
-              }
-              trainerId = newTrainer.id;
-            }
-
-            // link to training
-            const { error: linkErr } = await supabase.from('training_trainers').insert([{ training_id: training.id, trainer_id: trainerId, price: t.amount }]);
-            if(linkErr){
-              console.error('Error linking trainer to training:', linkErr);
-              alert('Błąd łączenia trenera z campem: '+linkErr.message);
-              continue;
-            }
-
-            createdTrainers.push(Object.assign({ id: trainerId }, t));
-          }
-
-          // get members for ST or 10t
+          // fetch members with style ST or 10t
           const { data: members, error: memErr } = await supabase.from('members').select('id,name,style').in('style', ['ST','10t']).order('name', {ascending:true});
-          if(memErr){ alert('Błąd pobierania członków: '+memErr.message); campModal.remove(); return; }
+          if(memErr){ alert('Błąd pobierania członków: '+memErr.message); return; }
 
-          // create participants and oboz_lesson_payments for each trainer
-          for(const m of members){
-            const { data: part, error: partErr } = await supabase.from('training_participants').insert([{ training_id: training.id, member_id: m.id, participant_name: m.name, camp_amount: 0, camp_status: 'unset' }]).select().single();
-            if(partErr || !part) continue;
-            for(const ct of createdTrainers){
-              // lessons will be entered manually later per participant; initialize with 0
-              await supabase.from('oboz_lesson_payments').insert([{ training_participant_id: part.id, trainer_id: ct.id, lessons_count: 0, amount: 0, currency: ct.currency || 'PLN', status: 'unset' }]);
-            }
-          }
+          // Build table HTML
+          const campId = 'clientcamp_' + Date.now();
+          const container = document.createElement('div');
+          container.className = 'content-box';
 
-          // Clear previous camp content before rendering new one
-          const campySection = document.getElementById('campySection');
-          const existingCamps = campySection.querySelectorAll('.content-box');
-          existingCamps.forEach(camp => {
-            if (!camp.contains(document.getElementById('campList'))) {
-              camp.remove();
-            }
+          const theadCols = [];
+          theadCols.push('<th style="text-align:center;width:50px" class="border-right-gold"><div class="header-main">Lp.</div></th>');
+          theadCols.push('<th class="border-right-gold"><div class="header-main">Imię i nazwisko</div></th>');
+          theadCols.push(`<th class="border-right-gold"><div class="header-main">Camp</div><div class="header-sub">${amount} ${currency}</div></th>`);
+          trainers.forEach(t=>{
+            theadCols.push(`<th class="border-right-gold"><div class="header-main">Lekcje ${escapeHtml(t.name)}</div><div class="header-sub">${t.amount} ${t.currency}</div></th>`);
           });
 
-          // Auto-select current month if camp was created in current month
-          const campDate = new Date(date);
-          const currentDate = new Date();
-          if(campDate.getMonth() === currentDate.getMonth() && campDate.getFullYear() === currentDate.getFullYear()){
-            const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-            document.getElementById('monthSelect').value = currentMonthKey;
-            loadCampsForMonth(currentMonthKey);
-          } else {
-            // Refresh camp list for current month
-            const currentMonth = document.getElementById('monthSelect').value;
-            if(currentMonth){
-              loadCampsForMonth(currentMonth);
-            }
-          }
+          const tbody = members.map((m,idx) => {
+            const trainerCells = trainers.map((t,ti)=>{
+              return `<td style="padding:4px;text-align:center" class="border-right-gold"><div class="payment-controls"><input data-member-id="${m.id}" data-trainer-index="${ti}" class="form-control trainer-amount" style="width:60px;margin:0 2px;text-align:center" value="" /><button class="btn btn-small trainer-confirm" data-member-id="${m.id}" data-trainer-index="${ti}">OK</button></div></td>`;
+            }).join('');
 
-          // Show camp details
-          renderCampFromDB(training.id);
+            return `<tr data-member-id="${m.id}"><td style="padding:4px;text-align:center" class="border-right-gold">${idx + 1}</td><td style="padding:4px" class="border-right-gold">${escapeHtml(m.name)}</td><td style="padding:4px;text-align:center" class="border-right-gold"><div class="payment-controls"><input data-member-id="${m.id}" class="form-control camp-paid" style="width:60px;margin:0 2px;text-align:center" value="" /><button class="btn btn-small camp-confirm" data-member-id="${m.id}">OK</button></div></td>${trainerCells}</tr>`;
+          }).join('');
+
+          container.innerHTML = `
+            <div class="content-header">
+              <h3>${escapeHtml(name)} — ${escapeHtml(date)}</h3>
+            </div>
+            <div style="overflow:auto">
+              <table>
+                <thead><tr>${theadCols.join('')}</tr></thead>
+                <tbody>${tbody}</tbody>
+              </table>
+            </div>
+          `;
+
+          // Insert into DOM and show details view
+          const campDetailsContainer = document.getElementById('campDetailsContainer');
+          if(campDetailsContainer){
+            campDetailsContainer.innerHTML = '';
+            campDetailsContainer.appendChild(container);
+          }
+          document.getElementById('monthView').style.display = 'none';
+          document.getElementById('campDetailsView').style.display = 'block';
+          document.getElementById('campTitle').textContent = `${name} - ${new Date(date).toLocaleDateString('pl-PL')}`;
+
+          // Attach handlers for immediate red highlight and confirm
+          container.querySelectorAll('.camp-paid').forEach(input => {
+            input.addEventListener('input', () => {
+              const td = input.closest('td');
+              if(input.value){
+                td.classList.add('pending-payment');
+                input.style.background = '#b91c1c';
+                input.style.color = '#ffffff';
+                input.style.borderColor = '#dc2626';
+              } else {
+                td.classList.remove('pending-payment');
+                input.style.background = '';
+                input.style.color = '';
+                input.style.borderColor = '';
+              }
+            });
+          });
+
+          container.querySelectorAll('.camp-confirm').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const memberId = btn.getAttribute('data-member-id');
+              const input = container.querySelector(`input.camp-paid[data-member-id="${memberId}"]`);
+              const val = parseFloat(input.value) || 0;
+              if(val > 0){
+                input.classList.add('status-paid');
+                input.classList.remove('status-unpaid');
+                const td = input.closest('td'); if(td) td.classList.remove('pending-payment');
+                input.style.background = '#28a745'; input.style.color = '#ffffff'; input.style.borderColor = '#28a745';
+                btn.outerHTML = `<button class="btn btn-small btn-delete camp-delete" data-member-id="${memberId}">×</button>`;
+              } else { alert('Wprowadź kwotę płatności aby potwierdzić'); }
+            });
+          });
+
+          container.querySelectorAll('.trainer-amount').forEach(input => {
+            input.addEventListener('input', () => {
+              const td = input.closest('td');
+              if(input.value){
+                td.classList.add('pending-payment');
+                input.style.background = '#b91c1c';
+                input.style.color = '#ffffff';
+                input.style.borderColor = '#dc2626';
+              } else {
+                td.classList.remove('pending-payment');
+                input.style.background = '';
+                input.style.color = '';
+                input.style.borderColor = '';
+              }
+            });
+          });
+
+          container.querySelectorAll('.trainer-confirm').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const memberId = btn.getAttribute('data-member-id');
+              const trainerIndex = btn.getAttribute('data-trainer-index');
+              const input = container.querySelector(`input.trainer-amount[data-member-id="${memberId}"][data-trainer-index="${trainerIndex}"]`);
+              const val = parseFloat(input.value) || 0;
+              if(val > 0){
+                input.classList.add('status-paid');
+                input.classList.remove('status-unpaid');
+                const td = input.closest('td'); if(td) td.classList.remove('pending-payment');
+                input.style.background = '#28a745'; input.style.color = '#ffffff'; input.style.borderColor = '#28a745';
+                btn.outerHTML = `<button class="btn btn-small btn-delete trainer-delete" data-member-id="${memberId}" data-trainer-index="${trainerIndex}">×</button>`;
+              } else { alert('Wprowadź kwotę przed potwierdzeniem'); }
+            });
+          });
+
+          // close modal
           campModal.remove();
         });
       }
