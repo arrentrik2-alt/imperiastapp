@@ -1009,8 +1009,8 @@
 
           // Calculate trainer amounts from database
           p.oboz.forEach(ob => {
-            if (trainerStats[ob.trainer_id]) {
-              trainerStats[ob.trainer_id].participants++;
+              if (trainerStats[ob.trainer_id]) {
+                trainerStats[ob.trainer_id].participants++;
 
               // Use amount from database if available
               const amount = ob.amount || 0;
@@ -1468,8 +1468,10 @@
                     return `<td style="padding:4px;text-align:center" class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}">
                       <div class="payment-controls">
                         <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-currency="${currency}" class="form-control trainer-amount ${ob.status === 'paid' ? 'status-paid' : (finalAmount > 0 ? 'status-unpaid' : '')}" style="width:60px;margin:0 2px;${ob.status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : (finalAmount > 0 ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : '')}text-align:center" value="${finalAmount||''}" />
-                        <button class="btn btn-small trainer-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>
-                        <button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>
+                        ${ob.status === 'paid' ?
+                          `<button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>` :
+                          `<button class="btn btn-small trainer-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>`
+                        }
                       </div>
                     </td>`;
                   }).join('');
@@ -1503,7 +1505,7 @@
 
                   return `<tr data-part-id="${p.id}"><td style="padding:4px;text-align:center" class="border-right-gold">${index + 1}</td><td style="padding:4px" class="border-right-gold">${escapeHtml(p.participant_name)}</td>                  <td style="padding:4px;text-align:center" class="border-right-gold">
                     <div class="payment-controls">
-                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;${storedCampPaid && p.camp_status !== 'paid' ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : (p.camp_status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : '')}text-align:center" value="${p.camp_status === 'paid' ? (p.camp_amount || '') : (storedCampPaid || '')}" />
+                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;${p.camp_status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : ''}text-align:center" value="${p.camp_status === 'paid' ? (p.camp_amount || '') : (storedCampPaid || '')}" />
                       ${p.camp_status === 'paid' ?
                         `<button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>` :
                         `<button class="btn btn-small camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>`
@@ -1561,10 +1563,10 @@
           updateCampSummary(parts, trainerInfo, trainingId, container, trainingCurrency);
 
           // Update financial summary
-          updateFinancialSummary();
+            updateFinancialSummary();
 
-          // Initialize participant totals
-          parts.forEach(p => updateParticipantTotals(p.id));
+            // Initialize participant totals
+            parts.forEach(p => updateParticipantTotals(p.id));
         }
 
         // Set visual status for existing payments
@@ -1584,16 +1586,16 @@
             }
           } else {
             // Check if there's an unconfirmed amount in camp paid
-            const storedCampPaid = localStorage.getItem(`camp_paid_${currentTrainingId}_${p.id}`);
+            const storedCampPaid = localStorage.getItem(`camp_paid_${window.currentTrainingId}_${p.id}`);
 
             if (storedCampPaid) {
               const paidInput = container.querySelector(`input.camp-paid[data-part-id="${p.id}"]`);
 
               if (paidInput && !paidInput.classList.contains('status-paid')) {
-                paidInput.classList.add('status-unpaid');
+                  paidInput.classList.add('status-unpaid');
                 paidInput.style.background = '#b91c1c';
                 paidInput.style.borderColor = '#dc2626';
-                paidInput.style.color = '#ffffff';
+                  paidInput.style.color = '#ffffff';
               }
             }
           }
@@ -1673,28 +1675,27 @@
             // Update localStorage for camp paid amounts
             if (partId) {
               if (value) {
-                localStorage.setItem(`camp_paid_${currentTrainingId}_${partId}`, value);
+                localStorage.setItem(`camp_paid_${window.currentTrainingId}_${partId}`, value);
                 // Add red highlight for entered amounts (unconfirmed)
-                if (!input.classList.contains('status-paid')) {
-                  input.style.background = '#b91c1c';
-                  input.style.color = '#ffffff';
-                  input.style.borderColor = '#dc2626';
-                }
+                input.style.background = '#b91c1c';
+                input.style.color = '#ffffff';
+                input.style.borderColor = '#dc2626';
               } else {
-                localStorage.removeItem(`camp_paid_${currentTrainingId}_${partId}`);
+                localStorage.removeItem(`camp_paid_${window.currentTrainingId}_${partId}`);
                 // Remove highlight when empty
                 input.classList.remove('status-paid', 'status-unpaid');
                 input.style.background = '';
                 input.style.color = '';
+                input.style.borderColor = '';
               }
 
-            // Update summary after camp paid change
+                          // Update summary after camp paid change
             const partId = input.getAttribute('data-part-id');
-            setTimeout(() => {
+                        setTimeout(() => {
               const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-              updateFinancialSummary();
-              updateParticipantTotals(partId);
+              updateCampSummary(parts, trainerInfo, window.currentTrainingId, container, trainingCurrency);
+            updateFinancialSummary();
+            updateParticipantTotals(partId);
             }, 50);
 
               // Camp list status will be updated when needed
@@ -1717,9 +1718,9 @@
               paidInput.classList.add('status-paid');
               paidInput.classList.remove('status-unpaid');
               // Remove red highlight
-              paidInput.style.background = '';
+                paidInput.style.background = '';
               paidInput.style.borderColor = '';
-              paidInput.style.color = '';
+                paidInput.style.color = '';
 
               // Clear localStorage values since payment is now confirmed
               localStorage.removeItem(`camp_due_${currentTrainingId}_${partId}`);
@@ -1850,9 +1851,9 @@
               }
 
                           // Update summary after lesson change (but preserve user input)
-              const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-              updateFinancialSummary();
+            const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
+            updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+            updateFinancialSummary();
 
             // Update participant total
             const partId = input.getAttribute('data-part-id');
@@ -1877,16 +1878,14 @@
             if (partId && trainerId) {
               if (value) {
                 // Store amount in localStorage
-                localStorage.setItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`, value);
+                localStorage.setItem(`trainer_amount_${window.currentTrainingId}_${partId}_${trainerId}`, value);
                 // Add red highlight for entered amounts (unconfirmed)
-                if (!input.classList.contains('status-paid')) {
-                  input.style.background = '#b91c1c';
-                  input.style.color = '#ffffff';
-                  input.style.borderColor = '#dc2626';
-                }
+                input.style.background = '#b91c1c';
+                input.style.color = '#ffffff';
+                input.style.borderColor = '#dc2626';
               } else {
                 // Clear localStorage if empty
-                localStorage.removeItem(`trainer_amount_${currentTrainingId}_${partId}_${trainerId}`);
+                localStorage.removeItem(`trainer_amount_${window.currentTrainingId}_${partId}_${trainerId}`);
                 // Remove highlight when empty
                 input.classList.remove('status-paid', 'status-unpaid');
                 input.style.background = '';
@@ -1896,7 +1895,7 @@
 
               // Update summary immediately
               const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
-              updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
+              updateCampSummary(parts, trainerInfo, window.currentTrainingId, container, trainingCurrency);
               updateFinancialSummary();
               updateParticipantTotals(partId);
             }
@@ -2285,7 +2284,7 @@
               // Call immediately to ensure data is updated
               const trainingCurrency = container.getAttribute('data-training-currency') || 'PLN';
               updateCampSummary(parts, trainerInfo, currentTrainingId, container, trainingCurrency);
-              updateFinancialSummary();
+                updateFinancialSummary();
               updateParticipantTotals(partId);
             }
           });
@@ -2499,9 +2498,9 @@
         });
 
         // Generate summary for each currency
-                  currenciesWithData.forEach(currency => {
-            const data = currencyData[currency];
-            const totalPaid = data.campPaid + data.lessonsPaid;
+        currenciesWithData.forEach(currency => {
+          const data = currencyData[currency];
+          const totalPaid = data.campPaid + data.lessonsPaid;
           const currencyExpenses = expensesByCurrency[currency];
           const profit = totalPaid - currencyExpenses;
 
@@ -2513,8 +2512,8 @@
             `;
           }
 
-                      summaryHtml += `
-              <div class="summary-grid" style="margin-bottom: 15px;">
+          summaryHtml += `
+            <div class="summary-grid" style="margin-bottom: 15px;">
               <div class="summary-item">
                 <span class="summary-label">Zapłacona kwota (camp + lekcje):</span>
                 <span class="summary-value">${totalPaid.toFixed(2)} ${currency}</span>
@@ -2534,11 +2533,11 @@
         });
 
         // Add expenses list to summary
-        const expensesListHtml = generateExpensesListHtml(currentTrainingId);
-        summaryHtml += expensesListHtml;
+          const expensesListHtml = generateExpensesListHtml(currentTrainingId);
+          summaryHtml += expensesListHtml;
 
         // Set the summary content
-        campFinancialSummary.innerHTML = summaryHtml;
+          campFinancialSummary.innerHTML = summaryHtml;
 
         console.log('Financial Summary Updated:', currencyData);
       }
