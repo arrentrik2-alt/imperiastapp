@@ -1279,7 +1279,7 @@
           } catch (e) {
             userId = null;
           }
-          const { data: createdCamp, error: campErr } = await supabase.from('public.camps').insert([{ name, date, amount, currency, created_by: userId }]).select().single();
+          const { data: createdCamp, error: campErr } = await supabase.from('camps').insert([{ name, date, amount, currency, created_by: userId }]).select().single();
           if(campErr || !createdCamp){ alert('Błąd tworzenia campu w DB: '+(campErr?campErr.message:'')); return; }
 
           // create or find trainers and link to camp
@@ -1287,17 +1287,17 @@
           for(const t of trainers){
             let trainerId = null;
             // try find by name
-            const { data: found, error: findErr } = await supabase.from('public.trainers_camps').select('*').ilike('name', t.name).limit(1);
+            const { data: found, error: findErr } = await supabase.from('trainers_camps').select('*').ilike('name', t.name).limit(1);
             if(findErr){ console.warn('Błąd szukania trenera lokalnego:', findErr); }
             if(found && found.length > 0){ trainerId = found[0].id; }
             else {
-              const { data: newTrainer, error: trErr } = await supabase.from('public.trainers_camps').insert([{ name: t.name, default_price: t.amount, currency: t.currency }]).select().single();
+              const { data: newTrainer, error: trErr } = await supabase.from('trainers_camps').insert([{ name: t.name, default_price: t.amount, currency: t.currency }]).select().single();
               if(trErr){ console.warn('Błąd tworzenia trenera:', trErr); continue; }
               trainerId = newTrainer.id;
             }
 
             // link trainer to camp
-            const { error: linkErr } = await supabase.from('public.camp_trainers_public').insert([{ camp_id: createdCamp.id, trainer_id: trainerId, price: t.amount }]);
+            const { error: linkErr } = await supabase.from('camp_trainers_public').insert([{ camp_id: createdCamp.id, trainer_id: trainerId, price: t.amount }]);
             if(linkErr){ console.warn('Błąd linkowania trenera do campu:', linkErr); }
             createdTrainers.push({ id: trainerId, name: t.name, amount: t.amount, currency: t.currency });
           }
@@ -1431,7 +1431,7 @@
         let currentTrainingId = trainingId;
 
         // fetch camp (new schema)
-        const { data: camp, error: campError } = await supabase.from('public.camps').select('*').eq('id', trainingId).single();
+        const { data: camp, error: campError } = await supabase.from('camps').select('*').eq('id', trainingId).single();
         if (campError || !camp) {
           throw new Error(`Błąd ładowania campu: ${campError?.message || 'Camp nie znaleziony'}`);
         }
@@ -1444,7 +1444,7 @@
 
         // fetch camp trainers
         console.log('=== FETCHING camp_trainers for campId:', trainingId);
-        const { data: tlinks, error: tlinksError } = await supabase.from('public.camp_trainers_public').select('trainer_id,price,id').eq('camp_id', trainingId).order('id', { ascending: true });
+        const { data: tlinks, error: tlinksError } = await supabase.from('camp_trainers_public').select('trainer_id,price,id').eq('camp_id', trainingId).order('id', { ascending: true });
         if (tlinksError) {
           throw new Error(`Błąd ładowania trenerów campu: ${tlinksError.message}`);
         }
@@ -1456,7 +1456,7 @@
         const trainerIds = tlinks.map(t => t.trainer_id);
         console.log('Trainer IDs:', trainerIds);
 
-        const { data: trainers, error: trainersError } = await supabase.from('public.trainers_camps').select('id,name,default_price,currency').in('id', trainerIds);
+        const { data: trainers, error: trainersError } = await supabase.from('trainers_camps').select('id,name,default_price,currency').in('id', trainerIds);
         if (trainersError) {
           throw new Error(`Błąd ładowania danych trenerów: ${trainersError.message}`);
         }
@@ -1478,7 +1478,7 @@
         }).sort((a, b) => a.name.localeCompare(b.name)); // Sort by name to prevent position changes
 
         // fetch participants from new schema
-        const { data: parts, error: partsError } = await supabase.from('public.participants_camps').select('id,member_id,participant_name,camp_amount,camp_status').eq('camp_id', trainingId).order('participant_name', {ascending:true});
+        const { data: parts, error: partsError } = await supabase.from('participants_camps').select('id,member_id,participant_name,camp_amount,camp_status').eq('camp_id', trainingId).order('participant_name', {ascending:true});
         if (partsError) {
           throw new Error(`Błąd ładowania uczestników: ${partsError.message}`);
         }
@@ -1489,7 +1489,7 @@
 
         // for each participant fetch payments
         for(const p of parts){
-          const { data: oboz, error: obozError } = await supabase.from('public.payments_camps').select('id,trainer_id,lessons_count,amount,status,currency').eq('participant_id', p.id);
+          const { data: oboz, error: obozError } = await supabase.from('payments_camps').select('id,trainer_id,lessons_count,amount,status,currency').eq('participant_id', p.id);
           if (obozError) {
             console.warn(`Błąd ładowania płatności dla uczestnika ${p.participant_name}:`, obozError.message);
           }
