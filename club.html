@@ -489,36 +489,18 @@
       </div>
     </div>
 
-    <!-- Campy ST section (clean skeleton for rebuild) -->
+    <!-- Campy ST section - simplified: only create button and placeholder list -->
     <main id="campySection" class="main-content" style="display:none">
-      <div id="monthView">
       <div class="header">
-          <h2>Campy ST (w budowie)</h2>
+        <h2>Campy ST</h2>
         <div class="user-info">
-            <!-- minimal controls preserved for compatibility -->
-            <select id="monthSelect" class="form-control" style="margin-right:8px"></select>
           <button id="createCampBtn" class="btn btn-primary" style="margin-left:8px"><i class="fa fa-plus"></i>Stwórz camp</button>
         </div>
       </div>
 
       <div class="content-box">
-          <div id="campListContainer">
-            <div id="campList">Strona campów została wyczyszczona. Zbudujemy ją od zera.</div>
-          </div>
-        </div>
-      </div>
-
-      <div id="campDetailsView" style="display:none">
-        <div class="header">
-          <h2 id="campTitle">Szczegóły campu</h2>
-          <div class="user-info">
-            <button id="addParticipantBtn" class="btn btn-primary" style="margin-right:8px"><i class="fa fa-plus"></i>Dodaj uczestnika</button>
-            <button id="backToListBtn" class="btn btn-outline"><i class="fa fa-arrow-left"></i>Powrót do listy</button>
-          </div>
-        </div>
-
-        <div class="content-box">
-          <div id="campDetailsContainer">Szczegóły będą tu dodane od zera.</div>
+        <div id="campListContainer">
+          <div id="campList">Kliknij "Stwórz camp", aby dodać nowy camp.</div>
         </div>
       </div>
     </main>
@@ -706,10 +688,10 @@
 
       createCampBtn.addEventListener('click', ()=> openCampModal());
 
-      // Initialize camp view
+      // Initialize camp view (simplified)
       async function initializeCampView(){
-        loadMonthOptions();
-        setupCampNavigation();
+        // keep create modal behavior only
+        // remove complex list/details initialization
       }
 
       // Setup navigation between views
@@ -868,7 +850,7 @@
         // Load payment status for each camp
         const campStatuses = await Promise.all(camps.map(async (camp) => {
           const { data: participants } = await supabase
-            .from('public.participants_camps')
+            .from('participants_camps')
             .select('id,camp_amount,camp_status')
             .eq('camp_id', camp.id);
 
@@ -877,7 +859,7 @@
 
           // Get payments for all participants in this camp
           const { data: payments } = await supabase
-            .from('public.payments_camps')
+            .from('payments_camps')
             .select('lessons_count,status,participant_id')
             .in('participant_id', participantIds);
 
@@ -1169,19 +1151,25 @@
 
         // Load and render camp details
         try {
-          await renderCampFromDB(campId);
+          const camp = await renderCampFromDB(campId);
 
-          // Update title with camp name
-          const { data: camp, error: campError } = await supabase
-            .from('camps.camps')
-            .select('name,date')
-            .eq('id', campId)
-            .single();
-
-          if(campError) {
-            console.warn('Błąd ładowania nazwy campu:', campError.message);
-          } else if(camp){
+          // Update title with camp name (use returned camp if available)
+          if(camp && camp.name){
             campTitle.textContent = `${camp.name} - ${new Date(camp.date).toLocaleDateString('pl-PL')}`;
+          } else {
+            // fallback: try to fetch directly from public 'camps' table
+            try{
+              const { data: fetchedCamp, error: campError } = await supabase
+                .from('camps')
+                .select('name,date')
+                .eq('id', campId)
+                .single();
+              if(!campError && fetchedCamp){
+                campTitle.textContent = `${fetchedCamp.name} - ${new Date(fetchedCamp.date).toLocaleDateString('pl-PL')}`;
+              }
+            } catch(e) {
+              console.warn('Nie udało się pobrać nazwy campu fallbackem:', e);
+            }
           }
         } catch(error) {
           console.error('Błąd ładowania campu:', error);
@@ -1355,15 +1343,15 @@
             </div>
           `;
 
-          // Insert into DOM and show details view
-          const campDetailsContainer = document.getElementById('campDetailsContainer');
-          if(campDetailsContainer){
-            campDetailsContainer.innerHTML = '';
-            campDetailsContainer.appendChild(container);
+          // Insert into simplified camp list container (show table inline)
+          const campListDiv = document.getElementById('campList');
+          if (campListDiv) {
+            campListDiv.innerHTML = '';
+            campListDiv.appendChild(container);
+            campListDiv.appendChild(summaryDiv);
+            // scroll to new table
+            container.scrollIntoView({ behavior: 'smooth' });
           }
-          document.getElementById('monthView').style.display = 'none';
-          document.getElementById('campDetailsView').style.display = 'block';
-          document.getElementById('campTitle').textContent = `${name} - ${new Date(date).toLocaleDateString('pl-PL')}`;
 
           // Attach handlers for immediate red highlight and confirm
           container.querySelectorAll('.camp-paid').forEach(input => {
@@ -1552,7 +1540,7 @@
         const theadCols = [
           '<th style="text-align:center;width:50px" class="border-right-gold"><div class="header-main">Lp.</div></th>',
           '<th class="border-right-gold"><div class="header-main">Imię i nazwisko</div></th>',
-          `<th class="border-right-gold"><div class="header-main">Camp</div><div class="header-sub">zaplacono ${training.currency || 'PLN'}</div></th>`
+          `<th class="border-right-gold"><div class="header-main">Camp</div><div class="header-sub">zaplacono ${trainingCurrency || 'PLN'}</div></th>`
         ];
         // for each trainer: amount input + confirm button
         trainerInfo.forEach((t, index)=>{
@@ -1565,97 +1553,38 @@
         theadCols.push(`<th><div class="header-main">Razem</div><div class="header-sub">EUR</div></th>`);
         container.innerHTML = `
           <div class="content-header">
-            <h3>${escapeHtml(training.name)} — ${escapeHtml(training.date)}</h3>
+            <h3>${escapeHtml(camp.name)} — ${escapeHtml(camp.date)}</h3>
             <div style="margin-top: 10px;">
               <input type="text" id="participantSearch" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;" />
             </div>
           </div>
           <div style="overflow:auto">
             <table>
-              <thead><tr>${theadCols.join('')}</tr></thead>
+              <thead>
+                <tr>
+                  <th style="text-align:center;width:50px"><div class="header-main">Lp.</div></th>
+                  <th><div class="header-main">Imię i nazwisko</div></th>
+                  <th><div class="header-main">Camp</div><div class="header-sub">${escapeHtml(String(camp.amount || 0))} ${escapeHtml(camp.currency || 'PLN')}</div></th>
+                  ${trainerInfo.map(t => `<th><div class="header-main">Lekcje ${escapeHtml(t.name)}</div><div class="header-sub">${t.price || 0} ${t.currency || 'PLN'}</div></th>`).join('')}
+                </tr>
+              </thead>
               <tbody>
                 ${parts.map((p, index) => {
-                  const campDue = training.price || 0;
-                  const campPaid = p.camp_amount || '';
-                  const obozCells = trainerInfo.map((ti, trainerIndex) => {
-                    const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
-                    const due = (ob.amount !== undefined && ob.amount !== null) ? ob.amount : 0;
-                    // Get stored amount from localStorage or use confirmed amount if already paid
-                    const storedAmount = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`trainer_amount_${trainingId}_${p.id}_${ti.id}`) || '');
-                    const finalAmount = storedAmount || due;
-                    const currency = ob.currency || ti.currency || 'PLN';
-                    const isLastTrainer = trainerIndex === trainerInfo.length - 1;
-
-                    return `<td style="padding:4px;text-align:center" class="${isLastTrainer ? 'border-right-gold' : 'border-right-gold'}">
-                      <div class="payment-controls">
-                        <input data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}" data-currency="${currency}" class="form-control trainer-amount ${ob.status === 'paid' ? 'status-paid' : (finalAmount > 0 ? 'status-unpaid' : '')}" style="width:60px;margin:0 2px;${ob.status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : (finalAmount > 0 ? 'background:#b91c1c;color:#ffffff;border:1px solid #dc2626;' : '')}text-align:center" value="${finalAmount||''}" />
-                        ${ob.status === 'paid' ?
-                          `<button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>` :
-                          `<button class="btn btn-small trainer-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>`
-                        }
-                      </div>
-                    </td>`;
-                  }).join('');
-                  // Get stored camp paid amount from localStorage or use confirmed amount if already paid
                   const storedCampPaid = localStorage.getItem(`camp_paid_${trainingId}_${p.id}`) || (p.camp_status === 'paid' ? (p.camp_amount || '') : '');
-                  const isUnconfirmedPaid = storedCampPaid && p.camp_status !== 'paid';
                   const campPaidClass = p.camp_status === 'paid' ? 'status-paid' : (storedCampPaid ? 'status-unpaid' : '');
-                  // Calculate totals for this participant
-                  let totalPLN = 0;
-                  let totalEUR = 0;
+                  const campInputValue = p.camp_status === 'paid' ? (p.camp_amount || '') : (storedCampPaid || '');
+                  const trainerCells = trainerInfo.map(ti => {
+                    const ob = (p.oboz||[]).find(o => o.trainer_id === ti.id) || {};
+                    const storedTrainer = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`trainer_amount_${trainingId}_${p.id}_${ti.id}`) || (ob.amount || ''));
+                    const btnHtml = ob.status === 'paid' ? `<button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>` : `<button class="btn btn-small trainer-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>`;
+                    return `<td style="padding:4px;text-align:center"><div class="payment-controls"><input type="number" step="0.01" min="0" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control trainer-amount ${ob.status === 'paid' ? 'status-paid' : (storedTrainer ? 'status-unpaid' : '')}" style="width:60px;margin:0 2px;text-align:center" value="${storedTrainer||''}" />${btnHtml}</div></td>`;
+                  }).join('');
 
-                  // Add camp amount in training currency
-                  const campAmount = parseFloat(storedCampPaid) || 0;
-                  if (training.currency === 'PLN') {
-                    totalPLN += campAmount;
-                  } else {
-                    totalEUR += campAmount;
-                  }
+                  const campBtnHtml = p.camp_status === 'paid' ? `<button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>` : `<button class="btn btn-small camp-confirm" data-part-id="${p.id}">OK</button>`;
 
-                  // Add trainer lesson amounts
-                  trainerInfo.forEach(ti => {
-                    const ob = (p.oboz||[]).find(o=>o.trainer_id===ti.id) || {};
-                    const lessons = ob.lessons_count || 0;
-                    const trainerAmount = lessons * ti.price;
-                    if (ti.currency === 'PLN') {
-                      totalPLN += trainerAmount;
-                    } else {
-                      totalEUR += trainerAmount;
-                    }
-                  });
-
-                  return `<tr data-part-id="${p.id}"><td style="padding:4px;text-align:center" class="border-right-gold">${index + 1}</td><td style="padding:4px" class="border-right-gold">${escapeHtml(p.participant_name)}</td>                  <td style="padding:4px;text-align:center" class="border-right-gold">
-                    <div class="payment-controls">
-                      <input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;${p.camp_status === 'paid' ? 'background:#28a745;color:#ffffff;border:1px solid #28a745;' : ''}text-align:center" value="${p.camp_status === 'paid' ? (p.camp_amount || '') : (storedCampPaid || '')}" />
-                      ${p.camp_status === 'paid' ?
-                        `<button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>` :
-                        `<button class="btn btn-small camp-confirm" data-part-id="${p.id}" data-due="${campDue}">OK</button>`
-                      }
-                    </div>
-                  </td>${obozCells}<td style="padding:4px;text-align:center;font-weight:bold" class="border-right-gold">${totalPLN.toFixed(2)} PLN</td><td style="padding:4px;text-align:center;font-weight:bold">${totalEUR.toFixed(2)} EUR</td></tr>`;
+                  return `<tr data-part-id="${p.id}"><td style="text-align:center;padding:4px">${index + 1}</td><td style="padding:4px">${escapeHtml(p.participant_name)}</td><td style="text-align:center;padding:4px"><div class="payment-controls"><input type="number" step="0.01" min="0" data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;text-align:center" value="${campInputValue||''}" />${campBtnHtml}</div></td>${trainerCells}</tr>`;
                 }).join('')}
               </tbody>
-              <tfoot>
-                <tr style="background: rgba(212, 175, 55, 0.1); border-top: 2px solid var(--gold);">
-                  <td colspan="2" style="padding:8px;text-align:center;font-weight:bold;color:var(--gold);">PODSUMOWANIE</td>
-                  <td style="padding:4px;text-align:center;border-right:2px solid var(--gold);">
-                    <div style="font-size:0.8rem;">
-                      <div>Ogólna: <span id="totalCampAmountFooter">0</span></div>
-                      <div>Zapłacona: <span id="paidCampAmountFooter">0</span></div>
-                    </div>
-                  </td>
-                  ${trainerInfo.map((t, index) => `
-                    <td style="padding:4px;text-align:center;${index === trainerInfo.length - 1 ? 'border-right:2px solid var(--gold);' : ''}">
-                      <div style="font-size:0.8rem;">
-                        <div>Ogólna: <span id="totalDue-${t.id}">0</span></div>
-                        <div>Zapłacona: <span id="totalPaid-${t.id}">0</span></div>
-                      </div>
-                    </td>
-                  `).join('')}
-                  <td style="padding:4px;text-align:center;font-weight:bold;border-right:2px solid var(--gold);" id="totalPLNFooter">0.00 PLN</td>
-                  <td style="padding:4px;text-align:center;font-weight:bold;" id="totalEURFooter">0.00 EUR</td>
-                </tr>
-              </tfoot>
             </table>
           </div>
         `;
@@ -2467,6 +2396,7 @@
 
 
 
+        return camp;
       }
 
       // Global functions for expense management
