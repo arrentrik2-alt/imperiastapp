@@ -384,6 +384,159 @@
       background-color: #c82333;
     }
 
+    /* Camps Styles */
+    .camps-list {
+      margin-top: 20px;
+    }
+
+    .camp-card {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 15px;
+      border: 1px solid var(--border-dark);
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .camp-card:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+    }
+
+    .camp-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .camp-name {
+      color: var(--text-light);
+      font-weight: bold;
+      flex: 1;
+    }
+
+    .camp-date {
+      color: var(--text-gray);
+      font-size: 0.9rem;
+    }
+
+    .camp-details {
+      color: var(--text-gray);
+      font-size: 0.9rem;
+    }
+
+    .camp-detail {
+      display: inline-block;
+      margin-right: 15px;
+    }
+
+    .camp-detail i {
+      margin-right: 5px;
+      color: var(--gold);
+    }
+
+    /* Camp Details Table */
+    .camp-details-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 20px;
+    }
+
+    .camp-details-table th {
+      background-color: var(--gold);
+      color: var(--primary-bg);
+      padding: 8px 4px;
+      text-align: center;
+      font-weight: bold;
+      border: 1px solid var(--border-dark);
+      white-space: nowrap;
+    }
+
+    .camp-details-table td {
+      padding: 6px 4px;
+      border: 1px solid var(--border-dark);
+      text-align: center;
+      color: var(--text-light);
+    }
+
+    .camp-details-table tr:hover {
+      background-color: rgba(212, 175, 55, 0.05);
+    }
+
+    .participant-name {
+      text-align: left;
+      padding-left: 8px;
+      font-weight: 500;
+    }
+
+    .payment-input {
+      width: 60px;
+      padding: 4px;
+      border: 1px solid var(--border-dark);
+      border-radius: 3px;
+      background-color: rgba(255, 255, 255, 0.07);
+      color: var(--text-light);
+      text-align: center;
+      font-size: 0.8rem;
+    }
+
+    .payment-input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    .amount-badge {
+      background-color: rgba(212, 175, 55, 0.1);
+      color: var(--gold);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    /* Trainer Form Styles */
+    .trainer-item {
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-dark);
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .trainer-fields {
+      display: flex;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .trainer-fields .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .trainer-fields .form-group label {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 0.8rem;
+    }
+
+    .remove-trainer-btn {
+      background-color: var(--error);
+      color: white;
+      border: none;
+      border-radius: 3px;
+      padding: 6px 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+
+    .remove-trainer-btn:hover {
+      background-color: #c82333;
+    }
+
     .empty-state {
       text-align: center;
       padding: 40px 20px;
@@ -506,6 +659,12 @@
         </a>
       </li>
       <li>
+        <a href="#" id="nav-camps">
+          <i class="fas fa-campground"></i>
+          <span class="link-text">Campy ST</span>
+        </a>
+      </li>
+      <li>
         <a href="#" id="nav-schedule">
           <i class="fas fa-calendar"></i>
           <span class="link-text">Harmonogram</span>
@@ -562,6 +721,44 @@
             <!-- Members will be loaded here -->
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Camps ST Section -->
+    <div class="content-box" id="camps-section" style="display: none;">
+      <div class="content-header">
+        <h3>Campy ST</h3>
+        <button class="btn btn-primary" id="create-camp-btn">
+          <i class="fas fa-plus"></i> Utwórz camp
+        </button>
+      </div>
+
+      <!-- Month Selector -->
+      <div class="month-selector" style="margin-bottom: 20px;">
+        <label for="camp-month-select">Wybierz miesiąc:</label>
+        <select id="camp-month-select" class="form-control" style="margin-left: 10px;">
+          <option value="2025-09">Wrzesień 2025</option>
+          <option value="2025-08">Sierpień 2025</option>
+        </select>
+      </div>
+
+      <!-- Camps List -->
+      <div class="camps-list" id="camps-list">
+        <!-- Camps will be loaded here -->
+      </div>
+    </div>
+
+    <!-- Camp Details Section -->
+    <div class="content-box" id="camp-details-section" style="display: none;">
+      <div class="content-header">
+        <h3 id="camp-details-title">Szczegóły campu</h3>
+        <button class="btn btn-outline" id="back-to-camps-btn">
+          <i class="fas fa-arrow-left"></i> Powrót do campów
+        </button>
+      </div>
+
+      <div class="camp-details-content" id="camp-details-content">
+        <!-- Camp details table will be loaded here -->
       </div>
     </div>
   </main>
@@ -669,6 +866,60 @@
           <button type="button" class="btn btn-outline" id="cancel-edit-member">Anuluj</button>
           <button type="submit" class="btn btn-primary" id="submit-edit-member">
             <i class="fas fa-save"></i> Zapisz zmiany
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Create Camp Modal -->
+  <div class="modal" id="create-camp-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-create-camp-modal">&times;</button>
+      <div class="modal-header">
+        <h3>Utwórz nowy camp</h3>
+      </div>
+
+      <form id="create-camp-form">
+        <div class="form-group">
+          <label for="camp-name">Nazwa campu *</label>
+          <input type="text" id="camp-name" name="camp-name" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="camp-date">Data campu *</label>
+          <input type="date" id="camp-date" name="camp-date" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="camp-amount">Kwota campu *</label>
+          <input type="number" id="camp-amount" name="camp-amount" class="form-control" step="0.01" min="0" required>
+        </div>
+
+        <div class="form-group">
+          <label for="camp-currency">Waluta *</label>
+          <select id="camp-currency" name="camp-currency" class="form-control" required>
+            <option value="">Wybierz walutę</option>
+            <option value="PLN">PLN</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+
+        <!-- Trainers Section -->
+        <div class="form-group">
+          <label>Szkoleniowcy</label>
+          <button type="button" class="btn btn-outline" id="add-trainer-btn" style="margin-top: 5px;">
+            <i class="fas fa-plus"></i> Dodaj szkoleniowca
+          </button>
+          <div id="trainers-container" style="margin-top: 10px;">
+            <!-- Trainers will be added here -->
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" id="cancel-create-camp">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="submit-create-camp">
+            <i class="fas fa-save"></i> Utwórz camp
           </button>
         </div>
       </form>
@@ -1025,9 +1276,359 @@
       }
     });
 
+    // Navigation functions
+    function setActiveNav(section) {
+      // Hide all sections
+      document.getElementById('members-section').style.display = 'none';
+      document.getElementById('camps-section').style.display = 'none';
+      document.getElementById('camp-details-section').style.display = 'none';
+
+      // Remove active class from all nav links
+      document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
+
+      // Show selected section and activate nav link
+      if (section === 'members') {
+        document.getElementById('members-section').style.display = 'block';
+        document.getElementById('nav-members').classList.add('active');
+      } else if (section === 'camps') {
+        document.getElementById('camps-section').style.display = 'block';
+        document.getElementById('nav-camps').classList.add('active');
+        loadCamps();
+      }
+    }
+
+    // Camps functionality
+    let currentMonth = '2025-09';
+    let currentCamp = null;
+
+    // DOM Elements for camps
+    const createCampBtn = document.getElementById('create-camp-btn');
+    const createCampModal = document.getElementById('create-camp-modal');
+    const closeCreateCampModal = document.getElementById('close-create-camp-modal');
+    const cancelCreateCamp = document.getElementById('cancel-create-camp');
+    const createCampForm = document.getElementById('create-camp-form');
+    const addTrainerBtn = document.getElementById('add-trainer-btn');
+    const trainersContainer = document.getElementById('trainers-container');
+    const campMonthSelect = document.getElementById('camp-month-select');
+    const campsList = document.getElementById('camps-list');
+    const backToCampsBtn = document.getElementById('back-to-camps-btn');
+
+    // Trainer management
+    let trainerCount = 0;
+
+    function addTrainer() {
+      trainerCount++;
+      const trainerItem = document.createElement('div');
+      trainerItem.className = 'trainer-item';
+      trainerItem.innerHTML = `
+        <div class="trainer-fields">
+          <div class="form-group">
+            <label for="trainer-name-${trainerCount}">Imię szkoleniowca</label>
+            <input type="text" id="trainer-name-${trainerCount}" name="trainer-name-${trainerCount}" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="trainer-amount-${trainerCount}">Kwota</label>
+            <input type="number" id="trainer-amount-${trainerCount}" name="trainer-amount-${trainerCount}" class="form-control" step="0.01" min="0" required>
+          </div>
+          <div class="form-group">
+            <label for="trainer-currency-${trainerCount}">Waluta</label>
+            <select id="trainer-currency-${trainerCount}" name="trainer-currency-${trainerCount}" class="form-control" required>
+              <option value="EUR">EUR</option>
+              <option value="PLN">PLN</option>
+            </select>
+          </div>
+          <button type="button" class="remove-trainer-btn" onclick="removeTrainer(this)">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+      trainersContainer.appendChild(trainerItem);
+    }
+
+    function removeTrainer(button) {
+      button.closest('.trainer-item').remove();
+    }
+
+    // Make removeTrainer global
+    window.removeTrainer = removeTrainer;
+
+    // Load camps for selected month
+    async function loadCamps() {
+      try {
+        const { data: camps, error } = await supabase
+          .from('camps')
+          .select('*')
+          .eq('month', currentMonth)
+          .order('date', { ascending: false });
+
+        if (error) throw error;
+
+        if (camps.length === 0) {
+          campsList.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-campground"></i>
+              <p>Brak campów w wybranym miesiącu</p>
+              <p>Kliknij "Utwórz camp" aby dodać pierwszy camp</p>
+            </div>
+          `;
+          return;
+        }
+
+        campsList.innerHTML = '';
+        camps.forEach(camp => {
+          const campCard = createCampCard(camp);
+          campsList.appendChild(campCard);
+        });
+
+      } catch (err) {
+        console.error('Błąd ładowania campów:', err);
+        campsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania campów</p></div>';
+      }
+    }
+
+    // Create camp card element
+    function createCampCard(camp) {
+      const card = document.createElement('div');
+      card.className = 'camp-card';
+      card.onclick = () => showCampDetails(camp);
+
+      const trainersText = camp.trainers ? camp.trainers.map(t => t.name).join(', ') : 'Brak szkoleniowców';
+
+      card.innerHTML = `
+        <div class="camp-header">
+          <div class="camp-name">${camp.name}</div>
+          <div class="camp-date">${new Date(camp.date).toLocaleDateString('pl-PL')}</div>
+        </div>
+        <div class="camp-details">
+          <span class="camp-detail">
+            <i class="fas fa-euro-sign"></i>${camp.amount} ${camp.currency}
+          </span>
+          <span class="camp-detail">
+            <i class="fas fa-users"></i>Szkoleniowcy: ${trainersText}
+          </span>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Show camp details
+    async function showCampDetails(camp) {
+      currentCamp = camp;
+      document.getElementById('camp-details-title').textContent = `Camp: ${camp.name}`;
+
+      // Hide camps list and show details
+      document.getElementById('camps-section').style.display = 'none';
+      document.getElementById('camp-details-section').style.display = 'block';
+
+      // Load camp participants (members with ST or 10T style)
+      try {
+        const { data: participants, error } = await supabase
+          .from('members')
+          .select('*')
+          .or('style.eq.st,style.eq.10t')
+          .order('name', { ascending: true });
+
+        if (error) throw error;
+
+        const detailsContent = document.getElementById('camp-details-content');
+        detailsContent.innerHTML = createCampDetailsTable(camp, participants);
+
+      } catch (err) {
+        console.error('Błąd ładowania uczestników campu:', err);
+        document.getElementById('camp-details-content').innerHTML = '<div class="empty-state"><p>Błąd ładowania danych</p></div>';
+      }
+    }
+
+    // Create camp details table
+    function createCampDetailsTable(camp, participants) {
+      let tableHtml = `
+        <table class="camp-details-table">
+          <thead>
+            <tr>
+              <th style="width: 200px; text-align: left;">Uczestnik</th>
+              <th style="width: 100px;">Camp<br><span class="amount-badge">${camp.amount} ${camp.currency}</span></th>
+      `;
+
+      // Add columns for each trainer
+      if (camp.trainers && camp.trainers.length > 0) {
+        camp.trainers.forEach(trainer => {
+          tableHtml += `<th style="width: 100px;">Lekcje<br><span class="amount-badge">${trainer.amount} ${trainer.currency}</span><br><small>${trainer.name}</small></th>`;
+        });
+      }
+
+      tableHtml += `
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      // Add rows for each participant
+      participants.forEach(participant => {
+        tableHtml += `
+          <tr>
+            <td class="participant-name">${participant.name}</td>
+            <td><input type="number" class="payment-input" step="0.01" min="0" placeholder="0.00"></td>
+        `;
+
+        // Add input fields for each trainer
+        if (camp.trainers && camp.trainers.length > 0) {
+          camp.trainers.forEach(() => {
+            tableHtml += `<td><input type="number" class="payment-input" step="0.01" min="0" placeholder="0.00"></td>`;
+          });
+        }
+
+        tableHtml += `
+          </tr>
+        `;
+      });
+
+      tableHtml += `
+          </tbody>
+        </table>
+      `;
+
+      return tableHtml;
+    }
+
+    // Create new camp
+    async function createCamp(campData) {
+      try {
+        const campId = Date.now().toString();
+
+        // Collect trainers data
+        const trainers = [];
+        const trainerItems = document.querySelectorAll('.trainer-item');
+        trainerItems.forEach((item, index) => {
+          const nameInput = item.querySelector(`input[name="trainer-name-${index + 1}"]`);
+          const amountInput = item.querySelector(`input[name="trainer-amount-${index + 1}"]`);
+          const currencySelect = item.querySelector(`select[name="trainer-currency-${index + 1}"]`);
+
+          if (nameInput && amountInput && currencySelect) {
+            trainers.push({
+              name: nameInput.value.trim(),
+              amount: parseFloat(amountInput.value),
+              currency: currencySelect.value
+            });
+          }
+        });
+
+        const { error } = await supabase
+          .from('camps')
+          .insert([{
+            id: campId,
+            month: currentMonth,
+            name: campData.name,
+            date: campData.date,
+            amount: parseFloat(campData.amount),
+            currency: campData.currency,
+            trainers: trainers,
+            created_at: new Date().toISOString()
+          }]);
+
+        if (error) throw error;
+
+        closeCreateCampModalFunc();
+        await loadCamps();
+
+      } catch (err) {
+        console.error('Błąd tworzenia campu:', err);
+        alert('Błąd tworzenia campu: ' + (err.message || 'Nieznany błąd'));
+      }
+    }
+
+    // Modal functions for create camp
+    function openCreateCampModal() {
+      createCampModal.classList.add('active');
+      trainerCount = 0;
+      trainersContainer.innerHTML = '';
+    }
+
+    function closeCreateCampModalFunc() {
+      createCampModal.classList.remove('active');
+      createCampForm.reset();
+      trainersContainer.innerHTML = '';
+    }
+
+    // Event listeners for camps
+    createCampBtn.addEventListener('click', openCreateCampModal);
+    closeCreateCampModal.addEventListener('click', closeCreateCampModalFunc);
+    cancelCreateCamp.addEventListener('click', closeCreateCampModalFunc);
+    addTrainerBtn.addEventListener('click', addTrainer);
+
+    // Close modal when clicking outside
+    createCampModal.addEventListener('click', (e) => {
+      if (e.target === createCampModal) {
+        closeCreateCampModalFunc();
+      }
+    });
+
+    // Create camp form submission
+    createCampForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(createCampForm);
+      const campData = {
+        name: formData.get('camp-name').trim(),
+        date: formData.get('camp-date'),
+        amount: formData.get('camp-amount'),
+        currency: formData.get('camp-currency')
+      };
+
+      // Basic validation
+      if (!campData.name || !campData.date || !campData.amount || !campData.currency) {
+        alert('Proszę wypełnić wszystkie wymagane pola');
+        return;
+      }
+
+      // Show loading state
+      const submitBtn = document.getElementById('submit-create-camp');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<div class="loading"></div> Tworzenie...';
+      submitBtn.disabled = true;
+
+      try {
+        await createCamp(campData);
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+
+    // Month selector change
+    campMonthSelect.addEventListener('change', (e) => {
+      currentMonth = e.target.value;
+      loadCamps();
+    });
+
+    // Back to camps button
+    backToCampsBtn.addEventListener('click', () => {
+      document.getElementById('camp-details-section').style.display = 'none';
+      document.getElementById('camps-section').style.display = 'block';
+      currentCamp = null;
+    });
+
+    // Navigation event listeners
+    document.getElementById('nav-members').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('members');
+    });
+
+    document.getElementById('nav-camps').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('camps');
+    });
+
+    // Update the original navigation function
+    navMembers.addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('members');
+    });
+
     // Initialize app
     document.addEventListener('DOMContentLoaded', () => {
       loadMembers();
+      setActiveNav('members'); // Start with members page
     });
   </script>
 </body>
