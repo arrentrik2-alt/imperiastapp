@@ -489,18 +489,19 @@
       </div>
     </div>
 
-    <!-- Campy ST section - simplified: only create button and placeholder list -->
+    <!-- Campy ST section - simplified: create button, month select and list -->
     <main id="campySection" class="main-content" style="display:none">
       <div class="header">
         <h2>Campy ST</h2>
         <div class="user-info">
+          <select id="monthSelect" class="form-control" style="margin-right:8px"></select>
           <button id="createCampBtn" class="btn btn-primary" style="margin-left:8px"><i class="fa fa-plus"></i>Stwórz camp</button>
         </div>
       </div>
 
       <div class="content-box">
         <div id="campListContainer">
-          <div id="campList">Kliknij "Stwórz camp", aby dodać nowy camp.</div>
+          <div id="campList">Wybierz miesiąc aby zobaczyć dostępne campy</div>
         </div>
       </div>
     </main>
@@ -1311,116 +1312,14 @@
             }
           } catch (e) { console.warn('Error inserting participants:', e); }
 
-          const campId = 'clientcamp_' + Date.now();
-          const container = document.createElement('div');
-          container.className = 'content-box';
-
-          const theadCols = [];
-          theadCols.push('<th style="text-align:center;width:50px" class="border-right-gold"><div class="header-main">Lp.</div></th>');
-          theadCols.push('<th class="border-right-gold"><div class="header-main">Imię i nazwisko</div></th>');
-          theadCols.push(`<th class="border-right-gold"><div class="header-main">Camp</div><div class="header-sub">${amount} ${currency}</div></th>`);
-          trainers.forEach(t=>{
-            theadCols.push(`<th class="border-right-gold"><div class="header-main">Lekcje ${escapeHtml(t.name)}</div><div class="header-sub">${t.amount} ${t.currency}</div></th>`);
-          });
-
-          const tbody = members.map((m,idx) => {
-            const trainerCells = trainers.map((t,ti)=>{
-              return `<td style="padding:4px;text-align:center" class="border-right-gold"><div class="payment-controls"><input data-member-id="${m.id}" data-trainer-index="${ti}" class="form-control trainer-amount" style="width:60px;margin:0 2px;text-align:center" value="" /><button class="btn btn-small trainer-confirm" data-member-id="${m.id}" data-trainer-index="${ti}">OK</button></div></td>`;
-            }).join('');
-
-            return `<tr data-member-id="${m.id}"><td style="padding:4px;text-align:center" class="border-right-gold">${idx + 1}</td><td style="padding:4px" class="border-right-gold">${escapeHtml(m.name)}</td><td style="padding:4px;text-align:center" class="border-right-gold"><div class="payment-controls"><input data-member-id="${m.id}" class="form-control camp-paid" style="width:60px;margin:0 2px;text-align:center" value="" /><button class="btn btn-small camp-confirm" data-member-id="${m.id}">OK</button></div></td>${trainerCells}</tr>`;
-          }).join('');
-
-          container.innerHTML = `
-            <div class="content-header">
-              <h3>${escapeHtml(name)} — ${escapeHtml(date)}</h3>
-            </div>
-            <div style="overflow:auto">
-              <table>
-                <thead><tr>${theadCols.join('')}</tr></thead>
-                <tbody>${tbody}</tbody>
-              </table>
-            </div>
-          `;
-
-          // Insert into simplified camp list container (show table inline)
-          const campListDiv = document.getElementById('campList');
-          if (campListDiv) {
-            campListDiv.innerHTML = '';
-            campListDiv.appendChild(container);
-            campListDiv.appendChild(summaryDiv);
-            // scroll to new table
-            container.scrollIntoView({ behavior: 'smooth' });
-          }
-
-          // Attach handlers for immediate red highlight and confirm
-          container.querySelectorAll('.camp-paid').forEach(input => {
-            input.addEventListener('input', () => {
-              const td = input.closest('td');
-              if(input.value){
-                td.classList.add('pending-payment');
-                input.style.background = '#b91c1c';
-                input.style.color = '#ffffff';
-                input.style.borderColor = '#dc2626';
-              } else {
-                td.classList.remove('pending-payment');
-                input.style.background = '';
-                input.style.color = '';
-                input.style.borderColor = '';
-              }
-            });
-          });
-
-          container.querySelectorAll('.camp-confirm').forEach(btn => {
-            btn.addEventListener('click', () => {
-              const memberId = btn.getAttribute('data-member-id');
-              const input = container.querySelector(`input.camp-paid[data-member-id="${memberId}"]`);
-              const val = parseFloat(input.value) || 0;
-              if(val > 0){
-                input.classList.add('status-paid');
-                input.classList.remove('status-unpaid');
-                const td = input.closest('td'); if(td) td.classList.remove('pending-payment');
-                input.style.background = '#28a745'; input.style.color = '#ffffff'; input.style.borderColor = '#28a745';
-                btn.outerHTML = `<button class="btn btn-small btn-delete camp-delete" data-member-id="${memberId}">×</button>`;
-              } else { alert('Wprowadź kwotę płatności aby potwierdzić'); }
-            });
-          });
-
-          container.querySelectorAll('.trainer-amount').forEach(input => {
-            input.addEventListener('input', () => {
-              const td = input.closest('td');
-              if(input.value){
-                td.classList.add('pending-payment');
-                input.style.background = '#b91c1c';
-                input.style.color = '#ffffff';
-                input.style.borderColor = '#dc2626';
-          } else {
-                td.classList.remove('pending-payment');
-                input.style.background = '';
-                input.style.color = '';
-                input.style.borderColor = '';
-              }
-            });
-          });
-
-          container.querySelectorAll('.trainer-confirm').forEach(btn => {
-            btn.addEventListener('click', () => {
-              const memberId = btn.getAttribute('data-member-id');
-              const trainerIndex = btn.getAttribute('data-trainer-index');
-              const input = container.querySelector(`input.trainer-amount[data-member-id="${memberId}"][data-trainer-index="${trainerIndex}"]`);
-              const val = parseFloat(input.value) || 0;
-              if(val > 0){
-                input.classList.add('status-paid');
-                input.classList.remove('status-unpaid');
-                const td = input.closest('td'); if(td) td.classList.remove('pending-payment');
-                input.style.background = '#28a745'; input.style.color = '#ffffff'; input.style.borderColor = '#28a745';
-                btn.outerHTML = `<button class="btn btn-small btn-delete trainer-delete" data-member-id="${memberId}" data-trainer-index="${trainerIndex}">×</button>`;
-              } else { alert('Wprowadź kwotę przed potwierdzeniem'); }
-            });
-          });
-
-          // close modal
+          // close modal and refresh month list — render list of camps, not the table directly
           campModal.remove();
+          try {
+            const createdMonthKey = `${new Date(date).getFullYear()}-${String(new Date(date).getMonth() + 1).padStart(2,'0')}`;
+            const monthSelect = document.getElementById('monthSelect');
+            if(monthSelect) monthSelect.value = createdMonthKey;
+            if(typeof loadCampsForMonth === 'function') setTimeout(()=> loadCampsForMonth(createdMonthKey), 80);
+          } catch(e){ console.warn('Error refreshing camps list after create:', e); }
 
           // After creating camp in DB, refresh camp list for the month of the created camp
           try {
