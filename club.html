@@ -1595,12 +1595,12 @@
                     const ob = (p.oboz||[]).find(o => o.trainer_id === ti.id) || {};
                     const storedTrainer = ob.status === 'paid' ? (ob.amount || '') : (localStorage.getItem(`trainer_amount_${trainingId}_${p.id}_${ti.id}`) || (ob.amount || ''));
                     const btnHtml = ob.status === 'paid' ? `<button class="btn btn-small btn-delete trainer-delete" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">×</button>` : `<button class="btn btn-small trainer-confirm" data-oboz-id="${ob.id||''}" data-part-id="${p.id}" data-trainer-id="${ti.id}">OK</button>`;
-                    return `<td style="padding:4px;text-align:center"><div class="payment-controls"><input data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control trainer-amount ${ob.status === 'paid' ? 'status-paid' : (storedTrainer ? 'status-unpaid' : '')}" style="width:60px;margin:0 2px;text-align:center" value="${storedTrainer||''}" />${btnHtml}</div></td>`;
+                    return `<td style="padding:4px;text-align:center"><div class="payment-controls"><input type="number" step="0.01" min="0" data-part-id="${p.id}" data-trainer-id="${ti.id}" class="form-control trainer-amount ${ob.status === 'paid' ? 'status-paid' : (storedTrainer ? 'status-unpaid' : '')}" style="width:60px;margin:0 2px;text-align:center" value="${storedTrainer||''}" />${btnHtml}</div></td>`;
                   }).join('');
 
                   const campBtnHtml = p.camp_status === 'paid' ? `<button class="btn btn-small btn-delete camp-delete" data-part-id="${p.id}">×</button>` : `<button class="btn btn-small camp-confirm" data-part-id="${p.id}">OK</button>`;
 
-                  return `<tr data-part-id="${p.id}"><td style="text-align:center;padding:4px">${index + 1}</td><td style="padding:4px">${escapeHtml(p.participant_name)}</td><td style="text-align:center;padding:4px"><div class="payment-controls"><input data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;text-align:center" value="${campInputValue||''}" />${campBtnHtml}</div></td>${trainerCells}</tr>`;
+                  return `<tr data-part-id="${p.id}"><td style="text-align:center;padding:4px">${index + 1}</td><td style="padding:4px">${escapeHtml(p.participant_name)}</td><td style="text-align:center;padding:4px"><div class="payment-controls"><input type="number" step="0.01" min="0" data-part-id="${p.id}" class="form-control camp-paid ${campPaidClass}" style="width:60px;margin:0 2px;text-align:center" value="${campInputValue||''}" />${campBtnHtml}</div></td>${trainerCells}</tr>`;
                 }).join('')}
               </tbody>
             </table>
