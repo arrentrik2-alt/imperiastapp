@@ -1143,42 +1143,40 @@
 
       // Show camp details
       async function showCampDetails(campId){
-        document.getElementById('monthView').style.display = 'none';
-        document.getElementById('campDetailsView').style.display = 'block';
+        // Try to hide month/list view if present
+        const monthViewEl = document.getElementById('monthView');
+        if(monthViewEl) monthViewEl.style.display = 'none';
 
-        // Update camp title
-        const campTitle = document.getElementById('campTitle');
-        campTitle.textContent = 'Ładowanie...';
+        // If there's a dedicated details view, show it; otherwise we'll render into campList
+        const campDetailsViewEl = document.getElementById('campDetailsView');
+        if(campDetailsViewEl) campDetailsViewEl.style.display = 'block';
 
-        // Clear previous content
-        const container = document.getElementById('campDetailsContainer');
-        container.innerHTML = 'Ładowanie szczegółów campu...';
+        // Try to set title if exists
+        const campTitleEl = document.getElementById('campTitle');
+        if(campTitleEl) campTitleEl.textContent = 'Ładowanie...';
 
         // Load and render camp details
         try {
-          const camp = await renderCampFromDB(campId);
+          const result = await renderCampFromDB(campId);
 
-          // Update title with camp name (use returned camp if available)
-          if(camp && camp.name){
-            campTitle.textContent = `${camp.name} - ${new Date(camp.date).toLocaleDateString('pl-PL')}`;
-          } else {
-            // fallback: try to fetch directly from public 'camps' table
-            try{
-              const { data: fetchedCamp, error: campError } = await supabase
-                .from('camps')
-                .select('name,date')
-                .eq('id', campId)
-                .single();
-              if(!campError && fetchedCamp){
-                campTitle.textContent = `${fetchedCamp.name} - ${new Date(fetchedCamp.date).toLocaleDateString('pl-PL')}`;
-              }
-            } catch(e) {
-              console.warn('Nie udało się pobrać nazwy campu fallbackem:', e);
-            }
+          // render into campList (if present) when using simplified UI
+          const campListDiv = document.getElementById('campList');
+          if(campListDiv){
+            // clear list and show table
+            campListDiv.innerHTML = '';
+            if(result && result.container) campListDiv.appendChild(result.container);
+            if(result && result.summaryDiv) campListDiv.appendChild(result.summaryDiv);
+          }
+
+          // update title if available
+          const campObj = result && result.camp ? result.camp : result;
+          if(campTitleEl && campObj && campObj.name){
+            campTitleEl.textContent = `${campObj.name} - ${new Date(campObj.date).toLocaleDateString('pl-PL')}`;
           }
         } catch(error) {
           console.error('Błąd ładowania campu:', error);
-          container.innerHTML = `Błąd ładowania szczegółów campu: ${error.message}`;
+          const campListDiv = document.getElementById('campList');
+          if(campListDiv) campListDiv.innerHTML = `Błąd ładowania szczegółów campu: ${error.message}`;
         }
       }
 
