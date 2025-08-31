@@ -1692,6 +1692,7 @@
                 input.style.color = '#ffffff';
                 input.style.borderColor = '#dc2626';
                 // Also add pending highlight to the whole cell
+                // immediate highlight on parent td
                 const td = input.closest('td');
                 if (td) td.classList.add('pending-payment');
               } else {
