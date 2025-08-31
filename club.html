@@ -710,6 +710,26 @@
       addMemberForm.reset();
     }
 
+    // Setup action button event listeners
+    function setupActionButtons() {
+      // Edit buttons
+      document.querySelectorAll('.btn-edit').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const memberId = e.currentTarget.getAttribute('data-member-id');
+          editMember(memberId);
+        });
+      });
+
+      // Delete buttons
+      document.querySelectorAll('.btn-delete').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const memberId = e.currentTarget.getAttribute('data-member-id');
+          const memberName = e.currentTarget.getAttribute('data-member-name');
+          deleteMember(memberId, memberName);
+        });
+      });
+    }
+
     // Load members from database
     async function loadMembers() {
       try {
@@ -749,6 +769,9 @@
           membersList.appendChild(memberCard);
         });
 
+        // Add event listeners for action buttons
+        setupActionButtons();
+
       } catch (err) {
         console.error('Błąd ładowania członków:', err);
         membersList.innerHTML = `
@@ -777,10 +800,10 @@
         <td><span class="member-karnet">${member.karnet}</span></td>
         <td>
           <div class="action-buttons">
-            <button class="btn-action btn-edit" onclick="editMember('${member.id}')" title="Edytuj">
+            <button class="btn-action btn-edit" data-member-id="${member.id}" title="Edytuj">
               <i class="fas fa-edit"></i> Edytuj
             </button>
-            <button class="btn-action btn-delete" onclick="deleteMember('${member.id}', '${member.name}')" title="Usuń">
+            <button class="btn-action btn-delete" data-member-id="${member.id}" data-member-name="${member.name}" title="Usuń">
               <i class="fas fa-trash"></i> Usuń
             </button>
           </div>
