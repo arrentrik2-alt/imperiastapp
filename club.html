@@ -492,16 +492,16 @@
     <!-- Campy ST section (clean skeleton for rebuild) -->
     <main id="campySection" class="main-content" style="display:none">
       <div id="monthView">
-        <div class="header">
+      <div class="header">
           <h2>Campy ST (w budowie)</h2>
-          <div class="user-info">
+        <div class="user-info">
             <!-- minimal controls preserved for compatibility -->
             <select id="monthSelect" class="form-control" style="margin-right:8px"></select>
-            <button id="createCampBtn" class="btn btn-primary" style="margin-left:8px"><i class="fa fa-plus"></i>Stwórz camp</button>
-          </div>
+          <button id="createCampBtn" class="btn btn-primary" style="margin-left:8px"><i class="fa fa-plus"></i>Stwórz camp</button>
         </div>
+      </div>
 
-        <div class="content-box">
+      <div class="content-box">
           <div id="campListContainer">
             <div id="campList">Strona campów została wyczyszczona. Zbudujemy ją od zera.</div>
           </div>
@@ -760,9 +760,9 @@
 
               // Add participant to training_participants
               const { data, error } = await supabase
-                .from('training_participants')
+                .from('camps.participants')
                 .insert([{
-                  training_id: currentTrainingId,
+                  camp_id: currentTrainingId,
                   participant_name: participantName
                 }])
                 .select();
@@ -825,9 +825,8 @@
         const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
 
         const { data: camps, error } = await supabase
-          .from('trainings')
-          .select('id,name,date,price,currency')
-          .eq('type', 'camp_st')
+          .from('camps.camps')
+          .select('id,name,date,amount as price,currency')
           .gte('date', startDate)
           .lte('date', endDate)
           .order('date', { ascending: false });
@@ -845,18 +844,18 @@
         // Load payment status for each camp
         const campStatuses = await Promise.all(camps.map(async (camp) => {
           const { data: participants } = await supabase
-            .from('training_participants')
+            .from('camps.participants')
             .select('id,camp_amount,camp_status')
-            .eq('training_id', camp.id);
+            .eq('camp_id', camp.id);
 
           // Get all participant IDs
           const participantIds = participants?.map(p => p.id) || [];
 
           // Get payments for all participants in this camp
           const { data: payments } = await supabase
-            .from('oboz_lesson_payments')
-            .select('lessons_count,status,training_participant_id')
-            .in('training_participant_id', participantIds);
+            .from('camps.payments')
+            .select('lessons_count,status,participant_id')
+            .in('participant_id', participantIds);
 
           let paidCount = 0;
           let unconfirmedCount = 0;
@@ -1150,7 +1149,7 @@
 
           // Update title with camp name
           const { data: camp, error: campError } = await supabase
-            .from('trainings')
+            .from('camps.camps')
             .select('name,date')
             .eq('id', campId)
             .single();
@@ -1251,6 +1250,30 @@
           const { data: members, error: memErr } = await supabase.from('members').select('id,name,style').in('style', ['ST','10t']).order('name', {ascending:true});
           if(memErr){ alert('Błąd pobierania członków: '+memErr.message); return; }
 
+          // create camp in DB (camps.camps)
+          const { data: createdCamp, error: campErr } = await supabase.from('camps.camps').insert([{ name, date, amount, currency, created_by: supabase.auth.user()?.id || null }]).select().single();
+          if(campErr || !createdCamp){ alert('Błąd tworzenia campu w DB: '+(campErr?campErr.message:'')); return; }
+
+          // create or find trainers and link to camp
+          const createdTrainers = [];
+          for(const t of trainers){
+            let trainerId = null;
+            // try find by name
+            const { data: found, error: findErr } = await supabase.from('camps.trainers').select('*').ilike('name', t.name).limit(1);
+            if(findErr){ console.warn('Błąd szukania trenera lokalnego:', findErr); }
+            if(found && found.length > 0){ trainerId = found[0].id; }
+            else {
+              const { data: newTrainer, error: trErr } = await supabase.from('camps.trainers').insert([{ name: t.name, default_price: t.amount, currency: t.currency }]).select().single();
+              if(trErr){ console.warn('Błąd tworzenia trenera:', trErr); continue; }
+              trainerId = newTrainer.id;
+            }
+
+            // link trainer to camp
+            const { error: linkErr } = await supabase.from('camps.camp_trainers').insert([{ camp_id: createdCamp.id, trainer_id: trainerId, price: t.amount }]);
+            if(linkErr){ console.warn('Błąd linkowania trenera do campu:', linkErr); }
+            createdTrainers.push({ id: trainerId, name: t.name, amount: t.amount, currency: t.currency });
+          }
+
           // Build table HTML
           const campId = 'clientcamp_' + Date.now();
           const container = document.createElement('div');
@@ -1335,7 +1358,7 @@
                 input.style.background = '#b91c1c';
                 input.style.color = '#ffffff';
                 input.style.borderColor = '#dc2626';
-              } else {
+          } else {
                 td.classList.remove('pending-payment');
                 input.style.background = '';
                 input.style.color = '';
@@ -1379,27 +1402,23 @@
         window.currentTrainingId = trainingId;
         let currentTrainingId = trainingId;
 
-        // fetch training
-        const { data: training, error: trainingError } = await supabase.from('trainings').select('*').eq('id', trainingId).single();
-        if (trainingError || !training) {
-          throw new Error(`Błąd ładowania treningu: ${trainingError?.message || 'Trening nie znaleziony'}`);
+        // fetch camp (new schema)
+        const { data: camp, error: campError } = await supabase.from('camps.camps').select('*').eq('id', trainingId).single();
+        if (campError || !camp) {
+          throw new Error(`Błąd ładowania campu: ${campError?.message || 'Camp nie znaleziony'}`);
         }
 
-        console.log('Loaded training:', training);
-        console.log('Training currency:', training.currency);
+        console.log('Loaded camp:', camp);
+        console.log('Camp currency:', camp.currency);
 
-        // Define training currency for use throughout the function
-        const trainingCurrency = training.currency || 'PLN';
+        // Define training/camp currency for use throughout the function
+        const trainingCurrency = camp.currency || 'PLN';
 
-        // fetch training trainers
-        console.log('=== FETCHING training_trainers for trainingId:', trainingId);
-        console.log('Query URL will be constructed as: training_trainers?select=trainer_id,price&training_id=eq.' + trainingId);
-        const { data: tlinks, error: tlinksError } = await supabase.from('training_trainers').select('trainer_id,price,id').eq('training_id', trainingId).order('id', { ascending: true });
-        console.log('Query result - data:', tlinks, 'error:', tlinksError);
-        console.log('Query executed successfully, tlinks is:', Array.isArray(tlinks) ? 'Array with ' + tlinks.length + ' items' : typeof tlinks);
-
+        // fetch camp trainers
+        console.log('=== FETCHING camp_trainers for campId:', trainingId);
+        const { data: tlinks, error: tlinksError } = await supabase.from('camps.camp_trainers').select('trainer_id,price,id').eq('camp_id', trainingId).order('id', { ascending: true });
         if (tlinksError) {
-          throw new Error(`Błąd ładowania trenerów treningu: ${tlinksError.message}`);
+          throw new Error(`Błąd ładowania trenerów campu: ${tlinksError.message}`);
         }
 
         if (!tlinks || tlinks.length === 0) {
@@ -1409,7 +1428,7 @@
         const trainerIds = tlinks.map(t => t.trainer_id);
         console.log('Trainer IDs:', trainerIds);
 
-        const { data: trainers, error: trainersError } = await supabase.from('trainers').select('id,name,default_price,currency').in('id', trainerIds);
+        const { data: trainers, error: trainersError } = await supabase.from('camps.trainers').select('id,name,default_price,currency').in('id', trainerIds);
         if (trainersError) {
           throw new Error(`Błąd ładowania danych trenerów: ${trainersError.message}`);
         }
@@ -1417,9 +1436,6 @@
         if (!trainers || trainers.length === 0) {
           throw new Error('Nie znaleziono danych trenerów');
         }
-
-        console.log('Loaded trainers data:', trainers);
-        console.log('Trainer currencies:', trainers.map(t => ({ name: t.name, currency: t.currency })));
 
         // map trainer id -> info (price from tlinks, currency from trainers)
         const trainerInfo = trainers.map(tr => {
@@ -1430,14 +1446,11 @@
             price: link.price || tr.default_price || 0,
             currency: tr.currency || 'PLN'
           };
-          console.log(`Trainer ${tr.name}: currency from DB = ${tr.currency}, final currency = ${trainerData.currency}`);
           return trainerData;
         }).sort((a, b) => a.name.localeCompare(b.name)); // Sort by name to prevent position changes
 
-        console.log('Final trainerInfo:', trainerInfo.map(t => ({ name: t.name, currency: t.currency })));
-
-        // fetch participants
-        const { data: parts, error: partsError } = await supabase.from('training_participants').select('id,member_id,participant_name,camp_amount,camp_status').eq('training_id', trainingId).order('participant_name', {ascending:true});
+        // fetch participants from new schema
+        const { data: parts, error: partsError } = await supabase.from('camps.participants').select('id,member_id,participant_name,camp_amount,camp_status').eq('camp_id', trainingId).order('participant_name', {ascending:true});
         if (partsError) {
           throw new Error(`Błąd ładowania uczestników: ${partsError.message}`);
         }
@@ -1446,9 +1459,9 @@
           throw new Error('Brak zapisanych uczestników do tego campu');
         }
 
-        // for each participant fetch oboz payments
+        // for each participant fetch payments
         for(const p of parts){
-          const { data: oboz, error: obozError } = await supabase.from('oboz_lesson_payments').select('id,trainer_id,lessons_count,amount,status,currency').eq('training_participant_id', p.id);
+          const { data: oboz, error: obozError } = await supabase.from('camps.payments').select('id,trainer_id,lessons_count,amount,status,currency').eq('participant_id', p.id);
           if (obozError) {
             console.warn(`Błąd ładowania płatności dla uczestnika ${p.participant_name}:`, obozError.message);
           }
@@ -1749,7 +1762,7 @@
             const paid = parseFloat(paidInput.value) || 0;
 
             if(paid > 0){
-              const { error } = await supabase.from('training_participants').update({ camp_amount: paid, camp_status: 'paid' }).eq('id', partId);
+              const { error } = await supabase.from('camps.participants').update({ camp_amount: paid, camp_status: 'paid' }).eq('id', partId);
               if(error){ alert('Błąd zapisu: '+error.message); return; }
               // Add status-paid class to inputs immediately
               paidInput.classList.add('status-paid');
@@ -1957,12 +1970,12 @@
             if(due > 0){
               if(obozId){
                 // update existing payment
-              const { error } = await supabase.from('oboz_lesson_payments').update({ amount: due, status: 'paid' }).eq('id', obozId);
+              const { error } = await supabase.from('camps.payments').update({ amount: due, status: 'paid' }).eq('id', obozId);
               if(error){ alert('Błąd zapisu: '+error.message); return; }
               } else {
                 // insert new payment
-                const insertObj = { training_participant_id: partId, trainer_id: trainerId, lessons_count: lessons, amount: due, currency: dueInput?.getAttribute('data-currency') || 'PLN', status: 'paid' };
-                const { data: newRow, error: insErr } = await supabase.from('oboz_lesson_payments').insert([insertObj]).select().single();
+                const insertObj = { participant_id: partId, trainer_id: trainerId, lessons_count: lessons, amount: due, currency: dueInput?.getAttribute('data-currency') || 'PLN', status: 'paid' };
+                const { data: newRow, error: insErr } = await supabase.from('camps.payments').insert([insertObj]).select().single();
                 if(insErr || !newRow){ alert('Błąd zapisu: '+(insErr?insErr.message:'')); return; }
                 obozId = newRow.id;
                 // update data-oboz-id on inputs/buttons so future actions reference the new row
@@ -2033,7 +2046,7 @@
               return;
             }
             if(!confirm('Usunąć tę płatność?')) return;
-            const { error } = await supabase.from('oboz_lesson_payments').delete().eq('id', obozId);
+            const { error } = await supabase.from('camps.payments').delete().eq('id', obozId);
             if(error){ alert('Błąd usuwania: '+error.message); return; }
             // clear UI and unset oboz ids
             if(dueInput){
@@ -2072,8 +2085,8 @@
           btn.addEventListener('click', async ()=>{
             const partId = btn.getAttribute('data-part-id');
             if(!confirm('Usunąć płatność campu dla tego uczestnika?')) return;
-            // reset participant camp_amount and status
-            const { error } = await supabase.from('training_participants').update({ camp_amount: 0, camp_status: 'unset' }).eq('id', partId);
+            // reset participant camp_amount and status (new schema)
+            const { error } = await supabase.from('camps.participants').update({ camp_amount: 0, camp_status: 'unset' }).eq('id', partId);
             if(error){ alert('Błąd usuwania: '+error.message); return; }
             const paidInput = container.querySelector(`input.camp-paid[data-part-id="${partId}"]`);
             const confirmBtn = container.querySelector(`button.camp-confirm[data-part-id="${partId}"]`);
