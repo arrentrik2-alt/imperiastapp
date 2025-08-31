@@ -259,67 +259,88 @@
       gap: 10px;
     }
 
-    /* Members List */
-    .members-list {
+    /* Members Table */
+    .members-table-container {
       margin-top: 20px;
-    }
-
-    .member-card {
-      background-color: rgba(255, 255, 255, 0.05);
+      overflow-x: auto;
       border-radius: 8px;
-      padding: 15px;
       border: 1px solid var(--border-dark);
-      margin-bottom: 12px;
-      transition: all 0.3s ease;
+      background-color: var(--secondary-bg);
     }
 
-    .member-card:hover {
-      border-color: var(--gold);
-      transform: translateY(-2px);
+    .members-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
     }
 
-    .member-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 10px;
+    .members-table th {
+      background-color: var(--gold);
+      color: var(--primary-bg);
+      padding: 12px 8px;
+      text-align: left;
+      font-weight: bold;
+      border-bottom: 1px solid var(--border-dark);
+      white-space: nowrap;
+    }
+
+    .members-table td {
+      padding: 12px 8px;
+      border-bottom: 1px solid var(--border-dark);
+      color: var(--text-light);
+      white-space: nowrap;
+    }
+
+    .members-table tr:hover {
+      background-color: rgba(212, 175, 55, 0.05);
     }
 
     .member-number {
       background-color: var(--gold);
       color: var(--primary-bg);
-      padding: 4px 8px;
+      padding: 2px 6px;
       border-radius: 4px;
       font-weight: bold;
-      margin-right: 10px;
-      min-width: 30px;
+      font-size: 0.8rem;
+      min-width: 25px;
       text-align: center;
+      display: inline-block;
     }
 
     .member-id {
       color: var(--gold);
       font-weight: bold;
-      margin-right: 10px;
+      font-family: 'Courier New', monospace;
     }
 
     .member-name {
-      color: var(--text-light);
-      font-weight: bold;
-      flex: 1;
+      font-weight: 500;
     }
 
-    .member-details {
+    .member-email {
       color: var(--text-gray);
-      font-size: 0.9rem;
     }
 
-    .member-detail {
-      display: inline-block;
-      margin-right: 15px;
+    .member-phone {
+      color: var(--text-gray);
     }
 
-    .member-detail i {
-      margin-right: 5px;
+    .member-style {
+      background-color: rgba(212, 175, 55, 0.1);
       color: var(--gold);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .member-karnet {
+      background-color: rgba(40, 167, 69, 0.1);
+      color: #28a745;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.8rem;
+      font-weight: 500;
     }
 
     .empty-state {
@@ -351,6 +372,22 @@
 
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    /* Table Responsive */
+    @media (max-width: 768px) {
+      .members-table-container {
+        font-size: 0.8rem;
+      }
+
+      .members-table th,
+      .members-table td {
+        padding: 8px 4px;
+      }
+
+      .members-table th {
+        font-size: 0.8rem;
+      }
     }
 
     /* Responsive */
@@ -394,6 +431,16 @@
 
       .main-content {
         margin-left: 0;
+      }
+
+      /* Mobile table styles */
+      .members-table-container {
+        font-size: 0.75rem;
+      }
+
+      .members-table th:nth-child(5),
+      .members-table td:nth-child(5) {
+        display: none;
       }
     }
   </style>
@@ -451,8 +498,23 @@
         </button>
       </div>
 
-      <div class="members-list" id="members-list">
-        <!-- Members will be loaded here -->
+      <div class="members-table-container">
+        <table class="members-table" id="members-table">
+          <thead>
+            <tr>
+              <th style="width: 60px;">Lp.</th>
+              <th style="width: 100px;">Imię i nazwisko</th>
+              <th style="width: 80px;">ID</th>
+              <th style="width: 200px;">Email</th>
+              <th style="width: 120px;">Telefon</th>
+              <th style="width: 80px;">Styl</th>
+              <th style="width: 80px;">Karnet</th>
+            </tr>
+          </thead>
+          <tbody id="members-list">
+            <!-- Members will be loaded here -->
+          </tbody>
+        </table>
       </div>
     </div>
   </main>
@@ -549,7 +611,13 @@
     // Load members from database
     async function loadMembers() {
       try {
-        membersList.innerHTML = '<div class="loading"></div>';
+        membersList.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 40px;">
+              <div class="loading"></div>
+            </td>
+          </tr>
+        `;
 
         const { data: members, error } = await supabase
           .from('members')
@@ -560,11 +628,15 @@
 
         if (members.length === 0) {
           membersList.innerHTML = `
-            <div class="empty-state">
-              <i class="fas fa-users"></i>
-              <p>Brak członków w klubie</p>
-              <p>Kliknij "Dodaj członka" aby dodać pierwszego członka</p>
-            </div>
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 40px;">
+                <div class="empty-state">
+                  <i class="fas fa-users"></i>
+                  <p>Brak członków w klubie</p>
+                  <p>Kliknij "Dodaj członka" aby dodać pierwszego członka</p>
+                </div>
+              </td>
+            </tr>
           `;
           return;
         }
@@ -577,36 +649,33 @@
 
       } catch (err) {
         console.error('Błąd ładowania członków:', err);
-        membersList.innerHTML = '<div class="empty-state"><p>Błąd ładowania członków</p></div>';
+        membersList.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 40px;">
+              <div class="empty-state">
+                <p>Błąd ładowania członków</p>
+              </div>
+            </td>
+          </tr>
+        `;
       }
     }
 
-    // Create member card element
+    // Create member table row element
     function createMemberCard(member, number) {
-      const card = document.createElement('div');
-      card.className = 'member-card';
+      const row = document.createElement('tr');
 
-      card.innerHTML = `
-        <div class="member-header">
-          <div class="member-number">${number}</div>
-          <div class="member-id">#${member.id}</div>
-          <div class="member-name">${member.name}</div>
-        </div>
-        <div class="member-details">
-          <span class="member-detail">
-            <i class="fas fa-envelope"></i>${member.email}
-          </span>
-          ${member.phone ? `<span class="member-detail"><i class="fas fa-phone"></i>${member.phone}</span>` : ''}
-          <span class="member-detail">
-            <i class="fas fa-music"></i>${member.style.toUpperCase()}
-          </span>
-          <span class="member-detail">
-            <i class="fas fa-ticket-alt"></i>${member.karnet}
-          </span>
-        </div>
+      row.innerHTML = `
+        <td><span class="member-number">${number}</span></td>
+        <td><span class="member-name">${member.name}</span></td>
+        <td><span class="member-id">#${member.id}</span></td>
+        <td><span class="member-email">${member.email}</span></td>
+        <td><span class="member-phone">${member.phone || '-'}</span></td>
+        <td><span class="member-style">${member.style.toUpperCase()}</span></td>
+        <td><span class="member-karnet">${member.karnet}</span></td>
       `;
 
-      return card;
+      return row;
     }
 
     // Add new member
