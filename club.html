@@ -985,7 +985,11 @@
           const enteredAmount = campPaidValue ? parseFloat(campPaidValue) : (confirmedAmount > 0 ? confirmedAmount : 0);
           if (enteredAmount > 0) {
             totalCampAmount += enteredAmount;
-            paidCampAmount += enteredAmount;
+          }
+
+          // Add only confirmed amounts to paid total
+          if (confirmedAmount > 0) {
+            paidCampAmount += confirmedAmount;
           }
 
           // Calculate lesson amounts per trainer from database
@@ -998,11 +1002,19 @@
                 trainerStats[ob.trainer_id].totalLessons += lessonCount;
                 trainerStats[ob.trainer_id].participants++;
 
-                if (ob.status !== 'paid') {
-                  unpaidLessons += lessonCount;
-                  trainerStats[ob.trainer_id].unpaidLessons += lessonCount;
-                } else {
-                  trainerStats[ob.trainer_id].paidParticipants++;
+                // Calculate amount for this trainer
+                const trainer = trainerInfo.find(t => t.id === ob.trainer_id);
+                if (trainer) {
+                  const amount = lessonCount * trainer.price;
+                  trainerStats[ob.trainer_id].totalDueAmount += amount;
+
+                  if (ob.status === 'paid') {
+                    trainerStats[ob.trainer_id].paidParticipants++;
+                    trainerStats[ob.trainer_id].totalPaidAmount += amount;
+                  } else {
+                    unpaidLessons += lessonCount;
+                    trainerStats[ob.trainer_id].unpaidLessons += lessonCount;
+                  }
                 }
               }
             }
@@ -1031,6 +1043,10 @@
                     trainerStats[ti.id].totalLessons += additionalLessons;
                     trainerStats[ti.id].participants = Math.max(trainerStats[ti.id].participants, 1);
 
+                    // Calculate amount for additional lessons
+                    const additionalAmount = additionalLessons * ti.price;
+                    trainerStats[ti.id].totalDueAmount += additionalAmount;
+
                     // Count as unpaid since not confirmed
                     unpaidLessons += additionalLessons;
                     trainerStats[ti.id].unpaidLessons += additionalLessons;
@@ -1044,15 +1060,19 @@
           trainerInfo.forEach(ti => {
             console.log(`Processing trainer ${ti.name} for participant ${p.id}`);
 
-            // Check for due amount input field - find by part-id and trainer-id
+            // Check for due amount input field - only add if different from database amount
             const dueAmountInput = containerParam.querySelector(`input.oboz-due[data-part-id="${p.id}"][data-trainer-id="${ti.id}"]`);
             console.log(`Due input for trainer ${ti.id}:`, dueAmountInput, dueAmountInput?.value);
             if (dueAmountInput && dueAmountInput.value) {
-              const dueAmount = parseFloat(dueAmountInput.value) || 0;
-              console.log(`Due amount for trainer ${ti.id}:`, dueAmount);
-              if (dueAmount > 0) {
-                trainerStats[ti.id].totalDueAmount += dueAmount;
-                console.log(`Added ${dueAmount} to totalDueAmount for trainer ${ti.id}, now: ${trainerStats[ti.id].totalDueAmount}`);
+              const inputAmount = parseFloat(dueAmountInput.value) || 0;
+              const existingDbEntry = p.oboz.find(ob => ob.trainer_id === ti.id);
+              const dbAmount = existingDbEntry ? (parseInt(existingDbEntry.lessons_count) || 0) * ti.price : 0;
+
+              // Only add the difference between input and database
+              const difference = inputAmount - dbAmount;
+              if (difference > 0) {
+                trainerStats[ti.id].totalDueAmount += difference;
+                console.log(`Added difference ${difference} to totalDueAmount for trainer ${ti.id}, now: ${trainerStats[ti.id].totalDueAmount}`);
               }
             }
 
@@ -1151,12 +1171,12 @@
                   </div>
 
                   <div class="stat-item">
-                    <span class="stat-label">Zapłacona kwota:</span>
-                      <span class="stat-value ${trainer.totalPaidAmount > 0 ? 'status-paid' : ''}">${trainer.totalPaidAmount.toFixed(2)} ${trainer.currency}</span>
+                    <span class="stat-label">Ogólna kwota:</span>
+                      <span class="stat-value">${trainer.totalDueAmount.toFixed(2)} ${trainer.currency}</span>
                   </div>
                   <div class="stat-item">
-                    <span class="stat-label">Nie zapłacone:</span>
-                    <span class="stat-value ${trainer.unpaidLessons > 0 ? 'status-unpaid' : 'status-paid'}">${Math.round(trainer.unpaidLessons / 2)}</span>
+                    <span class="stat-label">Zapłacona kwota:</span>
+                      <span class="stat-value ${trainer.totalPaidAmount > 0 ? 'status-paid' : ''}">${trainer.totalPaidAmount.toFixed(2)} ${trainer.currency}</span>
                   </div>
                   </div>
 
@@ -1592,43 +1612,8 @@
         summaryDiv.className = 'camp-summary';
         summaryDiv.innerHTML = `
           <div class="summary-section">
-            <h4>Podsumowanie Campu</h4>
-            <div class="summary-grid">
-              <div class="summary-item">
-                <span class="summary-label">Zapłacona kwota na camp:</span>
-                <span class="summary-value" id="paidCampAmount">0 ${trainingCurrency}</span>
-              </div>
-            </div>
-          </div>
-          <div class="summary-section">
-            <h4>Podsumowanie Szkoleniowców</h4>
-            <div id="trainerSummaries"></div>
-          </div>
-
-          <div class="summary-section">
             <h4>Podsumowanie Finansowe Campu</h4>
             <div id="campFinancialSummary" style="margin-top: 15px;"></div>
-          </div>
-
-          <div class="summary-section">
-            <h4>Wydatki Campu</h4>
-            <div id="campExpenses" style="margin-top: 15px;">
-              <div id="expensesList" style="margin-bottom: 15px;"></div>
-              <div class="add-expense-section" style="border-top: 1px solid var(--border-dark); padding-top: 15px;">
-                <h5 style="color: var(--gold); margin-bottom: 10px;">Dodaj wydatek</h5>
-                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                  <input type="text" id="globalExpenseName" class="form-control" placeholder="Nazwa wydatku" style="flex: 1; font-size: 0.9rem;" />
-                  <input type="number" id="globalExpenseAmount" step="0.01" class="form-control" placeholder="Kwota" style="width: 100px; font-size: 0.9rem;" />
-                  <select id="globalExpenseCurrency" class="form-control" style="width: 70px; font-size: 0.9rem;">
-                    <option value="PLN">PLN</option>
-                    <option value="EUR">EUR</option>
-                  </select>
-                  <button id="addGlobalExpenseBtn" class="btn btn-primary" style="padding: 6px 12px;">
-                    <i class="fa fa-plus"></i> Dodaj
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
 
 
@@ -1645,9 +1630,8 @@
           // Calculate and update summary
           setTimeout(() => updateCampSummary(parts, trainerInfo, trainingId, container, trainingCurrency), 50);
 
-          // Update expenses display and financial summary
+          // Update financial summary
           setTimeout(() => {
-            updateExpensesDisplay();
             updateFinancialSummary();
 
             // Initialize participant totals
@@ -1760,11 +1744,11 @@
             if (partId) {
               if (value) {
                 localStorage.setItem(`camp_paid_${currentTrainingId}_${partId}`, value);
-                // Add green highlight for entered amounts
+                // Add red highlight for entered amounts (unconfirmed)
                 if (!input.classList.contains('status-paid')) {
-                  input.classList.add('status-unpaid');
-                  input.style.background = '#28a745';
+                  input.style.background = '#b91c1c';
                   input.style.color = '#ffffff';
+                  input.style.borderColor = '#dc2626';
                 }
               } else {
                 localStorage.removeItem(`camp_paid_${currentTrainingId}_${partId}`);
@@ -2239,8 +2223,7 @@
         const saved = localStorage.getItem(expensesKey);
         console.log('Verified saved data:', saved);
 
-        // Update expenses display and financial summary
-        updateExpensesDisplay();
+        // Update financial summary
         updateFinancialSummary();
       }
 
@@ -2391,24 +2374,12 @@
           `;
         });
 
-        // Update the expenses list section
-        const expensesListSection = campFinancialSummary.querySelector('.add-expense-section');
-        if (expensesListSection) {
-          const expensesListHtml = generateExpensesListHtml(currentTrainingId);
-          summaryHtml += expensesListHtml;
-        }
+        // Add expenses list to summary
+        const expensesListHtml = generateExpensesListHtml(currentTrainingId);
+        summaryHtml += expensesListHtml;
 
-        // Remove old content and add new
-        const oldContent = campFinancialSummary.querySelectorAll(':not(.add-expense-section)');
-        oldContent.forEach(el => el.remove());
-
-        // Insert new summary content before the add-expense-section
-        const addExpenseSection = campFinancialSummary.querySelector('.add-expense-section');
-        if (addExpenseSection) {
-          addExpenseSection.insertAdjacentHTML('beforebegin', summaryHtml);
-        } else {
-          campFinancialSummary.innerHTML = summaryHtml;
-        }
+        // Set the summary content
+        campFinancialSummary.innerHTML = summaryHtml;
 
         console.log('Financial Summary Updated:', currencyData);
       }
@@ -2462,8 +2433,8 @@
               expenses.splice(expenseIndex, 1);
               localStorage.setItem(expensesKey, JSON.stringify(expenses));
 
-              // Update expenses display
-              updateExpensesDisplay();
+              // Update financial summary (includes expenses)
+              updateFinancialSummary();
             }
           } catch (e) {
             console.error('Error deleting expense:', e);
