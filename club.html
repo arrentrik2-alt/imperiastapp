@@ -1805,7 +1805,7 @@
           }
         }
 
-        tableHtml += `<tr class="${rowClasses}"><td class="participant-name">${participant.name}</td>`;
+        tableHtml += `<tr class="${rowClasses}" data-participant-id="${participant.id}"><td class="participant-name">${participant.name}</td>`;
 
         // Camp payment cell
         const campCellHtml = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
@@ -2185,7 +2185,9 @@
       // Update row styling and summaries
       updateRowStyling(participantId);
       updateSummaries();
-      updateParticipantTotals(campId, participantId);
+      console.log(`[PAYMENT] Calling updateParticipantTotals for ${participantId}`);
+      // Use setTimeout to ensure DOM is updated before updating totals
+      setTimeout(() => updateParticipantTotals(campId, participantId), 10);
     }
 
     function handleConfirmPayment(button) {
@@ -2214,7 +2216,8 @@
       // Update row styling and summaries
       updateRowStyling(participantId);
       updateSummaries();
-      updateParticipantTotals(campId, participantId);
+      // Use setTimeout to ensure DOM is updated before updating totals
+      setTimeout(() => updateParticipantTotals(campId, participantId), 10);
     }
 
     function handleRemovePayment(button) {
@@ -2242,7 +2245,8 @@
       // Update row styling and summaries
       updateRowStyling(participantId);
       updateSummaries();
-      updateParticipantTotals(campId, participantId);
+      // Use setTimeout to ensure DOM is updated before updating totals
+      setTimeout(() => updateParticipantTotals(campId, participantId), 10);
     }
 
     function updateRowStyling(participantId) {
@@ -2361,22 +2365,19 @@
     // Update participant totals
     function updateParticipantTotals(campId, participantId) {
       const camp = window.currentCamp;
-      if (!camp || !window.currentParticipants) return;
+      const participants = window.currentParticipants;
+      if (!camp || !participants) return;
 
       const participant = window.currentParticipants.find(p => p.id === participantId);
       if (!participant) return;
 
       // Find the participant's row
-      const table = document.querySelector('.camp-details-table');
-      if (!table) return;
-
-      const rows = table.querySelectorAll('tbody tr');
-      const participantRow = Array.from(rows).find(row => {
-        const nameCell = row.querySelector('.participant-name');
-        return nameCell && nameCell.textContent.trim() === participant.name;
-      });
-
-      if (!participantRow) return;
+      const participantRow = document.querySelector(`tr[data-participant-id="${participantId}"]`);
+      console.log(`[UPDATE] Looking for participant row with ID: ${participantId}`);
+      if (!participantRow) {
+        console.log(`[UPDATE] Participant row not found for ID: ${participantId}`);
+        return;
+      }
 
       // Calculate totals
       let totalPLN = 0;
@@ -2410,11 +2411,6 @@
       const cells = participantRow.querySelectorAll('td');
       console.log(`[UPDATE] Found ${cells.length} cells in row for ${participant.name}`);
 
-      // Log all cell classes for debugging
-      cells.forEach((cell, index) => {
-        console.log(`[UPDATE] Cell ${index}: ${cell.className || 'no-class'}, text: "${cell.textContent}"`);
-      });
-
       let cellIndex = 3; // Start after participant name, camp payment
 
       if (camp.trainers && camp.trainers.length > 0) {
@@ -2428,19 +2424,21 @@
 
       // Check if PLN column exists and update it
       const plnCell = cells[cellIndex];
-      console.log(`[UPDATE] PLN cell at index ${cellIndex}:`, plnCell ? `class: ${plnCell.className}, current text: "${plnCell.textContent}"` : 'not found');
       if (plnCell && plnCell.classList.contains('total-pln')) {
-        console.log(`[UPDATE] Updating PLN cell with value: ${totalPLN.toFixed(2)}`);
+        console.log(`[UPDATE] Updating PLN cell (index ${cellIndex}) with value: ${totalPLN.toFixed(2)}`);
         plnCell.textContent = totalPLN.toFixed(2);
         cellIndex++;
+      } else {
+        console.log(`[UPDATE] PLN cell not found at index ${cellIndex} or doesn't have total-pln class`);
       }
 
       // Check if EUR column exists and update it
       const eurCell = cells[cellIndex];
-      console.log(`[UPDATE] EUR cell at index ${cellIndex}:`, eurCell ? `class: ${eurCell.className}, current text: "${eurCell.textContent}"` : 'not found');
       if (eurCell && eurCell.classList.contains('total-eur')) {
-        console.log(`[UPDATE] Updating EUR cell with value: ${totalEUR.toFixed(2)}`);
+        console.log(`[UPDATE] Updating EUR cell (index ${cellIndex}) with value: ${totalEUR.toFixed(2)}`);
         eurCell.textContent = totalEUR.toFixed(2);
+      } else {
+        console.log(`[UPDATE] EUR cell not found at index ${cellIndex} or doesn't have total-eur class`);
       }
     }
 
