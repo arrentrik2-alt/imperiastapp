@@ -1724,7 +1724,7 @@
         .from('members')
         .select('*')
         .eq('id', memberId)
-        .single()
+        .maybeSingle()
         .then(({ data: member, error }) => {
           if (error) {
             console.error('Błąd ładowania członka:', error);
@@ -2039,7 +2039,7 @@
             .select('has_attention')
             .eq('camp_id', camp.id)
             .eq('participant_id', participantId)
-            .single();
+            .maybeSingle();
 
           if (!error && data) {
             hasAttention = data.has_attention;
@@ -2527,7 +2527,7 @@
             .select('has_attention')
             .eq('camp_id', camp.id)
             .eq('participant_id', participant.id)
-            .single();
+            .maybeSingle();
 
           hasAttention = !error && data ? data.has_attention : false;
         } catch (err) {
@@ -2542,7 +2542,7 @@
             .select('comment')
             .eq('camp_id', camp.id)
             .eq('participant_id', participant.id)
-            .single();
+            .maybeSingle();
 
           comment = !error && data ? data.comment : '';
         } catch (err) {
@@ -3462,7 +3462,7 @@
             .eq('trainer_index', trainerIndex);
         }
 
-        const { data, error } = await query.single();
+        const { data, error } = await query.maybeSingle();
 
         if (error) {
           // Don't log 406 errors for missing tables - they're expected during setup
@@ -3498,7 +3498,7 @@
             .eq('trainer_index', trainerIndex);
         }
 
-        const { data, error } = await query.single();
+        const { data, error } = await query.maybeSingle();
 
         if (error) {
           // Don't log 406 errors for missing tables - they're expected during setup
