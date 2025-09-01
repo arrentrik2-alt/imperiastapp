@@ -1139,6 +1139,7 @@
       setActiveNav('groups');
       currentGroupId = null; // Reset current group ID
       currentGroupName = null; // Reset current group name
+      currentGroupData = null; // Reset current group data
       console.log('currentGroupId po resecie:', currentGroupId, 'currentGroupName po resecie:', currentGroupName);
     });
     
@@ -1686,6 +1687,7 @@
     const participantGroupNameSpan = document.getElementById('participant-group-name');
     
     let currentGroupId = null; // Store current group ID for adding participants
+    let currentGroupData = null; // Store current group data for attendance journal
 
     function openGroupParticipantsPage(group) {
       if (!group || !group.id) {
@@ -1696,7 +1698,8 @@
       console.log('Otwieranie strony uczestników dla grupy:', group.id, group.name);
       currentGroupId = group.id; // Store group ID
       currentGroupName = group.name; // Store group name
-      console.log('Ustawiono currentGroupId:', currentGroupId, 'currentGroupName:', currentGroupName);
+      currentGroupData = group; // Store full group data for attendance journal
+      console.log('Ustawiono currentGroupId:', currentGroupId, 'currentGroupName:', currentGroupName, 'currentGroupData:', currentGroupData);
       groupParticipantsName.textContent = group.name;
       
       // Set participants month selector to match groups month selector
@@ -3127,21 +3130,16 @@
       `;
 
       try {
-        if (!currentGroupId) {
-          container.innerHTML = '<p class="text-center text-gray">Nie wybrano grupy</p>';
+        console.log('loadAttendanceJournal called, currentGroupId:', currentGroupId, 'currentGroupName:', currentGroupName, 'currentGroupData:', currentGroupData);
+
+        if (!currentGroupId || !currentGroupData) {
+          console.error('currentGroupId or currentGroupData is not set');
+          container.innerHTML = '<p class="text-center text-gray">Nie wybrano grupy lub brak danych grupy</p>';
           return;
         }
 
-        // Get group details to determine training day
-        const selectedMonth = document.getElementById('attendance-month-select').value || currentAttendanceMonth;
-        const { data: groupData, error: groupError } = await supabase
-          .from('groups_month')
-          .select('*')
-          .eq('id', currentGroupId)
-          .eq('month', selectedMonth)
-          .single();
-
-        if (groupError) throw groupError;
+        // Use stored group data instead of querying database
+        const group = currentGroupData;
 
         const { data: participantsData, error: participantsError } = await supabase
           .from('participant_groups_month')
@@ -3159,7 +3157,7 @@
         if (participantsError) throw participantsError;
 
         // Get training dates for the month (based on group day_of_week)
-        const trainingDates = getTrainingDatesForMonth(selectedMonth, groupData.day_of_week);
+        const trainingDates = getTrainingDatesForMonth(selectedMonth, group.day_of_week);
 
         // Create attendance table
         const tableHTML = createAttendanceTable(participantsData, trainingDates, selectedMonth);
