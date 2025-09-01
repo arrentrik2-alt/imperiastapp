@@ -2318,13 +2318,37 @@
           searchInput.value = '';
         }
 
-        // Show financial summary
+        // Show financial summary and ensure it's rendered after data is loaded
         const financialSummary = document.getElementById('financial-summary');
         const summaryCurrencies = document.getElementById('summary-currencies');
         if (financialSummary && summaryCurrencies) {
-          summaryCurrencies.innerHTML = createFinancialSummaryHTML(camp, allParticipants);
+          // createFinancialSummaryHTML returns a Promise
+          summaryCurrencies.innerHTML = await createFinancialSummaryHTML(camp, allParticipants);
           financialSummary.style.display = 'block';
         }
+
+        // After rendering table and summary, ensure payment inputs have currency data and recalc totals
+        setTimeout(async () => {
+          document.querySelectorAll('.payment-input').forEach(input => {
+            if (!input.dataset.currency) {
+              const tableType = input.getAttribute('data-column-type');
+              if (tableType === 'camp' && window.currentCamp) {
+                input.dataset.currency = window.currentCamp.currency || 'PLN';
+              } else if (tableType === 'trainer') {
+                const idx = input.getAttribute('data-trainer-index');
+                input.dataset.currency = (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[idx]) ? window.currentCamp.trainers[idx].currency : 'PLN';
+              }
+            }
+          });
+
+          // recalc UI totals for every participant
+          const participantsToUpdate = window.currentParticipants || [];
+          for (const p of participantsToUpdate) {
+            await updateParticipantTotals(camp.id, p.id);
+          }
+
+          if (typeof updateSummaries === 'function') await updateSummaries();
+        }, 50);
 
         // Camp statuses are updated globally when members data is loaded
 
