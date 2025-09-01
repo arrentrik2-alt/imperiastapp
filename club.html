@@ -2090,6 +2090,15 @@
       const externalParticipants = getCampParticipants(campId);
       console.log(`[UPDATE-CAMP-STATUS] Found ${externalParticipants.length} external participants for camp ${camp.name}`);
 
+      // DEBUG: Check if window.allMembers exists
+      console.log(`[UPDATE-CAMP-STATUS] window.allMembers type: ${typeof window.allMembers}`);
+      console.log(`[UPDATE-CAMP-STATUS] window.allMembers is array: ${Array.isArray(window.allMembers)}`);
+      if (window.allMembers) {
+        console.log(`[UPDATE-CAMP-STATUS] window.allMembers length: ${window.allMembers.length}`);
+      } else {
+        console.log(`[UPDATE-CAMP-STATUS] window.allMembers is null/undefined!`);
+      }
+
       // Always include club members eligible for this camp
       const members = window.allMembers || [];
       console.log(`[UPDATE-CAMP-STATUS] window.allMembers exists: ${!!window.allMembers}, total members: ${members.length}`);
