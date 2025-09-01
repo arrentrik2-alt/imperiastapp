@@ -217,6 +217,26 @@
       gap: 10px;
     }
 
+    .view-switch-buttons {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .view-switch-buttons .btn.active {
+      background-color: var(--gold);
+      color: white;
+      border-color: var(--gold);
+    }
+
+    .group-view-section {
+      display: none;
+    }
+
+    .group-view-section.active {
+      display: block;
+    }
+
     /* Modal */
     .modal {
       display: none;
@@ -329,6 +349,119 @@
     
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .loading-state p {
+      margin: 15px 0 0 0;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* Attendance Journal Table */
+    .attendance-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .attendance-table th,
+    .attendance-table td {
+      padding: 12px 8px;
+      text-align: center;
+      border-bottom: 1px solid #e1e5e9;
+      font-size: 0.9rem;
+    }
+
+    .attendance-table th {
+      background: var(--gold);
+      color: white;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .attendance-table th.participant-name {
+      text-align: left;
+      min-width: 200px;
+      position: sticky;
+      left: 0;
+      z-index: 15;
+    }
+
+    .attendance-table td.participant-name {
+      text-align: left;
+      background: white;
+      font-weight: 500;
+      position: sticky;
+      left: 0;
+      z-index: 5;
+    }
+
+    .attendance-table tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+
+    .attendance-table tr:nth-child(even) td.participant-name {
+      background: #f8f9fa;
+    }
+
+    .attendance-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--gold);
+    }
+
+    .attendance-column-approved {
+      background: #e8f5e8 !important;
+    }
+
+    .attendance-column-approved .attendance-checkbox {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .approve-btn, .edit-btn {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      min-width: auto;
+      margin-top: 5px;
+    }
+
+    .approve-btn {
+      background: #28a745;
+      color: white;
+      border: 1px solid #28a745;
+    }
+
+    .approve-btn:hover {
+      background: #218838;
+      border-color: #1e7e34;
+    }
+
+    .edit-btn {
+      background: #ffc107;
+      color: #212529;
+      border: 1px solid #ffc107;
+    }
+
+    .edit-btn:hover {
+      background: #e0a800;
+      border-color: #d39e00;
     }
     
     /* Month selector */
@@ -569,38 +702,70 @@
     <div class="content-box" id="group-participants-section" style="display:none;">
       <div class="content-header">
         <h3>Uczestnicy grupy</h3>
-        <button class="btn btn-outline" id="back-to-groups-btn">
-          <i class="fas fa-arrow-left"></i> Powrót do grup
-        </button>
+        <div class="view-switch-buttons">
+          <button class="btn btn-outline active" id="view-group-details-btn">
+            <i class="fas fa-info-circle"></i> Szczegóły grupy
+          </button>
+          <button class="btn btn-outline" id="view-attendance-journal-btn">
+            <i class="fas fa-book"></i> Dziennik obecności
+          </button>
+          <button class="btn btn-outline" id="back-to-groups-btn">
+            <i class="fas fa-arrow-left"></i> Powrót do grup
+          </button>
         </div>
-      
-      <div class="month-selector">
-        <label for="participants-month-select">Miesiąc:</label>
-        <select id="participants-month-select" class="form-control">
-          <!-- Will be populated with available months -->
-          </select>
-        <button class="btn btn-outline" id="return-current-month-participants" title="Wróć do bieżącego miesiąca">
-          <i class="fas fa-calendar-day"></i>
-        </button>
-        </div>
-    
-      <div id="group-participants-info" style="margin-bottom: 20px; display:flex; align-items:center; justify-content:space-between; gap:20px;">
-        <h4 id="group-participants-name" style="color: var(--gold); margin: 0;"></h4>
-        <div style="display:flex; align-items:center; gap:12px;">
-          <canvas id="group-donut" width="80" height="80"></canvas>
-          <div id="group-participants-summary" style="color:var(--text-gray); font-size:0.95rem; text-align:right;"></div>
-      </div>
-      </div>
-
-      <div style="margin-bottom: 20px;">
-        <button class="btn btn-primary" id="add-participant-to-group-btn">
-          <i class="fas fa-plus"></i> Dodaj uczestnika
-        </button>
         </div>
 
-        <div id="participants-list">
-        <!-- Participants will be loaded here -->
+      <!-- Group Details View -->
+      <div class="group-view-section active" id="group-details-view">
+        <div class="month-selector">
+          <label for="participants-month-select">Miesiąc:</label>
+          <select id="participants-month-select" class="form-control">
+            <!-- Will be populated with available months -->
+            </select>
+          <button class="btn btn-outline" id="return-current-month-participants" title="Wróć do bieżącego miesiąca">
+            <i class="fas fa-calendar-day"></i>
+          </button>
+          </div>
+
+        <div id="group-participants-info" style="margin-bottom: 20px; display:flex; align-items:center; justify-content:space-between; gap:20px;">
+          <h4 id="group-participants-name" style="color: var(--gold); margin: 0;"></h4>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <canvas id="group-donut" width="80" height="80"></canvas>
+            <div id="group-participants-summary" style="color:var(--text-gray); font-size:0.95rem; text-align:right;"></div>
         </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <button class="btn btn-primary" id="add-participant-to-group-btn">
+            <i class="fas fa-plus"></i> Dodaj uczestnika
+          </button>
+          </div>
+
+          <div id="participants-list">
+          <!-- Participants will be loaded here -->
+          </div>
+      </div>
+
+      <!-- Attendance Journal View -->
+      <div class="group-view-section" id="attendance-journal-view">
+        <div class="month-selector">
+          <label for="attendance-month-select">Miesiąc obecności:</label>
+          <select id="attendance-month-select" class="form-control">
+            <!-- Will be populated with available months -->
+            </select>
+          <button class="btn btn-outline" id="return-current-month-attendance" title="Wróć do bieżącego miesiąca">
+            <i class="fas fa-calendar-day"></i>
+          </button>
+          </div>
+
+        <div id="attendance-journal-container">
+          <!-- Attendance journal table will be loaded here -->
+          <div class="loading-state">
+            <div class="loading"></div>
+            <p>Ładowanie dziennika obecności...</p>
+          </div>
+        </div>
+      </div>
       </div>
 
   <!-- Add Group Modal -->
@@ -932,6 +1097,40 @@
       e.preventDefault();
       setActiveNav('groups');
     });
+
+    // View switch buttons
+    const viewGroupDetailsBtn = document.getElementById('view-group-details-btn');
+    const viewAttendanceJournalBtn = document.getElementById('view-attendance-journal-btn');
+
+    viewGroupDetailsBtn.addEventListener('click', () => {
+      switchGroupView('details');
+    });
+
+    viewAttendanceJournalBtn.addEventListener('click', () => {
+      switchGroupView('attendance');
+    });
+
+    // Helper function to switch between group views
+    function switchGroupView(view) {
+      // Remove active class from all buttons
+      document.querySelectorAll('.view-switch-buttons .btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      // Hide all view sections
+      document.querySelectorAll('.group-view-section').forEach(section => {
+        section.classList.remove('active');
+      });
+
+      if (view === 'details') {
+        viewGroupDetailsBtn.classList.add('active');
+        document.getElementById('group-details-view').classList.add('active');
+      } else if (view === 'attendance') {
+        viewAttendanceJournalBtn.classList.add('active');
+        document.getElementById('attendance-journal-view').classList.add('active');
+        loadAttendanceJournal(); // Load attendance data when switching to journal view
+      }
+    }
 
     const backToGroupsBtn = document.getElementById('back-to-groups-btn');
     backToGroupsBtn.addEventListener('click', (e) => {
@@ -2910,6 +3109,391 @@
       p2search.disabled = false;
       delete p2search.dataset.selected;
     });
+
+    // Attendance Journal functionality
+    let currentAttendanceMonth = getCurrentMonth();
+    let attendanceData = {}; // Store attendance data for current session
+
+    // Load attendance journal for current group
+    async function loadAttendanceJournal() {
+      const container = document.getElementById('attendance-journal-container');
+
+      // Show loading state
+      container.innerHTML = `
+        <div class="loading-state">
+          <div class="loading"></div>
+          <p>Ładowanie dziennika obecności...</p>
+        </div>
+      `;
+
+      try {
+        if (!currentGroupId) {
+          container.innerHTML = '<p class="text-center text-gray">Nie wybrano grupy</p>';
+          return;
+        }
+
+        // Get group details to determine training day
+        const { data: groupData, error: groupError } = await supabase
+          .from('groups')
+          .select('*')
+          .eq('id', currentGroupId)
+          .single();
+
+        if (groupError) throw groupError;
+
+        // Get participants for the selected month
+        const selectedMonth = document.getElementById('attendance-month-select').value || currentAttendanceMonth;
+
+        const { data: participantsData, error: participantsError } = await supabase
+          .from('participant_groups_month')
+          .select(`
+            participant_id,
+            participants_month!inner (
+              id,
+              name,
+              phone
+            )
+          `)
+          .eq('group_id', currentGroupId)
+          .eq('month', selectedMonth);
+
+        if (participantsError) throw participantsError;
+
+        // Get training dates for the month (based on group day_of_week)
+        const trainingDates = getTrainingDatesForMonth(selectedMonth, groupData.day_of_week);
+
+        // Create attendance table
+        const tableHTML = createAttendanceTable(participantsData, trainingDates, selectedMonth);
+        container.innerHTML = tableHTML;
+
+        // Load existing attendance data
+        await loadExistingAttendanceData(currentGroupId, selectedMonth, participantsData, trainingDates);
+
+        console.log('Attendance journal loaded successfully');
+
+      } catch (err) {
+        console.error('Error loading attendance journal:', err);
+        container.innerHTML = `<p class="text-center text-danger">Błąd ładowania dziennika: ${err.message}</p>`;
+      }
+    }
+
+    // Get training dates for a month based on day of week
+    function getTrainingDatesForMonth(month, dayOfWeek) {
+      const dates = [];
+      const [year, monthNum] = month.split('-').map(Number);
+
+      // Convert day name to number (0-6, Sunday=0)
+      const dayMap = {
+        'niedziela': 0, 'poniedziałek': 1, 'wtorek': 2, 'środa': 3,
+        'czwartek': 4, 'piątek': 5, 'sobota': 6
+      };
+      const targetDay = dayMap[dayOfWeek.toLowerCase()];
+
+      if (targetDay === undefined) return dates;
+
+      const firstDay = new Date(year, monthNum - 1, 1);
+      const lastDay = new Date(year, monthNum, 0);
+
+      for (let date = new Date(firstDay); date <= lastDay; date.setDate(date.getDate() + 1)) {
+        if (date.getDay() === targetDay) {
+          dates.push(new Date(date));
+        }
+      }
+
+      return dates;
+    }
+
+    // Create attendance table HTML
+    function createAttendanceTable(participants, trainingDates, month) {
+      let tableHTML = `
+        <table class="attendance-table">
+          <thead>
+            <tr>
+              <th class="participant-name">Uczestnik</th>
+      `;
+
+      // Add date columns with approve/edit buttons
+      trainingDates.forEach(date => {
+        const dateStr = date.toISOString().split('T')[0];
+        const formattedDate = date.toLocaleDateString('pl-PL', {
+          day: '2-digit',
+          month: '2-digit'
+        });
+
+        tableHTML += `
+          <th class="date-column" data-date="${dateStr}">
+            <div>${formattedDate}</div>
+            <button class="btn approve-btn" data-date="${dateStr}">Zatwierdź</button>
+          </th>
+        `;
+      });
+
+      tableHTML += `
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      // Add participant rows
+      participants.forEach(participant => {
+        const p = participant.participants_month;
+        tableHTML += `
+          <tr data-participant-id="${p.id}">
+            <td class="participant-name">${p.name}</td>
+        `;
+
+        // Add checkbox cells for each training date
+        trainingDates.forEach(date => {
+          const dateStr = date.toISOString().split('T')[0];
+          tableHTML += `
+            <td>
+              <input type="checkbox" class="attendance-checkbox"
+                     data-participant-id="${p.id}"
+                     data-date="${dateStr}">
+            </td>
+          `;
+        });
+
+        tableHTML += `</tr>`;
+      });
+
+      tableHTML += `
+          </tbody>
+        </table>
+      `;
+
+      return tableHTML;
+    }
+
+    // Load existing attendance data from database
+    async function loadExistingAttendanceData(groupId, month, participants, trainingDates) {
+      try {
+        // For now, we'll use a simple approach - store attendance in localStorage
+        // In a real app, you'd have an attendance table in the database
+        const attendanceKey = `attendance_${groupId}_${month}`;
+        const storedData = localStorage.getItem(attendanceKey);
+
+        if (storedData) {
+          attendanceData = JSON.parse(storedData);
+
+          // Set checkboxes based on stored data
+          participants.forEach(participant => {
+            const p = participant.participants_month;
+            trainingDates.forEach(date => {
+              const dateStr = date.toISOString().split('T')[0];
+              const checkbox = document.querySelector(
+                `input[data-participant-id="${p.id}"][data-date="${dateStr}"]`
+              );
+
+              if (checkbox && attendanceData[p.id] && attendanceData[p.id][dateStr]) {
+                checkbox.checked = true;
+
+                // Check if column is approved
+                if (attendanceData[p.id][dateStr].approved) {
+                  const column = checkbox.closest('td');
+                  column.classList.add('attendance-column-approved');
+                  checkbox.disabled = true;
+                }
+              }
+            });
+          });
+
+          // Update approve buttons based on stored approval status
+          updateApproveButtons(trainingDates);
+        }
+      } catch (err) {
+        console.error('Error loading existing attendance data:', err);
+      }
+    }
+
+    // Update approve/edit buttons based on approval status
+    function updateApproveButtons(trainingDates) {
+      trainingDates.forEach(date => {
+        const dateStr = date.toISOString().split('T')[0];
+        const approveBtn = document.querySelector(`button[data-date="${dateStr}"].approve-btn`);
+
+        if (approveBtn) {
+          // Check if all participants for this date are approved
+          const checkboxes = document.querySelectorAll(`input[data-date="${dateStr}"]`);
+          const allApproved = Array.from(checkboxes).every(cb => {
+            const participantId = cb.dataset.participantId;
+            return attendanceData[participantId] &&
+                   attendanceData[participantId][dateStr] &&
+                   attendanceData[participantId][dateStr].approved;
+          });
+
+          if (allApproved) {
+            approveBtn.textContent = 'Edytuj';
+            approveBtn.className = 'btn edit-btn';
+          } else {
+            approveBtn.textContent = 'Zatwierdź';
+            approveBtn.className = 'btn approve-btn';
+          }
+        }
+      });
+    }
+
+    // Handle checkbox changes
+    document.addEventListener('change', (e) => {
+      if (e.target.classList.contains('attendance-checkbox')) {
+        const participantId = e.target.dataset.participantId;
+        const date = e.target.dataset.date;
+        const isChecked = e.target.checked;
+
+        // Initialize data structure if needed
+        if (!attendanceData[participantId]) {
+          attendanceData[participantId] = {};
+        }
+
+        if (!attendanceData[participantId][date]) {
+          attendanceData[participantId][date] = {};
+        }
+
+        // Update attendance data
+        attendanceData[participantId][date].present = isChecked;
+        attendanceData[participantId][date].approved = false; // Reset approval when checkbox changes
+
+        // Remove approved class if checkbox was unchecked
+        if (!isChecked) {
+          const column = e.target.closest('td');
+          column.classList.remove('attendance-column-approved');
+          e.target.disabled = false;
+        }
+
+        // Save to localStorage
+        const month = document.getElementById('attendance-month-select').value || currentAttendanceMonth;
+        const attendanceKey = `attendance_${currentGroupId}_${month}`;
+        localStorage.setItem(attendanceKey, JSON.stringify(attendanceData));
+
+        console.log('Attendance updated:', participantId, date, isChecked);
+      }
+    });
+
+    // Handle approve/edit button clicks
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('approve-btn') || e.target.classList.contains('edit-btn')) {
+        const date = e.target.dataset.date;
+        const isEditMode = e.target.classList.contains('edit-btn');
+
+        if (isEditMode) {
+          // Enable editing for this date column
+          enableColumnEditing(date);
+          e.target.textContent = 'Zatwierdź';
+          e.target.className = 'btn approve-btn';
+        } else {
+          // Approve attendance for this date
+          approveColumnAttendance(date);
+          e.target.textContent = 'Edytuj';
+          e.target.className = 'btn edit-btn';
+        }
+      }
+    });
+
+    // Approve attendance for a date column
+    function approveColumnAttendance(date) {
+      const checkboxes = document.querySelectorAll(`input[data-date="${date}"]`);
+
+      checkboxes.forEach(cb => {
+        const participantId = cb.dataset.participantId;
+
+        // Mark as approved
+        if (!attendanceData[participantId]) {
+          attendanceData[participantId] = {};
+        }
+        if (!attendanceData[participantId][date]) {
+          attendanceData[participantId][date] = {};
+        }
+
+        attendanceData[participantId][date].approved = true;
+        attendanceData[participantId][date].present = cb.checked;
+
+        // Disable checkbox and mark column as approved
+        cb.disabled = true;
+        const column = cb.closest('td');
+        column.classList.add('attendance-column-approved');
+      });
+
+      // Save to localStorage
+      const month = document.getElementById('attendance-month-select').value || currentAttendanceMonth;
+      const attendanceKey = `attendance_${currentGroupId}_${month}`;
+      localStorage.setItem(attendanceKey, JSON.stringify(attendanceData));
+
+      console.log('Column approved:', date);
+    }
+
+    // Enable editing for a date column
+    function enableColumnEditing(date) {
+      const checkboxes = document.querySelectorAll(`input[data-date="${date}"]`);
+
+      checkboxes.forEach(cb => {
+        const participantId = cb.dataset.participantId;
+
+        // Re-enable checkbox
+        cb.disabled = false;
+
+        // Remove approved class
+        const column = cb.closest('td');
+        column.classList.remove('attendance-column-approved');
+
+        // Reset approval status
+        if (attendanceData[participantId] && attendanceData[participantId][date]) {
+          attendanceData[participantId][date].approved = false;
+        }
+      });
+
+      // Save to localStorage
+      const month = document.getElementById('attendance-month-select').value || currentAttendanceMonth;
+      const attendanceKey = `attendance_${currentGroupId}_${month}`;
+      localStorage.setItem(attendanceKey, JSON.stringify(attendanceData));
+
+      console.log('Column editing enabled:', date);
+    }
+
+    // Initialize attendance month selector
+    function initializeAttendanceMonthSelector() {
+      const selector = document.getElementById('attendance-month-select');
+      if (selector) {
+        // Populate with available months (you can modify this to load from database)
+        const months = [];
+        const currentDate = new Date();
+        for (let i = 0; i < 12; i++) {
+          const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+          const value = date.toISOString().slice(0, 7);
+          const label = date.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long' });
+          months.push({ value, label });
+        }
+
+        selector.innerHTML = months.map(month =>
+          `<option value="${month.value}" ${month.value === currentAttendanceMonth ? 'selected' : ''}>${month.label}</option>`
+        ).join('');
+
+        // Handle month change
+        selector.addEventListener('change', () => {
+          currentAttendanceMonth = selector.value;
+          if (document.getElementById('attendance-journal-view').classList.contains('active')) {
+            loadAttendanceJournal();
+          }
+        });
+
+        // Handle return to current month button
+        const returnBtn = document.getElementById('return-current-month-attendance');
+        if (returnBtn) {
+          returnBtn.addEventListener('click', () => {
+            selector.value = getCurrentMonth();
+            currentAttendanceMonth = getCurrentMonth();
+            if (document.getElementById('attendance-journal-view').classList.contains('active')) {
+              loadAttendanceJournal();
+            }
+          });
+        }
+      }
+    }
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeAttendanceMonthSelector();
+    });
+
   </script>
 </body>
 </html>
