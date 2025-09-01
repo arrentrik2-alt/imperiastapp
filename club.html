@@ -2072,17 +2072,26 @@
       if (!camp) return;
 
       // Get participants for this camp - both external and club members
-      let participants = getCampParticipants(campId);
+      const externalParticipants = getCampParticipants(campId);
 
       // Always include club members eligible for this camp
       const members = window.allMembers || [];
       const eligibleMembers = members.filter(m => m.style === 'st' || m.style === '10t');
 
-      // Combine external participants and club members
-      participants = [...participants, ...eligibleMembers];
+      // Combine external participants and club members, but avoid duplicates
+      const allParticipants = [...externalParticipants];
+      eligibleMembers.forEach(member => {
+        // Check if this member is not already in external participants
+        const isAlreadyExternal = externalParticipants.some(ext => ext.id === member.id);
+        if (!isAlreadyExternal) {
+          allParticipants.push(member);
+        }
+      });
+
+      console.log(`[UPDATE-CAMP-STATUS] Camp ${camp.name}: ${externalParticipants.length} external + ${eligibleMembers.length - externalParticipants.length} club members = ${allParticipants.length} total`);
 
       // Calculate status
-      const statusClass = calculateCampStatus(camp, participants);
+      const statusClass = calculateCampStatus(camp, allParticipants);
 
       // Remove existing status classes
       campCard.classList.remove('status-complete', 'status-incomplete', 'status-attention');
@@ -2091,6 +2100,8 @@
       if (statusClass) {
         campCard.classList.add(statusClass);
       }
+
+      console.log(`[UPDATE-CAMP-STATUS] Camp ${camp.name} final status: ${statusClass || 'normal'}`);
     }
 
     // Update status for all camps in the list
