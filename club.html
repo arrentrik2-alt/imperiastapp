@@ -2076,6 +2076,15 @@
       }
     }
 
+    // Update status for all camps in the list
+    function updateAllCampStatuses() {
+      if (!window.allCamps || !Array.isArray(window.allCamps)) return;
+
+      window.allCamps.forEach(camp => {
+        updateCampStatus(camp.id);
+      });
+    }
+
     // Load camps for selected month
     async function loadCamps() {
       try {
@@ -2105,10 +2114,11 @@
         camps.forEach(camp => {
           const campCard = createCampCard(camp);
           campsList.appendChild(campCard);
-
-          // Update camp status after creation
-          updateCampStatus(camp.id);
         });
+
+        // Update all camp statuses after all cards are created
+        // This will work even if members data is not yet loaded
+        setTimeout(() => updateAllCampStatuses(), 100);
 
       } catch (err) {
         console.error('Błąd ładowania campów:', err);
@@ -2132,10 +2142,16 @@
         allParticipants = members.filter(m => m.style === 'st' || m.style === '10t');
       }
 
-      const statusClass = calculateCampStatus(camp, allParticipants);
-      if (statusClass) {
-        card.classList.add(statusClass);
+      // Only calculate status if we have participants data available
+      if (allParticipants.length > 0 || (window.allMembers && window.allMembers.length > 0)) {
+        const statusClass = calculateCampStatus(camp, allParticipants);
+        if (statusClass) {
+          card.classList.add(statusClass);
+        }
       }
+
+      // Store reference for later status update
+      card._campId = camp.id;
 
       const trainersText = camp.trainers ? camp.trainers.map(t => t.name).join(', ') : 'Brak szkoleniowców';
 
@@ -2177,6 +2193,9 @@
 
         // Store all members for camp status calculation
         window.allMembers = allMembers;
+
+        // Update camp statuses now that we have members data
+        updateAllCampStatuses();
 
         // Get members eligible for this camp (ST or 10T style)
         const members = allMembers.filter(m => m.style === 'st' || m.style === '10t');
