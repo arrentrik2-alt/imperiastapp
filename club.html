@@ -2182,15 +2182,18 @@
 
       // Load camp participants (members with ST or 10T style + additional camp participants)
       try {
-        const { data: allMembers, error: membersError } = await supabase
-          .from('members')
-          .select('*')
-          .order('name', { ascending: true });
+        // Use already loaded members data if available
+        let allMembers = window.allMembers;
+        if (!allMembers) {
+          const { data: membersData, error: membersError } = await supabase
+            .from('members')
+            .select('*')
+            .order('name', { ascending: true });
 
-        if (membersError) throw membersError;
-
-        // Store all members for camp status calculation
-        window.allMembers = allMembers;
+          if (membersError) throw membersError;
+          allMembers = membersData;
+          window.allMembers = allMembers;
+        }
 
         // Get members eligible for this camp (ST or 10T style)
         const members = allMembers.filter(m => m.style === 'st' || m.style === '10t');
@@ -2224,8 +2227,7 @@
           financialSummary.style.display = 'block';
         }
 
-        // Update camp statuses now that we have all data loaded
-        updateAllCampStatuses();
+        // Camp statuses are updated globally when members data is loaded
 
       } catch (err) {
         console.error('Błąd ładowania uczestników campu:', err);
@@ -3346,11 +3348,38 @@
     });
 
     // Initialize app
-    document.addEventListener('DOMContentLoaded', () => {
-      loadMembers();
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Load members data first (needed for camp status calculation)
+      await loadMembers();
+
+      // Then load camps and set up everything else
       setActiveNav('members'); // Start with members page
       setupPaymentEventListeners(); // Setup payment event listeners
+
+      // Load members data for camp status calculation
+      loadMembersDataForCampStatus();
     });
+
+    // Load members data specifically for camp status calculation
+    async function loadMembersDataForCampStatus() {
+      try {
+        const { data: allMembers, error } = await supabase
+          .from('members')
+          .select('*')
+          .order('name', { ascending: true });
+
+        if (error) throw error;
+
+        // Store all members for camp status calculation
+        window.allMembers = allMembers;
+
+        // Update all camp statuses now that we have members data
+        updateAllCampStatuses();
+
+      } catch (err) {
+        console.error('Błąd ładowania danych członków dla statusu campów:', err);
+      }
+    }
   </script>
 </body>
 </html>
