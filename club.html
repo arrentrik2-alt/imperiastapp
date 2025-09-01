@@ -2593,6 +2593,8 @@
 
     // Create camp details table
     async function createCampDetailsTable(camp, participants) {
+      // Debug: Check if function is called
+      console.log('[CREATE-CAMP-DETAILS-TABLE] Function called with camp:', camp?.name);
       let tableHtml = `
         <table class="camp-details-table">
           <thead>
@@ -2678,13 +2680,19 @@
         }
 
         // Load trainer payments
+        console.log('[CREATE-CAMP-DETAILS-TABLE] Loading trainer payments for participant:', participant.name);
         const trainerPayments = [];
         if (camp.trainers && camp.trainers.length > 0) {
-          camp.trainers.forEach((trainer, index) => {
+          console.log('[CREATE-CAMP-DETAILS-TABLE] Camp has trainers:', camp.trainers.length);
+          for (const [index, trainer] of camp.trainers.entries()) {
+            console.log(`[CREATE-CAMP-DETAILS-TABLE] Processing trainer ${index}:`, trainer);
             if (trainer) { // Only load if trainer exists at this index
               try {
+                console.log(`[CREATE-CAMP-DETAILS-TABLE] Getting payment for trainer ${index}`);
+                console.log(`[CREATE-CAMP-DETAILS-TABLE] getSavedPayment function exists:`, typeof getSavedPayment);
                 const paymentResult = await getSavedPayment(camp.id, participant.id, 'trainer', index);
                 const statusResult = await getPaymentStatus(camp.id, participant.id, 'trainer', index);
+                console.log(`[CREATE-CAMP-DETAILS-TABLE] Payment result for trainer ${index}:`, paymentResult);
                 trainerPayments.push({
                   amount: paymentResult,
                   confirmed: statusResult
@@ -2696,7 +2704,7 @@
             } else {
               trainerPayments.push({ amount: '', confirmed: false });
             }
-          });
+          }
         }
 
         return {
@@ -3067,27 +3075,27 @@
     });
 
     // Payment event handlers
-    function setupPaymentEventListeners() {
+    async function setupPaymentEventListeners() {
       // Payment input change handler
-      document.addEventListener('input', (e) => {
+      document.addEventListener('input', async (e) => {
         if (e.target.classList.contains('payment-input')) {
-          handlePaymentInput(e.target);
+          await handlePaymentInput(e.target);
         }
       });
 
       // Confirm payment button handler
-      document.addEventListener('click', (e) => {
+      document.addEventListener('click', async (e) => {
         if (e.target.closest('.confirm-payment-btn')) {
           const button = e.target.closest('.confirm-payment-btn');
-          handleConfirmPayment(button);
+          await handleConfirmPayment(button);
         }
       });
 
       // Remove payment button handler
-      document.addEventListener('click', (e) => {
+      document.addEventListener('click', async (e) => {
         if (e.target.closest('.remove-payment-btn')) {
           const button = e.target.closest('.remove-payment-btn');
-          handleRemovePayment(button);
+          await handleRemovePayment(button);
         }
       });
 
@@ -3845,7 +3853,7 @@
 
       // Add trainer payments to totals
       if (camp.trainers && camp.trainers.length > 0) {
-        camp.trainers.forEach((trainer, trainerIndex) => {
+        for (const [trainerIndex, trainer] of camp.trainers.entries()) {
           if (trainer) { // Only process if trainer exists at this index
             const trainerAmount = parseFloat(await getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
 
@@ -3855,7 +3863,7 @@
               totalEUR += trainerAmount;
             }
           }
-        });
+        }
       }
 
       // Check which currency columns actually exist in the table
@@ -3915,9 +3923,9 @@
 
       // Update trainer summaries
       if (camp.trainers && camp.trainers.length > 0) {
-        camp.trainers.forEach((trainer, index) => {
+        for (const [index, trainer] of camp.trainers.entries()) {
           if (trainer) { // Only update if trainer exists at this index
-            const trainerSummary = calculateColumnSummary(camp.id, 'trainer', index);
+            const trainerSummary = await calculateColumnSummary(camp.id, 'trainer', index);
             const trainerTotalElement = document.querySelector(`.summary-row:nth-child(1) td:nth-child(${index + 3}) .summary-amount`);
             const trainerPaidElement = document.querySelector(`.summary-row:nth-child(2) td:nth-child(${index + 3}) .summary-amount`);
 
@@ -3928,7 +3936,7 @@
               trainerPaidElement.textContent = formatCurrency(trainerSummary.paid, trainerSummary.currency);
             }
           }
-        });
+        }
       }
     }
 
@@ -4071,7 +4079,7 @@
 
       // Then set up everything else
       setActiveNav('members'); // Start with members page
-      setupPaymentEventListeners(); // Setup payment event listeners
+      await setupPaymentEventListeners(); // Setup payment event listeners
       // Hide global loader when initialization finished
       hideGlobalLoader();
     });
