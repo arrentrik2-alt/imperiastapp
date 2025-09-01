@@ -404,6 +404,22 @@
       transform: translateY(-2px);
     }
 
+    /* Camp status backgrounds */
+    .camp-card.status-complete {
+      background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 100%);
+      border-left: 4px solid var(--success);
+    }
+
+    .camp-card.status-incomplete {
+      background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(220, 53, 69, 0.05) 100%);
+      border-left: 4px solid var(--error);
+    }
+
+    .camp-card.status-attention {
+      background: linear-gradient(135deg, rgba(255, 165, 0, 0.1) 0%, rgba(255, 165, 0, 0.05) 100%);
+      border-left: 4px solid #ff8c00;
+    }
+
     .camp-header {
       display: flex;
       align-items: center;
@@ -512,6 +528,24 @@
 
     .camp-details-table tr:hover {
       background-color: rgba(212, 175, 55, 0.05);
+    }
+
+    /* Alternating row colors */
+    .camp-details-table tbody tr:nth-child(even) {
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .camp-details-table tbody tr:nth-child(odd) {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    /* Attention highlighting for participant names */
+    .camp-details-table .participant-name.attention-highlight {
+      background-color: rgba(255, 165, 0, 0.3) !important;
+      color: #ff8c00 !important;
+      font-weight: 600;
+      border-radius: 4px;
+      padding: 2px 6px;
     }
 
     /* Payment status highlighting - only on payment cells */
@@ -1951,6 +1985,82 @@
       }
     }
 
+    // Calculate camp status for coloring
+    function calculateCampStatus(camp, participants) {
+      if (!participants || participants.length === 0) {
+        return 'status-incomplete'; // No participants = incomplete
+      }
+
+      let hasUnconfirmedPayments = false;
+      let hasAttentions = false;
+
+      participants.forEach(participant => {
+        const participantId = participant.id;
+
+        // Check camp payment status
+        const campPayment = getSavedPayment(camp.id, participantId, 'camp');
+        const campConfirmed = getPaymentStatus(camp.id, participantId, 'camp');
+
+        if (campPayment && !campConfirmed) {
+          hasUnconfirmedPayments = true;
+        }
+
+        // Check trainer payments status
+        if (camp.trainers && camp.trainers.length > 0) {
+          camp.trainers.forEach((trainer, trainerIndex) => {
+            const trainerPayment = getSavedPayment(camp.id, participantId, 'trainer', trainerIndex);
+            const trainerConfirmed = getPaymentStatus(camp.id, participantId, 'trainer', trainerIndex);
+
+            if (trainerPayment && !trainerConfirmed) {
+              hasUnconfirmedPayments = true;
+            }
+          });
+        }
+
+        // Check if participant has attention flag
+        const attentionKey = `attention_${camp.id}_${participantId}`;
+        if (localStorage.getItem(attentionKey) === 'true') {
+          hasAttentions = true;
+        }
+      });
+
+      if (hasUnconfirmedPayments) {
+        return 'status-incomplete'; // Red - has unconfirmed payments
+      } else if (hasAttentions) {
+        return 'status-attention'; // Orange - all confirmed but has attentions
+      } else {
+        return 'status-complete'; // Green - all confirmed, no attentions
+      }
+    }
+
+    // Update camp status in the list
+    function updateCampStatus(campId) {
+      const campCard = document.querySelector(`.camp-card[data-camp-id="${campId}"]`);
+      if (!campCard) return;
+
+      // Get camp data
+      const camp = Array.isArray(window.allCamps) ? window.allCamps.find(c => c.id === campId) : null;
+      if (!camp) return;
+
+      // Get participants for this camp
+      let participants = getCampParticipants(campId);
+
+      // If no camp participants, check members
+      if (participants.length === 0) {
+        const members = window.allMembers || [];
+        participants = members.filter(m => m.style === 'st' || m.style === '10t');
+      }
+
+      // Calculate status
+      const statusClass = calculateCampStatus(camp, participants);
+
+      // Remove existing status classes
+      campCard.classList.remove('status-complete', 'status-incomplete', 'status-attention');
+
+      // Add new status class
+      campCard.classList.add(statusClass);
+    }
+
     // Load camps for selected month
     async function loadCamps() {
       try {
@@ -1961,6 +2071,9 @@
           .order('date', { ascending: false });
 
         if (error) throw error;
+
+        // Store camps for status calculation
+        window.allCamps = camps;
 
         if (camps.length === 0) {
           campsList.innerHTML = `
@@ -1977,6 +2090,9 @@
         camps.forEach(camp => {
           const campCard = createCampCard(camp);
           campsList.appendChild(campCard);
+
+          // Update camp status after creation
+          updateCampStatus(camp.id);
         });
 
       } catch (err) {
@@ -1989,7 +2105,12 @@
     function createCampCard(camp) {
       const card = document.createElement('div');
       card.className = 'camp-card';
+      card.setAttribute('data-camp-id', camp.id);
       card.onclick = () => showCampDetails(camp);
+
+      // Calculate initial status
+      const statusClass = calculateCampStatus(camp, []);
+      card.classList.add(statusClass);
 
       const trainersText = camp.trainers ? camp.trainers.map(t => t.name).join(', ') : 'Brak szkoleniowców';
 
@@ -2022,13 +2143,18 @@
 
       // Load camp participants (members with ST or 10T style + additional camp participants)
       try {
-        const { data: members, error } = await supabase
+        const { data: allMembers, error: membersError } = await supabase
           .from('members')
           .select('*')
-          .or('style.eq.st,style.eq.10t')
           .order('name', { ascending: true });
 
-        if (error) throw error;
+        if (membersError) throw membersError;
+
+        // Store all members for camp status calculation
+        window.allMembers = allMembers;
+
+        // Get members eligible for this camp (ST or 10T style)
+        const members = allMembers.filter(m => m.style === 'st' || m.style === '10t');
 
         // Load additional camp participants
         const additionalParticipants = getCampParticipants(camp.id);
@@ -2377,7 +2503,7 @@
         const isCampParticipant = participant.isCampParticipant;
         const participantClass = isCampParticipant ? 'camp-participant' : 'member-participant';
 
-        tableHtml += `<tr class="${rowClasses} participant-row ${participantClass}" data-participant-id="${participant.id}"><td class="participant-name">${participant.name}${isCampParticipant ? ' <small style="color: var(--gold); font-weight: normal;">(zewnętrzny)</small>' : ''}</td>`;
+        tableHtml += `<tr class="${rowClasses} participant-row ${participantClass}" data-participant-id="${participant.id}"><td class="participant-name ${attentionClass}">${participant.name}${isCampParticipant ? ' <small style="color: var(--gold); font-weight: normal;">(zewnętrzny)</small>' : ''}</td>`;
 
         // Camp payment cell
         const campCellHtml = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
@@ -2396,6 +2522,7 @@
         // Add attention checkbox
         const attentionKey = `attention_${camp.id}_${participant.id}`;
         const isAttentionChecked = localStorage.getItem(attentionKey) === 'true';
+        const attentionClass = isAttentionChecked ? 'attention-highlight' : '';
         tableHtml += `<td><input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}" ${isAttentionChecked ? 'checked' : ''}></td>`;
 
         // Add comment field
@@ -2691,11 +2818,23 @@
           const participantId = checkbox.getAttribute('data-participant-id');
           const attentionKey = `attention_${campId}_${participantId}`;
 
-          if (checkbox.checked) {
-            localStorage.setItem(attentionKey, 'true');
-          } else {
-            localStorage.removeItem(attentionKey);
+          // Find the participant name cell and update its highlighting
+          const participantRow = document.querySelector(`tr[data-participant-id="${participantId}"]`);
+          if (participantRow) {
+            const nameCell = participantRow.querySelector('.participant-name');
+            if (nameCell) {
+              if (checkbox.checked) {
+                localStorage.setItem(attentionKey, 'true');
+                nameCell.classList.add('attention-highlight');
+              } else {
+                localStorage.removeItem(attentionKey);
+                nameCell.classList.remove('attention-highlight');
+              }
+            }
           }
+
+          // Update camp status in the list
+          updateCampStatus(campId);
         }
       });
 
@@ -2758,6 +2897,7 @@
       setTimeout(() => {
         updateParticipantTotals(campId, participantId);
         updateFinancialSummary();
+        updateCampStatus(campId);
       }, 10);
     }
 
@@ -2791,6 +2931,7 @@
       setTimeout(() => {
         updateParticipantTotals(campId, participantId);
         updateFinancialSummary();
+        updateCampStatus(campId);
       }, 10);
     }
 
@@ -2823,6 +2964,7 @@
       setTimeout(() => {
         updateParticipantTotals(campId, participantId);
         updateFinancialSummary();
+        updateCampStatus(campId);
       }, 10);
     }
 
