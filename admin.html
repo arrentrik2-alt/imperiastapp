@@ -229,6 +229,12 @@
       border-color: var(--gold);
     }
 
+    .modal .btn.active {
+      background-color: var(--gold);
+      color: white;
+      border-color: var(--gold);
+    }
+
     .group-view-section {
       display: none;
     }
@@ -854,10 +860,26 @@
         <h3>Dodaj uczestnika do grupy</h3>
         <p id="participant-group-name" style="color: var(--text-gray); margin-top: 5px;"></p>
         </div>
-      
+
         <div class="form-group">
-        <label for="participant-name">Imię i nazwisko</label>
-        <input type="text" id="participant-name" class="form-control" placeholder="Imię i nazwisko">
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <button type="button" class="btn btn-outline active" id="group-participant-mode-new">Nowy</button>
+            <button type="button" class="btn btn-outline" id="group-participant-mode-existing">Istniejący</button>
+          </div>
+
+          <!-- existing participant search container -->
+          <div id="group-participant-existing-container" style="display:none;">
+            <label for="group-participant-search">Wyszukaj istniejącego uczestnika</label>
+            <input type="text" id="group-participant-search" class="form-control" placeholder="Wpisz imię, aby wyszukać...">
+            <div id="group-participant-search-results" style="background:var(--secondary-bg);border:1px solid var(--border-dark);max-height:160px;overflow:auto;margin-top:6px;border-radius:4px;"></div>
+            <input type="hidden" id="group-participant-selected-id">
+          </div>
+
+          <!-- new participant container -->
+          <div id="group-participant-new-container">
+            <label for="participant-name">Imię i nazwisko <span id="group-participant-badge" style="display:none; margin-left:8px; color:var(--success); font-weight:600; font-size:0.9rem;">Istniejący</span></label>
+            <input type="text" id="participant-name" class="form-control" placeholder="Imię i nazwisko">
+          </div>
         </div>
       
         <div class="form-group">
@@ -1744,6 +1766,8 @@
       const name = participantNameInput.value.trim();
       const phone = participantPhoneInput.value.trim();
       const amount = parseFloat(participantAmountInput.value) || 0;
+      const selectedParticipantId = groupParticipantSelectedId.value;
+      const isExistingParticipant = !!selectedParticipantId;
 
       if (!name) {
         alert('Podaj imię i nazwisko uczestnika');
@@ -1755,28 +1779,39 @@
       saveParticipantBtn.disabled = true;
 
       try {
-        // 1. Add participant
-        const rodoValue = !!document.getElementById('participant-rodo').checked;
-        const { data: participantId, error: participantError } = await supabase.rpc('insert_participant_month', {
-          p_month: selectedMonth,
-          p_name: name,
-          p_email: null,
-          p_phone: phone || null,
-          p_rodo: rodoValue
-        });
+        let participantId;
 
-        if (participantError) throw participantError;
+        if (isExistingParticipant) {
+          // Use existing participant
+          participantId = selectedParticipantId;
+          console.log('Using existing participant:', participantId);
+        } else {
+          // 1. Add new participant
+          const rodoValue = !!document.getElementById('participant-rodo').checked;
+          const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
+            p_month: selectedMonth,
+            p_name: name,
+            p_email: null,
+            p_phone: phone || null,
+            p_rodo: rodoValue
+          });
 
-        // Ensure RODO persisted even if RPC signature mismatch: update directly
-        try {
-          const { error: rodoErr } = await supabase
-            .from('participants_month')
-            .update({ rodo: rodoValue })
-            .eq('id', participantId);
-          if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
-        } catch (e) {
-          console.warn('RODO update exception:', e);
+          if (participantError) throw participantError;
+          participantId = newParticipantId;
+
+          // Ensure RODO persisted even if RPC signature mismatch: update directly
+          try {
+            const { error: rodoErr } = await supabase
+              .from('participants_month')
+              .update({ rodo: rodoValue })
+              .eq('id', participantId);
+            if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
+          } catch (e) {
+            console.warn('RODO update exception:', e);
+          }
         }
+
+
 
         // 2. Add participant to group
         const { error: groupError } = await supabase.rpc('add_participant_to_group_month', {
@@ -2470,6 +2505,58 @@
       const { data, error } = await supabase.from('participants_month').select('id,name,phone').eq('month', month).ilike('name', `%${q}%`).limit(12);
       if (error) { console.warn('Search error', error); return []; }
       return data || [];
+    }
+
+    // Search participants from entire database (for groups)
+    async function searchParticipantsGlobal(q) {
+      if (!q || q.length < 2) return [];
+      try {
+        // First try to search in current month's participants
+        const currentMonth = document.getElementById('participants-month-select').value;
+        const { data: currentMonthData, error: currentError } = await supabase
+          .from('participants_month')
+          .select('id,name,phone')
+          .eq('month', currentMonth)
+          .ilike('name', `%${q}%`)
+          .limit(8);
+
+        // Then search in other months (distinct participants)
+        const { data: otherMonthsData, error: otherError } = await supabase
+          .from('participants_month')
+          .select('id,name,phone')
+          .neq('month', currentMonth)
+          .ilike('name', `%${q}%`)
+          .limit(6);
+
+        // Combine and deduplicate results
+        const allResults = [];
+        const seenIds = new Set();
+
+        // Add current month results first
+        if (currentMonthData) {
+          currentMonthData.forEach(p => {
+            if (!seenIds.has(p.id)) {
+              seenIds.add(p.id);
+              allResults.push({ ...p, source: 'current_month' });
+            }
+          });
+        }
+
+        // Add other months results
+        if (otherMonthsData) {
+          otherMonthsData.forEach(p => {
+            if (!seenIds.has(p.id)) {
+              seenIds.add(p.id);
+              allResults.push({ ...p, source: 'other_month' });
+            }
+          });
+        }
+
+        return allResults.slice(0, 12);
+      } catch (error) {
+        console.warn('Global search error', error);
+        return [];
+      }
     }
 
     // attach search handlers
@@ -3568,6 +3655,75 @@
     }
 
     // Attendance month selector is now handled by populateMonthSelectors()
+
+    // Group participant modal handlers
+    const groupParticipantModeNew = document.getElementById('group-participant-mode-new');
+    const groupParticipantModeExisting = document.getElementById('group-participant-mode-existing');
+    const groupParticipantNewContainer = document.getElementById('group-participant-new-container');
+    const groupParticipantExistingContainer = document.getElementById('group-participant-existing-container');
+    const groupParticipantSearch = document.getElementById('group-participant-search');
+    const groupParticipantSearchResults = document.getElementById('group-participant-search-results');
+    const groupParticipantSelectedId = document.getElementById('group-participant-selected-id');
+    const groupParticipantBadge = document.getElementById('group-participant-badge');
+
+    // Handle mode switching
+    groupParticipantModeNew.addEventListener('click', () => {
+      groupParticipantModeNew.classList.add('active');
+      groupParticipantModeExisting.classList.remove('active');
+      groupParticipantNewContainer.style.display = 'block';
+      groupParticipantExistingContainer.style.display = 'none';
+      groupParticipantSelectedId.value = '';
+      groupParticipantBadge.style.display = 'none';
+      groupParticipantSearch.value = '';
+      groupParticipantSearch.disabled = false;
+      delete groupParticipantSearch.dataset.selected;
+    });
+
+    groupParticipantModeExisting.addEventListener('click', () => {
+      groupParticipantModeExisting.classList.add('active');
+      groupParticipantModeNew.classList.remove('active');
+      groupParticipantExistingContainer.style.display = 'block';
+      groupParticipantNewContainer.style.display = 'none';
+      participantNameInput.value = '';
+      participantPhoneInput.value = '';
+    });
+
+    // Handle search input
+    groupParticipantSearch.addEventListener('input', debounce(async (e) => {
+      const q = e.target.value.trim();
+      groupParticipantSearchResults.innerHTML = '';
+      const rows = await searchParticipantsGlobal(q);
+      rows.forEach(r => {
+        const div = document.createElement('div');
+        div.style.padding = '6px';
+        div.style.cursor = 'pointer';
+        div.textContent = `${r.name} ${r.phone ? '• ' + r.phone : ''}`;
+        if (r.source === 'other_month') {
+          div.style.color = 'var(--text-gray)';
+          div.style.fontSize = '0.9rem';
+        }
+        div.addEventListener('click', () => {
+          groupParticipantSelectedId.value = r.id;
+          participantNameInput.value = r.name;
+          participantPhoneInput.value = r.phone || '';
+          groupParticipantSearchResults.innerHTML = '';
+          groupParticipantSearch.value = r.name;
+          groupParticipantSearch.disabled = true;
+          groupParticipantSearch.dataset.selected = 'true';
+          groupParticipantBadge.style.display = 'inline';
+        });
+        groupParticipantSearchResults.appendChild(div);
+      });
+    }, 300));
+
+    // Clear search when clicking badge
+    groupParticipantBadge.addEventListener('click', () => {
+      groupParticipantSelectedId.value = '';
+      groupParticipantBadge.style.display = 'none';
+      groupParticipantSearch.value = '';
+      groupParticipantSearch.disabled = false;
+      delete groupParticipantSearch.dataset.selected;
+    });
 
   </script>
 </body>
