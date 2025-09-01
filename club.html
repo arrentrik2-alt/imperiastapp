@@ -2092,8 +2092,15 @@
 
       // Always include club members eligible for this camp
       const members = window.allMembers || [];
+      console.log(`[UPDATE-CAMP-STATUS] window.allMembers exists: ${!!window.allMembers}, total members: ${members.length}`);
+
       const eligibleMembers = members.filter(m => m.style === 'st' || m.style === '10t');
-      console.log(`[UPDATE-CAMP-STATUS] Found ${eligibleMembers.length} eligible club members`);
+      console.log(`[UPDATE-CAMP-STATUS] Found ${eligibleMembers.length} eligible club members (ST or 10T)`);
+
+      // Log eligible members
+      if (eligibleMembers.length > 0) {
+        console.log(`[UPDATE-CAMP-STATUS] Eligible members:`, eligibleMembers.map(m => `${m.name} (${m.id})`).join(', '));
+      }
 
       // Combine external participants and club members, but avoid duplicates
       const allParticipants = [...externalParticipants];
