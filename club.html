@@ -2464,6 +2464,11 @@
 
       // Add rows for each participant
       participants.forEach(participant => {
+        // Check attention status for this participant
+        const attentionKey = `attention_${camp.id}_${participant.id}`;
+        const isAttentionChecked = localStorage.getItem(attentionKey) === 'true';
+        const attentionClass = isAttentionChecked ? 'attention-highlight' : '';
+
         // Determine row classes based on payment status
         const campPayment = getSavedPayment(camp.id, participant.id, 'camp');
         const campConfirmed = getPaymentStatus(camp.id, participant.id, 'camp');
@@ -2520,9 +2525,6 @@
         }
 
         // Add attention checkbox
-        const attentionKey = `attention_${camp.id}_${participant.id}`;
-        const isAttentionChecked = localStorage.getItem(attentionKey) === 'true';
-        const attentionClass = isAttentionChecked ? 'attention-highlight' : '';
         tableHtml += `<td><input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}" ${isAttentionChecked ? 'checked' : ''}></td>`;
 
         // Add comment field
