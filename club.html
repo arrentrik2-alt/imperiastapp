@@ -2053,17 +2053,17 @@
         // Check trainer payments status
         if (camp.trainers && camp.trainers.length > 0) {
           for (const [trainerIndex, trainer] of camp.trainers.entries()) {
-            const trainerPayment = await getSavedPayment(camp.id, participantId, 'trainer', parseInt(trainerIndex, 10));
-            const trainerConfirmed = await getPaymentStatus(camp.id, participantId, 'trainer', parseInt(trainerIndex, 10));
+            if (trainer) { // Only check if trainer exists at this index
+              const trainerPayment = await getSavedPayment(camp.id, participantId, 'trainer', trainerIndex);
+              const trainerConfirmed = await getPaymentStatus(camp.id, participantId, 'trainer', trainerIndex);
 
-
-
-            const hasValidTrainerPayment = trainerPayment && trainerPayment !== '' && trainerPayment !== '0' && trainerPayment !== '0.00';
-            if (hasValidTrainerPayment) {
-              hasAnyPayments = true;
-              if (!trainerConfirmed) {
-                hasUnconfirmedPayments = true;
-                console.log(`[STATUS-CHECK] ${participant.name}: Found unconfirmed trainer payment - setting RED status`);
+              const hasValidTrainerPayment = trainerPayment && trainerPayment !== '' && trainerPayment !== '0' && trainerPayment !== '0.00';
+              if (hasValidTrainerPayment) {
+                hasAnyPayments = true;
+                if (!trainerConfirmed) {
+                  hasUnconfirmedPayments = true;
+                  console.log(`[STATUS-CHECK] ${participant.name}: Found unconfirmed trainer payment - setting RED status`);
+                }
               }
             }
           }
@@ -2225,7 +2225,8 @@
             .order('trainer_index', { ascending: true });
 
           if (!trainerError && trainers) {
-            // Convert trainer data to the expected format
+            // Sort trainers by trainer_index and create sequential array
+            trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
             camp.trainers = trainers.map(trainer => ({
               name: trainer.name,
               amount: parseFloat(trainer.amount),
@@ -2333,6 +2334,8 @@
           .order('trainer_index', { ascending: true });
 
         if (!trainerError && trainers) {
+          // Sort trainers by trainer_index and create sequential array
+          trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
           camp.trainers = trainers.map(trainer => ({
             name: trainer.name,
             amount: parseFloat(trainer.amount),
@@ -2601,7 +2604,9 @@
       // Add columns for each trainer
       if (camp.trainers && camp.trainers.length > 0) {
         camp.trainers.forEach((trainer, index) => {
-          tableHtml += `<th style="width: 120px;">Lekcje ${trainer.name}<br><span class="amount-badge">${trainer.amount} ${trainer.currency}</span></th>`;
+          if (trainer) { // Only add if trainer exists at this index
+            tableHtml += `<th style="width: 120px;">Lekcje ${trainer.name}<br><span class="amount-badge">${trainer.amount} ${trainer.currency}</span></th>`;
+          }
         });
       }
 
@@ -2675,19 +2680,23 @@
         // Load trainer payments
         const trainerPayments = [];
         if (camp.trainers && camp.trainers.length > 0) {
-          for (let i = 0; i < camp.trainers.length; i++) {
-            try {
-              const paymentResult = await getSavedPayment(camp.id, participant.id, 'trainer', i);
-              const statusResult = await getPaymentStatus(camp.id, participant.id, 'trainer', i);
-              trainerPayments.push({
-                amount: paymentResult,
-                confirmed: statusResult
-              });
-            } catch (err) {
-              console.error('Error loading trainer payment for participant:', participant.name, 'trainer:', i, err);
+          camp.trainers.forEach((trainer, index) => {
+            if (trainer) { // Only load if trainer exists at this index
+              try {
+                const paymentResult = await getSavedPayment(camp.id, participant.id, 'trainer', index);
+                const statusResult = await getPaymentStatus(camp.id, participant.id, 'trainer', index);
+                trainerPayments.push({
+                  amount: paymentResult,
+                  confirmed: statusResult
+                });
+              } catch (err) {
+                console.error('Error loading trainer payment for participant:', participant.name, 'trainer:', index, err);
+                trainerPayments.push({ amount: '', confirmed: false });
+              }
+            } else {
               trainerPayments.push({ amount: '', confirmed: false });
             }
-          }
+          });
         }
 
         return {
@@ -2758,11 +2767,13 @@
         // Add cells for each trainer
         if (camp.trainers && camp.trainers.length > 0) {
           camp.trainers.forEach((trainer, trainerIndex) => {
-            const trainerData = participantData.trainerPayments[trainerIndex];
-            const trainerPayment = trainerData.amount;
-            const trainerConfirmed = trainerData.confirmed;
-            const trainerCellHtml = createPaymentCell(camp.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIndex);
-            tableHtml += trainerCellHtml;
+            if (trainer) { // Only add if trainer exists at this index
+              const trainerData = participantData.trainerPayments[trainerIndex];
+              const trainerPayment = trainerData.amount;
+              const trainerConfirmed = trainerData.confirmed;
+              const trainerCellHtml = createPaymentCell(camp.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIndex);
+              tableHtml += trainerCellHtml;
+            }
           });
         }
 
@@ -3327,13 +3338,15 @@
         let hasConfirmedTrainer = false;
 
         for (const [trainerIndex, trainer] of currentCamp.trainers.entries()) {
-          const trainerPayment = await getSavedPayment(currentCamp.id, participantId, 'trainer', parseInt(trainerIndex, 10));
-          const trainerConfirmed = await getPaymentStatus(currentCamp.id, participantId, 'trainer', parseInt(trainerIndex, 10));
+          if (trainer) { // Only check if trainer exists at this index
+            const trainerPayment = await getSavedPayment(currentCamp.id, participantId, 'trainer', trainerIndex);
+            const trainerConfirmed = await getPaymentStatus(currentCamp.id, participantId, 'trainer', trainerIndex);
 
-          if (trainerPayment && trainerConfirmed) {
-            hasConfirmedTrainer = true;
-          } else if (trainerPayment && !trainerConfirmed) {
-            hasUnconfirmedTrainer = true;
+            if (trainerPayment && trainerConfirmed) {
+              hasConfirmedTrainer = true;
+            } else if (trainerPayment && !trainerConfirmed) {
+              hasUnconfirmedTrainer = true;
+            }
           }
         }
 
@@ -3832,15 +3845,17 @@
 
       // Add trainer payments to totals
       if (camp.trainers && camp.trainers.length > 0) {
-        for (const [trainerIndex, trainer] of camp.trainers.entries()) {
-          const trainerAmount = parseFloat(await getSavedPayment(camp.id, participant.id, 'trainer', parseInt(trainerIndex, 10))) || 0;
+        camp.trainers.forEach((trainer, trainerIndex) => {
+          if (trainer) { // Only process if trainer exists at this index
+            const trainerAmount = parseFloat(await getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
 
-          if (trainer.currency === 'PLN') {
-            totalPLN += trainerAmount;
-          } else if (trainer.currency === 'EUR') {
-            totalEUR += trainerAmount;
+            if (trainer.currency === 'PLN') {
+              totalPLN += trainerAmount;
+            } else if (trainer.currency === 'EUR') {
+              totalEUR += trainerAmount;
+            }
           }
-        }
+        });
       }
 
       // Check which currency columns actually exist in the table
@@ -3901,15 +3916,17 @@
       // Update trainer summaries
       if (camp.trainers && camp.trainers.length > 0) {
         camp.trainers.forEach((trainer, index) => {
-          const trainerSummary = calculateColumnSummary(camp.id, 'trainer', index);
-          const trainerTotalElement = document.querySelector(`.summary-row:nth-child(1) td:nth-child(${index + 3}) .summary-amount`);
-          const trainerPaidElement = document.querySelector(`.summary-row:nth-child(2) td:nth-child(${index + 3}) .summary-amount`);
+          if (trainer) { // Only update if trainer exists at this index
+            const trainerSummary = calculateColumnSummary(camp.id, 'trainer', index);
+            const trainerTotalElement = document.querySelector(`.summary-row:nth-child(1) td:nth-child(${index + 3}) .summary-amount`);
+            const trainerPaidElement = document.querySelector(`.summary-row:nth-child(2) td:nth-child(${index + 3}) .summary-amount`);
 
-          if (trainerTotalElement) {
-            trainerTotalElement.textContent = formatCurrency(trainerSummary.total, trainerSummary.currency);
-          }
-          if (trainerPaidElement) {
-            trainerPaidElement.textContent = formatCurrency(trainerSummary.paid, trainerSummary.currency);
+            if (trainerTotalElement) {
+              trainerTotalElement.textContent = formatCurrency(trainerSummary.total, trainerSummary.currency);
+            }
+            if (trainerPaidElement) {
+              trainerPaidElement.textContent = formatCurrency(trainerSummary.paid, trainerSummary.currency);
+            }
           }
         });
       }
