@@ -462,6 +462,7 @@
       color: var(--text-light);
       font-weight: bold;
       flex: 1;
+      padding-left: 35px; /* Make space for the delete button */
     }
 
     .camp-date {
@@ -471,7 +472,7 @@
 
     .camp-header .btn-delete {
       position: absolute;
-      right: 0;
+      left: 0;
       top: 0;
     }
 
@@ -2528,11 +2529,11 @@
 
       card.innerHTML = `
         <div class="camp-header">
-          <div class="camp-name">${camp.name}</div>
-          <div class="camp-date">${new Date(camp.date).toLocaleDateString('pl-PL')}</div>
           <button class="btn btn-delete btn-small" data-camp-id="${camp.id}">
             <i class="fas fa-trash"></i>
           </button>
+          <div class="camp-name">${camp.name}</div>
+          <div class="camp-date">${new Date(camp.date).toLocaleDateString('pl-PL')}</div>
         </div>
         <div class="camp-details">
           <span class="camp-detail">
