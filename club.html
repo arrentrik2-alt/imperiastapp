@@ -1997,15 +1997,25 @@
 
       participants.forEach(participant => {
         const participantId = participant.id;
+        const isExternal = participant.isCampParticipant; // Check if this is an external participant
+
+        console.log(`[STATUS-CHECK] Checking ${participant.name} (${participantId}), external: ${isExternal}`);
 
         // Check camp payment status
         const campPayment = getSavedPayment(camp.id, participantId, 'camp');
         const campConfirmed = getPaymentStatus(camp.id, participantId, 'camp');
 
-        if (campPayment) {
+        console.log(`[STATUS-CHECK] ${participant.name}: campPayment="${campPayment}", campConfirmed=${campConfirmed}`);
+
+        // Consider payment as existing if it's not empty and not zero
+        const hasValidPayment = campPayment && campPayment !== '' && campPayment !== '0' && campPayment !== '0.00';
+        console.log(`[STATUS-CHECK] ${participant.name}: hasValidPayment=${hasValidPayment}`);
+
+        if (hasValidPayment) {
           hasAnyPayments = true;
           if (!campConfirmed) {
             hasUnconfirmedPayments = true;
+            console.log(`[STATUS-CHECK] ${participant.name}: Found unconfirmed payment - setting RED status`);
           }
         }
 
@@ -2015,10 +2025,14 @@
             const trainerPayment = getSavedPayment(camp.id, participantId, 'trainer', trainerIndex);
             const trainerConfirmed = getPaymentStatus(camp.id, participantId, 'trainer', trainerIndex);
 
-            if (trainerPayment) {
+            console.log(`[STATUS-CHECK] ${participant.name}: trainer ${trainerIndex} payment="${trainerPayment}", confirmed=${trainerConfirmed}`);
+
+            const hasValidTrainerPayment = trainerPayment && trainerPayment !== '' && trainerPayment !== '0' && trainerPayment !== '0.00';
+            if (hasValidTrainerPayment) {
               hasAnyPayments = true;
               if (!trainerConfirmed) {
                 hasUnconfirmedPayments = true;
+                console.log(`[STATUS-CHECK] ${participant.name}: Found unconfirmed trainer payment - setting RED status`);
               }
             }
           });
@@ -2026,8 +2040,11 @@
 
         // Check if participant has attention flag
         const attentionKey = `attention_${camp.id}_${participantId}`;
-        if (localStorage.getItem(attentionKey) === 'true') {
+        const hasAttention = localStorage.getItem(attentionKey) === 'true';
+        console.log(`[STATUS-CHECK] ${participant.name}: attention=${hasAttention}`);
+        if (hasAttention) {
           hasAttentions = true;
+          console.log(`[STATUS-CHECK] ${participant.name}: Found attention - setting ORANGE status`);
         }
       });
 
