@@ -2146,6 +2146,9 @@
 
       window.allCamps.forEach(camp => {
         console.log(`[UPDATE-ALL-STATUSES] Updating status for camp: ${camp.name} (ID: ${camp.id})`);
+        if (camp.name === 'rtert') {
+          console.log(`[UPDATE-ALL-STATUSES] Found camp 'rtert' - processing now`);
+        }
         updateCampStatus(camp.id);
       });
       console.log('[UPDATE-ALL-STATUSES] Finished updating all camp statuses');
