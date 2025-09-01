@@ -1978,7 +1978,7 @@
     }
 
     // Calculate camp status for coloring
-    function calculateCampStatus(camp, participants) {
+    async function calculateCampStatus(camp, participants) {
       console.log(`[CALCULATE-STATUS] Starting calculation for camp ${camp.name} with ${participants.length} participants`);
 
       if (!participants || participants.length === 0) {
@@ -2014,9 +2014,9 @@
 
         // Check trainer payments status
         if (camp.trainers && camp.trainers.length > 0) {
-          camp.trainers.forEach((trainer, trainerIndex) => {
-            const trainerPayment = getSavedPayment(camp.id, participantId, 'trainer', trainerIndex);
-            const trainerConfirmed = getPaymentStatus(camp.id, participantId, 'trainer', trainerIndex);
+          for (const [trainerIndex, trainer] of camp.trainers.entries()) {
+            const trainerPayment = await getSavedPayment(camp.id, participantId, 'trainer', trainerIndex);
+            const trainerConfirmed = await getPaymentStatus(camp.id, participantId, 'trainer', trainerIndex);
 
             console.log(`[STATUS-CHECK] ${participant.name}: trainer ${trainerIndex} payment="${trainerPayment}", confirmed=${trainerConfirmed}`);
 
@@ -2028,7 +2028,7 @@
                 console.log(`[STATUS-CHECK] ${participant.name}: Found unconfirmed trainer payment - setting RED status`);
               }
             }
-          });
+          }
         }
 
         // Check if participant has attention flag
@@ -2133,7 +2133,7 @@
       });
 
       // Calculate status
-      const statusClass = calculateCampStatus(camp, allParticipants);
+      const statusClass = await calculateCampStatus(camp, allParticipants);
 
       // Remove existing status classes
       campCard.classList.remove('status-complete', 'status-incomplete', 'status-attention');
@@ -2232,7 +2232,7 @@
 
       // Only calculate status if we have participants data available
       if (allParticipants.length > 0 || (window.allMembers && window.allMembers.length > 0)) {
-        const statusClass = calculateCampStatus(camp, allParticipants);
+        const statusClass = await calculateCampStatus(camp, allParticipants);
         if (statusClass) {
           card.classList.add(statusClass);
         }
@@ -3114,7 +3114,7 @@
       });
     }
 
-    function handlePaymentInput(input) {
+    async function handlePaymentInput(input) {
       const campId = input.getAttribute('data-camp-id');
       const participantId = input.getAttribute('data-participant-id');
       const columnType = input.getAttribute('data-column-type');
@@ -3136,7 +3136,7 @@
         removeBtn.style.display = 'none';
 
         // Save payment temporarily
-        savePayment(campId, participantId, columnType, value, trainerIndex);
+        await savePayment(campId, participantId, columnType, value, trainerIndex);
       } else {
         // No value - hide both buttons, remove styling
         input.classList.remove('unconfirmed', 'confirmed');
@@ -3145,11 +3145,11 @@
         removeBtn.style.display = 'none';
 
         // Remove payment from storage
-        removePayment(campId, participantId, columnType, trainerIndex);
+        await removePayment(campId, participantId, columnType, trainerIndex);
       }
 
       // Update row styling and summaries
-      updateRowStyling(participantId);
+      await updateRowStyling(participantId);
       await updateSummaries();
       // Use setTimeout to ensure DOM is updated before updating totals
       setTimeout(async () => {
@@ -3159,7 +3159,7 @@
       }, 10);
     }
 
-    function handleConfirmPayment(button) {
+    async function handleConfirmPayment(button) {
       const campId = button.getAttribute('data-camp-id');
       const participantId = button.getAttribute('data-participant-id');
       const columnType = button.getAttribute('data-column-type');
@@ -3172,7 +3172,7 @@
       const removeBtn = paymentCell.querySelector('.remove-payment-btn');
 
       // Mark as confirmed
-      confirmPayment(campId, participantId, columnType, trainerIndex);
+      await confirmPayment(campId, participantId, columnType, trainerIndex);
 
       // Update UI
       input.classList.remove('unconfirmed');
@@ -3183,7 +3183,7 @@
       removeBtn.style.display = '';
 
       // Update row styling and summaries
-      updateRowStyling(participantId);
+      await updateRowStyling(participantId);
       await updateSummaries();
       // Use setTimeout to ensure DOM is updated before updating totals
       setTimeout(async () => {
@@ -3193,7 +3193,7 @@
       }, 10);
     }
 
-    function handleRemovePayment(button) {
+    async function handleRemovePayment(button) {
       const campId = button.getAttribute('data-camp-id');
       const participantId = button.getAttribute('data-participant-id');
       const columnType = button.getAttribute('data-column-type');
@@ -3206,7 +3206,7 @@
       const removeBtn = paymentCell.querySelector('.remove-payment-btn');
 
       // Remove payment from storage
-      removePayment(campId, participantId, columnType, trainerIndex);
+      await removePayment(campId, participantId, columnType, trainerIndex);
 
       // Clear the input completely
       input.value = '';
@@ -3216,7 +3216,7 @@
       removeBtn.style.display = 'none';
 
       // Update row styling and summaries
-      updateRowStyling(participantId);
+      await updateRowStyling(participantId);
       await updateSummaries();
       // Use setTimeout to ensure DOM is updated before updating totals
       setTimeout(async () => {
@@ -3226,7 +3226,7 @@
       }, 10);
     }
 
-    function updateRowStyling(participantId) {
+    async function updateRowStyling(participantId) {
       const currentCamp = window.currentCamp;
       if (!currentCamp) return;
 
@@ -3251,8 +3251,8 @@
       );
 
       // Determine new row classes based on current payment status
-      const campPayment = getSavedPayment(currentCamp.id, participantId, 'camp');
-      const campConfirmed = getPaymentStatus(currentCamp.id, participantId, 'camp');
+      const campPayment = await getSavedPayment(currentCamp.id, participantId, 'camp');
+      const campConfirmed = await getPaymentStatus(currentCamp.id, participantId, 'camp');
 
       let rowClasses = '';
 
@@ -3267,16 +3267,16 @@
         let hasUnconfirmedTrainer = false;
         let hasConfirmedTrainer = false;
 
-        currentCamp.trainers.forEach((trainer, trainerIndex) => {
-          const trainerPayment = getSavedPayment(currentCamp.id, participantId, 'trainer', trainerIndex);
-          const trainerConfirmed = getPaymentStatus(currentCamp.id, participantId, 'trainer', trainerIndex);
+        for (const [trainerIndex, trainer] of currentCamp.trainers.entries()) {
+          const trainerPayment = await getSavedPayment(currentCamp.id, participantId, 'trainer', trainerIndex);
+          const trainerConfirmed = await getPaymentStatus(currentCamp.id, participantId, 'trainer', trainerIndex);
 
           if (trainerPayment && trainerConfirmed) {
             hasConfirmedTrainer = true;
           } else if (trainerPayment && !trainerConfirmed) {
             hasUnconfirmedTrainer = true;
           }
-        });
+        }
 
         if (hasConfirmedTrainer && !rowClasses.includes('payment-confirmed-camp')) {
           rowClasses += ' payment-confirmed-trainer';
@@ -3636,7 +3636,7 @@
     }
 
     // Update participant totals
-    function updateParticipantTotals(campId, participantId) {
+    async function updateParticipantTotals(campId, participantId) {
       const camp = window.currentCamp;
       const participants = window.currentParticipants;
       if (!camp || !participants) return;
@@ -3655,7 +3655,7 @@
       let totalEUR = 0;
 
       // Add camp payment to totals
-      const campAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'camp')) || 0;
+      const campAmount = parseFloat(await getSavedPayment(camp.id, participant.id, 'camp')) || 0;
       if (camp.currency === 'PLN') {
         totalPLN += campAmount;
       } else if (camp.currency === 'EUR') {
@@ -3664,14 +3664,14 @@
 
       // Add trainer payments to totals
       if (camp.trainers && camp.trainers.length > 0) {
-        camp.trainers.forEach((trainer, trainerIndex) => {
-          const trainerAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
+        for (const [trainerIndex, trainer] of camp.trainers.entries()) {
+          const trainerAmount = parseFloat(await getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
           if (trainer.currency === 'PLN') {
             totalPLN += trainerAmount;
           } else if (trainer.currency === 'EUR') {
             totalEUR += trainerAmount;
           }
-        });
+        }
       }
 
       // Check which currency columns actually exist in the table
