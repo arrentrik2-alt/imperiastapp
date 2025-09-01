@@ -405,6 +405,16 @@
       background-color: #c82333;
     }
 
+    .btn-small {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      min-width: auto;
+    }
+
+    .btn-small i {
+      font-size: 0.8rem;
+    }
+
     /* Camps Styles */
     .camps-list {
       margin-top: 20px;
@@ -445,6 +455,7 @@
       display: flex;
       align-items: center;
       margin-bottom: 10px;
+      position: relative;
     }
 
     .camp-name {
@@ -456,6 +467,12 @@
     .camp-date {
       color: var(--text-gray);
       font-size: 0.9rem;
+    }
+
+    .camp-header .btn-delete {
+      position: absolute;
+      right: 0;
+      top: 0;
     }
 
     .camp-details {
@@ -1319,9 +1336,6 @@
         <div class="camp-actions">
           <button class="btn btn-primary" id="add-participant-btn">
             <i class="fas fa-user-plus"></i> Dodaj uczestnika
-          </button>
-          <button class="btn btn-delete" id="delete-camp-btn">
-            <i class="fas fa-trash"></i> Usuń camp
           </button>
           <button class="btn btn-outline" id="back-to-camps-btn">
             <i class="fas fa-arrow-left"></i> Powrót do campów
@@ -2483,7 +2497,15 @@
       const card = document.createElement('div');
       card.className = 'camp-card';
       card.setAttribute('data-camp-id', camp.id);
-      card.onclick = () => showCampDetails(camp);
+
+      // Handle card click (excluding delete button)
+      card.onclick = (e) => {
+        // Don't open camp details if clicking on delete button
+        if (e.target.closest('.btn-delete')) {
+          return;
+        }
+        showCampDetails(camp);
+      };
 
       // Always include club members eligible for this camp
       const members = window.allMembers || [];
@@ -2508,6 +2530,9 @@
         <div class="camp-header">
           <div class="camp-name">${camp.name}</div>
           <div class="camp-date">${new Date(camp.date).toLocaleDateString('pl-PL')}</div>
+          <button class="btn btn-delete btn-small" data-camp-id="${camp.id}">
+            <i class="fas fa-trash"></i>
+          </button>
         </div>
         <div class="camp-details">
           <span class="camp-detail">
@@ -2518,6 +2543,13 @@
           </span>
         </div>
       `;
+
+      // Handle delete button click
+      const deleteBtn = card.querySelector('.btn-delete');
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent card click
+        deleteCamp(camp);
+      });
 
       return card;
     }
@@ -3256,14 +3288,6 @@
     campMonthSelect.addEventListener('change', (e) => {
       currentMonth = e.target.value;
       loadCamps();
-    });
-
-    // Delete camp button
-    const deleteCampBtn = document.getElementById('delete-camp-btn');
-    deleteCampBtn.addEventListener('click', () => {
-      if (window.currentCamp) {
-        deleteCamp(window.currentCamp);
-      }
     });
 
     // Back to camps button
