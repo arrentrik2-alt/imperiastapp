@@ -806,15 +806,7 @@
       display: none;
     }
 
-    /* Camp participant styling */
-    .participant-row.camp-participant {
-      background: linear-gradient(90deg, rgba(212, 175, 55, 0.05) 0%, rgba(212, 175, 55, 0.02) 100%);
-    }
 
-    .participant-row.camp-participant .participant-name small {
-      font-size: 0.7rem;
-      opacity: 0.8;
-    }
 
     /* Financial Summary Styles */
     .financial-summary {
@@ -2000,9 +1992,7 @@
 
       participants.forEach(participant => {
         const participantId = participant.id;
-        const isExternal = participant.isCampParticipant; // Check if this is an external participant
-
-        console.log(`[STATUS-CHECK] Checking ${participant.name} (${participantId}), external: ${isExternal}`);
+        console.log(`[STATUS-CHECK] Checking ${participant.name} (${participantId})`);
 
         // Check camp payment status
         const campPayment = getSavedPayment(camp.id, participantId, 'camp');
@@ -2626,11 +2616,7 @@
           }
         }
 
-        // Add visual indicator for camp participants
-        const isCampParticipant = participant.isCampParticipant;
-        const participantClass = isCampParticipant ? 'camp-participant' : 'member-participant';
-
-        tableHtml += `<tr class="${rowClasses} participant-row ${participantClass}" data-participant-id="${participant.id}"><td class="participant-name ${attentionClass}">${participant.name}${isCampParticipant ? ' <small style="color: var(--gold); font-weight: normal;">(zewnętrzny)</small>' : ''}</td>`;
+        tableHtml += `<tr class="${rowClasses} participant-row" data-participant-id="${participant.id}"><td class="participant-name ${attentionClass}">${participant.name}</td>`;
 
         // Camp payment cell
         const campCellHtml = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
