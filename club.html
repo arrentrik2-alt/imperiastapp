@@ -2053,10 +2053,10 @@
         // Check trainer payments status
         if (camp.trainers && camp.trainers.length > 0) {
           for (const [trainerIndex, trainer] of camp.trainers.entries()) {
-            const trainerPayment = await getSavedPayment(camp.id, participantId, 'trainer', trainerIndex);
-            const trainerConfirmed = await getPaymentStatus(camp.id, participantId, 'trainer', trainerIndex);
+            const trainerPayment = await getSavedPayment(camp.id, participantId, 'trainer', parseInt(trainerIndex, 10));
+            const trainerConfirmed = await getPaymentStatus(camp.id, participantId, 'trainer', parseInt(trainerIndex, 10));
 
-            console.log(`[STATUS-CHECK] ${participant.name}: trainer ${trainerIndex} payment="${trainerPayment}", confirmed=${trainerConfirmed}`);
+
 
             const hasValidTrainerPayment = trainerPayment && trainerPayment !== '' && trainerPayment !== '0' && trainerPayment !== '0.00';
             if (hasValidTrainerPayment) {
@@ -2239,7 +2239,7 @@
         // Store camps for status calculation
         window.allCamps = camps;
 
-        console.log(`[LOAD-CAMPS] Loaded ${camps.length} camps with trainer data`);
+
 
         if (camps.length === 0) {
           campsList.innerHTML = `
@@ -2412,11 +2412,18 @@
           document.querySelectorAll('.payment-input').forEach(input => {
             if (!input.dataset.currency) {
               const tableType = input.getAttribute('data-column-type');
+
               if (tableType === 'camp' && window.currentCamp) {
                 input.dataset.currency = window.currentCamp.currency || 'PLN';
               } else if (tableType === 'trainer') {
-                const idx = input.getAttribute('data-trainer-index');
-                input.dataset.currency = (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[idx]) ? window.currentCamp.trainers[idx].currency : 'PLN';
+                const idxStr = input.getAttribute('data-trainer-index');
+                const idx = parseInt(idxStr, 10);
+
+                if (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[idx]) {
+                  input.dataset.currency = window.currentCamp.trainers[idx].currency || 'PLN';
+                } else {
+                  input.dataset.currency = 'PLN';
+                }
               }
             }
           });
@@ -2887,7 +2894,7 @@
       return `
         <td class="${cellClass}">
           <div class="payment-cell">
-            <input type="number" id="${inputId}" class="${inputClass}" step="0.01" min="0" placeholder="0.00" value="${savedAmount}" data-camp-id="${campId}" data-participant-id="${participantId}" data-column-type="${columnType}" ${trainerIndex !== null ? `data-trainer-index="${trainerIndex}"` : ''} data-currency="${columnType === 'camp' ? (window.currentCamp ? window.currentCamp.currency : 'PLN') : (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[trainerIndex] ? window.currentCamp.trainers[trainerIndex].currency : 'PLN')}">
+            <input type="number" id="${inputId}" class="${inputClass}" step="0.01" min="0" placeholder="0.00" value="${savedAmount}" data-camp-id="${campId}" data-participant-id="${participantId}" data-column-type="${columnType}" ${trainerIndex !== null ? `data-trainer-index="${trainerIndex}"` : ''}>
             <button type="button" id="${confirmBtnId}" class="confirm-payment-btn" style="${confirmBtnStyle}" data-camp-id="${campId}" data-participant-id="${participantId}" data-column-type="${columnType}" ${trainerIndex !== null ? `data-trainer-index="${trainerIndex}"` : ''}>
               <i class="fas fa-check"></i>
             </button>
@@ -3161,8 +3168,11 @@
       const campId = input.getAttribute('data-camp-id');
       const participantId = input.getAttribute('data-participant-id');
       const columnType = input.getAttribute('data-column-type');
-      const trainerIndex = input.getAttribute('data-trainer-index');
+      const trainerIndexStr = input.getAttribute('data-trainer-index');
+      const trainerIndex = trainerIndexStr ? parseInt(trainerIndexStr, 10) : null;
       const value = input.value.trim();
+
+
 
       const cell = input.closest('td');
       const paymentCell = input.closest('.payment-cell');
@@ -3206,7 +3216,10 @@
       const campId = button.getAttribute('data-camp-id');
       const participantId = button.getAttribute('data-participant-id');
       const columnType = button.getAttribute('data-column-type');
-      const trainerIndex = button.getAttribute('data-trainer-index');
+      const trainerIndexStr = button.getAttribute('data-trainer-index');
+      const trainerIndex = trainerIndexStr ? parseInt(trainerIndexStr, 10) : null;
+
+
 
       const cell = button.closest('td');
       const paymentCell = button.closest('.payment-cell');
@@ -3240,7 +3253,10 @@
       const campId = button.getAttribute('data-camp-id');
       const participantId = button.getAttribute('data-participant-id');
       const columnType = button.getAttribute('data-column-type');
-      const trainerIndex = button.getAttribute('data-trainer-index');
+      const trainerIndexStr = button.getAttribute('data-trainer-index');
+      const trainerIndex = trainerIndexStr ? parseInt(trainerIndexStr, 10) : null;
+
+
 
       const cell = button.closest('td');
       const paymentCell = button.closest('.payment-cell');
@@ -3311,8 +3327,8 @@
         let hasConfirmedTrainer = false;
 
         for (const [trainerIndex, trainer] of currentCamp.trainers.entries()) {
-          const trainerPayment = await getSavedPayment(currentCamp.id, participantId, 'trainer', trainerIndex);
-          const trainerConfirmed = await getPaymentStatus(currentCamp.id, participantId, 'trainer', trainerIndex);
+          const trainerPayment = await getSavedPayment(currentCamp.id, participantId, 'trainer', parseInt(trainerIndex, 10));
+          const trainerConfirmed = await getPaymentStatus(currentCamp.id, participantId, 'trainer', parseInt(trainerIndex, 10));
 
           if (trainerPayment && trainerConfirmed) {
             hasConfirmedTrainer = true;
@@ -3590,7 +3606,7 @@
             .select('amount')
             .eq('camp_id', campId)
             .eq('participant_id', participantId)
-            .eq('trainer_index', trainerIndex);
+            .eq('trainer_index', parseInt(trainerIndex, 10));
         }
 
         const { data, error } = await query.maybeSingle();
@@ -3626,7 +3642,7 @@
             .select('confirmed')
             .eq('camp_id', campId)
             .eq('participant_id', participantId)
-            .eq('trainer_index', trainerIndex);
+            .eq('trainer_index', parseInt(trainerIndex, 10));
         }
 
         const { data, error } = await query.maybeSingle();
@@ -3665,8 +3681,8 @@
         const camp = window.currentCamp;
         if (columnType === 'camp') {
           paymentData.currency = camp.currency;
-        } else if (columnType === 'trainer' && camp.trainers && camp.trainers[trainerIndex]) {
-          paymentData.currency = camp.trainers[trainerIndex].currency;
+        } else if (columnType === 'trainer' && camp.trainers && camp.trainers[parseInt(trainerIndex, 10)]) {
+          paymentData.currency = camp.trainers[parseInt(trainerIndex, 10)].currency;
         }
 
         let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
@@ -3713,7 +3729,7 @@
           .update(updateData)
           .eq('camp_id', campId)
           .eq('participant_id', participantId)
-          .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? trainerIndex : campId);
+          .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : campId);
 
         if (error) {
           console.error('Error confirming payment:', error);
@@ -3734,7 +3750,7 @@
           .delete()
           .eq('camp_id', campId)
           .eq('participant_id', participantId)
-          .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? trainerIndex : campId);
+          .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : campId);
 
         if (error) {
           console.error('Error removing payment:', error);
@@ -3763,12 +3779,12 @@
           }
         }
       } else if (columnType === 'trainer' && window.currentCamp && window.currentCamp.trainers) {
-        const trainer = window.currentCamp.trainers[trainerIndex];
+        const trainer = window.currentCamp.trainers[parseInt(trainerIndex, 10)];
         if (trainer) {
           currency = trainer.currency;
           for (const participant of participants) {
-            const amount = parseFloat(await getSavedPayment(campId, participant.id, columnType, trainerIndex)) || 0;
-            const isConfirmed = await getPaymentStatus(campId, participant.id, columnType, trainerIndex);
+            const amount = parseFloat(await getSavedPayment(campId, participant.id, columnType, parseInt(trainerIndex, 10))) || 0;
+            const isConfirmed = await getPaymentStatus(campId, participant.id, columnType, parseInt(trainerIndex, 10));
 
             total += amount;
             if (isConfirmed) {
@@ -3817,7 +3833,8 @@
       // Add trainer payments to totals
       if (camp.trainers && camp.trainers.length > 0) {
         for (const [trainerIndex, trainer] of camp.trainers.entries()) {
-          const trainerAmount = parseFloat(await getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
+          const trainerAmount = parseFloat(await getSavedPayment(camp.id, participant.id, 'trainer', parseInt(trainerIndex, 10))) || 0;
+
           if (trainer.currency === 'PLN') {
             totalPLN += trainerAmount;
           } else if (trainer.currency === 'EUR') {
