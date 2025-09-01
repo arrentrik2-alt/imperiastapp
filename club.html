@@ -3380,12 +3380,15 @@
       // Load members data first (needed for camp status calculation)
       await loadMembers();
 
-      // Then load camps and set up everything else
+      // Load camps data so we have camp list for status updates
+      await loadCamps();
+
+      // Then set up everything else
       setActiveNav('members'); // Start with members page
       setupPaymentEventListeners(); // Setup payment event listeners
 
       // Load members data for camp status calculation
-      loadMembersDataForCampStatus();
+      await loadMembersDataForCampStatus();
     });
 
     // Load members data specifically for camp status calculation
