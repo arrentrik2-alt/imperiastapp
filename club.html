@@ -192,6 +192,29 @@
       display: flex;
     }
 
+    /* Global loader */
+    #global-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    #global-loader.active { display: flex; pointer-events: auto; }
+    .loader-backdrop {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    }
+    .loader-content {
+      position: relative; z-index: 3001; display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--text-light);
+    }
+    .spinner {
+      width: 48px; height: 48px; border-radius: 50%; border: 5px solid rgba(255,255,255,0.12); border-top-color: var(--gold); animation: spin 1s linear infinite;
+    }
+    .loader-message { font-size: 0.95rem; color: var(--text-light); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     .modal-content {
       background: var(--secondary-bg);
       border: 1px solid var(--border-dark);
@@ -1308,6 +1331,14 @@
       </div>
     </div>
   </main>
+
+  <div id="global-loader">
+    <div class="loader-backdrop"></div>
+    <div class="loader-content">
+      <div class="spinner"></div>
+      <div id="loader-message" class="loader-message">Ładowanie...</div>
+    </div>
+  </div>
 
   <!-- Add Member Modal -->
   <div class="modal" id="add-member-modal">
@@ -2764,6 +2795,19 @@
       return tableHtml;
     }
 
+    // Global loader control
+    function showGlobalLoader(message = 'Ładowanie...') {
+      const loader = document.getElementById('global-loader');
+      const msg = document.getElementById('loader-message');
+      if (msg) msg.textContent = message;
+      if (loader) loader.classList.add('active');
+    }
+
+    function hideGlobalLoader() {
+      const loader = document.getElementById('global-loader');
+      if (loader) loader.classList.remove('active');
+    }
+
     // Create payment cell with input and buttons
     function createPaymentCell(campId, participantId, columnType, savedAmount, isConfirmed, trainerIndex = null) {
       const cellId = `cell_${campId}_${participantId}_${columnType}${trainerIndex !== null ? `_${trainerIndex}` : ''}`;
@@ -2794,7 +2838,7 @@
       return `
         <td class="${cellClass}">
           <div class="payment-cell">
-            <input type="number" id="${inputId}" class="${inputClass}" step="0.01" min="0" placeholder="0.00" value="${savedAmount}" data-camp-id="${campId}" data-participant-id="${participantId}" data-column-type="${columnType}" ${trainerIndex !== null ? `data-trainer-index="${trainerIndex}"` : ''}>
+            <input type="number" id="${inputId}" class="${inputClass}" step="0.01" min="0" placeholder="0.00" value="${savedAmount}" data-camp-id="${campId}" data-participant-id="${participantId}" data-column-type="${columnType}" ${trainerIndex !== null ? `data-trainer-index="${trainerIndex}"` : ''} data-currency="${columnType === 'camp' ? (window.currentCamp ? window.currentCamp.currency : 'PLN') : (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[trainerIndex] ? window.currentCamp.trainers[trainerIndex].currency : 'PLN')}">
             <button type="button" id="${confirmBtnId}" class="confirm-payment-btn" style="${confirmBtnStyle}" data-camp-id="${campId}" data-participant-id="${participantId}" data-column-type="${columnType}" ${trainerIndex !== null ? `data-trainer-index="${trainerIndex}"` : ''}>
               <i class="fas fa-check"></i>
             </button>
@@ -3925,6 +3969,8 @@
       // Then set up everything else
       setActiveNav('members'); // Start with members page
       setupPaymentEventListeners(); // Setup payment event listeners
+      // Hide global loader when initialization finished
+      hideGlobalLoader();
     });
 
     // Load members data specifically for camp status calculation
