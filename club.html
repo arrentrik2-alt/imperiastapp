@@ -3539,25 +3539,25 @@
 
         let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
 
-        // Try to update existing payment first
-        const updateResult = await supabase
+        // Upsert (insert or update) in a single call to avoid relying on update counts
+        const onConflict = columnType === 'camp' ? ['camp_id', 'participant_id'] : ['camp_id', 'participant_id', 'trainer_index'];
+        const { data: upsertData, error: upsertError } = await supabase
           .from(tableName)
-          .update(paymentData)
-          .eq('camp_id', campId)
-          .eq('participant_id', participantId)
-          .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? trainerIndex : campId);
+          .upsert(paymentData, { onConflict })
+          .select();
 
-        // If no row was updated, insert new payment
-        if (updateResult.count === 0) {
-          const insertResult = await supabase
-            .from(tableName)
-            .insert(paymentData);
-
-          if (insertResult.error) {
-            console.error('Error inserting payment:', insertResult.error);
+        if (upsertError) {
+          console.error('Error upserting payment:', upsertError);
+        } else {
+          // Update UI after successful save
+          try {
+            // Refresh participant totals and summaries
+            await updateParticipantTotals(campId, participantId);
+            if (typeof updateSummaries === 'function') await updateSummaries();
+            if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
+          } catch (uiErr) {
+            console.error('Error updating UI after savePayment:', uiErr);
           }
-        } else if (updateResult.error) {
-          console.error('Error updating payment:', updateResult.error);
         }
       } catch (err) {
         console.error('Error in savePayment:', err);
