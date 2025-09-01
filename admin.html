@@ -717,40 +717,40 @@
           <button class="btn btn-outline" id="view-attendance-journal-btn">
             <i class="fas fa-book"></i> Dziennik obecności
           </button>
-          <button class="btn btn-outline" id="back-to-groups-btn">
-            <i class="fas fa-arrow-left"></i> Powrót do grup
-          </button>
+        <button class="btn btn-outline" id="back-to-groups-btn">
+          <i class="fas fa-arrow-left"></i> Powrót do grup
+        </button>
         </div>
         </div>
-
+      
       <!-- Group Details View -->
       <div class="group-view-section active" id="group-details-view">
-        <div class="month-selector">
-          <label for="participants-month-select">Miesiąc:</label>
-          <select id="participants-month-select" class="form-control">
-            <!-- Will be populated with available months -->
-            </select>
-          <button class="btn btn-outline" id="return-current-month-participants" title="Wróć do bieżącego miesiąca">
-            <i class="fas fa-calendar-day"></i>
-          </button>
-          </div>
-
-        <div id="group-participants-info" style="margin-bottom: 20px; display:flex; align-items:center; justify-content:space-between; gap:20px;">
-          <h4 id="group-participants-name" style="color: var(--gold); margin: 0;"></h4>
-          <div style="display:flex; align-items:center; gap:12px;">
-            <canvas id="group-donut" width="80" height="80"></canvas>
-            <div id="group-participants-summary" style="color:var(--text-gray); font-size:0.95rem; text-align:right;"></div>
+      <div class="month-selector">
+        <label for="participants-month-select">Miesiąc:</label>
+        <select id="participants-month-select" class="form-control">
+          <!-- Will be populated with available months -->
+          </select>
+        <button class="btn btn-outline" id="return-current-month-participants" title="Wróć do bieżącego miesiąca">
+          <i class="fas fa-calendar-day"></i>
+        </button>
         </div>
+    
+      <div id="group-participants-info" style="margin-bottom: 20px; display:flex; align-items:center; justify-content:space-between; gap:20px;">
+        <h4 id="group-participants-name" style="color: var(--gold); margin: 0;"></h4>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <canvas id="group-donut" width="80" height="80"></canvas>
+          <div id="group-participants-summary" style="color:var(--text-gray); font-size:0.95rem; text-align:right;"></div>
+      </div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <button class="btn btn-primary" id="add-participant-to-group-btn">
+          <i class="fas fa-plus"></i> Dodaj uczestnika
+        </button>
         </div>
 
-        <div style="margin-bottom: 20px;">
-          <button class="btn btn-primary" id="add-participant-to-group-btn">
-            <i class="fas fa-plus"></i> Dodaj uczestnika
-          </button>
-          </div>
-
-          <div id="participants-list">
-          <!-- Participants will be loaded here -->
+        <div id="participants-list">
+        <!-- Participants will be loaded here -->
           </div>
       </div>
 
@@ -773,7 +773,7 @@
             <p>Ładowanie dziennika obecności...</p>
           </div>
         </div>
-      </div>
+        </div>
       </div>
 
   <!-- Add Group Modal -->
@@ -860,7 +860,7 @@
         <h3>Dodaj uczestnika do grupy</h3>
         <p id="participant-group-name" style="color: var(--text-gray); margin-top: 5px;"></p>
         </div>
-
+      
         <div class="form-group">
           <div style="display:flex;gap:8px;margin-bottom:8px;">
             <button type="button" class="btn btn-outline active" id="group-participant-mode-new">Nowy</button>
@@ -878,7 +878,7 @@
           <!-- new participant container -->
           <div id="group-participant-new-container">
             <label for="participant-name">Imię i nazwisko <span id="group-participant-badge" style="display:none; margin-left:8px; color:var(--success); font-weight:600; font-size:0.9rem;">Istniejący</span></label>
-            <input type="text" id="participant-name" class="form-control" placeholder="Imię i nazwisko">
+        <input type="text" id="participant-name" class="form-control" placeholder="Imię i nazwisko">
           </div>
         </div>
       
@@ -1749,7 +1749,22 @@
       addParticipantModal.classList.add('active');
       participantNameInput.value = '';
       participantPhoneInput.value = '';
+      participantPhoneInput.value = '';
       participantAmountInput.value = '';
+
+      // Reset participant mode buttons
+      document.getElementById('group-participant-mode-new').classList.add('active');
+      document.getElementById('group-participant-mode-existing').classList.remove('active');
+
+      // Show new participant form, hide existing search
+      document.getElementById('group-participant-new-container').style.display = 'block';
+      document.getElementById('group-participant-existing-container').style.display = 'none';
+
+      // Reset existing participant search
+      document.getElementById('group-participant-search').value = '';
+      document.getElementById('group-participant-selected-id').value = '';
+      document.getElementById('group-participant-search-results').innerHTML = '';
+      document.getElementById('group-participant-badge').style.display = 'none';
     }
 
     function closeAddParticipantModal() {
@@ -1787,27 +1802,27 @@
           console.log('Using existing participant:', participantId);
         } else {
           // 1. Add new participant
-          const rodoValue = !!document.getElementById('participant-rodo').checked;
+        const rodoValue = !!document.getElementById('participant-rodo').checked;
           const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
-            p_month: selectedMonth,
-            p_name: name,
-            p_email: null,
-            p_phone: phone || null,
-            p_rodo: rodoValue
-          });
+          p_month: selectedMonth,
+          p_name: name,
+          p_email: null,
+          p_phone: phone || null,
+          p_rodo: rodoValue
+        });
 
-          if (participantError) throw participantError;
+        if (participantError) throw participantError;
           participantId = newParticipantId;
 
-          // Ensure RODO persisted even if RPC signature mismatch: update directly
-          try {
-            const { error: rodoErr } = await supabase
-              .from('participants_month')
-              .update({ rodo: rodoValue })
-              .eq('id', participantId);
-            if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
-          } catch (e) {
-            console.warn('RODO update exception:', e);
+        // Ensure RODO persisted even if RPC signature mismatch: update directly
+        try {
+          const { error: rodoErr } = await supabase
+            .from('participants_month')
+            .update({ rodo: rodoValue })
+            .eq('id', participantId);
+          if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
+        } catch (e) {
+          console.warn('RODO update exception:', e);
           }
         }
 
@@ -2503,22 +2518,7 @@
     async function searchParticipants(month, q) {
       if (!q || q.length < 2) return [];
       try {
-        // Try new unified table first
-        try {
-          const { data: unifiedData, error: unifiedError } = await supabase
-            .from('participants')
-            .select('id,name,phone')
-            .ilike('name', `%${q}%`)
-            .limit(12);
-
-          if (!unifiedError && unifiedData && unifiedData.length > 0) {
-            return unifiedData.map(p => ({ ...p, source: 'unified' }));
-          }
-        } catch (unifiedError) {
-          console.warn('Unified search failed, falling back to legacy:', unifiedError);
-        }
-
-        // Fallback to legacy search
+        // Search in current month first
         const { data: currentMonthData, error: currentError } = await supabase
           .from('participants_month')
           .select('id,name,phone')
@@ -2526,6 +2526,7 @@
           .ilike('name', `%${q}%`)
           .limit(8);
 
+        // Search in other months
         const { data: otherMonthsData, error: otherError } = await supabase
           .from('participants_month')
           .select('id,name,phone')
@@ -2537,6 +2538,7 @@
         const allResults = [];
         const seenIds = new Set();
 
+        // Add current month results first
         if (currentMonthData) {
           currentMonthData.forEach(p => {
             if (!seenIds.has(p.id)) {
@@ -2546,6 +2548,7 @@
           });
         }
 
+        // Add other months results
         if (otherMonthsData) {
           otherMonthsData.forEach(p => {
             if (!seenIds.has(p.id)) {
@@ -2562,26 +2565,11 @@
       }
     }
 
-    // Search participants from entire database (for groups) - backward compatibility
+    // Search participants from entire database (for groups)
     async function searchParticipantsGlobal(q) {
       if (!q || q.length < 2) return [];
       try {
-        // Try new unified table first
-        try {
-          const { data: unifiedData, error: unifiedError } = await supabase
-            .from('participants')
-            .select('id,name,phone')
-            .ilike('name', `%${q}%`)
-            .limit(12);
-
-          if (!unifiedError && unifiedData) {
-            return unifiedData.map(p => ({ ...p, source: 'unified' }));
-          }
-        } catch (unifiedError) {
-          console.warn('Unified search failed, falling back to legacy:', unifiedError);
-        }
-
-        // Fallback to legacy search
+        // First try to search in current month's participants
         const currentMonth = document.getElementById('participants-month-select').value;
         const { data: currentMonthData, error: currentError } = await supabase
           .from('participants_month')
@@ -2590,6 +2578,7 @@
           .ilike('name', `%${q}%`)
           .limit(8);
 
+        // Then search in other months (distinct participants)
         const { data: otherMonthsData, error: otherError } = await supabase
           .from('participants_month')
           .select('id,name,phone')
@@ -2601,6 +2590,7 @@
         const allResults = [];
         const seenIds = new Set();
 
+        // Add current month results first
         if (currentMonthData) {
           currentMonthData.forEach(p => {
             if (!seenIds.has(p.id)) {
@@ -2610,6 +2600,7 @@
           });
         }
 
+        // Add other months results
         if (otherMonthsData) {
           otherMonthsData.forEach(p => {
             if (!seenIds.has(p.id)) {
@@ -2622,30 +2613,6 @@
         return allResults.slice(0, 12);
       } catch (error) {
         console.warn('Global search error', error);
-        return [];
-      }
-    }
-
-    // Search in unified participants table (new architecture)
-    async function searchParticipantsUnified(q, context = 'all') {
-      if (!q || q.length < 2) return [];
-      try {
-        let query = supabase
-          .from('participants')
-          .select('id,name,phone,email')
-          .ilike('name', `%${q}%`)
-          .limit(12);
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.warn('Unified search error:', error);
-          return [];
-        }
-
-        return data || [];
-      } catch (error) {
-        console.warn('Unified search exception:', error);
         return [];
       }
     }
