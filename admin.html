@@ -409,6 +409,7 @@
       position: sticky;
       left: 0;
       z-index: 5;
+      color: #333; /* Dark color for better visibility */
     }
 
     .attendance-table tr:nth-child(even) {
@@ -417,6 +418,7 @@
 
     .attendance-table tr:nth-child(even) td.participant-name {
       background: #f8f9fa;
+      color: #333; /* Dark color for better visibility */
     }
 
     .attendance-checkbox {
@@ -1275,6 +1277,7 @@
       render('current-month-select');
       render('groups-month-select');
       render('participants-month-select');
+      render('attendance-month-select');
       render('lessons-month-select');
 
       console.log('Selektory miesięcy zaktualizowane');
@@ -3162,9 +3165,17 @@
         // Debug: check group object properties
         console.log('Group object:', group);
         console.log('Group day property:', group.day);
+        console.log('Group day_of_week property:', group.day_of_week);
 
         // Get training dates for the month (based on group day)
-        const trainingDates = getTrainingDatesForMonth(selectedMonth, group.day);
+        const dayOfWeek = group.day || group.day_of_week;
+        console.log('Using dayOfWeek:', dayOfWeek);
+
+        if (!dayOfWeek) {
+          throw new Error('Brak informacji o dniu tygodnia grupy');
+        }
+
+        const trainingDates = getTrainingDatesForMonth(selectedMonth, dayOfWeek);
 
         // Create attendance table
         const tableHTML = createAttendanceTable(participantsData, trainingDates, selectedMonth);
@@ -3269,42 +3280,68 @@
       return tableHTML;
     }
 
-    // Load existing attendance data from database
+    // Load existing attendance data from Supabase database
     async function loadExistingAttendanceData(groupId, month, participants, trainingDates) {
       try {
-        // For now, we'll use a simple approach - store attendance in localStorage
-        // In a real app, you'd have an attendance table in the database
-        const attendanceKey = `attendance_${groupId}_${month}`;
-        const storedData = localStorage.getItem(attendanceKey);
+        // Load attendance data from Supabase
+        const { data: attendanceRecords, error } = await supabase
+          .from('attendance')
+          .select('*')
+          .eq('group_id', groupId)
+          .eq('month', month);
 
-        if (storedData) {
-          attendanceData = JSON.parse(storedData);
-
-          // Set checkboxes based on stored data
-          participants.forEach(participant => {
-            const p = participant.participants_month;
-            trainingDates.forEach(date => {
-              const dateStr = date.toISOString().split('T')[0];
-              const checkbox = document.querySelector(
-                `input[data-participant-id="${p.id}"][data-date="${dateStr}"]`
-              );
-
-              if (checkbox && attendanceData[p.id] && attendanceData[p.id][dateStr]) {
-                checkbox.checked = true;
-
-                // Check if column is approved
-                if (attendanceData[p.id][dateStr].approved) {
-                  const column = checkbox.closest('td');
-                  column.classList.add('attendance-column-approved');
-                  checkbox.disabled = true;
-                }
-              }
-            });
-          });
-
-          // Update approve buttons based on stored approval status
-          updateApproveButtons(trainingDates);
+        if (error) {
+          console.error('Error loading attendance data from database:', error);
+          return;
         }
+
+        // Clear existing attendance data
+        attendanceData = {};
+
+        // Process attendance records
+        if (attendanceRecords && attendanceRecords.length > 0) {
+          attendanceRecords.forEach(record => {
+            const participantId = record.participant_id;
+            const dateStr = record.date;
+
+            if (!attendanceData[participantId]) {
+              attendanceData[participantId] = {};
+            }
+
+            attendanceData[participantId][dateStr] = {
+              present: record.present,
+              approved: record.approved
+            };
+          });
+        }
+
+        // Set checkboxes based on loaded data
+        participants.forEach(participant => {
+          const p = participant.participants_month;
+          trainingDates.forEach(date => {
+            const dateStr = date.toISOString().split('T')[0];
+            const checkbox = document.querySelector(
+              `input[data-participant-id="${p.id}"][data-date="${dateStr}"]`
+            );
+
+            if (checkbox && attendanceData[p.id] && attendanceData[p.id][dateStr]) {
+              checkbox.checked = attendanceData[p.id][dateStr].present;
+
+              // Check if column is approved
+              if (attendanceData[p.id][dateStr].approved) {
+                const column = checkbox.closest('td');
+                column.classList.add('attendance-column-approved');
+                checkbox.disabled = true;
+              }
+            }
+          });
+        });
+
+        // Update approve buttons based on stored approval status
+        updateApproveButtons(trainingDates);
+
+        console.log('Attendance data loaded from database:', attendanceRecords?.length || 0, 'records');
+
       } catch (err) {
         console.error('Error loading existing attendance data:', err);
       }
@@ -3338,38 +3375,85 @@
     }
 
     // Handle checkbox changes
-    document.addEventListener('change', (e) => {
+    document.addEventListener('change', async (e) => {
       if (e.target.classList.contains('attendance-checkbox')) {
         const participantId = e.target.dataset.participantId;
         const date = e.target.dataset.date;
         const isChecked = e.target.checked;
-
-        // Initialize data structure if needed
-        if (!attendanceData[participantId]) {
-          attendanceData[participantId] = {};
-        }
-
-        if (!attendanceData[participantId][date]) {
-          attendanceData[participantId][date] = {};
-        }
-
-        // Update attendance data
-        attendanceData[participantId][date].present = isChecked;
-        attendanceData[participantId][date].approved = false; // Reset approval when checkbox changes
-
-        // Remove approved class if checkbox was unchecked
-        if (!isChecked) {
-          const column = e.target.closest('td');
-          column.classList.remove('attendance-column-approved');
-          e.target.disabled = false;
-        }
-
-        // Save to localStorage
         const month = document.getElementById('attendance-month-select').value || currentAttendanceMonth;
-        const attendanceKey = `attendance_${currentGroupId}_${month}`;
-        localStorage.setItem(attendanceKey, JSON.stringify(attendanceData));
 
-        console.log('Attendance updated:', participantId, date, isChecked);
+        try {
+          // Update or insert attendance record in Supabase
+          const { data: existingRecord, error: selectError } = await supabase
+            .from('attendance')
+            .select('*')
+            .eq('group_id', currentGroupId)
+            .eq('participant_id', participantId)
+            .eq('date', date)
+            .single();
+
+          if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = not found
+            console.error('Error checking existing attendance record:', selectError);
+            return;
+          }
+
+          if (existingRecord) {
+            // Update existing record
+            const { error: updateError } = await supabase
+              .from('attendance')
+              .update({
+                present: isChecked,
+                approved: false // Reset approval when checkbox changes
+              })
+              .eq('id', existingRecord.id);
+
+            if (updateError) {
+              console.error('Error updating attendance record:', updateError);
+              return;
+            }
+          } else {
+            // Insert new record
+            const { error: insertError } = await supabase
+              .from('attendance')
+              .insert({
+                group_id: currentGroupId,
+                participant_id: participantId,
+                date: date,
+                month: month,
+                present: isChecked,
+                approved: false
+              });
+
+            if (insertError) {
+              console.error('Error inserting attendance record:', insertError);
+              return;
+            }
+          }
+
+          // Update local attendance data structure
+          if (!attendanceData[participantId]) {
+            attendanceData[participantId] = {};
+          }
+
+          if (!attendanceData[participantId][date]) {
+            attendanceData[participantId][date] = {};
+          }
+
+          attendanceData[participantId][date].present = isChecked;
+          attendanceData[participantId][date].approved = false;
+
+          // Remove approved class if checkbox was unchecked
+          if (!isChecked) {
+            const column = e.target.closest('td');
+            column.classList.remove('attendance-column-approved');
+            e.target.disabled = false;
+          }
+
+          console.log('Attendance updated in database:', participantId, date, isChecked);
+
+        } catch (err) {
+          console.error('Error updating attendance:', err);
+        }
       }
     });
 
@@ -3394,109 +3478,96 @@
     });
 
     // Approve attendance for a date column
-    function approveColumnAttendance(date) {
+    async function approveColumnAttendance(date) {
       const checkboxes = document.querySelectorAll(`input[data-date="${date}"]`);
-
-      checkboxes.forEach(cb => {
-        const participantId = cb.dataset.participantId;
-
-        // Mark as approved
-        if (!attendanceData[participantId]) {
-          attendanceData[participantId] = {};
-        }
-        if (!attendanceData[participantId][date]) {
-          attendanceData[participantId][date] = {};
-        }
-
-        attendanceData[participantId][date].approved = true;
-        attendanceData[participantId][date].present = cb.checked;
-
-        // Disable checkbox and mark column as approved
-        cb.disabled = true;
-        const column = cb.closest('td');
-        column.classList.add('attendance-column-approved');
-      });
-
-      // Save to localStorage
       const month = document.getElementById('attendance-month-select').value || currentAttendanceMonth;
-      const attendanceKey = `attendance_${currentGroupId}_${month}`;
-      localStorage.setItem(attendanceKey, JSON.stringify(attendanceData));
 
-      console.log('Column approved:', date);
-    }
+      try {
+        // Update all attendance records for this date to approved
+        for (const cb of checkboxes) {
+          const participantId = cb.dataset.participantId;
 
-    // Enable editing for a date column
-    function enableColumnEditing(date) {
-      const checkboxes = document.querySelectorAll(`input[data-date="${date}"]`);
+          // Update attendance record in database
+          const { error: updateError } = await supabase
+            .from('attendance')
+            .update({ approved: true })
+            .eq('group_id', currentGroupId)
+            .eq('participant_id', participantId)
+            .eq('date', date);
 
-      checkboxes.forEach(cb => {
-        const participantId = cb.dataset.participantId;
-
-        // Re-enable checkbox
-        cb.disabled = false;
-
-        // Remove approved class
-        const column = cb.closest('td');
-        column.classList.remove('attendance-column-approved');
-
-        // Reset approval status
-        if (attendanceData[participantId] && attendanceData[participantId][date]) {
-          attendanceData[participantId][date].approved = false;
-        }
-      });
-
-      // Save to localStorage
-      const month = document.getElementById('attendance-month-select').value || currentAttendanceMonth;
-      const attendanceKey = `attendance_${currentGroupId}_${month}`;
-      localStorage.setItem(attendanceKey, JSON.stringify(attendanceData));
-
-      console.log('Column editing enabled:', date);
-    }
-
-    // Initialize attendance month selector
-    function initializeAttendanceMonthSelector() {
-      const selector = document.getElementById('attendance-month-select');
-      if (selector) {
-        // Populate with available months (you can modify this to load from database)
-        const months = [];
-        const currentDate = new Date();
-        for (let i = 0; i < 12; i++) {
-          const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-          const value = date.toISOString().slice(0, 7);
-          const label = date.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long' });
-          months.push({ value, label });
-        }
-
-        selector.innerHTML = months.map(month =>
-          `<option value="${month.value}" ${month.value === currentAttendanceMonth ? 'selected' : ''}>${month.label}</option>`
-        ).join('');
-
-        // Handle month change
-        selector.addEventListener('change', () => {
-          currentAttendanceMonth = selector.value;
-          if (document.getElementById('attendance-journal-view').classList.contains('active')) {
-            loadAttendanceJournal();
+          if (updateError) {
+            console.error('Error approving attendance record:', updateError);
+            continue;
           }
-        });
 
-        // Handle return to current month button
-        const returnBtn = document.getElementById('return-current-month-attendance');
-        if (returnBtn) {
-          returnBtn.addEventListener('click', () => {
-            selector.value = getCurrentMonth();
-            currentAttendanceMonth = getCurrentMonth();
-            if (document.getElementById('attendance-journal-view').classList.contains('active')) {
-              loadAttendanceJournal();
-            }
-          });
+          // Update local data structure
+          if (!attendanceData[participantId]) {
+            attendanceData[participantId] = {};
+          }
+          if (!attendanceData[participantId][date]) {
+            attendanceData[participantId][date] = {};
+          }
+
+          attendanceData[participantId][date].approved = true;
+          attendanceData[participantId][date].present = cb.checked;
+
+          // Disable checkbox and mark column as approved
+          cb.disabled = true;
+          const column = cb.closest('td');
+          column.classList.add('attendance-column-approved');
         }
+
+        console.log('Column approved in database:', date);
+
+      } catch (err) {
+        console.error('Error approving column:', err);
       }
     }
 
-    // Initialize when DOM is ready
-    document.addEventListener('DOMContentLoaded', () => {
-      initializeAttendanceMonthSelector();
-    });
+    // Enable editing for a date column
+    async function enableColumnEditing(date) {
+      const checkboxes = document.querySelectorAll(`input[data-date="${date}"]`);
+      const month = document.getElementById('attendance-month-select').value || currentAttendanceMonth;
+
+      try {
+        // Update all attendance records for this date to not approved
+        for (const cb of checkboxes) {
+          const participantId = cb.dataset.participantId;
+
+          // Update attendance record in database
+          const { error: updateError } = await supabase
+            .from('attendance')
+            .update({ approved: false })
+            .eq('group_id', currentGroupId)
+            .eq('participant_id', participantId)
+            .eq('date', date);
+
+          if (updateError) {
+            console.error('Error enabling editing for attendance record:', updateError);
+            continue;
+          }
+
+          // Re-enable checkbox
+          cb.disabled = false;
+
+          // Remove approved class
+          const column = cb.closest('td');
+          column.classList.remove('attendance-column-approved');
+
+          // Reset approval status in local data
+          if (attendanceData[participantId] && attendanceData[participantId][date]) {
+            attendanceData[participantId][date].approved = false;
+          }
+        }
+
+        console.log('Column editing enabled in database:', date);
+
+      } catch (err) {
+        console.error('Error enabling column editing:', err);
+      }
+    }
+
+    // Attendance month selector is now handled by populateMonthSelectors()
 
   </script>
 </body>
