@@ -2116,9 +2116,7 @@
           campsList.appendChild(campCard);
         });
 
-        // Update all camp statuses after all cards are created
-        // This will work even if members data is not yet loaded
-        setTimeout(() => updateAllCampStatuses(), 100);
+        // Camp statuses will be updated when member data is loaded in showCampDetails()
 
       } catch (err) {
         console.error('Błąd ładowania campów:', err);
@@ -2194,9 +2192,6 @@
         // Store all members for camp status calculation
         window.allMembers = allMembers;
 
-        // Update camp statuses now that we have members data
-        updateAllCampStatuses();
-
         // Get members eligible for this camp (ST or 10T style)
         const members = allMembers.filter(m => m.style === 'st' || m.style === '10t');
 
@@ -2228,6 +2223,9 @@
           summaryCurrencies.innerHTML = createFinancialSummaryHTML(camp, allParticipants);
           financialSummary.style.display = 'block';
         }
+
+        // Update camp statuses now that we have all data loaded
+        updateAllCampStatuses();
 
       } catch (err) {
         console.error('Błąd ładowania uczestników campu:', err);
