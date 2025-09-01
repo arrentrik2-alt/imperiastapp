@@ -2200,13 +2200,21 @@
       card.onclick = () => showCampDetails(camp);
 
       // Calculate initial status - check both camp participants and club members
-      let allParticipants = getCampParticipants(camp.id);
+      const externalParticipants = getCampParticipants(camp.id);
 
-      // If no camp participants, check club members eligible for this camp
-      if (allParticipants.length === 0) {
-        const members = window.allMembers || [];
-        allParticipants = members.filter(m => m.style === 'st' || m.style === '10t');
-      }
+      // Always include club members eligible for this camp
+      const members = window.allMembers || [];
+      const eligibleMembers = members.filter(m => m.style === 'st' || m.style === '10t');
+
+      // Combine external participants and club members, but avoid duplicates
+      let allParticipants = [...externalParticipants];
+      eligibleMembers.forEach(member => {
+        // Check if this member is not already in external participants
+        const isAlreadyExternal = externalParticipants.some(ext => ext.id === member.id);
+        if (!isAlreadyExternal) {
+          allParticipants.push(member);
+        }
+      });
 
       // Only calculate status if we have participants data available
       if (allParticipants.length > 0 || (window.allMembers && window.allMembers.length > 0)) {
