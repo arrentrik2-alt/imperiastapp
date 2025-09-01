@@ -1113,6 +1113,21 @@
       animation: spin 1s ease-in-out infinite;
     }
 
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .loading-state p {
+      margin: 15px 0 0 0;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
@@ -2208,6 +2223,14 @@
     // Load camps for selected month
     async function loadCamps() {
       try {
+        // Show loading state
+        campsList.innerHTML = `
+          <div class="loading-state">
+            <div class="loading"></div>
+            <p>Ładowanie campów...</p>
+          </div>
+        `;
+
         const { data: camps, error } = await supabase
           .from('camps')
           .select('*')
@@ -2352,6 +2375,15 @@
       // Hide camps list and show details
       document.getElementById('camps-section').style.display = 'none';
       document.getElementById('camp-details-section').style.display = 'block';
+
+      // Show loading state in camp details
+      const detailsContent = document.getElementById('camp-details-content');
+      detailsContent.innerHTML = `
+        <div class="loading-state">
+          <div class="loading"></div>
+          <p>Ładowanie szczegółów campu...</p>
+        </div>
+      `;
 
       // Load camp participants (members with ST or 10T style + additional camp participants)
       try {
