@@ -782,6 +782,223 @@
       opacity: 0.8;
     }
 
+    /* Financial Summary Styles */
+    .financial-summary {
+      margin-top: 30px;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%);
+      border-radius: 12px;
+      border: 1px solid var(--border-dark);
+    }
+
+    .financial-summary h3 {
+      color: var(--gold);
+      margin-bottom: 20px;
+      font-size: 1.4rem;
+    }
+
+    .summary-currencies {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+    }
+
+    .currency-summary {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 20px;
+      border: 1px solid var(--border-dark);
+    }
+
+    .currency-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-dark);
+    }
+
+    .currency-flag {
+      font-size: 1.5rem;
+      margin-right: 10px;
+    }
+
+    .currency-title {
+      color: var(--gold);
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .summary-label {
+      color: var(--text-gray);
+      font-weight: 500;
+    }
+
+    .summary-value {
+      color: var(--text-light);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .summary-value.total {
+      color: var(--gold);
+      font-size: 1rem;
+    }
+
+    .summary-value.paid {
+      color: var(--success);
+      font-size: 1rem;
+    }
+
+    .summary-value.profit {
+      color: var(--success);
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .summary-value.loss {
+      color: var(--error);
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    /* Expenses Section */
+    .expenses-section {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border-dark);
+    }
+
+    .expenses-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .expenses-title {
+      color: var(--text-light);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .expense-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.02);
+      font-size: 0.85rem;
+    }
+
+    .expense-name {
+      color: var(--text-gray);
+      flex: 1;
+    }
+
+    .expense-amount {
+      color: var(--error);
+      font-weight: 600;
+    }
+
+    .expense-remove {
+      color: var(--error);
+      cursor: pointer;
+      margin-left: 10px;
+      font-size: 0.8rem;
+    }
+
+    .expense-remove:hover {
+      color: #ff6b6b;
+    }
+
+    /* Add Expense Form */
+    .add-expense-form {
+      margin-top: 15px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 6px;
+      border: 1px solid var(--border-dark);
+    }
+
+    .expense-form-row {
+      display: flex;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .expense-form-group {
+      flex: 1;
+    }
+
+    .expense-form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text-gray);
+      font-size: 0.85rem;
+    }
+
+    .expense-input {
+      width: 100%;
+      padding: 8px;
+      background-color: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--border-dark);
+      border-radius: 4px;
+      color: var(--text-light);
+      font-size: 0.85rem;
+    }
+
+    .expense-input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    .btn-add-expense {
+      padding: 8px 12px;
+      background-color: var(--error);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .btn-add-expense:hover {
+      background-color: #c82333;
+    }
+
+    .total-expenses {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .total-expenses-label {
+      color: var(--text-gray);
+      font-size: 0.85rem;
+    }
+
+    .total-expenses-value {
+      color: var(--error);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
     /* Trainer Form Styles */
     .trainer-item {
       background-color: rgba(255, 255, 255, 0.05);
@@ -1054,6 +1271,14 @@
 
       <div class="camp-details-content" id="camp-details-content">
         <!-- Camp details table will be loaded here -->
+      </div>
+
+      <!-- Financial Summary Section -->
+      <div class="financial-summary" id="financial-summary">
+        <h3>Podsumowanie Finansowe</h3>
+        <div class="summary-currencies" id="summary-currencies">
+          <!-- Currency summaries will be loaded here -->
+        </div>
       </div>
     </div>
   </main>
@@ -1680,6 +1905,52 @@
     // Make removeTrainer global
     window.removeTrainer = removeTrainer;
 
+    // Global functions for expenses
+    window.addNewExpense = function(campId, currency) {
+      const nameInput = document.getElementById(`expense-name-${currency}`);
+      const amountInput = document.getElementById(`expense-amount-${currency}`);
+
+      if (!nameInput || !amountInput) return;
+
+      const name = nameInput.value.trim();
+      const amount = amountInput.value.trim();
+
+      if (!name || !amount || parseFloat(amount) <= 0) {
+        alert('Wypełnij nazwę wydatku i prawidłową kwotę');
+        return;
+      }
+
+      // Add expense
+      addExpense(campId, currency, name, amount);
+
+      // Clear inputs
+      nameInput.value = '';
+      amountInput.value = '';
+
+      // Update financial summary
+      updateFinancialSummary();
+    };
+
+    window.removeExpense = function(campId, currency, expenseId) {
+      if (confirm('Czy na pewno chcesz usunąć ten wydatek?')) {
+        removeExpense(campId, currency, expenseId);
+        updateFinancialSummary();
+      }
+    };
+
+    // Update financial summary
+    function updateFinancialSummary() {
+      const camp = window.currentCamp;
+      const participants = window.currentParticipants;
+
+      if (!camp || !participants) return;
+
+      const summaryCurrencies = document.getElementById('summary-currencies');
+      if (summaryCurrencies) {
+        summaryCurrencies.innerHTML = createFinancialSummaryHTML(camp, participants);
+      }
+    }
+
     // Load camps for selected month
     async function loadCamps() {
       try {
@@ -1780,6 +2051,14 @@
           searchInput.value = '';
         }
 
+        // Show financial summary
+        const financialSummary = document.getElementById('financial-summary');
+        const summaryCurrencies = document.getElementById('summary-currencies');
+        if (financialSummary && summaryCurrencies) {
+          summaryCurrencies.innerHTML = createFinancialSummaryHTML(camp, allParticipants);
+          financialSummary.style.display = 'block';
+        }
+
       } catch (err) {
         console.error('Błąd ładowania uczestników campu:', err);
         document.getElementById('camp-details-content').innerHTML = '<div class="empty-state"><p>Błąd ładowania danych</p></div>';
@@ -1841,6 +2120,180 @@
       const participants = getCampParticipants(campId);
       const filtered = participants.filter(p => p.id !== participantId);
       localStorage.setItem(key, JSON.stringify(filtered));
+    }
+
+    // Expenses management
+    function getExpensesKey(campId, currency) {
+      return `expenses_${campId}_${currency}`;
+    }
+
+    function getExpenses(campId, currency) {
+      const key = getExpensesKey(campId, currency);
+      const expenses = localStorage.getItem(key);
+      return expenses ? JSON.parse(expenses) : [];
+    }
+
+    function addExpense(campId, currency, name, amount) {
+      const key = getExpensesKey(campId, currency);
+      const expenses = getExpenses(campId, currency);
+      const expense = {
+        id: Date.now().toString(),
+        name: name.trim(),
+        amount: parseFloat(amount),
+        currency: currency,
+        created_at: new Date().toISOString()
+      };
+      expenses.push(expense);
+      localStorage.setItem(key, JSON.stringify(expenses));
+      return expense;
+    }
+
+    function removeExpense(campId, currency, expenseId) {
+      const key = getExpensesKey(campId, currency);
+      const expenses = getExpenses(campId, currency);
+      const filtered = expenses.filter(e => e.id !== expenseId);
+      localStorage.setItem(key, JSON.stringify(filtered));
+    }
+
+    function getTotalExpenses(campId, currency) {
+      const expenses = getExpenses(campId, currency);
+      return expenses.reduce((total, expense) => total + expense.amount, 0);
+    }
+
+    // Calculate financial summary for a currency
+    function calculateCurrencySummary(camp, currency, participants) {
+      let totalAmount = 0; // Wszystkie kwoty (potwierdzone + niepotwierdzone)
+      let paidAmount = 0;  // Tylko potwierdzone kwoty
+
+      // Calculate camp payments
+      participants.forEach(participant => {
+        const campPayment = parseFloat(getSavedPayment(camp.id, participant.id, 'camp')) || 0;
+        const campConfirmed = getPaymentStatus(camp.id, participant.id, 'camp');
+
+        if (camp.currency === currency) {
+          totalAmount += campPayment;
+          if (campConfirmed) {
+            paidAmount += campPayment;
+          }
+        }
+      });
+
+      // Calculate trainer payments
+      if (camp.trainers && camp.trainers.length > 0) {
+        camp.trainers.forEach((trainer, trainerIndex) => {
+          if (trainer.currency === currency) {
+            participants.forEach(participant => {
+              const trainerPayment = parseFloat(getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
+              const trainerConfirmed = getPaymentStatus(camp.id, participant.id, 'trainer', trainerIndex);
+
+              totalAmount += trainerPayment;
+              if (trainerConfirmed) {
+                paidAmount += trainerPayment;
+              }
+            });
+          }
+        });
+      }
+
+      // Calculate expenses and profit
+      const totalExpenses = getTotalExpenses(camp.id, currency);
+      const profit = paidAmount - totalExpenses;
+
+      return {
+        currency,
+        totalAmount,
+        paidAmount,
+        totalExpenses,
+        profit
+      };
+    }
+
+    // Create financial summary HTML
+    function createFinancialSummaryHTML(camp, participants) {
+      // Determine which currencies to show
+      const currencies = [];
+      if (camp.currency === 'PLN' || (camp.trainers && camp.trainers.some(t => t.currency === 'PLN'))) {
+        currencies.push('PLN');
+      }
+      if (camp.currency === 'EUR' || (camp.trainers && camp.trainers.some(t => t.currency === 'EUR'))) {
+        currencies.push('EUR');
+      }
+
+      if (currencies.length === 0) {
+        return '<p style="text-align: center; color: var(--text-gray);">Brak danych finansowych</p>';
+      }
+
+      let summaryHtml = '';
+
+      currencies.forEach(currency => {
+        const summary = calculateCurrencySummary(camp, currency, participants);
+        const expenses = getExpenses(camp.id, currency);
+
+        summaryHtml += `
+          <div class="currency-summary">
+            <div class="currency-header">
+              <div class="currency-flag">${currency === 'PLN' ? '🇵🇱' : '🇪🇺'}</div>
+              <div class="currency-title">${currency}</div>
+            </div>
+
+            <div class="summary-item">
+              <span class="summary-label">Kwota ogólna campu</span>
+              <span class="summary-value total">${summary.totalAmount.toFixed(2)} ${currency}</span>
+            </div>
+
+            <div class="summary-item">
+              <span class="summary-label">Zapłacona kwota campu</span>
+              <span class="summary-value paid">${summary.paidAmount.toFixed(2)} ${currency}</span>
+            </div>
+
+            <div class="summary-item">
+              <span class="summary-label">Zysk</span>
+              <span class="summary-value ${summary.profit >= 0 ? 'profit' : 'loss'}">${summary.profit.toFixed(2)} ${currency}</span>
+            </div>
+
+            <!-- Expenses Section -->
+            <div class="expenses-section">
+              <div class="expenses-header">
+                <div class="expenses-title">Wydatki</div>
+              </div>
+
+              <div id="expenses-list-${currency}" class="expenses-list">
+                ${expenses.map(expense => `
+                  <div class="expense-item" data-expense-id="${expense.id}">
+                    <span class="expense-name">${expense.name}</span>
+                    <span class="expense-amount">${expense.amount.toFixed(2)} ${currency}</span>
+                    <span class="expense-remove" onclick="removeExpense('${camp.id}', '${currency}', '${expense.id}')">×</span>
+                  </div>
+                `).join('')}
+              </div>
+
+              <div class="total-expenses">
+                <div class="total-expenses-label">Suma wydatków</div>
+                <div class="total-expenses-value">${summary.totalExpenses.toFixed(2)} ${currency}</div>
+              </div>
+
+              <!-- Add Expense Form -->
+              <div class="add-expense-form">
+                <div class="expense-form-row">
+                  <div class="expense-form-group">
+                    <label for="expense-name-${currency}">Nazwa wydatku</label>
+                    <input type="text" id="expense-name-${currency}" class="expense-input" placeholder="np. Catering">
+                  </div>
+                  <div class="expense-form-group">
+                    <label for="expense-amount-${currency}">Kwota</label>
+                    <input type="number" id="expense-amount-${currency}" class="expense-input" step="0.01" min="0" placeholder="0.00">
+                  </div>
+                  <button type="button" class="btn-add-expense" onclick="addNewExpense('${camp.id}', '${currency}')">
+                    <i class="fas fa-plus"></i> Dodaj
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      return summaryHtml;
     }
 
     // Create camp details table
@@ -2183,6 +2636,7 @@
     // Back to camps button
     backToCampsBtn.addEventListener('click', () => {
       document.getElementById('camp-details-section').style.display = 'none';
+      document.getElementById('financial-summary').style.display = 'none';
       document.getElementById('camps-section').style.display = 'block';
       currentCamp = null;
     });
@@ -2301,7 +2755,10 @@
       updateRowStyling(participantId);
       updateSummaries();
       // Use setTimeout to ensure DOM is updated before updating totals
-      setTimeout(() => updateParticipantTotals(campId, participantId), 10);
+      setTimeout(() => {
+        updateParticipantTotals(campId, participantId);
+        updateFinancialSummary();
+      }, 10);
     }
 
     function handleConfirmPayment(button) {
@@ -2331,7 +2788,10 @@
       updateRowStyling(participantId);
       updateSummaries();
       // Use setTimeout to ensure DOM is updated before updating totals
-      setTimeout(() => updateParticipantTotals(campId, participantId), 10);
+      setTimeout(() => {
+        updateParticipantTotals(campId, participantId);
+        updateFinancialSummary();
+      }, 10);
     }
 
     function handleRemovePayment(button) {
@@ -2360,7 +2820,10 @@
       updateRowStyling(participantId);
       updateSummaries();
       // Use setTimeout to ensure DOM is updated before updating totals
-      setTimeout(() => updateParticipantTotals(campId, participantId), 10);
+      setTimeout(() => {
+        updateParticipantTotals(campId, participantId);
+        updateFinancialSummary();
+      }, 10);
     }
 
     function updateRowStyling(participantId) {
