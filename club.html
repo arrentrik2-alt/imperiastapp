@@ -1320,6 +1320,9 @@
           <button class="btn btn-primary" id="add-participant-btn">
             <i class="fas fa-user-plus"></i> Dodaj uczestnika
           </button>
+          <button class="btn btn-delete" id="delete-camp-btn">
+            <i class="fas fa-trash"></i> Usuń camp
+          </button>
           <button class="btn btn-outline" id="back-to-camps-btn">
             <i class="fas fa-arrow-left"></i> Powrót do campów
           </button>
@@ -2323,6 +2326,125 @@
       }
     }
 
+    // Delete camp and all related data
+    async function deleteCamp(camp) {
+      if (!confirm(`Czy na pewno chcesz usunąć camp "${camp.name}"?\n\nTa operacja usunie wszystkie dane campu, włącznie z uczestnikami, trenerami, płatnościami i uwagami.`)) {
+        return;
+      }
+
+      try {
+        console.log(`[DELETE-CAMP] Starting deletion of camp ${camp.name} (${camp.id})`);
+
+        // Delete in order of dependencies (foreign keys)
+        // 1. Delete camp payments
+        const { error: campPaymentsError } = await supabase
+          .from('camp_payments')
+          .delete()
+          .eq('camp_id', camp.id);
+
+        if (campPaymentsError) {
+          console.error('Error deleting camp payments:', campPaymentsError);
+          throw campPaymentsError;
+        }
+
+        // 2. Delete trainer payments
+        const { error: trainerPaymentsError } = await supabase
+          .from('trainer_payments')
+          .delete()
+          .eq('camp_id', camp.id);
+
+        if (trainerPaymentsError) {
+          console.error('Error deleting trainer payments:', trainerPaymentsError);
+          throw trainerPaymentsError;
+        }
+
+        // 3. Delete participant attention records
+        const { error: attentionError } = await supabase
+          .from('participant_attention')
+          .delete()
+          .eq('camp_id', camp.id);
+
+        if (attentionError) {
+          console.error('Error deleting participant attention:', attentionError);
+          throw attentionError;
+        }
+
+        // 4. Delete participant comments
+        const { error: commentsError } = await supabase
+          .from('participant_comments')
+          .delete()
+          .eq('camp_id', camp.id);
+
+        if (commentsError) {
+          console.error('Error deleting participant comments:', commentsError);
+          throw commentsError;
+        }
+
+        // 5. Delete camp expenses
+        const { error: expensesError } = await supabase
+          .from('camp_expenses')
+          .delete()
+          .eq('camp_id', camp.id);
+
+        if (expensesError) {
+          console.error('Error deleting camp expenses:', expensesError);
+          throw expensesError;
+        }
+
+        // 6. Delete camp participants
+        const { error: participantsError } = await supabase
+          .from('camp_participants')
+          .delete()
+          .eq('camp_id', camp.id);
+
+        if (participantsError) {
+          console.error('Error deleting camp participants:', participantsError);
+          throw participantsError;
+        }
+
+        // 7. Delete trainers
+        const { error: trainersError } = await supabase
+          .from('trainers')
+          .delete()
+          .eq('camp_id', camp.id);
+
+        if (trainersError) {
+          console.error('Error deleting trainers:', trainersError);
+          throw trainersError;
+        }
+
+        // 8. Delete the camp itself
+        const { error: campError } = await supabase
+          .from('camps')
+          .delete()
+          .eq('id', camp.id);
+
+        if (campError) {
+          console.error('Error deleting camp:', campError);
+          throw campError;
+        }
+
+        console.log(`[DELETE-CAMP] Successfully deleted camp ${camp.name}`);
+
+        // Update application state
+        if (window.allCamps) {
+          window.allCamps = window.allCamps.filter(c => c.id !== camp.id);
+        }
+
+        // Go back to camps list and reload
+        document.getElementById('camp-details-section').style.display = 'none';
+        document.getElementById('camps-section').style.display = 'block';
+        await loadCamps();
+
+        // Show success message
+        alert(`Camp "${camp.name}" został pomyślnie usunięty.`);
+
+      } catch (err) {
+        console.error('Error deleting camp:', err);
+        alert(`Błąd podczas usuwania campu: ${err.message}`);
+      }
+    }
+
     // Update camp statuses asynchronously after rendering
     async function updateCampStatuses(camps, participantsByCamp) {
       for (const camp of camps) {
@@ -3134,6 +3256,14 @@
     campMonthSelect.addEventListener('change', (e) => {
       currentMonth = e.target.value;
       loadCamps();
+    });
+
+    // Delete camp button
+    const deleteCampBtn = document.getElementById('delete-camp-btn');
+    deleteCampBtn.addEventListener('click', () => {
+      if (window.currentCamp) {
+        deleteCamp(window.currentCamp);
+      }
     });
 
     // Back to camps button
