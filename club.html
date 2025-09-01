@@ -1965,7 +1965,7 @@
     };
 
     // Update financial summary
-    function updateFinancialSummary() {
+    async function updateFinancialSummary() {
       const camp = window.currentCamp;
       const participants = window.currentParticipants;
 
@@ -1973,7 +1973,7 @@
 
       const summaryCurrencies = document.getElementById('summary-currencies');
       if (summaryCurrencies) {
-        summaryCurrencies.innerHTML = createFinancialSummaryHTML(camp, participants);
+        summaryCurrencies.innerHTML = await createFinancialSummaryHTML(camp, participants);
       }
     }
 
@@ -2032,8 +2032,22 @@
         }
 
         // Check if participant has attention flag
-        const attentionKey = `attention_${camp.id}_${participantId}`;
-        const hasAttention = localStorage.getItem(attentionKey) === 'true';
+        let hasAttention = false;
+        try {
+          const { data, error } = await supabase
+            .from('participant_attention')
+            .select('has_attention')
+            .eq('camp_id', camp.id)
+            .eq('participant_id', participantId)
+            .single();
+
+          if (!error && data) {
+            hasAttention = data.has_attention;
+          }
+        } catch (err) {
+          console.error('Error checking attention:', err);
+        }
+
         console.log(`[STATUS-CHECK] ${participant.name}: attention=${hasAttention}`);
         if (hasAttention) {
           hasAttentions = true;
@@ -2061,7 +2075,7 @@
     }
 
     // Update camp status in the list
-    function updateCampStatus(campId) {
+    async function updateCampStatus(campId) {
       console.log(`[UPDATE-CAMP-STATUS] Starting update for camp ID: ${campId}`);
       const campCard = document.querySelector(`.camp-card[data-camp-id="${campId}"]`);
       if (!campCard) {
@@ -2077,7 +2091,7 @@
       }
 
       // Get participants for this camp - both external and club members
-      const externalParticipants = getCampParticipants(campId);
+      const externalParticipants = await getCampParticipants(campId);
       console.log(`[UPDATE-CAMP-STATUS] Found ${externalParticipants.length} external participants for camp ${camp.name}`);
 
       // DEBUG: Check if window.allMembers exists
@@ -2136,20 +2150,20 @@
     }
 
     // Update status for all camps in the list
-    function updateAllCampStatuses() {
+    async function updateAllCampStatuses() {
       console.log(`[UPDATE-ALL-STATUSES] Starting update for ${window.allCamps?.length || 0} camps`);
       if (!window.allCamps || !Array.isArray(window.allCamps)) {
         console.log('[UPDATE-ALL-STATUSES] No camps data available');
         return;
       }
 
-      window.allCamps.forEach(camp => {
+      for (const camp of window.allCamps) {
         console.log(`[UPDATE-ALL-STATUSES] Updating status for camp: ${camp.name} (ID: ${camp.id})`);
         if (camp.name === 'rtert') {
           console.log(`[UPDATE-ALL-STATUSES] Found camp 'rtert' - processing now`);
         }
-        updateCampStatus(camp.id);
-      });
+        await updateCampStatus(camp.id);
+      }
       console.log('[UPDATE-ALL-STATUSES] Finished updating all camp statuses');
     }
 
@@ -2179,10 +2193,10 @@
         }
 
         campsList.innerHTML = '';
-        camps.forEach(camp => {
-          const campCard = createCampCard(camp);
+        for (const camp of camps) {
+          const campCard = await createCampCard(camp);
           campsList.appendChild(campCard);
-        });
+        }
 
         // Camp statuses will be updated when member data is loaded in showCampDetails()
 
@@ -2193,14 +2207,14 @@
     }
 
     // Create camp card element
-    function createCampCard(camp) {
+    async function createCampCard(camp) {
       const card = document.createElement('div');
       card.className = 'camp-card';
       card.setAttribute('data-camp-id', camp.id);
       card.onclick = () => showCampDetails(camp);
 
       // Calculate initial status - check both camp participants and club members
-      const externalParticipants = getCampParticipants(camp.id);
+      const externalParticipants = await getCampParticipants(camp.id);
 
       // Always include club members eligible for this camp
       const members = window.allMembers || [];
@@ -2282,7 +2296,7 @@
         console.log(`[SHOW-CAMP-DETAILS] Eligible members:`, members.map(m => `${m.name} (${m.id})`).join(', '));
 
         // Load additional camp participants
-        const additionalParticipants = getCampParticipants(camp.id);
+        const additionalParticipants = await getCampParticipants(camp.id);
         console.log(`[SHOW-CAMP-DETAILS] Found ${additionalParticipants.length} external participants`);
 
         // Combine members and additional participants
@@ -2293,7 +2307,7 @@
         window.currentParticipants = allParticipants;
 
         const detailsContent = document.getElementById('camp-details-content');
-        detailsContent.innerHTML = createCampDetailsTable(camp, allParticipants);
+        detailsContent.innerHTML = await createCampDetailsTable(camp, allParticipants);
 
         // Setup participant search
         setupParticipantSearch();
@@ -2416,7 +2430,7 @@
     }
 
     // Calculate financial summary for a currency
-    function calculateCurrencySummary(camp, currency, participants) {
+    async function calculateCurrencySummary(camp, currency, participants) {
       let totalAmount = 0; // Wszystkie kwoty (potwierdzone + niepotwierdzone)
       let paidAmount = 0;  // Tylko potwierdzone kwoty
 
@@ -2451,7 +2465,7 @@
       }
 
       // Calculate expenses and profit
-      const totalExpenses = getTotalExpenses(camp.id, currency);
+      const totalExpenses = await getTotalExpenses(camp.id, currency);
       const profit = paidAmount - totalExpenses;
 
       return {
@@ -2464,7 +2478,7 @@
     }
 
     // Create financial summary HTML
-    function createFinancialSummaryHTML(camp, participants) {
+    async function createFinancialSummaryHTML(camp, participants) {
       // Determine which currencies to show
       const currencies = [];
       if (camp.currency === 'PLN' || (camp.trainers && camp.trainers.some(t => t.currency === 'PLN'))) {
@@ -2480,9 +2494,9 @@
 
       let summaryHtml = '';
 
-      currencies.forEach(currency => {
-        const summary = calculateCurrencySummary(camp, currency, participants);
-        const expenses = getExpenses(camp.id, currency);
+      for (const currency of currencies) {
+        const summary = await calculateCurrencySummary(camp, currency, participants);
+        const expenses = await getExpenses(camp.id, currency);
 
         summaryHtml += `
           <div class="currency-summary">
@@ -2552,7 +2566,7 @@
     }
 
     // Create camp details table
-    function createCampDetailsTable(camp, participants) {
+    async function createCampDetailsTable(camp, participants) {
       let tableHtml = `
         <table class="camp-details-table">
           <thead>
@@ -2591,16 +2605,94 @@
           <tbody>
       `;
 
+      // Load all attention and payment data for participants
+      const dataPromises = participants.map(async participant => {
+        // Load attention
+        let hasAttention = false;
+        try {
+          const { data, error } = await supabase
+            .from('participant_attention')
+            .select('has_attention')
+            .eq('camp_id', camp.id)
+            .eq('participant_id', participant.id)
+            .single();
+
+          hasAttention = !error && data ? data.has_attention : false;
+        } catch (err) {
+          console.error('Error loading attention for participant:', participant.name, err);
+        }
+
+        // Load comment
+        let comment = '';
+        try {
+          const { data, error } = await supabase
+            .from('participant_comments')
+            .select('comment')
+            .eq('camp_id', camp.id)
+            .eq('participant_id', participant.id)
+            .single();
+
+          comment = !error && data ? data.comment : '';
+        } catch (err) {
+          console.error('Error loading comment for participant:', participant.name, err);
+        }
+
+        // Load camp payment
+        let campPayment = '';
+        let campConfirmed = false;
+        try {
+          const paymentResult = await getSavedPayment(camp.id, participant.id, 'camp');
+          const statusResult = await getPaymentStatus(camp.id, participant.id, 'camp');
+          campPayment = paymentResult;
+          campConfirmed = statusResult;
+        } catch (err) {
+          console.error('Error loading camp payment for participant:', participant.name, err);
+        }
+
+        // Load trainer payments
+        const trainerPayments = [];
+        if (camp.trainers && camp.trainers.length > 0) {
+          for (let i = 0; i < camp.trainers.length; i++) {
+            try {
+              const paymentResult = await getSavedPayment(camp.id, participant.id, 'trainer', i);
+              const statusResult = await getPaymentStatus(camp.id, participant.id, 'trainer', i);
+              trainerPayments.push({
+                amount: paymentResult,
+                confirmed: statusResult
+              });
+            } catch (err) {
+              console.error('Error loading trainer payment for participant:', participant.name, 'trainer:', i, err);
+              trainerPayments.push({ amount: '', confirmed: false });
+            }
+          }
+        }
+
+        return {
+          participantId: participant.id,
+          hasAttention,
+          comment,
+          campPayment,
+          campConfirmed,
+          trainerPayments
+        };
+      });
+
+      // Wait for all data to load
+      const dataResults = await Promise.all(dataPromises);
+      const dataMap = {};
+      dataResults.forEach(item => {
+        dataMap[item.participantId] = item;
+      });
+
       // Add rows for each participant
       participants.forEach(participant => {
-        // Check attention status for this participant
-        const attentionKey = `attention_${camp.id}_${participant.id}`;
-        const isAttentionChecked = localStorage.getItem(attentionKey) === 'true';
+        const participantData = dataMap[participant.id];
+        const isAttentionChecked = participantData.hasAttention;
         const attentionClass = isAttentionChecked ? 'attention-highlight' : '';
 
-        // Determine row classes based on payment status
-        const campPayment = getSavedPayment(camp.id, participant.id, 'camp');
-        const campConfirmed = getPaymentStatus(camp.id, participant.id, 'camp');
+        // Use pre-loaded payment data
+        const campPayment = participantData.campPayment;
+        const campConfirmed = participantData.campConfirmed;
 
         let rowClasses = '';
 
@@ -2616,8 +2708,9 @@
           let hasConfirmedTrainer = false;
 
           camp.trainers.forEach((trainer, trainerIndex) => {
-            const trainerPayment = getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex);
-            const trainerConfirmed = getPaymentStatus(camp.id, participant.id, 'trainer', trainerIndex);
+            const trainerData = participantData.trainerPayments[trainerIndex];
+            const trainerPayment = trainerData.amount;
+            const trainerConfirmed = trainerData.confirmed;
 
             if (trainerPayment && trainerConfirmed) {
               hasConfirmedTrainer = true;
@@ -2642,8 +2735,9 @@
         // Add cells for each trainer
         if (camp.trainers && camp.trainers.length > 0) {
           camp.trainers.forEach((trainer, trainerIndex) => {
-            const trainerPayment = getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex);
-            const trainerConfirmed = getPaymentStatus(camp.id, participant.id, 'trainer', trainerIndex);
+            const trainerData = participantData.trainerPayments[trainerIndex];
+            const trainerPayment = trainerData.amount;
+            const trainerConfirmed = trainerData.confirmed;
             const trainerCellHtml = createPaymentCell(camp.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIndex);
             tableHtml += trainerCellHtml;
           });
@@ -2653,8 +2747,7 @@
         tableHtml += `<td><input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}" ${isAttentionChecked ? 'checked' : ''}></td>`;
 
         // Add comment field
-        const commentKey = `comment_${camp.id}_${participant.id}`;
-        const savedComment = localStorage.getItem(commentKey) || '';
+        const savedComment = participantData.comment || '';
         tableHtml += `<td><input type="text" class="comment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" placeholder="Komentarz..." value="${savedComment}"></td>`;
 
         // Calculate and add total columns
@@ -2698,13 +2791,13 @@
       `;
 
       // Add summary rows
-      const campSummary = calculateColumnSummary(camp.id, 'camp');
+      const campSummary = await calculateColumnSummary(camp.id, 'camp');
       const trainerSummaries = [];
 
       if (camp.trainers && camp.trainers.length > 0) {
-        camp.trainers.forEach((trainer, index) => {
-          trainerSummaries.push(calculateColumnSummary(camp.id, 'trainer', index));
-        });
+        for (let index = 0; index < camp.trainers.length; index++) {
+          trainerSummaries.push(await calculateColumnSummary(camp.id, 'trainer', index));
+        }
       }
 
       // Summary row 1: Kwota ogólna
@@ -2938,12 +3031,11 @@
       });
 
       // Attention checkbox handler
-      document.addEventListener('change', (e) => {
+      document.addEventListener('change', async (e) => {
         if (e.target.classList.contains('attention-checkbox')) {
           const checkbox = e.target;
           const campId = checkbox.getAttribute('data-camp-id');
           const participantId = checkbox.getAttribute('data-participant-id');
-          const attentionKey = `attention_${campId}_${participantId}`;
 
           // Find the participant name cell and update its highlighting
           const participantRow = document.querySelector(`tr[data-participant-id="${participantId}"]`);
@@ -2951,10 +3043,33 @@
             const nameCell = participantRow.querySelector('.participant-name');
             if (nameCell) {
               if (checkbox.checked) {
-                localStorage.setItem(attentionKey, 'true');
+                // Save attention to Supabase
+                try {
+                  await supabase
+                    .from('participant_attention')
+                    .upsert({
+                      camp_id: campId,
+                      participant_id: participantId,
+                      has_attention: true,
+                      updated_at: new Date().toISOString()
+                    });
+                } catch (err) {
+                  console.error('Error saving attention:', err);
+                }
+
                 nameCell.classList.add('attention-highlight');
               } else {
-                localStorage.removeItem(attentionKey);
+                // Remove attention from Supabase
+                try {
+                  await supabase
+                    .from('participant_attention')
+                    .delete()
+                    .eq('camp_id', campId)
+                    .eq('participant_id', participantId);
+                } catch (err) {
+                  console.error('Error removing attention:', err);
+                }
+
                 nameCell.classList.remove('attention-highlight');
               }
             }
@@ -2966,18 +3081,34 @@
       });
 
       // Comment input handler
-      document.addEventListener('input', (e) => {
+      document.addEventListener('input', async (e) => {
         if (e.target.classList.contains('comment-input')) {
           const input = e.target;
           const campId = input.getAttribute('data-camp-id');
           const participantId = input.getAttribute('data-participant-id');
-          const commentKey = `comment_${campId}_${participantId}`;
           const value = input.value.trim();
 
-          if (value) {
-            localStorage.setItem(commentKey, value);
-          } else {
-            localStorage.removeItem(commentKey);
+          try {
+            if (value) {
+              // Save comment to Supabase
+              await supabase
+                .from('participant_comments')
+                .upsert({
+                  camp_id: campId,
+                  participant_id: participantId,
+                  comment: value,
+                  updated_at: new Date().toISOString()
+                });
+            } else {
+              // Remove comment from Supabase
+              await supabase
+                .from('participant_comments')
+                .delete()
+                .eq('camp_id', campId)
+                .eq('participant_id', participantId);
+            }
+          } catch (err) {
+            console.error('Error saving comment:', err);
           }
         }
       });
@@ -3019,12 +3150,12 @@
 
       // Update row styling and summaries
       updateRowStyling(participantId);
-      updateSummaries();
+      await updateSummaries();
       // Use setTimeout to ensure DOM is updated before updating totals
-      setTimeout(() => {
-        updateParticipantTotals(campId, participantId);
-        updateFinancialSummary();
-        updateCampStatus(campId);
+      setTimeout(async () => {
+        await updateParticipantTotals(campId, participantId);
+        await updateFinancialSummary();
+        await updateCampStatus(campId);
       }, 10);
     }
 
@@ -3053,12 +3184,12 @@
 
       // Update row styling and summaries
       updateRowStyling(participantId);
-      updateSummaries();
+      await updateSummaries();
       // Use setTimeout to ensure DOM is updated before updating totals
-      setTimeout(() => {
-        updateParticipantTotals(campId, participantId);
-        updateFinancialSummary();
-        updateCampStatus(campId);
+      setTimeout(async () => {
+        await updateParticipantTotals(campId, participantId);
+        await updateFinancialSummary();
+        await updateCampStatus(campId);
       }, 10);
     }
 
@@ -3086,12 +3217,12 @@
 
       // Update row styling and summaries
       updateRowStyling(participantId);
-      updateSummaries();
+      await updateSummaries();
       // Use setTimeout to ensure DOM is updated before updating totals
-      setTimeout(() => {
-        updateParticipantTotals(campId, participantId);
-        updateFinancialSummary();
-        updateCampStatus(campId);
+      setTimeout(async () => {
+        await updateParticipantTotals(campId, participantId);
+        await updateFinancialSummary();
+        await updateCampStatus(campId);
       }, 10);
     }
 
@@ -3166,8 +3297,304 @@
       return participant ? participant.name : '';
     }
 
+    // Expense functions using Supabase
+    async function getExpenses(campId, currency) {
+      try {
+        const { data, error } = await supabase
+          .from('camp_expenses')
+          .select('*')
+          .eq('camp_id', campId)
+          .eq('currency', currency)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('Error getting expenses:', error);
+          return [];
+        }
+
+        return data || [];
+      } catch (err) {
+        console.error('Error in getExpenses:', err);
+        return [];
+      }
+    }
+
+    async function addExpense(campId, currency, name, amount) {
+      try {
+        const { error } = await supabase
+          .from('camp_expenses')
+          .insert({
+            camp_id: campId,
+            currency: currency,
+            name: name,
+            amount: parseFloat(amount)
+          });
+
+        if (error) {
+          console.error('Error adding expense:', error);
+          throw error;
+        }
+      } catch (err) {
+        console.error('Error in addExpense:', err);
+        throw err;
+      }
+    }
+
+    async function removeExpense(campId, currency, expenseId) {
+      try {
+        const { error } = await supabase
+          .from('camp_expenses')
+          .delete()
+          .eq('camp_id', campId)
+          .eq('currency', currency)
+          .eq('id', expenseId);
+
+        if (error) {
+          console.error('Error removing expense:', error);
+          throw error;
+        }
+      } catch (err) {
+        console.error('Error in removeExpense:', err);
+        throw err;
+      }
+    }
+
+    async function getTotalExpenses(campId, currency) {
+      try {
+        const expenses = await getExpenses(campId, currency);
+        return expenses.reduce((total, expense) => total + expense.amount, 0);
+      } catch (err) {
+        console.error('Error calculating total expenses:', err);
+        return 0;
+      }
+    }
+
+    // Global functions for HTML onclick handlers
+    window.addNewExpense = async function(campId, currency) {
+      const nameInput = document.getElementById(`expense-name-${currency}`);
+      const amountInput = document.getElementById(`expense-amount-${currency}`);
+
+      const name = nameInput.value.trim();
+      const amount = amountInput.value.trim();
+
+      if (!name || !amount || parseFloat(amount) <= 0) {
+        alert('Wypełnij nazwę wydatku i prawidłową kwotę');
+        return;
+      }
+
+      try {
+        await addExpense(campId, currency, name, amount);
+
+        // Clear inputs
+        nameInput.value = '';
+        amountInput.value = '';
+
+        // Update financial summary
+        await updateFinancialSummary();
+      } catch (err) {
+        console.error('Error adding expense:', err);
+        alert('Błąd dodawania wydatku: ' + (err.message || 'Nieznany błąd'));
+      }
+    };
+
+    window.removeExpense = async function(campId, currency, expenseId) {
+      if (confirm('Czy na pewno chcesz usunąć ten wydatek?')) {
+        try {
+          await removeExpense(campId, currency, expenseId);
+          await updateFinancialSummary();
+        } catch (err) {
+          console.error('Error removing expense:', err);
+          alert('Błąd usuwania wydatku: ' + (err.message || 'Nieznany błąd'));
+        }
+      }
+    };
+
+    // Camp participants functions using Supabase
+    async function getCampParticipants(campId) {
+      try {
+        const { data, error } = await supabase
+          .from('camp_participants')
+          .select('*')
+          .eq('camp_id', campId);
+
+        if (error) {
+          console.error('Error getting camp participants:', error);
+          return [];
+        }
+
+        // Transform data to match expected format
+        return data ? data.map(p => ({
+          id: p.participant_id,
+          name: p.name,
+          isCampParticipant: true // Flag to distinguish from club members
+        })) : [];
+      } catch (err) {
+        console.error('Error in getCampParticipants:', err);
+        return [];
+      }
+    }
+
+    // Payment functions using Supabase
+    async function getSavedPayment(campId, participantId, columnType, trainerIndex = null) {
+      try {
+        let query;
+
+        if (columnType === 'camp') {
+          query = supabase
+            .from('camp_payments')
+            .select('amount')
+            .eq('camp_id', campId)
+            .eq('participant_id', participantId);
+        } else if (columnType === 'trainer') {
+          query = supabase
+            .from('trainer_payments')
+            .select('amount')
+            .eq('camp_id', campId)
+            .eq('participant_id', participantId)
+            .eq('trainer_index', trainerIndex);
+        }
+
+        const { data, error } = await query.single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+          console.error('Error getting payment:', error);
+          return '';
+        }
+
+        return data ? data.amount.toString() : '';
+      } catch (err) {
+        console.error('Error in getSavedPayment:', err);
+        return '';
+      }
+    }
+
+    async function getPaymentStatus(campId, participantId, columnType, trainerIndex = null) {
+      try {
+        let query;
+
+        if (columnType === 'camp') {
+          query = supabase
+            .from('camp_payments')
+            .select('confirmed')
+            .eq('camp_id', campId)
+            .eq('participant_id', participantId);
+        } else if (columnType === 'trainer') {
+          query = supabase
+            .from('trainer_payments')
+            .select('confirmed')
+            .eq('camp_id', campId)
+            .eq('participant_id', participantId)
+            .eq('trainer_index', trainerIndex);
+        }
+
+        const { data, error } = await query.single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+          console.error('Error getting payment status:', error);
+          return false;
+        }
+
+        return data ? data.confirmed : false;
+      } catch (err) {
+        console.error('Error in getPaymentStatus:', err);
+        return false;
+      }
+    }
+
+    async function savePayment(campId, participantId, columnType, amount, trainerIndex = null) {
+      try {
+        const paymentData = {
+          camp_id: campId,
+          participant_id: participantId,
+          amount: parseFloat(amount) || 0,
+          confirmed: false,
+          updated_at: new Date().toISOString()
+        };
+
+        if (columnType === 'trainer') {
+          paymentData.trainer_index = trainerIndex;
+        }
+
+        // Determine currency
+        const camp = window.currentCamp;
+        if (columnType === 'camp') {
+          paymentData.currency = camp.currency;
+        } else if (columnType === 'trainer' && camp.trainers && camp.trainers[trainerIndex]) {
+          paymentData.currency = camp.trainers[trainerIndex].currency;
+        }
+
+        let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
+
+        // Try to update existing payment first
+        const updateResult = await supabase
+          .from(tableName)
+          .update(paymentData)
+          .eq('camp_id', campId)
+          .eq('participant_id', participantId)
+          .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? trainerIndex : campId);
+
+        // If no row was updated, insert new payment
+        if (updateResult.count === 0) {
+          const insertResult = await supabase
+            .from(tableName)
+            .insert(paymentData);
+
+          if (insertResult.error) {
+            console.error('Error inserting payment:', insertResult.error);
+          }
+        } else if (updateResult.error) {
+          console.error('Error updating payment:', updateResult.error);
+        }
+      } catch (err) {
+        console.error('Error in savePayment:', err);
+      }
+    }
+
+    async function confirmPayment(campId, participantId, columnType, trainerIndex = null) {
+      try {
+        let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
+
+        const updateData = {
+          confirmed: true,
+          updated_at: new Date().toISOString()
+        };
+
+        const { error } = await supabase
+          .from(tableName)
+          .update(updateData)
+          .eq('camp_id', campId)
+          .eq('participant_id', participantId)
+          .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? trainerIndex : campId);
+
+        if (error) {
+          console.error('Error confirming payment:', error);
+        }
+      } catch (err) {
+        console.error('Error in confirmPayment:', err);
+      }
+    }
+
+    async function removePayment(campId, participantId, columnType, trainerIndex = null) {
+      try {
+        let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
+
+        const { error } = await supabase
+          .from(tableName)
+          .delete()
+          .eq('camp_id', campId)
+          .eq('participant_id', participantId)
+          .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? trainerIndex : campId);
+
+        if (error) {
+          console.error('Error removing payment:', error);
+        }
+      } catch (err) {
+        console.error('Error in removePayment:', err);
+      }
+    }
+
     // Calculate column summary
-    function calculateColumnSummary(campId, columnType, trainerIndex = null) {
+    async function calculateColumnSummary(campId, columnType, trainerIndex = null) {
       const participants = window.currentParticipants || [];
       let total = 0;
       let paid = 0;
@@ -3175,28 +3602,28 @@
 
       if (columnType === 'camp' && window.currentCamp) {
         currency = window.currentCamp.currency;
-        participants.forEach(participant => {
-          const amount = parseFloat(getSavedPayment(campId, participant.id, columnType, trainerIndex)) || 0;
-          const isConfirmed = getPaymentStatus(campId, participant.id, columnType, trainerIndex);
+        for (const participant of participants) {
+          const amount = parseFloat(await getSavedPayment(campId, participant.id, columnType, trainerIndex)) || 0;
+          const isConfirmed = await getPaymentStatus(campId, participant.id, columnType, trainerIndex);
 
           total += amount;
           if (isConfirmed) {
             paid += amount;
           }
-        });
+        }
       } else if (columnType === 'trainer' && window.currentCamp && window.currentCamp.trainers) {
         const trainer = window.currentCamp.trainers[trainerIndex];
         if (trainer) {
           currency = trainer.currency;
-          participants.forEach(participant => {
-            const amount = parseFloat(getSavedPayment(campId, participant.id, columnType, trainerIndex)) || 0;
-            const isConfirmed = getPaymentStatus(campId, participant.id, columnType, trainerIndex);
+          for (const participant of participants) {
+            const amount = parseFloat(await getSavedPayment(campId, participant.id, columnType, trainerIndex)) || 0;
+            const isConfirmed = await getPaymentStatus(campId, participant.id, columnType, trainerIndex);
 
             total += amount;
             if (isConfirmed) {
               paid += amount;
             }
-          });
+          }
         }
       }
 
@@ -3286,12 +3713,12 @@
     }
 
     // Update summaries function
-    function updateSummaries() {
+    async function updateSummaries() {
       const camp = window.currentCamp;
       if (!camp || !window.currentParticipants) return;
 
       // Update camp summary
-      const campSummary = calculateColumnSummary(camp.id, 'camp');
+      const campSummary = await calculateColumnSummary(camp.id, 'camp');
       const campTotalElement = document.querySelector('.summary-row:nth-child(1) td:nth-child(2) .summary-amount');
       const campPaidElement = document.querySelector('.summary-row:nth-child(2) td:nth-child(2) .summary-amount');
 
@@ -3347,8 +3774,21 @@
           // Removed isCampParticipant flag
         };
 
-        // Save to localStorage
-        saveCampParticipant(camp.id, newParticipant);
+        // Save to Supabase
+        try {
+          const { error } = await supabase
+            .from('camp_participants')
+            .insert({
+              camp_id: camp.id,
+              participant_id: participantId,
+              name: participantData.name
+            });
+
+          if (error) throw error;
+        } catch (err) {
+          console.error('Error saving participant to Supabase:', err);
+          throw err;
+        }
 
         // Reload camp details
         await showCampDetails(camp);
@@ -3441,7 +3881,7 @@
 
       // Now that all data is loaded, update camp statuses
       console.log('[INIT] All data loaded, updating camp statuses...');
-      updateAllCampStatuses();
+      await updateAllCampStatuses();
 
       // Then set up everything else
       setActiveNav('members'); // Start with members page
