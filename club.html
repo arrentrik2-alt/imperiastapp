@@ -1990,13 +1990,13 @@
       let hasUnconfirmedPayments = false;
       let hasAttentions = false;
 
-      participants.forEach(participant => {
+      for (const participant of participants) {
         const participantId = participant.id;
         console.log(`[STATUS-CHECK] Checking ${participant.name} (${participantId})`);
 
         // Check camp payment status
-        const campPayment = getSavedPayment(camp.id, participantId, 'camp');
-        const campConfirmed = getPaymentStatus(camp.id, participantId, 'camp');
+        const campPayment = await getSavedPayment(camp.id, participantId, 'camp');
+        const campConfirmed = await getPaymentStatus(camp.id, participantId, 'camp');
 
         console.log(`[STATUS-CHECK] ${participant.name}: campPayment="${campPayment}", campConfirmed=${campConfirmed}`);
 
@@ -2053,7 +2053,7 @@
           hasAttentions = true;
           console.log(`[STATUS-CHECK] ${participant.name}: Found attention - setting ORANGE status`);
         }
-      });
+      }
 
       // If no payments and no attentions, return empty string (normal background)
       if (!hasAnyPayments && !hasAttentions) {
