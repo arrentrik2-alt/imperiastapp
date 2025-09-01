@@ -3141,6 +3141,9 @@
         // Use stored group data instead of querying database
         const group = currentGroupData;
 
+        // Get selected month from selector
+        const selectedMonth = document.getElementById('attendance-month-select').value || currentAttendanceMonth;
+
         const { data: participantsData, error: participantsError } = await supabase
           .from('participant_groups_month')
           .select(`
