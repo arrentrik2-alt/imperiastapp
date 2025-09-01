@@ -2248,6 +2248,31 @@
 
         if (error) throw error;
 
+        // Load all camp participants at once (batch query)
+        const { data: allCampParticipants, error: participantsError } = await supabase
+          .from('camp_participants')
+          .select('*')
+          .in('camp_id', camps.map(camp => camp.id));
+
+        if (participantsError) {
+          console.error('Error loading camp participants:', participantsError);
+        }
+
+        // Group participants by camp_id
+        const participantsByCamp = {};
+        if (allCampParticipants) {
+          allCampParticipants.forEach(p => {
+            if (!participantsByCamp[p.camp_id]) {
+              participantsByCamp[p.camp_id] = [];
+            }
+            participantsByCamp[p.camp_id].push({
+              id: p.participant_id,
+              name: p.name,
+              isCampParticipant: true
+            });
+          });
+        }
+
         // Process trainer data for each camp
         for (const camp of camps) {
           if (camp.trainers && camp.trainers.length > 0) {
@@ -2281,9 +2306,14 @@
 
         campsList.innerHTML = '';
         for (const camp of camps) {
-          const campCard = await createCampCard(camp);
+          const campCard = createCampCard(camp, participantsByCamp[camp.id] || []);
           campsList.appendChild(campCard);
         }
+
+        // Update camp statuses asynchronously (doesn't block rendering)
+        setTimeout(() => {
+          updateCampStatuses(camps, participantsByCamp);
+        }, 100);
 
         // Camp statuses will be updated when member data is loaded in showCampDetails()
 
@@ -2293,15 +2323,45 @@
       }
     }
 
+    // Update camp statuses asynchronously after rendering
+    async function updateCampStatuses(camps, participantsByCamp) {
+      for (const camp of camps) {
+        try {
+          const externalParticipants = participantsByCamp[camp.id] || [];
+          const members = window.allMembers || [];
+          const eligibleMembers = members.filter(m => m.style === 'st' || m.style === '10t');
+
+          // Combine external participants and club members, but avoid duplicates
+          let allParticipants = [...externalParticipants];
+          eligibleMembers.forEach(member => {
+            const isAlreadyExternal = externalParticipants.some(ext => ext.id === member.id);
+            if (!isAlreadyExternal) {
+              allParticipants.push(member);
+            }
+          });
+
+          // Calculate status if we have participants data available
+          if (allParticipants.length > 0 || (window.allMembers && window.allMembers.length > 0)) {
+            const statusClass = await calculateCampStatus(camp, allParticipants);
+            if (statusClass) {
+              const campCard = document.querySelector(`[data-camp-id="${camp.id}"]`);
+              if (campCard) {
+                campCard.classList.add(statusClass);
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Error updating status for camp ${camp.name}:`, err);
+        }
+      }
+    }
+
     // Create camp card element
-    async function createCampCard(camp) {
+    function createCampCard(camp, externalParticipants = []) {
       const card = document.createElement('div');
       card.className = 'camp-card';
       card.setAttribute('data-camp-id', camp.id);
       card.onclick = () => showCampDetails(camp);
-
-      // Calculate initial status - check both camp participants and club members
-      const externalParticipants = await getCampParticipants(camp.id);
 
       // Always include club members eligible for this camp
       const members = window.allMembers || [];
@@ -2316,14 +2376,6 @@
           allParticipants.push(member);
         }
       });
-
-      // Only calculate status if we have participants data available
-      if (allParticipants.length > 0 || (window.allMembers && window.allMembers.length > 0)) {
-        const statusClass = await calculateCampStatus(camp, allParticipants);
-        if (statusClass) {
-          card.classList.add(statusClass);
-        }
-      }
 
       // Store reference for later status update
       card._campId = camp.id;
