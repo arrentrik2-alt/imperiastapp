@@ -1987,7 +1987,10 @@
 
     // Calculate camp status for coloring
     function calculateCampStatus(camp, participants) {
+      console.log(`[STATUS] Calculating status for camp ${camp.name}, participants:`, participants ? participants.length : 0);
+
       if (!participants || participants.length === 0) {
+        console.log(`[STATUS] No participants - returning empty status`);
         return ''; // No participants = no status (normal background)
       }
 
@@ -1997,10 +2000,12 @@
 
       participants.forEach(participant => {
         const participantId = participant.id;
+        console.log(`[STATUS] Checking participant ${participant.name} (${participantId})`);
 
         // Check camp payment status
         const campPayment = getSavedPayment(camp.id, participantId, 'camp');
         const campConfirmed = getPaymentStatus(camp.id, participantId, 'camp');
+        console.log(`[STATUS] Camp payment: ${campPayment}, confirmed: ${campConfirmed}`);
 
         if (campPayment) {
           hasAnyPayments = true;
@@ -2014,6 +2019,7 @@
           camp.trainers.forEach((trainer, trainerIndex) => {
             const trainerPayment = getSavedPayment(camp.id, participantId, 'trainer', trainerIndex);
             const trainerConfirmed = getPaymentStatus(camp.id, participantId, 'trainer', trainerIndex);
+            console.log(`[STATUS] Trainer ${trainerIndex} payment: ${trainerPayment}, confirmed: ${trainerConfirmed}`);
 
             if (trainerPayment) {
               hasAnyPayments = true;
@@ -2026,21 +2032,29 @@
 
         // Check if participant has attention flag
         const attentionKey = `attention_${camp.id}_${participantId}`;
-        if (localStorage.getItem(attentionKey) === 'true') {
+        const hasAttention = localStorage.getItem(attentionKey) === 'true';
+        console.log(`[STATUS] Attention for ${participantId}: ${hasAttention}`);
+        if (hasAttention) {
           hasAttentions = true;
         }
       });
 
+      console.log(`[STATUS] Final status - hasAnyPayments: ${hasAnyPayments}, hasUnconfirmedPayments: ${hasUnconfirmedPayments}, hasAttentions: ${hasAttentions}`);
+
       // If no payments and no attentions, return empty string (normal background)
       if (!hasAnyPayments && !hasAttentions) {
+        console.log(`[STATUS] No payments and no attentions - returning empty status`);
         return '';
       }
 
       if (hasUnconfirmedPayments) {
+        console.log(`[STATUS] Has unconfirmed payments - returning RED`);
         return 'status-incomplete'; // Red - has unconfirmed payments
       } else if (hasAttentions) {
+        console.log(`[STATUS] All confirmed but has attentions - returning ORANGE`);
         return 'status-attention'; // Orange - all confirmed but has attentions
       } else {
+        console.log(`[STATUS] All confirmed, no attentions - returning GREEN`);
         return 'status-complete'; // Green - all confirmed, no attentions
       }
     }
