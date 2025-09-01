@@ -2502,16 +2502,86 @@
 
     async function searchParticipants(month, q) {
       if (!q || q.length < 2) return [];
-      const { data, error } = await supabase.from('participants_month').select('id,name,phone').eq('month', month).ilike('name', `%${q}%`).limit(12);
-      if (error) { console.warn('Search error', error); return []; }
-      return data || [];
+      try {
+        // Try new unified table first
+        try {
+          const { data: unifiedData, error: unifiedError } = await supabase
+            .from('participants')
+            .select('id,name,phone')
+            .ilike('name', `%${q}%`)
+            .limit(12);
+
+          if (!unifiedError && unifiedData && unifiedData.length > 0) {
+            return unifiedData.map(p => ({ ...p, source: 'unified' }));
+          }
+        } catch (unifiedError) {
+          console.warn('Unified search failed, falling back to legacy:', unifiedError);
+        }
+
+        // Fallback to legacy search
+        const { data: currentMonthData, error: currentError } = await supabase
+          .from('participants_month')
+          .select('id,name,phone')
+          .eq('month', month)
+          .ilike('name', `%${q}%`)
+          .limit(8);
+
+        const { data: otherMonthsData, error: otherError } = await supabase
+          .from('participants_month')
+          .select('id,name,phone')
+          .neq('month', month)
+          .ilike('name', `%${q}%`)
+          .limit(6);
+
+        // Combine and deduplicate results
+        const allResults = [];
+        const seenIds = new Set();
+
+        if (currentMonthData) {
+          currentMonthData.forEach(p => {
+            if (!seenIds.has(p.id)) {
+              seenIds.add(p.id);
+              allResults.push({ ...p, source: 'current_month' });
+            }
+          });
+        }
+
+        if (otherMonthsData) {
+          otherMonthsData.forEach(p => {
+            if (!seenIds.has(p.id)) {
+              seenIds.add(p.id);
+              allResults.push({ ...p, source: 'other_month' });
+            }
+          });
+        }
+
+        return allResults.slice(0, 12);
+      } catch (error) {
+        console.warn('Search error', error);
+        return [];
+      }
     }
 
-    // Search participants from entire database (for groups)
+    // Search participants from entire database (for groups) - backward compatibility
     async function searchParticipantsGlobal(q) {
       if (!q || q.length < 2) return [];
       try {
-        // First try to search in current month's participants
+        // Try new unified table first
+        try {
+          const { data: unifiedData, error: unifiedError } = await supabase
+            .from('participants')
+            .select('id,name,phone')
+            .ilike('name', `%${q}%`)
+            .limit(12);
+
+          if (!unifiedError && unifiedData) {
+            return unifiedData.map(p => ({ ...p, source: 'unified' }));
+          }
+        } catch (unifiedError) {
+          console.warn('Unified search failed, falling back to legacy:', unifiedError);
+        }
+
+        // Fallback to legacy search
         const currentMonth = document.getElementById('participants-month-select').value;
         const { data: currentMonthData, error: currentError } = await supabase
           .from('participants_month')
@@ -2520,7 +2590,6 @@
           .ilike('name', `%${q}%`)
           .limit(8);
 
-        // Then search in other months (distinct participants)
         const { data: otherMonthsData, error: otherError } = await supabase
           .from('participants_month')
           .select('id,name,phone')
@@ -2532,7 +2601,6 @@
         const allResults = [];
         const seenIds = new Set();
 
-        // Add current month results first
         if (currentMonthData) {
           currentMonthData.forEach(p => {
             if (!seenIds.has(p.id)) {
@@ -2542,7 +2610,6 @@
           });
         }
 
-        // Add other months results
         if (otherMonthsData) {
           otherMonthsData.forEach(p => {
             if (!seenIds.has(p.id)) {
@@ -2559,6 +2626,30 @@
       }
     }
 
+    // Search in unified participants table (new architecture)
+    async function searchParticipantsUnified(q, context = 'all') {
+      if (!q || q.length < 2) return [];
+      try {
+        let query = supabase
+          .from('participants')
+          .select('id,name,phone,email')
+          .ilike('name', `%${q}%`)
+          .limit(12);
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.warn('Unified search error:', error);
+          return [];
+        }
+
+        return data || [];
+      } catch (error) {
+        console.warn('Unified search exception:', error);
+        return [];
+      }
+    }
+
     // attach search handlers
     const p1search = document.getElementById('participant1-search');
     const p1results = document.getElementById('participant1-search-results');
@@ -2568,7 +2659,14 @@
       const month = document.getElementById('lessons-month-select').value;
       const rows = await searchParticipants(month, q);
       rows.forEach(r=>{
-        const div = document.createElement('div'); div.style.padding='6px'; div.style.cursor='pointer'; div.textContent = `${r.name} ${r.phone ? '• '+r.phone : ''}`;
+        const div = document.createElement('div');
+        div.style.padding='6px';
+        div.style.cursor='pointer';
+        div.textContent = `${r.name} ${r.phone ? '• '+r.phone : ''}`;
+        if (r.source === 'other_month') {
+          div.style.color = 'var(--text-gray)';
+          div.style.fontSize = '0.9rem';
+        }
         div.addEventListener('click', ()=>{
           document.getElementById('participant1-selected-id').value = r.id;
           document.getElementById('participant1-name').value = r.name;
@@ -2591,7 +2689,14 @@
       const month = document.getElementById('lessons-month-select').value;
       const rows = await searchParticipants(month, q);
       rows.forEach(r=>{
-        const div = document.createElement('div'); div.style.padding='6px'; div.style.cursor='pointer'; div.textContent = `${r.name} ${r.phone ? '• '+r.phone : ''}`;
+        const div = document.createElement('div');
+        div.style.padding='6px';
+        div.style.cursor='pointer';
+        div.textContent = `${r.name} ${r.phone ? '• '+r.phone : ''}`;
+        if (r.source === 'other_month') {
+          div.style.color = 'var(--text-gray)';
+          div.style.fontSize = '0.9rem';
+        }
         div.addEventListener('click', ()=>{
           document.getElementById('participant2-selected-id').value = r.id;
           document.getElementById('participant2-name').value = r.name;
