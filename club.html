@@ -1987,7 +1987,10 @@
 
     // Calculate camp status for coloring
     function calculateCampStatus(camp, participants) {
+      console.log(`[CALCULATE-STATUS] Starting calculation for camp ${camp.name} with ${participants.length} participants`);
+
       if (!participants || participants.length === 0) {
+        console.log(`[CALCULATE-STATUS] No participants found, returning normal status`);
         return ''; // No participants = no status (normal background)
       }
 
@@ -2050,33 +2053,47 @@
 
       // If no payments and no attentions, return empty string (normal background)
       if (!hasAnyPayments && !hasAttentions) {
+        console.log(`[CALCULATE-STATUS] No payments and no attentions, returning normal status`);
         return '';
       }
 
+      let statusResult;
       if (hasUnconfirmedPayments) {
-        return 'status-incomplete'; // Red - has unconfirmed payments
+        statusResult = 'status-incomplete'; // Red - has unconfirmed payments
       } else if (hasAttentions) {
-        return 'status-attention'; // Orange - all confirmed but has attentions
+        statusResult = 'status-attention'; // Orange - all confirmed but has attentions
       } else {
-        return 'status-complete'; // Green - all confirmed, no attentions
+        statusResult = 'status-complete'; // Green - all confirmed, no attentions
       }
+
+      console.log(`[CALCULATE-STATUS] Final status for camp ${camp.name}: ${statusResult} (payments: ${hasAnyPayments}, unconfirmed: ${hasUnconfirmedPayments}, attentions: ${hasAttentions})`);
+      return statusResult;
     }
 
     // Update camp status in the list
     function updateCampStatus(campId) {
+      console.log(`[UPDATE-CAMP-STATUS] Starting update for camp ID: ${campId}`);
       const campCard = document.querySelector(`.camp-card[data-camp-id="${campId}"]`);
-      if (!campCard) return;
+      if (!campCard) {
+        console.log(`[UPDATE-CAMP-STATUS] Camp card not found for ID: ${campId}`);
+        return;
+      }
 
       // Get camp data
       const camp = Array.isArray(window.allCamps) ? window.allCamps.find(c => c.id === campId) : null;
-      if (!camp) return;
+      if (!camp) {
+        console.log(`[UPDATE-CAMP-STATUS] Camp data not found for ID: ${campId}`);
+        return;
+      }
 
       // Get participants for this camp - both external and club members
       const externalParticipants = getCampParticipants(campId);
+      console.log(`[UPDATE-CAMP-STATUS] Found ${externalParticipants.length} external participants for camp ${camp.name}`);
 
       // Always include club members eligible for this camp
       const members = window.allMembers || [];
       const eligibleMembers = members.filter(m => m.style === 'st' || m.style === '10t');
+      console.log(`[UPDATE-CAMP-STATUS] Found ${eligibleMembers.length} eligible club members`);
 
       // Combine external participants and club members, but avoid duplicates
       const allParticipants = [...externalParticipants];
@@ -2088,7 +2105,12 @@
         }
       });
 
-      console.log(`[UPDATE-CAMP-STATUS] Camp ${camp.name}: ${externalParticipants.length} external + ${eligibleMembers.length - externalParticipants.length} club members = ${allParticipants.length} total`);
+      console.log(`[UPDATE-CAMP-STATUS] Camp ${camp.name}: ${externalParticipants.length} external + ${eligibleMembers.length} club members = ${allParticipants.length} total participants`);
+
+      // Log participant details
+      allParticipants.forEach(participant => {
+        console.log(`[UPDATE-CAMP-STATUS] Participant: ${participant.name} (ID: ${participant.id}, external: ${participant.isCampParticipant || false})`);
+      });
 
       // Calculate status
       const statusClass = calculateCampStatus(camp, allParticipants);
@@ -2099,6 +2121,9 @@
       // Add new status class only if not empty
       if (statusClass) {
         campCard.classList.add(statusClass);
+        console.log(`[UPDATE-CAMP-STATUS] Applied status class: ${statusClass}`);
+      } else {
+        console.log(`[UPDATE-CAMP-STATUS] No status class applied (normal state)`);
       }
 
       console.log(`[UPDATE-CAMP-STATUS] Camp ${camp.name} final status: ${statusClass || 'normal'}`);
@@ -2106,11 +2131,17 @@
 
     // Update status for all camps in the list
     function updateAllCampStatuses() {
-      if (!window.allCamps || !Array.isArray(window.allCamps)) return;
+      console.log(`[UPDATE-ALL-STATUSES] Starting update for ${window.allCamps?.length || 0} camps`);
+      if (!window.allCamps || !Array.isArray(window.allCamps)) {
+        console.log('[UPDATE-ALL-STATUSES] No camps data available');
+        return;
+      }
 
       window.allCamps.forEach(camp => {
+        console.log(`[UPDATE-ALL-STATUSES] Updating status for camp: ${camp.name} (ID: ${camp.id})`);
         updateCampStatus(camp.id);
       });
+      console.log('[UPDATE-ALL-STATUSES] Finished updating all camp statuses');
     }
 
     // Load camps for selected month
