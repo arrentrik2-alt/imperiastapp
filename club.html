@@ -2367,29 +2367,7 @@
     }
 
     // Camp participants management
-    function getCampParticipantsKey(campId) {
-      return `camp_participants_${campId}`;
-    }
 
-    function getCampParticipants(campId) {
-      const key = getCampParticipantsKey(campId);
-      const participants = localStorage.getItem(key);
-      return participants ? JSON.parse(participants) : [];
-    }
-
-    function saveCampParticipant(campId, participant) {
-      const key = getCampParticipantsKey(campId);
-      const participants = getCampParticipants(campId);
-      participants.push(participant);
-      localStorage.setItem(key, JSON.stringify(participants));
-    }
-
-    function removeCampParticipant(campId, participantId) {
-      const key = getCampParticipantsKey(campId);
-      const participants = getCampParticipants(campId);
-      const filtered = participants.filter(p => p.id !== participantId);
-      localStorage.setItem(key, JSON.stringify(filtered));
-    }
 
 
 
