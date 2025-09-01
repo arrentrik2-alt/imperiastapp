@@ -2435,9 +2435,9 @@
       let paidAmount = 0;  // Tylko potwierdzone kwoty
 
       // Calculate camp payments
-      participants.forEach(participant => {
-        const campPayment = parseFloat(getSavedPayment(camp.id, participant.id, 'camp')) || 0;
-        const campConfirmed = getPaymentStatus(camp.id, participant.id, 'camp');
+      for (const participant of participants) {
+        const campPayment = parseFloat(await getSavedPayment(camp.id, participant.id, 'camp')) || 0;
+        const campConfirmed = await getPaymentStatus(camp.id, participant.id, 'camp');
 
         if (camp.currency === currency) {
           totalAmount += campPayment;
@@ -2445,23 +2445,23 @@
             paidAmount += campPayment;
           }
         }
-      });
+      }
 
       // Calculate trainer payments
       if (camp.trainers && camp.trainers.length > 0) {
-        camp.trainers.forEach((trainer, trainerIndex) => {
+        for (const [trainerIndex, trainer] of camp.trainers.entries()) {
           if (trainer.currency === currency) {
-            participants.forEach(participant => {
-              const trainerPayment = parseFloat(getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
-              const trainerConfirmed = getPaymentStatus(camp.id, participant.id, 'trainer', trainerIndex);
+            for (const participant of participants) {
+              const trainerPayment = parseFloat(await getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
+              const trainerConfirmed = await getPaymentStatus(camp.id, participant.id, 'trainer', trainerIndex);
 
               totalAmount += trainerPayment;
               if (trainerConfirmed) {
                 paidAmount += trainerPayment;
               }
-            });
+            }
           }
-        });
+        }
       }
 
       // Calculate expenses and profit
@@ -3370,7 +3370,7 @@
     }
 
     // Global functions for HTML onclick handlers
-    window.addNewExpense = async function(campId, currency) {
+    async function addNewExpense(campId, currency) {
       const nameInput = document.getElementById(`expense-name-${currency}`);
       const amountInput = document.getElementById(`expense-amount-${currency}`);
 
@@ -3397,6 +3397,8 @@
       }
     };
 
+    window.addNewExpense = addNewExpense;
+
     window.removeExpense = async function(campId, currency, expenseId) {
       if (confirm('Czy na pewno chcesz usunąć ten wydatek?')) {
         try {
@@ -3408,6 +3410,13 @@
         }
       }
     };
+
+    // Make sure all global functions are available
+    window.getSavedPayment = getSavedPayment;
+    window.getPaymentStatus = getPaymentStatus;
+    window.savePayment = savePayment;
+    window.confirmPayment = confirmPayment;
+    window.removePayment = removePayment;
 
     // Camp participants functions using Supabase
     async function getCampParticipants(campId) {
