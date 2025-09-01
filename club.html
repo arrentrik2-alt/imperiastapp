@@ -2391,43 +2391,7 @@
       localStorage.setItem(key, JSON.stringify(filtered));
     }
 
-    // Expenses management
-    function getExpensesKey(campId, currency) {
-      return `expenses_${campId}_${currency}`;
-    }
 
-    function getExpenses(campId, currency) {
-      const key = getExpensesKey(campId, currency);
-      const expenses = localStorage.getItem(key);
-      return expenses ? JSON.parse(expenses) : [];
-    }
-
-    function addExpense(campId, currency, name, amount) {
-      const key = getExpensesKey(campId, currency);
-      const expenses = getExpenses(campId, currency);
-      const expense = {
-        id: Date.now().toString(),
-        name: name.trim(),
-        amount: parseFloat(amount),
-        currency: currency,
-        created_at: new Date().toISOString()
-      };
-      expenses.push(expense);
-      localStorage.setItem(key, JSON.stringify(expenses));
-      return expense;
-    }
-
-    function removeExpense(campId, currency, expenseId) {
-      const key = getExpensesKey(campId, currency);
-      const expenses = getExpenses(campId, currency);
-      const filtered = expenses.filter(e => e.id !== expenseId);
-      localStorage.setItem(key, JSON.stringify(filtered));
-    }
-
-    function getTotalExpenses(campId, currency) {
-      const expenses = getExpenses(campId, currency);
-      return expenses.reduce((total, expense) => total + expense.amount, 0);
-    }
 
     // Calculate financial summary for a currency
     async function calculateCurrencySummary(camp, currency, participants) {
