@@ -2231,26 +2231,29 @@
           </div>
         `;
 
+        // Load camps with trainer data in a single batch query
         const { data: camps, error } = await supabase
           .from('camps')
-          .select('*')
+          .select(`
+            *,
+            trainers (
+              name,
+              amount,
+              currency,
+              trainer_index
+            )
+          `)
           .eq('month', currentMonth)
           .order('date', { ascending: false });
 
         if (error) throw error;
 
-        // Load trainer data for each camp
+        // Process trainer data for each camp
         for (const camp of camps) {
-          const { data: trainers, error: trainerError } = await supabase
-            .from('trainers')
-            .select('*')
-            .eq('camp_id', camp.id)
-            .order('trainer_index', { ascending: true });
-
-          if (!trainerError && trainers) {
+          if (camp.trainers && camp.trainers.length > 0) {
             // Sort trainers by trainer_index and create sequential array
-            trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
-            camp.trainers = trainers.map(trainer => ({
+            camp.trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
+            camp.trainers = camp.trainers.map(trainer => ({
               name: trainer.name,
               amount: parseFloat(trainer.amount),
               currency: trainer.currency
@@ -4109,8 +4112,11 @@
       console.log('[INIT] All data loaded, updating camp statuses...');
       await updateAllCampStatuses();
 
-      // Then set up everything else
-      setActiveNav('members'); // Start with members page
+      // Then set up everything else - only set to members if user hasn't already navigated to camps
+      const currentActiveNav = document.querySelector('.nav-links a.active');
+      if (!currentActiveNav || currentActiveNav.id !== 'nav-camps') {
+        setActiveNav('members'); // Start with members page
+      }
       await setupPaymentEventListeners(); // Setup payment event listeners
       // Hide global loader when initialization finished
       hideGlobalLoader();
