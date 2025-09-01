@@ -2069,8 +2069,10 @@
       // Remove existing status classes
       campCard.classList.remove('status-complete', 'status-incomplete', 'status-attention');
 
-      // Add new status class
-      campCard.classList.add(statusClass);
+      // Add new status class only if not empty
+      if (statusClass) {
+        campCard.classList.add(statusClass);
+      }
     }
 
     // Load camps for selected month
@@ -2122,7 +2124,9 @@
 
       // Calculate initial status
       const statusClass = calculateCampStatus(camp, []);
-      card.classList.add(statusClass);
+      if (statusClass) {
+        card.classList.add(statusClass);
+      }
 
       const trainersText = camp.trainers ? camp.trainers.map(t => t.name).join(', ') : 'Brak szkoleniowców';
 
