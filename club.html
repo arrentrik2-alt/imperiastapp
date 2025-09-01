@@ -1988,9 +1988,10 @@
     // Calculate camp status for coloring
     function calculateCampStatus(camp, participants) {
       if (!participants || participants.length === 0) {
-        return 'status-incomplete'; // No participants = incomplete
+        return ''; // No participants = no status (normal background)
       }
 
+      let hasAnyPayments = false;
       let hasUnconfirmedPayments = false;
       let hasAttentions = false;
 
@@ -2001,8 +2002,11 @@
         const campPayment = getSavedPayment(camp.id, participantId, 'camp');
         const campConfirmed = getPaymentStatus(camp.id, participantId, 'camp');
 
-        if (campPayment && !campConfirmed) {
-          hasUnconfirmedPayments = true;
+        if (campPayment) {
+          hasAnyPayments = true;
+          if (!campConfirmed) {
+            hasUnconfirmedPayments = true;
+          }
         }
 
         // Check trainer payments status
@@ -2011,8 +2015,11 @@
             const trainerPayment = getSavedPayment(camp.id, participantId, 'trainer', trainerIndex);
             const trainerConfirmed = getPaymentStatus(camp.id, participantId, 'trainer', trainerIndex);
 
-            if (trainerPayment && !trainerConfirmed) {
-              hasUnconfirmedPayments = true;
+            if (trainerPayment) {
+              hasAnyPayments = true;
+              if (!trainerConfirmed) {
+                hasUnconfirmedPayments = true;
+              }
             }
           });
         }
@@ -2023,6 +2030,11 @@
           hasAttentions = true;
         }
       });
+
+      // If no payments and no attentions, return empty string (normal background)
+      if (!hasAnyPayments && !hasAttentions) {
+        return '';
+      }
 
       if (hasUnconfirmedPayments) {
         return 'status-incomplete'; // Red - has unconfirmed payments
