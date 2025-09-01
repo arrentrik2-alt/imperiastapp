@@ -3383,17 +3383,22 @@
       // Load camps data so we have camp list for status updates
       await loadCamps();
 
+      // Load members data for camp status calculation
+      await loadMembersDataForCampStatus();
+
+      // Now that all data is loaded, update camp statuses
+      console.log('[INIT] All data loaded, updating camp statuses...');
+      updateAllCampStatuses();
+
       // Then set up everything else
       setActiveNav('members'); // Start with members page
       setupPaymentEventListeners(); // Setup payment event listeners
-
-      // Load members data for camp status calculation
-      await loadMembersDataForCampStatus();
     });
 
     // Load members data specifically for camp status calculation
     async function loadMembersDataForCampStatus() {
       try {
+        console.log('[LOAD-MEMBERS-STATUS] Starting to load members for status calculation...');
         const { data: allMembers, error } = await supabase
           .from('members')
           .select('*')
@@ -3403,9 +3408,9 @@
 
         // Store all members for camp status calculation
         window.allMembers = allMembers;
+        console.log(`[LOAD-MEMBERS-STATUS] Loaded ${allMembers.length} members`);
 
-        // Update all camp statuses now that we have members data
-        updateAllCampStatuses();
+        // Don't call updateAllCampStatuses here - it will be called at the end of DOMContentLoaded
 
       } catch (err) {
         console.error('Błąd ładowania danych członków dla statusu campów:', err);
