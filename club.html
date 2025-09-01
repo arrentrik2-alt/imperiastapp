@@ -3355,6 +3355,93 @@
       }
     }
 
+    // ===========================================
+    // DIAGNOSTIC FUNCTION - Test database connection
+    // ===========================================
+    async function testDatabaseConnection() {
+      console.log('🔍 Testing database connection...');
+
+      try {
+        // Test 1: Check if camps table exists
+        const { data: camps, error: campsError } = await supabase
+          .from('camps')
+          .select('*')
+          .limit(1);
+
+        if (campsError) {
+          console.error('❌ Camps table error:', campsError);
+          return false;
+        } else {
+          console.log('✅ Camps table accessible, records:', camps?.length || 0);
+        }
+
+        // Test 2: Check if we can insert a test record
+        const testId = 'diagnostic_' + Date.now();
+        const { data: insertData, error: insertError } = await supabase
+          .from('camps')
+          .insert({
+            id: testId,
+            month: 'september',
+            name: 'Diagnostic Test',
+            date: '2025-09-01',
+            amount: 100.00,
+            currency: 'PLN'
+          })
+          .select();
+
+        if (insertError) {
+          console.error('❌ Insert test failed:', insertError);
+          return false;
+        } else {
+          console.log('✅ Insert test successful:', insertData);
+
+          // Clean up test record
+          await supabase.from('camps').delete().eq('id', testId);
+        }
+
+        console.log('🎉 Database connection is working!');
+        return true;
+
+      } catch (err) {
+        console.error('💥 Database connection test failed:', err);
+        return false;
+      }
+    }
+
+    // ===========================================
+    // AUTO-CREATE TABLES IF MISSING
+    // ===========================================
+    async function createTablesIfMissing() {
+      console.log('🔧 Checking if tables need to be created...');
+
+      try {
+        // Check if camps table exists
+        const { error: campsError } = await supabase.from('camps').select('*').limit(1);
+
+        if (campsError && campsError.message?.includes('406')) {
+          console.log('📋 Tables missing, creating them...');
+
+          // Create tables via RPC call (this would require a stored procedure in Supabase)
+          // For now, we'll just log the issue
+          console.error('❌ Tables are missing from database!');
+          console.log('📝 Please run the SQL script from create_all_camp_tables.sql in Supabase SQL Editor');
+          return false;
+        }
+
+        console.log('✅ Tables exist');
+        return true;
+      } catch (err) {
+        console.error('Error checking tables:', err);
+        return false;
+      }
+    }
+
+    // Run diagnostic and table creation check on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      await testDatabaseConnection();
+      await createTablesIfMissing();
+    });
+
     // Payment functions using Supabase
     async function getSavedPayment(campId, participantId, columnType, trainerIndex = null) {
       try {
@@ -3377,8 +3464,11 @@
 
         const { data, error } = await query.single();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-          console.error('Error getting payment:', error);
+        if (error) {
+          // Don't log 406 errors for missing tables - they're expected during setup
+          if (error.code !== 'PGRST116' && !error.message?.includes('406')) {
+            console.error('Error getting payment:', error);
+          }
           return '';
         }
 
@@ -3410,8 +3500,11 @@
 
         const { data, error } = await query.single();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-          console.error('Error getting payment status:', error);
+        if (error) {
+          // Don't log 406 errors for missing tables - they're expected during setup
+          if (error.code !== 'PGRST116' && !error.message?.includes('406')) {
+            console.error('Error getting payment status:', error);
+          }
           return false;
         }
 
@@ -3553,7 +3646,8 @@
 
     // Format currency
     function formatCurrency(amount, currency) {
-      return `${amount.toFixed(2)} ${currency}`;
+      const numAmount = parseFloat(amount) || 0;
+      return `${numAmount.toFixed(2)} ${currency}`;
     }
 
     // Update participant totals
