@@ -195,7 +195,8 @@
     /* Global loader */
     #global-loader {
       position: fixed;
-      inset: 0;
+      top: 20px;
+      right: 20px;
       z-index: 3000;
       display: none;
       align-items: center;
@@ -203,16 +204,13 @@
       pointer-events: none;
     }
     #global-loader.active { display: flex; pointer-events: auto; }
-    .loader-backdrop {
-      position: absolute; inset: 0; background: rgba(0,0,0,0.6);
-    }
     .loader-content {
-      position: relative; z-index: 3001; display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--text-light);
+      display: flex; flex-direction: column; align-items: center; gap: 5px; background: rgba(0,0,0,0.8); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-dark); color: var(--text-light);
     }
     .spinner {
-      width: 48px; height: 48px; border-radius: 50%; border: 5px solid rgba(255,255,255,0.12); border-top-color: var(--gold); animation: spin 1s linear infinite;
+      width: 24px; height: 24px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.3); border-top-color: var(--gold); animation: spin 1s linear infinite;
     }
-    .loader-message { font-size: 0.95rem; color: var(--text-light); }
+    .loader-message { font-size: 0.8rem; color: var(--text-light); }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .modal-content {
@@ -1527,6 +1525,15 @@
       </div>
     </div>
 
+  <!-- Global Loader -->
+  <div id="global-loader" class="global-loader" style="display: none;">
+    <div class="loader-backdrop"></div>
+    <div class="loader-content">
+      <div class="spinner"></div>
+      <div id="loader-message" class="loader-message">Ładowanie...</div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
@@ -2209,8 +2216,30 @@
 
         if (error) throw error;
 
+        // Load trainer data for each camp
+        for (const camp of camps) {
+          const { data: trainers, error: trainerError } = await supabase
+            .from('trainers')
+            .select('*')
+            .eq('camp_id', camp.id)
+            .order('trainer_index', { ascending: true });
+
+          if (!trainerError && trainers) {
+            // Convert trainer data to the expected format
+            camp.trainers = trainers.map(trainer => ({
+              name: trainer.name,
+              amount: parseFloat(trainer.amount),
+              currency: trainer.currency
+            }));
+          } else {
+            camp.trainers = [];
+          }
+        }
+
         // Store camps for status calculation
         window.allCamps = camps;
+
+        console.log(`[LOAD-CAMPS] Loaded ${camps.length} camps with trainer data`);
 
         if (camps.length === 0) {
           campsList.innerHTML = `
@@ -2294,6 +2323,26 @@
 
     // Show camp details
     async function showCampDetails(camp) {
+      // Load trainer data for this camp if not already loaded
+      if (!camp.trainers) {
+        console.log(`[SHOW-CAMP-DETAILS] Loading trainer data for camp ${camp.id}`);
+        const { data: trainers, error: trainerError } = await supabase
+          .from('trainers')
+          .select('*')
+          .eq('camp_id', camp.id)
+          .order('trainer_index', { ascending: true });
+
+        if (!trainerError && trainers) {
+          camp.trainers = trainers.map(trainer => ({
+            name: trainer.name,
+            amount: parseFloat(trainer.amount),
+            currency: trainer.currency
+          }));
+        } else {
+          camp.trainers = [];
+        }
+      }
+
       window.currentCamp = camp;
       document.getElementById('camp-details-title').textContent = `Camp: ${camp.name}`;
 
@@ -2855,24 +2904,8 @@
       try {
         const campId = Date.now().toString();
 
-        // Collect trainers data
-        const trainers = [];
-        const trainerItems = document.querySelectorAll('.trainer-item');
-        trainerItems.forEach((item, index) => {
-          const nameInput = item.querySelector(`input[name="trainer-name-${index + 1}"]`);
-          const amountInput = item.querySelector(`input[name="trainer-amount-${index + 1}"]`);
-          const currencySelect = item.querySelector(`select[name="trainer-currency-${index + 1}"]`);
-
-          if (nameInput && amountInput && currencySelect) {
-            trainers.push({
-              name: nameInput.value.trim(),
-              amount: parseFloat(amountInput.value),
-              currency: currencySelect.value
-            });
-          }
-        });
-
-        const { error } = await supabase
+        // First create the camp without trainers
+        const { error: campError } = await supabase
           .from('camps')
           .insert([{
             id: campId,
@@ -2881,11 +2914,41 @@
             date: campData.date,
             amount: parseFloat(campData.amount),
             currency: campData.currency,
-            trainers: trainers,
+            trainers: [], // Empty array initially
             created_at: new Date().toISOString()
           }]);
 
-        if (error) throw error;
+        if (campError) throw campError;
+
+        // Now save trainers to separate table
+        const trainerItems = document.querySelectorAll('.trainer-item');
+        if (trainerItems.length > 0) {
+          const trainerInserts = [];
+          trainerItems.forEach((item, index) => {
+            const nameInput = item.querySelector(`input[name="trainer-name-${index + 1}"]`);
+            const amountInput = item.querySelector(`input[name="trainer-amount-${index + 1}"]`);
+            const currencySelect = item.querySelector(`select[name="trainer-currency-${index + 1}"]`);
+
+            if (nameInput && amountInput && currencySelect) {
+              trainerInserts.push({
+                id: `${campId}_trainer_${index}`,
+                camp_id: campId,
+                name: nameInput.value.trim(),
+                amount: parseFloat(amountInput.value),
+                currency: currencySelect.value,
+                trainer_index: index
+              });
+            }
+          });
+
+          if (trainerInserts.length > 0) {
+            const { error: trainerError } = await supabase
+              .from('trainers')
+              .insert(trainerInserts);
+
+            if (trainerError) throw trainerError;
+          }
+        }
 
         closeCreateCampModalFunc();
         await loadCamps();
