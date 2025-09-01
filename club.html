@@ -2334,37 +2334,7 @@
       }
     }
 
-    // Payment storage - using localStorage for now
-    function getPaymentKey(campId, participantId, columnType, trainerIndex = null) {
-      return `payment_${campId}_${participantId}_${columnType}${trainerIndex !== null ? `_${trainerIndex}` : ''}`;
-    }
 
-    function getPaymentStatus(campId, participantId, columnType, trainerIndex = null) {
-      const key = getPaymentKey(campId, participantId, columnType, trainerIndex) + '_status';
-      return localStorage.getItem(key) === 'confirmed';
-    }
-
-    function savePayment(campId, participantId, columnType, amount, trainerIndex = null) {
-      const key = getPaymentKey(campId, participantId, columnType, trainerIndex);
-      localStorage.setItem(key, amount);
-    }
-
-    function removePayment(campId, participantId, columnType, trainerIndex = null) {
-      const key = getPaymentKey(campId, participantId, columnType, trainerIndex);
-      const statusKey = key + '_status';
-      localStorage.removeItem(key);
-      localStorage.removeItem(statusKey);
-    }
-
-    function confirmPayment(campId, participantId, columnType, trainerIndex = null) {
-      const key = getPaymentKey(campId, participantId, columnType, trainerIndex) + '_status';
-      localStorage.setItem(key, 'confirmed');
-    }
-
-    function getSavedPayment(campId, participantId, columnType, trainerIndex = null) {
-      const key = getPaymentKey(campId, participantId, columnType, trainerIndex);
-      return localStorage.getItem(key) || '';
-    }
 
     // Camp participants management
 
