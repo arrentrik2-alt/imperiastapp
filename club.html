@@ -750,6 +750,38 @@
       color: var(--success);
     }
 
+    /* Camp actions styling */
+    .camp-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    /* Participant search styling */
+    .participant-search {
+      display: flex;
+      align-items: center;
+    }
+
+    .participant-search input {
+      margin-right: 10px;
+    }
+
+    /* Filtered participant styling */
+    .participant-row.filtered {
+      display: none;
+    }
+
+    /* Camp participant styling */
+    .participant-row.camp-participant {
+      background: linear-gradient(90deg, rgba(212, 175, 55, 0.05) 0%, rgba(212, 175, 55, 0.02) 100%);
+    }
+
+    .participant-row.camp-participant .participant-name small {
+      font-size: 0.7rem;
+      opacity: 0.8;
+    }
+
     /* Trainer Form Styles */
     .trainer-item {
       background-color: rgba(255, 255, 255, 0.05);
@@ -1005,9 +1037,19 @@
     <div class="content-box" id="camp-details-section" style="display: none;">
       <div class="content-header">
         <h3 id="camp-details-title">Szczegóły campu</h3>
-        <button class="btn btn-outline" id="back-to-camps-btn">
-          <i class="fas fa-arrow-left"></i> Powrót do campów
-        </button>
+        <div class="camp-actions">
+          <button class="btn btn-primary" id="add-participant-btn">
+            <i class="fas fa-user-plus"></i> Dodaj uczestnika
+          </button>
+          <button class="btn btn-outline" id="back-to-camps-btn">
+            <i class="fas fa-arrow-left"></i> Powrót do campów
+          </button>
+        </div>
+      </div>
+
+      <!-- Participant Search -->
+      <div class="participant-search" style="margin-bottom: 20px;">
+        <input type="text" id="participant-search" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;">
       </div>
 
       <div class="camp-details-content" id="camp-details-content">
@@ -1125,59 +1167,83 @@
     </div>
   </div>
 
-  <!-- Create Camp Modal -->
-  <div class="modal" id="create-camp-modal">
-    <div class="modal-content">
-      <button class="modal-close" id="close-create-camp-modal">&times;</button>
-      <div class="modal-header">
-        <h3>Utwórz nowy camp</h3>
-      </div>
-
-      <form id="create-camp-form">
-        <div class="form-group">
-          <label for="camp-name">Nazwa campu *</label>
-          <input type="text" id="camp-name" name="camp-name" class="form-control" required>
+      <!-- Create Camp Modal -->
+    <div class="modal" id="create-camp-modal">
+      <div class="modal-content">
+        <button class="modal-close" id="close-create-camp-modal">&times;</button>
+        <div class="modal-header">
+          <h3>Utwórz nowy camp</h3>
         </div>
 
-        <div class="form-group">
-          <label for="camp-date">Data campu *</label>
-          <input type="date" id="camp-date" name="camp-date" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-          <label for="camp-amount">Kwota campu *</label>
-          <input type="number" id="camp-amount" name="camp-amount" class="form-control" step="0.01" min="0" required>
-        </div>
-
-        <div class="form-group">
-          <label for="camp-currency">Waluta *</label>
-          <select id="camp-currency" name="camp-currency" class="form-control" required>
-            <option value="">Wybierz walutę</option>
-            <option value="PLN">PLN</option>
-            <option value="EUR">EUR</option>
-          </select>
-        </div>
-
-        <!-- Trainers Section -->
-        <div class="form-group">
-          <label>Szkoleniowcy</label>
-          <button type="button" class="btn btn-outline" id="add-trainer-btn" style="margin-top: 5px;">
-            <i class="fas fa-plus"></i> Dodaj szkoleniowca
-          </button>
-          <div id="trainers-container" style="margin-top: 10px;">
-            <!-- Trainers will be added here -->
+        <form id="create-camp-form">
+          <div class="form-group">
+            <label for="camp-name">Nazwa campu *</label>
+            <input type="text" id="camp-name" name="camp-name" class="form-control" required>
           </div>
+
+          <div class="form-group">
+            <label for="camp-date">Data campu *</label>
+            <input type="date" id="camp-date" name="camp-date" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="camp-amount">Kwota campu *</label>
+            <input type="number" id="camp-amount" name="camp-amount" class="form-control" step="0.01" min="0" required>
+          </div>
+
+          <div class="form-group">
+            <label for="camp-currency">Waluta *</label>
+            <select id="camp-currency" name="camp-currency" class="form-control" required>
+              <option value="">Wybierz walutę</option>
+              <option value="PLN">PLN</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+
+          <!-- Trainers Section -->
+          <div class="form-group">
+            <label>Szkoleniowcy</label>
+            <button type="button" class="btn btn-outline" id="add-trainer-btn" style="margin-top: 5px;">
+              <i class="fas fa-plus"></i> Dodaj szkoleniowca
+            </button>
+            <div id="trainers-container" style="margin-top: 10px;">
+              <!-- Trainers will be added here -->
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="cancel-create-camp">Anuluj</button>
+            <button type="submit" class="btn btn-primary" id="submit-create-camp">
+              <i class="fas fa-save"></i> Utwórz camp
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add Participant Modal -->
+    <div class="modal" id="add-participant-modal">
+      <div class="modal-content">
+        <button class="modal-close" id="close-add-participant-modal">&times;</button>
+        <div class="modal-header">
+          <h3>Dodaj uczestnika do campu</h3>
         </div>
 
-        <div class="form-actions">
-          <button type="button" class="btn btn-outline" id="cancel-create-camp">Anuluj</button>
-          <button type="submit" class="btn btn-primary" id="submit-create-camp">
-            <i class="fas fa-save"></i> Utwórz camp
-          </button>
-        </div>
-      </form>
+        <form id="add-participant-form">
+          <div class="form-group">
+            <label for="participant-name">Imię i nazwisko *</label>
+            <input type="text" id="participant-name" name="participant-name" class="form-control" required placeholder="Wpisz imię i nazwisko">
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="cancel-add-participant">Anuluj</button>
+            <button type="submit" class="btn btn-primary" id="submit-add-participant">
+              <i class="fas fa-user-plus"></i> Dodaj uczestnika
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
 
   <!-- Scripts -->
   <script type="module">
@@ -1553,6 +1619,7 @@
     // Camps functionality
     let currentMonth = '2025-09';
     let currentCamp = null;
+    let campParticipants = []; // Additional participants added to camp
 
     // DOM Elements for camps
     const createCampBtn = document.getElementById('create-camp-btn');
@@ -1565,6 +1632,14 @@
     const campMonthSelect = document.getElementById('camp-month-select');
     const campsList = document.getElementById('camps-list');
     const backToCampsBtn = document.getElementById('back-to-camps-btn');
+
+    // DOM Elements for participants
+    const addParticipantBtn = document.getElementById('add-participant-btn');
+    const addParticipantModal = document.getElementById('add-participant-modal');
+    const closeAddParticipantModal = document.getElementById('close-add-participant-modal');
+    const cancelAddParticipant = document.getElementById('cancel-add-participant');
+    const addParticipantForm = document.getElementById('add-participant-form');
+    const participantSearch = document.getElementById('participant-search');
 
     // Trainer management
     let trainerCount = 0;
@@ -1674,9 +1749,9 @@
       document.getElementById('camps-section').style.display = 'none';
       document.getElementById('camp-details-section').style.display = 'block';
 
-      // Load camp participants (members with ST or 10T style)
+      // Load camp participants (members with ST or 10T style + additional camp participants)
       try {
-        const { data: participants, error } = await supabase
+        const { data: members, error } = await supabase
           .from('members')
           .select('*')
           .or('style.eq.st,style.eq.10t')
@@ -1684,11 +1759,26 @@
 
         if (error) throw error;
 
+        // Load additional camp participants
+        const additionalParticipants = getCampParticipants(camp.id);
+
+        // Combine members and additional participants
+        const allParticipants = [...members, ...additionalParticipants];
+
         // Cache participants for later use
-        window.currentParticipants = participants;
+        window.currentParticipants = allParticipants;
 
         const detailsContent = document.getElementById('camp-details-content');
-        detailsContent.innerHTML = createCampDetailsTable(camp, participants);
+        detailsContent.innerHTML = createCampDetailsTable(camp, allParticipants);
+
+        // Setup participant search
+        setupParticipantSearch();
+
+        // Clear search input
+        const searchInput = document.getElementById('participant-search');
+        if (searchInput) {
+          searchInput.value = '';
+        }
 
       } catch (err) {
         console.error('Błąd ładowania uczestników campu:', err);
@@ -1726,6 +1816,31 @@
     function getSavedPayment(campId, participantId, columnType, trainerIndex = null) {
       const key = getPaymentKey(campId, participantId, columnType, trainerIndex);
       return localStorage.getItem(key) || '';
+    }
+
+    // Camp participants management
+    function getCampParticipantsKey(campId) {
+      return `camp_participants_${campId}`;
+    }
+
+    function getCampParticipants(campId) {
+      const key = getCampParticipantsKey(campId);
+      const participants = localStorage.getItem(key);
+      return participants ? JSON.parse(participants) : [];
+    }
+
+    function saveCampParticipant(campId, participant) {
+      const key = getCampParticipantsKey(campId);
+      const participants = getCampParticipants(campId);
+      participants.push(participant);
+      localStorage.setItem(key, JSON.stringify(participants));
+    }
+
+    function removeCampParticipant(campId, participantId) {
+      const key = getCampParticipantsKey(campId);
+      const participants = getCampParticipants(campId);
+      const filtered = participants.filter(p => p.id !== participantId);
+      localStorage.setItem(key, JSON.stringify(filtered));
     }
 
     // Create camp details table
@@ -1805,7 +1920,11 @@
           }
         }
 
-        tableHtml += `<tr class="${rowClasses}" data-participant-id="${participant.id}"><td class="participant-name">${participant.name}</td>`;
+        // Add visual indicator for camp participants
+        const isCampParticipant = participant.isCampParticipant;
+        const participantClass = isCampParticipant ? 'camp-participant' : 'member-participant';
+
+        tableHtml += `<tr class="${rowClasses} participant-row ${participantClass}" data-participant-id="${participant.id}"><td class="participant-name">${participant.name}${isCampParticipant ? ' <small style="color: var(--gold); font-weight: normal;">(zewnętrzny)</small>' : ''}</td>`;
 
         // Camp payment cell
         const campCellHtml = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
@@ -1837,7 +1956,6 @@
 
         // Add camp payment to totals
         const campAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'camp')) || 0;
-        console.log(`Camp ${camp.name} - currency: ${camp.currency}, amount: ${campAmount}`);
         if (camp.currency === 'PLN') {
           totalPLN += campAmount;
         } else if (camp.currency === 'EUR') {
@@ -1848,7 +1966,6 @@
         if (camp.trainers && camp.trainers.length > 0) {
           camp.trainers.forEach((trainer, trainerIndex) => {
             const trainerAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
-            console.log(`Trainer ${trainerIndex} (${trainer.name}) - currency: ${trainer.currency}, amount: ${trainerAmount}`);
             if (trainer.currency === 'PLN') {
               totalPLN += trainerAmount;
             } else if (trainer.currency === 'EUR') {
@@ -1856,8 +1973,6 @@
             }
           });
         }
-
-        console.log(`Participant ${participant.name} - Total PLN: ${totalPLN}, Total EUR: ${totalEUR}`);
 
         // Add total columns based on available currencies
         if (hasPLNPayments) {
@@ -2185,7 +2300,6 @@
       // Update row styling and summaries
       updateRowStyling(participantId);
       updateSummaries();
-      console.log(`[PAYMENT] Calling updateParticipantTotals for ${participantId}`);
       // Use setTimeout to ensure DOM is updated before updating totals
       setTimeout(() => updateParticipantTotals(campId, participantId), 10);
     }
@@ -2373,9 +2487,7 @@
 
       // Find the participant's row
       const participantRow = document.querySelector(`tr[data-participant-id="${participantId}"]`);
-      console.log(`[UPDATE] Looking for participant row with ID: ${participantId}`);
       if (!participantRow) {
-        console.log(`[UPDATE] Participant row not found for ID: ${participantId}`);
         return;
       }
 
@@ -2385,7 +2497,6 @@
 
       // Add camp payment to totals
       const campAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'camp')) || 0;
-      console.log(`[UPDATE] Camp ${camp.name} - currency: ${camp.currency}, amount: ${campAmount}`);
       if (camp.currency === 'PLN') {
         totalPLN += campAmount;
       } else if (camp.currency === 'EUR') {
@@ -2396,7 +2507,6 @@
       if (camp.trainers && camp.trainers.length > 0) {
         camp.trainers.forEach((trainer, trainerIndex) => {
           const trainerAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
-          console.log(`[UPDATE] Trainer ${trainerIndex} (${trainer.name}) - currency: ${trainer.currency}, amount: ${trainerAmount}`);
           if (trainer.currency === 'PLN') {
             totalPLN += trainerAmount;
           } else if (trainer.currency === 'EUR') {
@@ -2405,52 +2515,39 @@
         });
       }
 
-      console.log(`[UPDATE] Participant ${participant.name} - Total PLN: ${totalPLN}, Total EUR: ${totalEUR}`);
-
       // Check which currency columns actually exist in the table
       const cells = participantRow.querySelectorAll('td');
-      console.log(`[UPDATE] Found ${cells.length} cells in row for ${participant.name}`);
 
       let cellIndex = 3; // Start after participant name, camp payment
 
       if (camp.trainers && camp.trainers.length > 0) {
         cellIndex += camp.trainers.length;
-        console.log(`[UPDATE] Added ${camp.trainers.length} trainer cells, cellIndex now: ${cellIndex}`);
       }
 
       // Skip attention and comment cells
       cellIndex += 2;
-      console.log(`[UPDATE] After skipping attention/comment, cellIndex: ${cellIndex}`);
 
       // Check if PLN column exists and update it
       const plnCell = cells[cellIndex];
-      console.log(`[UPDATE] Checking PLN cell at index ${cellIndex}:`, plnCell ? `classes: ${plnCell.className}, text: "${plnCell.textContent}"` : 'null');
       if (plnCell && plnCell.classList.contains('total-pln')) {
-        console.log(`[UPDATE] Updating PLN cell (index ${cellIndex}) with value: ${totalPLN.toFixed(2)}`);
         plnCell.textContent = totalPLN.toFixed(2);
         cellIndex++;
       } else {
-        console.log(`[UPDATE] PLN cell not found at index ${cellIndex} or doesn't have total-pln class`);
         // Try to find PLN cell by searching all cells
         const foundPlnCell = Array.from(cells).find(cell => cell.classList.contains('total-pln'));
         if (foundPlnCell) {
-          console.log(`[UPDATE] Found PLN cell by search, updating with value: ${totalPLN.toFixed(2)}`);
           foundPlnCell.textContent = totalPLN.toFixed(2);
         }
       }
 
       // Check if EUR column exists and update it
       const eurCell = cells[cellIndex];
-      console.log(`[UPDATE] Checking EUR cell at index ${cellIndex}:`, eurCell ? `classes: ${eurCell.className}, text: "${eurCell.textContent}"` : 'null');
       if (eurCell && eurCell.classList.contains('total-eur')) {
-        console.log(`[UPDATE] Updating EUR cell (index ${cellIndex}) with value: ${totalEUR.toFixed(2)}`);
         eurCell.textContent = totalEUR.toFixed(2);
       } else {
-        console.log(`[UPDATE] EUR cell not found at index ${cellIndex} or doesn't have total-eur class`);
         // Try to find EUR cell by searching all cells
         const foundEurCell = Array.from(cells).find(cell => cell.classList.contains('total-eur'));
         if (foundEurCell) {
-          console.log(`[UPDATE] Found EUR cell by search, updating with value: ${totalEUR.toFixed(2)}`);
           foundEurCell.textContent = totalEUR.toFixed(2);
         }
       }
@@ -2489,6 +2586,115 @@
         });
       }
     }
+
+    // Add participant modal functions
+    function openAddParticipantModal() {
+      addParticipantModal.classList.add('active');
+    }
+
+    function closeAddParticipantModalFunc() {
+      addParticipantModal.classList.remove('active');
+      addParticipantForm.reset();
+    }
+
+    // Add participant to camp
+    async function addParticipantToCamp(participantData) {
+      try {
+        const camp = window.currentCamp;
+        if (!camp) {
+          alert('Błąd: Nie można dodać uczestnika - brak aktywnego campu');
+          return;
+        }
+
+        // Generate unique ID for camp participant
+        const participantId = `camp_${camp.id}_${Date.now()}`;
+
+        const newParticipant = {
+          id: participantId,
+          name: participantData.name,
+          isCampParticipant: true // Flag to distinguish from members
+        };
+
+        // Save to localStorage
+        saveCampParticipant(camp.id, newParticipant);
+
+        // Reload camp details
+        await showCampDetails(camp);
+
+        closeAddParticipantModalFunc();
+
+      } catch (err) {
+        console.error('Błąd dodawania uczestnika:', err);
+        alert('Błąd dodawania uczestnika: ' + (err.message || 'Nieznany błąd'));
+      }
+    }
+
+    // Setup participant search
+    function setupParticipantSearch() {
+      const searchInput = document.getElementById('participant-search');
+      if (!searchInput) return;
+
+      searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const table = document.querySelector('.camp-details-table');
+        if (!table) return;
+
+        const rows = table.querySelectorAll('tbody tr');
+
+        rows.forEach(row => {
+          const nameCell = row.querySelector('.participant-name');
+          if (nameCell) {
+            const participantName = nameCell.textContent.toLowerCase();
+            if (participantName.includes(searchTerm)) {
+              row.style.display = '';
+            } else {
+              row.style.display = 'none';
+            }
+          }
+        });
+      });
+    }
+
+    // Event listeners for participants
+    addParticipantBtn.addEventListener('click', openAddParticipantModal);
+    closeAddParticipantModal.addEventListener('click', closeAddParticipantModalFunc);
+    cancelAddParticipant.addEventListener('click', closeAddParticipantModalFunc);
+
+    // Close modal when clicking outside
+    addParticipantModal.addEventListener('click', (e) => {
+      if (e.target === addParticipantModal) {
+        closeAddParticipantModalFunc();
+      }
+    });
+
+    // Add participant form submission
+    addParticipantForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(addParticipantForm);
+      const participantData = {
+        name: formData.get('participant-name').trim()
+      };
+
+      // Basic validation
+      if (!participantData.name) {
+        alert('Proszę wpisać imię i nazwisko uczestnika');
+        return;
+      }
+
+      // Show loading state
+      const submitBtn = document.getElementById('submit-add-participant');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<div class="loading"></div> Dodawanie...';
+      submitBtn.disabled = true;
+
+      try {
+        await addParticipantToCamp(participantData);
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    });
 
     // Initialize app
     document.addEventListener('DOMContentLoaded', () => {
