@@ -3159,8 +3159,12 @@
 
         if (participantsError) throw participantsError;
 
-        // Get training dates for the month (based on group day_of_week)
-        const trainingDates = getTrainingDatesForMonth(selectedMonth, group.day_of_week);
+        // Debug: check group object properties
+        console.log('Group object:', group);
+        console.log('Group day property:', group.day);
+
+        // Get training dates for the month (based on group day)
+        const trainingDates = getTrainingDatesForMonth(selectedMonth, group.day);
 
         // Create attendance table
         const tableHTML = createAttendanceTable(participantsData, trainingDates, selectedMonth);
