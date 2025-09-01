@@ -2252,6 +2252,8 @@
       try {
         // Use already loaded members data if available
         let allMembers = window.allMembers;
+        console.log(`[SHOW-CAMP-DETAILS] window.allMembers exists: ${!!allMembers}, length: ${allMembers?.length || 0}`);
+
         if (!allMembers) {
           const { data: membersData, error: membersError } = await supabase
             .from('members')
@@ -2265,12 +2267,19 @@
 
         // Get members eligible for this camp (ST or 10T style)
         const members = allMembers.filter(m => m.style === 'st' || m.style === '10t');
+        console.log(`[SHOW-CAMP-DETAILS] Found ${members.length} eligible club members (ST/10T)`);
+
+        // Debug: show all members and their styles
+        console.log(`[SHOW-CAMP-DETAILS] All members:`, allMembers.map(m => `${m.name}: ${m.style}`).join(', '));
+        console.log(`[SHOW-CAMP-DETAILS] Eligible members:`, members.map(m => `${m.name} (${m.id})`).join(', '));
 
         // Load additional camp participants
         const additionalParticipants = getCampParticipants(camp.id);
+        console.log(`[SHOW-CAMP-DETAILS] Found ${additionalParticipants.length} external participants`);
 
         // Combine members and additional participants
         const allParticipants = [...members, ...additionalParticipants];
+        console.log(`[SHOW-CAMP-DETAILS] Total participants: ${allParticipants.length}`);
 
         // Cache participants for later use
         window.currentParticipants = allParticipants;
