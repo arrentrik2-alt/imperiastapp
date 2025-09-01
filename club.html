@@ -3585,6 +3585,7 @@
 
     async function savePayment(campId, participantId, columnType, amount, trainerIndex = null) {
       try {
+        showGlobalLoader('Zapisuję płatność...');
         const paymentData = {
           camp_id: campId,
           participant_id: participantId,
@@ -3627,13 +3628,16 @@
             console.error('Error updating UI after savePayment:', uiErr);
           }
         }
+        hideGlobalLoader();
       } catch (err) {
         console.error('Error in savePayment:', err);
+        hideGlobalLoader();
       }
     }
 
     async function confirmPayment(campId, participantId, columnType, trainerIndex = null) {
       try {
+        showGlobalLoader('Potwierdzam płatność...');
         let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
 
         const updateData = {
@@ -3651,8 +3655,10 @@
         if (error) {
           console.error('Error confirming payment:', error);
         }
+        hideGlobalLoader();
       } catch (err) {
         console.error('Error in confirmPayment:', err);
+        hideGlobalLoader();
       }
     }
 
