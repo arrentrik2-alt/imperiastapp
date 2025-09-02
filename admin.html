@@ -659,12 +659,6 @@
           <span class="link-text">Grupy</span>
         </a>
       </li>
-      <li>
-        <a href="#" id="logoutBtn">
-          <i class="fas fa-sign-out-alt"></i>
-          <span class="link-text">Wyloguj</span>
-        </a>
-      </li>
     </ul>
   </aside>
 
@@ -1120,11 +1114,7 @@
       }
     }
     
-    // Logout function
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      window.location.href = "login.html";
-    });
+    // Logout function - moved to after dynamic button creation
     
     // Navigation
     const homeLink = document.getElementById('nav-home');
@@ -3451,6 +3441,17 @@
     navLessons.innerHTML = `<a href="#" id="nav-lessons"><i class="fas fa-chalkboard-teacher"></i><span class="link-text">Lekcje</span></a>`;
     document.querySelector('.nav-links').appendChild(navLessons);
     document.getElementById('nav-lessons').addEventListener('click', (e) => { e.preventDefault(); setActiveNav('lessons'); });
+
+    // Add logout button after lessons button
+    const navLogout = document.createElement('li');
+    navLogout.innerHTML = `<a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="link-text">Wyloguj</span></a>`;
+    document.querySelector('.nav-links').appendChild(navLogout);
+
+    // Add logout event listener to the dynamically created button
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "login.html";
+    });
 
     // extend setActiveNav to handle lessons
     const _origSetActive = setActiveNav;
