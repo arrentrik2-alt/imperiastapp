@@ -1459,7 +1459,7 @@
           });
         }
 
-        // Process lesson payments
+        // Process lesson payments (treat them as a default payment method)
         if (!lessonPayErr && lessonPayments) {
           lessonPayments.forEach(p => {
             const amt = parseFloat(p.amount || 0);
@@ -1467,7 +1467,8 @@
             if (p.confirmed) {
               paidSum += amt;
               paidParticipants.add(p.participant_id);
-              const m = 'Lekcje';
+              // Use a default payment method for lessons (you can customize this)
+              const m = 'Przelew'; // Default payment method for lessons
               byMethod[m] = (byMethod[m] || 0) + amt;
             } else {
               unpaidSum += amt;
