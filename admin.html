@@ -1426,32 +1426,55 @@
           document.getElementById('participants-count').textContent = (participants || []).length;
         }
         
-        // Aggregate payments for overview
-        const { data: paymentsAll, error: payErr } = await supabase
+        // Aggregate payments for overview (groups + lessons)
+        const { data: groupPayments, error: groupPayErr } = await supabase
           .from('payments_month')
           .select('participant_id, amount, payment_method, confirmed')
           .eq('month', selectedMonth);
-        
+
+        const { data: lessonPayments, error: lessonPayErr } = await supabase
+          .from('lesson_payments_month')
+          .select('participant_id, amount, confirmed')
+          .eq('month', selectedMonth);
+
         let paidSum = 0, unpaidSum = 0, totalSum = 0;
         const byMethod = {};
         const paidParticipants = new Set();
         const unpaidParticipants = new Set();
 
-        if (!payErr && paymentsAll) {
-          paymentsAll.forEach(p => {
+        // Process group payments
+        if (!groupPayErr && groupPayments) {
+          groupPayments.forEach(p => {
             const amt = parseFloat(p.amount || 0);
             totalSum += amt;
             if (p.confirmed) {
               paidSum += amt;
               paidParticipants.add(p.participant_id);
-              const m = p.payment_method || 'Inne';
+              const m = p.payment_method || 'Inne (grupy)';
               byMethod[m] = (byMethod[m] || 0) + amt;
             } else {
               unpaidSum += amt;
               unpaidParticipants.add(p.participant_id);
+            }
+          });
         }
-      });
-    }
+
+        // Process lesson payments
+        if (!lessonPayErr && lessonPayments) {
+          lessonPayments.forEach(p => {
+            const amt = parseFloat(p.amount || 0);
+            totalSum += amt;
+            if (p.confirmed) {
+              paidSum += amt;
+              paidParticipants.add(p.participant_id);
+              const m = 'Lekcje';
+              byMethod[m] = (byMethod[m] || 0) + amt;
+            } else {
+              unpaidSum += amt;
+              unpaidParticipants.add(p.participant_id);
+            }
+          });
+        }
     
         // Render paid/unpaid summary on home
         const paidEl = document.getElementById('home-paid');
