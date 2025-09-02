@@ -1179,6 +1179,28 @@
         const mm = String(now.getMonth() + 1).padStart(2, '0');
       return `${yyyy}-${mm}`;
     }
+
+    // Helper function to format time to hh:mm format
+    function formatTimeToHHMM(timeString) {
+      if (!timeString) return '';
+      // If already in hh:mm format, return as is
+      if (/^\d{2}:\d{2}$/.test(timeString)) return timeString;
+      // If it's a full datetime string, extract time part
+      if (timeString.includes('T') || timeString.includes(' ')) {
+        const time = timeString.split('T')[1] || timeString.split(' ')[1];
+        if (time) return time.substring(0, 5); // Extract hh:mm from hh:mm:ss
+      }
+      return timeString;
+    }
+
+    // Helper function to format date to dd:mm format
+    function formatDateToDDMM(dayOfMonth, monthString) {
+      if (!dayOfMonth || !monthString) return '';
+      // Extract month number from YYYY-MM format
+      const monthNum = parseInt(monthString.split('-')[1]);
+      // Format as dd:mm (day of month : month number)
+      return `${dayOfMonth.toString().padStart(2, '0')}:${monthNum.toString().padStart(2, '0')}`;
+    }
     
     // Helper function to get available months (current + created)
     async function getAvailableMonths() {
@@ -1665,7 +1687,7 @@
               <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
             <div class="group-detail">
               <i class="fas fa-calendar-day"></i>
-                <span>${group.day}, ${group.start_time}</span>
+                <span>${group.day}, ${formatTimeToHHMM(group.start_time)}</span>
             </div>
             <div class="group-detail">
               <i class="fas fa-user-tie"></i>
@@ -2975,7 +2997,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div style="flex:1;">
                 <h4 style="margin:0;color:var(--gold);">${lesson.title}</h4>
-                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}<div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
+                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}${lesson.day_of_month ? ' <span style="color:var(--gold);font-weight:500;">(' + formatDateToDDMM(lesson.day_of_month, month) + ')</span>' : ''}<div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
               </div>
               <div style="text-align:right; min-width:160px;">
                 <div style="font-size:0.85rem;color:var(--text-gray);">Kwota lekcji</div>
