@@ -1179,28 +1179,6 @@
         const mm = String(now.getMonth() + 1).padStart(2, '0');
       return `${yyyy}-${mm}`;
     }
-
-    // Helper function to format time to hh:mm format
-    function formatTimeToHHMM(timeString) {
-      if (!timeString) return '';
-      // If already in hh:mm format, return as is
-      if (/^\d{2}:\d{2}$/.test(timeString)) return timeString;
-      // If it's a full datetime string, extract time part
-      if (timeString.includes('T') || timeString.includes(' ')) {
-        const time = timeString.split('T')[1] || timeString.split(' ')[1];
-        if (time) return time.substring(0, 5); // Extract hh:mm from hh:mm:ss
-      }
-      return timeString;
-    }
-
-    // Helper function to format date to dd:mm format
-    function formatDateToDDMM(dayOfMonth, monthString) {
-      if (!dayOfMonth || !monthString) return '';
-      // Extract month number from YYYY-MM format
-      const monthNum = parseInt(monthString.split('-')[1]);
-      // Format as dd:mm (day of month : month number)
-      return `${dayOfMonth.toString().padStart(2, '0')}:${monthNum.toString().padStart(2, '0')}`;
-    }
     
     // Helper function to get available months (current + created)
     async function getAvailableMonths() {
@@ -1687,7 +1665,7 @@
               <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
             <div class="group-detail">
               <i class="fas fa-calendar-day"></i>
-                <span>${group.day}, ${formatTimeToHHMM(group.start_time)}</span>
+                <span>${group.day}, ${group.start_time}</span>
             </div>
             <div class="group-detail">
               <i class="fas fa-user-tie"></i>
@@ -1735,6 +1713,8 @@
     
     let currentGroupId = null; // Store current group ID for adding participants
     let currentGroupData = null; // Store current group data for attendance journal
+    let isEditingParticipant = false; // Flag to track if we're editing
+    let editingParticipantId = null; // ID of participant being edited
 
     function openGroupParticipantsPage(group) {
       if (!group || !group.id) {
@@ -1767,30 +1747,65 @@
     closeAddParticipantModalBtn.addEventListener('click', closeAddParticipantModal);
     cancelParticipantBtn.addEventListener('click', closeAddParticipantModal);
 
-    function openAddParticipantModal() {
+    function openAddParticipantModal(participantData = null) {
       addParticipantModal.classList.add('active');
-      participantNameInput.value = '';
-      participantPhoneInput.value = '';
-      participantPhoneInput.value = '';
-      participantAmountInput.value = '';
 
-      // Reset participant mode buttons
-      document.getElementById('group-participant-mode-new').classList.add('active');
-      document.getElementById('group-participant-mode-existing').classList.remove('active');
+      if (participantData) {
+        // Edit mode
+        isEditingParticipant = true;
+        editingParticipantId = participantData.participant_id;
+        document.querySelector('#add-participant-modal .modal-header h3').textContent = 'Edytuj uczestnika';
+        document.getElementById('save-participant-btn').innerHTML = '<i class="fas fa-save"></i> Zapisz zmiany';
 
-      // Show new participant form, hide existing search
-      document.getElementById('group-participant-new-container').style.display = 'block';
-      document.getElementById('group-participant-existing-container').style.display = 'none';
+        // Fill form with participant data
+        participantNameInput.value = participantData.name || '';
+        participantPhoneInput.value = participantData.phone || '';
+        participantAmountInput.value = participantData.amount || '';
 
-      // Reset existing participant search
-      document.getElementById('group-participant-search').value = '';
-      document.getElementById('group-participant-selected-id').value = '';
-      document.getElementById('group-participant-search-results').innerHTML = '';
-      document.getElementById('group-participant-badge').style.display = 'none';
+        // Hide mode buttons in edit mode
+        document.querySelector('.form-group .btn').parentElement.style.display = 'none';
+
+        // Show new participant form (since we're editing existing participant)
+        document.getElementById('group-participant-new-container').style.display = 'block';
+        document.getElementById('group-participant-existing-container').style.display = 'none';
+
+      } else {
+        // Add mode
+        isEditingParticipant = false;
+        editingParticipantId = null;
+        document.querySelector('#add-participant-modal .modal-header h3').textContent = 'Dodaj uczestnika do grupy';
+        document.getElementById('save-participant-btn').innerHTML = '<i class="fas fa-save"></i> Dodaj uczestnika';
+
+        participantNameInput.value = '';
+        participantPhoneInput.value = '';
+        participantPhoneInput.value = '';
+        participantAmountInput.value = '';
+
+        // Show mode buttons in add mode
+        document.querySelector('.form-group .btn').parentElement.style.display = 'flex';
+
+        // Reset participant mode buttons
+        document.getElementById('group-participant-mode-new').classList.add('active');
+        document.getElementById('group-participant-mode-existing').classList.remove('active');
+
+        // Show new participant form, hide existing search
+        document.getElementById('group-participant-new-container').style.display = 'block';
+        document.getElementById('group-participant-existing-container').style.display = 'none';
+
+        // Reset existing participant search
+        document.getElementById('group-participant-search').value = '';
+        document.getElementById('group-participant-selected-id').value = '';
+        document.getElementById('group-participant-search-results').innerHTML = '';
+        document.getElementById('group-participant-badge').style.display = 'none';
+      }
     }
 
     function closeAddParticipantModal() {
       addParticipantModal.classList.remove('active');
+
+      // Reset editing flags when modal is closed
+      isEditingParticipant = false;
+      editingParticipantId = null;
     }
 
     saveParticipantBtn.addEventListener('click', async () => {
@@ -1816,67 +1831,135 @@
       saveParticipantBtn.disabled = true;
 
       try {
-        let participantId;
+        if (isEditingParticipant) {
+          // Edit existing participant
+          console.log('Editing participant:', editingParticipantId);
 
-        if (isExistingParticipant) {
-          // Use existing participant
-          participantId = selectedParticipantId;
-          console.log('Using existing participant:', participantId);
-        } else {
-          // 1. Add new participant
-        const rodoValue = !!document.getElementById('participant-rodo').checked;
-          const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
-          p_month: selectedMonth,
-          p_name: name,
-          p_email: null,
-          p_phone: phone || null,
-          p_rodo: rodoValue
-        });
-
-        if (participantError) throw participantError;
-          participantId = newParticipantId;
-
-        // Ensure RODO persisted even if RPC signature mismatch: update directly
-        try {
-          const { error: rodoErr } = await supabase
+          // Update participant data
+          const { error: updateError } = await supabase
             .from('participants_month')
-            .update({ rodo: rodoValue })
-            .eq('id', participantId);
-          if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
-        } catch (e) {
-          console.warn('RODO update exception:', e);
+            .update({
+              name: name,
+              phone: phone || null
+            })
+            .eq('id', editingParticipantId);
+
+          if (updateError) throw updateError;
+
+          // Update or create payment record
+          const { data: existingPayment, error: paymentCheckError } = await supabase
+            .from('payments_month')
+            .select('*')
+            .eq('month', selectedMonth)
+            .eq('group_id', currentGroupId)
+            .eq('participant_id', editingParticipantId)
+            .single();
+
+          if (paymentCheckError && paymentCheckError.code !== 'PGRST116') {
+            throw paymentCheckError;
+          }
+
+          if (existingPayment) {
+            // Update existing payment
+            const { error: paymentUpdateError } = await supabase
+              .from('payments_month')
+              .update({ amount: amount })
+              .eq('id', existingPayment.id);
+            if (paymentUpdateError) throw paymentUpdateError;
+          } else if (amount > 0) {
+            // Create new payment record
+            const { error: paymentCreateError } = await supabase
+              .from('payments_month')
+              .insert({
+                month: selectedMonth,
+                group_id: currentGroupId,
+                participant_id: editingParticipantId,
+                amount: amount,
+                confirmed: false
+              });
+            if (paymentCreateError) throw paymentCreateError;
+          }
+
+          console.log('Participant updated successfully');
+
+        } else {
+          // Add new participant
+          let participantId;
+
+          if (isExistingParticipant) {
+            // Use existing participant
+            participantId = selectedParticipantId;
+            console.log('Using existing participant:', participantId);
+          } else {
+            // 1. Add new participant
+            const rodoValue = !!document.getElementById('participant-rodo').checked;
+            const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
+              p_month: selectedMonth,
+              p_name: name,
+              p_email: null,
+              p_phone: phone || null,
+              p_rodo: rodoValue
+            });
+
+            if (participantError) throw participantError;
+            participantId = newParticipantId;
+
+            // Ensure RODO persisted even if RPC signature mismatch: update directly
+            try {
+              const { error: rodoErr } = await supabase
+                .from('participants_month')
+                .update({ rodo: rodoValue })
+                .eq('id', participantId);
+              if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
+            } catch (e) {
+              console.warn('RODO update exception:', e);
+            }
+          }
+
+          // 2. Add participant to group
+          const { error: groupError } = await supabase.rpc('add_participant_to_group_month', {
+            p_month: selectedMonth,
+            p_participant_id: participantId,
+            p_group_id: currentGroupId
+          });
+
+          if (groupError) throw groupError;
+
+          // 3. Add payment record
+          if (amount > 0) {
+            const { error: paymentError } = await supabase.rpc('insert_payment_month', {
+              p_month: selectedMonth,
+              p_participant_id: participantId,
+              p_group_id: currentGroupId,
+              p_amount: amount,
+              p_payment_method: null
+            });
+
+            if (paymentError) throw paymentError;
           }
         }
 
+        // Remember if we were editing for success message
+        const wasEditing = isEditingParticipant;
 
-
-        // 2. Add participant to group
-        const { error: groupError } = await supabase.rpc('add_participant_to_group_month', {
-          p_month: selectedMonth,
-          p_participant_id: participantId,
-          p_group_id: currentGroupId
-        });
-
-        if (groupError) throw groupError;
-
-        // 3. Add payment record
-        if (amount > 0) {
-          const { error: paymentError } = await supabase.rpc('insert_payment_month', {
-            p_month: selectedMonth,
-            p_participant_id: participantId,
-            p_group_id: currentGroupId,
-            p_amount: amount,
-            p_payment_method: null
-          });
-
-          if (paymentError) throw paymentError;
-        }
+        // Reset editing flags
+        isEditingParticipant = false;
+        editingParticipantId = null;
 
         closeAddParticipantModal();
         await loadGroupParticipants(currentGroupId);
-        // Removed success alert per user's request
+
+        // Show success message
+        const successMessage = wasEditing ?
+          'Uczestnik został pomyślnie zaktualizowany!' :
+          'Uczestnik został pomyślnie dodany do grupy!';
+        alert(successMessage);
+
       } catch (err) {
-        alert('Błąd dodawania uczestnika: ' + (err.message || 'Nieznany'));
+        const errorMessage = isEditingParticipant ?
+          'Błąd aktualizacji uczestnika: ' + (err.message || 'Nieznany') :
+          'Błąd dodawania uczestnika: ' + (err.message || 'Nieznany');
+        alert(errorMessage);
       } finally {
         saveParticipantBtn.disabled = false;
         saveParticipantBtn.innerHTML = originalText;
@@ -2033,10 +2116,55 @@
           `;
 
           // Add event listeners for action buttons
-          participantCard.querySelector('.edit-btn').addEventListener('click', (e) => {
+          participantCard.querySelector('.edit-btn').addEventListener('click', async (e) => {
             e.stopPropagation();
-            // TODO: Implement edit functionality
-            alert('Funkcja edycji uczestników będzie dostępna wkrótce');
+
+            try {
+              // Get participant data from database
+              const selectedMonth = document.getElementById('participants-month-select').value;
+              const { data: participantData, error: participantError } = await supabase
+                .from('participant_groups_month')
+                .select(`
+                  participant_id,
+                  participants_month!inner (
+                    id, name, phone
+                  )
+                `)
+                .eq('month', selectedMonth)
+                .eq('group_id', groupId)
+                .eq('participant_id', participant.participant_id)
+                .single();
+
+              if (participantError) throw participantError;
+
+              // Get payment amount for this participant
+              const { data: paymentData, error: paymentError } = await supabase
+                .from('payments_month')
+                .select('amount')
+                .eq('month', selectedMonth)
+                .eq('group_id', groupId)
+                .eq('participant_id', participant.participant_id)
+                .single();
+
+              if (paymentError && paymentError.code !== 'PGRST116') { // PGRST116 = not found
+                console.warn('Payment data not found:', paymentError);
+              }
+
+              // Prepare participant data for editing
+              const editData = {
+                participant_id: participant.participant_id,
+                name: participantData.participants_month.name,
+                phone: participantData.participants_month.phone,
+                amount: paymentData ? paymentData.amount : 0
+              };
+
+              // Open modal in edit mode
+              openAddParticipantModal(editData);
+
+            } catch (err) {
+              console.error('Error loading participant data for editing:', err);
+              alert('Błąd podczas ładowania danych uczestnika: ' + err.message);
+            }
           });
 
           participantCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
@@ -2997,7 +3125,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div style="flex:1;">
                 <h4 style="margin:0;color:var(--gold);">${lesson.title}</h4>
-                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}${lesson.day_of_month ? ' <span style="color:var(--gold);font-weight:500;">(' + formatDateToDDMM(lesson.day_of_month, month) + ')</span>' : ''}<div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
+                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}<div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
               </div>
               <div style="text-align:right; min-width:160px;">
                 <div style="font-size:0.85rem;color:var(--text-gray);">Kwota lekcji</div>
