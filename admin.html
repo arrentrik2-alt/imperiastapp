@@ -3437,10 +3437,12 @@
       }
     }
 
-    // add nav link handler
+    // add nav link handler - insert before logout button
     const navLessons = document.createElement('li');
     navLessons.innerHTML = `<a href="#" id="nav-lessons"><i class="fas fa-chalkboard-teacher"></i><span class="link-text">Lekcje</span></a>`;
-    document.querySelector('.nav-links').appendChild(navLessons);
+    const navLinks = document.querySelector('.nav-links');
+    const logoutBtn = document.getElementById('logoutBtn').closest('li');
+    navLinks.insertBefore(navLessons, logoutBtn);
     document.getElementById('nav-lessons').addEventListener('click', (e) => { e.preventDefault(); setActiveNav('lessons'); });
 
     // extend setActiveNav to handle lessons
