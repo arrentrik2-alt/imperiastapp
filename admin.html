@@ -235,6 +235,48 @@
       letter-spacing: 1px;
     }
 
+    /* Days checkboxes styling */
+    .days-checkboxes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .day-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--border-dark);
+      border-radius: 6px;
+      background-color: rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .day-checkbox:hover {
+      border-color: var(--gold);
+      background-color: rgba(212, 175, 55, 0.1);
+    }
+
+    .day-checkbox input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--gold);
+    }
+
+    .day-checkbox span {
+      color: var(--text-light);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .day-checkbox input[type="checkbox"]:checked + span {
+      color: var(--gold);
+      font-weight: 600;
+    }
+
     .view-switch-buttons {
       display: flex;
       gap: 10px;
@@ -810,18 +852,41 @@
         <input type="text" id="group-name" class="form-control" placeholder="Nazwa grupy">
     </div>
 
-      <div class="form-group">
-        <label for="group-day">Dzień tygodnia</label>
-        <select id="group-day" class="form-control">
-          <option value="Poniedziałek">Poniedziałek</option>
-          <option value="Wtorek">Wtorek</option>
-          <option value="Środa">Środa</option>
-          <option value="Czwartek">Czwartek</option>
-          <option value="Piątek">Piątek</option>
-          <option value="Sobota">Sobota</option>
-          <option value="Niedziela">Niedziela</option>
-        </select>
-    </div>
+            <div class="form-group">
+        <label>Dni tygodnia</label>
+        <div id="days-checkboxes" class="days-checkboxes">
+          <label class="day-checkbox">
+            <input type="checkbox" value="Poniedziałek">
+            <span>Poniedziałek</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Wtorek">
+            <span>Wtorek</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Środa">
+            <span>Środa</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Czwartek">
+            <span>Czwartek</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Piątek">
+            <span>Piątek</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Sobota">
+            <span>Sobota</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Niedziela">
+            <span>Niedziela</span>
+          </label>
+        </div>
+        <!-- Hidden field for backward compatibility -->
+        <input type="hidden" id="group-day" value="">
+      </div>
 
       <div class="form-group">
         <label for="group-start">Godzina rozpoczęcia</label>
@@ -1578,22 +1643,37 @@
 
     function openModal() {
       editingGroupId = null;
-      document.getElementById('group-modal-title').textContent = 'Dodaj nową grupę';
+      const modalTitle = document.getElementById('group-modal-title');
+      if (modalTitle) modalTitle.textContent = 'Dodaj nową grupę';
       addGroupModal.classList.add('active');
       resetForm();
     }
 
     function openEditModal(groupData) {
       editingGroupId = groupData.id;
-      document.getElementById('group-modal-title').textContent = 'Edytuj grupę';
-      document.getElementById('save-group-btn-text').textContent = 'Zapisz zmiany';
+      const modalTitle = document.getElementById('group-modal-title');
+      if (modalTitle) modalTitle.textContent = 'Edytuj grupę';
+      const saveBtnText = document.getElementById('save-group-btn-text');
+      if (saveBtnText) saveBtnText.textContent = 'Zapisz zmiany';
       addGroupModal.classList.add('active');
 
       // Fill form with existing data
-      document.getElementById('group-name').value = groupData.name || '';
-      document.getElementById('group-day').value = groupData.day || '';
-      document.getElementById('group-start').value = groupData.start_time ? groupData.start_time.substring(0, 5) : '';
-      document.getElementById('group-trainer').value = groupData.trainer || '';
+      const nameField = document.getElementById('group-name');
+      const startField = document.getElementById('group-start');
+      const trainerField = document.getElementById('group-trainer');
+
+      if (nameField) nameField.value = groupData.name || '';
+      if (startField) startField.value = groupData.start_time ? groupData.start_time.substring(0, 5) : '';
+      if (trainerField) trainerField.value = groupData.trainer || '';
+
+      // Handle days - support both single day (backward compatibility) and multiple days
+      let days = [];
+      if (groupData.days && Array.isArray(groupData.days)) {
+        days = groupData.days;
+      } else if (groupData.day) {
+        days = [groupData.day];
+      }
+      setSelectedDays(days);
     }
 
     function closeModal() {
@@ -1603,11 +1683,35 @@
     }
 
     function resetForm() {
-      document.getElementById('group-name').value = '';
-      document.getElementById('group-day').value = '';
-      document.getElementById('group-start').value = '';
-      document.getElementById('group-trainer').value = '';
-      document.getElementById('save-group-btn-text').textContent = 'Zapisz grupę';
+      const nameField = document.getElementById('group-name');
+      const dayField = document.getElementById('group-day');
+      const startField = document.getElementById('group-start');
+      const trainerField = document.getElementById('group-trainer');
+      const saveBtnText = document.getElementById('save-group-btn-text');
+
+      if (nameField) nameField.value = '';
+      if (dayField) dayField.value = '';
+      if (startField) startField.value = '';
+      if (trainerField) trainerField.value = '';
+      if (saveBtnText) saveBtnText.textContent = 'Zapisz grupę';
+
+      // Reset all day checkboxes
+      const checkboxes = document.querySelectorAll('#days-checkboxes input[type="checkbox"]');
+      checkboxes.forEach(checkbox => checkbox.checked = false);
+    }
+
+    // Helper function to get selected days
+    function getSelectedDays() {
+      const checkboxes = document.querySelectorAll('#days-checkboxes input[type="checkbox"]:checked');
+      return Array.from(checkboxes).map(checkbox => checkbox.value);
+    }
+
+    // Helper function to set selected days
+    function setSelectedDays(days) {
+      const checkboxes = document.querySelectorAll('#days-checkboxes input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = days.includes(checkbox.value);
+      });
     }
     
     addGroupBtn.addEventListener('click', openModal);
@@ -1617,13 +1721,17 @@
 
     // Save group function (add new or update existing group)
     saveGroupBtn.addEventListener('click', async () => {
-      const name = document.getElementById('group-name').value.trim();
-      const day = document.getElementById('group-day').value;
-      const start = document.getElementById('group-start').value;
-      const trainer = document.getElementById('group-trainer').value.trim();
+      const nameField = document.getElementById('group-name');
+      const startField = document.getElementById('group-start');
+      const trainerField = document.getElementById('group-trainer');
 
-      if (!name || !day || !start || !trainer) {
-        alert('Podaj nazwę, dzień, godzinę startu i trenera');
+      const name = nameField ? nameField.value.trim() : '';
+      const start = startField ? startField.value : '';
+      const trainer = trainerField ? trainerField.value.trim() : '';
+      const selectedDays = getSelectedDays();
+
+      if (!name || selectedDays.length === 0 || !start || !trainer) {
+        alert('Podaj nazwę, zaznacz przynajmniej jeden dzień tygodnia, godzinę startu i trenera');
         return;
       }
 
@@ -1635,12 +1743,12 @@
 
       try {
         if (editingGroupId) {
-          // Update existing group
+          // Update existing group - use the first selected day for backward compatibility
           const { error } = await supabase
             .from('groups_month')
             .update({
               name: name,
-              day: day,
+              day: selectedDays[0], // Use first day for single group update
               start_time: start,
               trainer: trainer
             })
@@ -1653,16 +1761,18 @@
           await loadGroups();
           await loadHomeData();
         } else {
-          // Add new group
-          const resp = await supabase.rpc('insert_group_month', {
-            p_month: selectedMonth,
-            p_name: name,
-            p_day: day,
-            p_start_time: start,
-            p_trainer: trainer
-          });
+          // Add new groups - create one group per selected day
+          for (const day of selectedDays) {
+            const resp = await supabase.rpc('insert_group_month', {
+              p_month: selectedMonth,
+              p_name: name,
+              p_day: day,
+              p_start_time: start,
+              p_trainer: trainer
+            });
 
-          if (resp.error) throw resp.error;
+            if (resp.error) throw resp.error;
+          }
 
           closeModal();
           await loadGroups();
