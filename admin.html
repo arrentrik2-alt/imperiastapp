@@ -1978,6 +1978,12 @@
 
       // Load participants for the current group and month
       loadGroupParticipants(group.id);
+
+      // If attendance journal view is active, reload it for the new group
+      const attendanceJournalView = document.getElementById('attendance-journal-view');
+      if (attendanceJournalView && attendanceJournalView.style.display !== 'none') {
+        loadAttendanceJournal();
+      }
     }
 
     const addParticipantToGroupBtn = document.getElementById('add-participant-to-group-btn');
@@ -3524,6 +3530,28 @@
     let currentAttendanceMonth = getCurrentMonth();
     let attendanceData = {}; // Store attendance data for current session
 
+    // View switch buttons for group participants section
+    const viewGroupDetailsBtn = document.getElementById('view-group-details-btn');
+    const viewAttendanceJournalBtn = document.getElementById('view-attendance-journal-btn');
+
+    if (viewGroupDetailsBtn && viewAttendanceJournalBtn) {
+      viewGroupDetailsBtn.addEventListener('click', () => {
+        viewGroupDetailsBtn.classList.add('active');
+        viewAttendanceJournalBtn.classList.remove('active');
+        document.getElementById('group-details-view').style.display = 'block';
+        document.getElementById('attendance-journal-view').style.display = 'none';
+      });
+
+      viewAttendanceJournalBtn.addEventListener('click', () => {
+        viewGroupDetailsBtn.classList.remove('active');
+        viewAttendanceJournalBtn.classList.add('active');
+        document.getElementById('group-details-view').style.display = 'none';
+        document.getElementById('attendance-journal-view').style.display = 'block';
+        // Always reload attendance journal when switching to this view
+        loadAttendanceJournal();
+      });
+    }
+
     // Load attendance journal for current group
     async function loadAttendanceJournal() {
       const container = document.getElementById('attendance-journal-container');
@@ -4007,7 +4035,19 @@
       }
     }
 
-    // Attendance month selector is now handled by populateMonthSelectors()
+    // Handle attendance month selector change
+    const attendanceMonthSelect = document.getElementById('attendance-month-select');
+    if (attendanceMonthSelect) {
+      attendanceMonthSelect.addEventListener('change', () => {
+        // Sync with participants month selector
+        document.getElementById('participants-month-select').value = attendanceMonthSelect.value;
+        // Reload attendance journal if it's currently visible
+        const attendanceJournalView = document.getElementById('attendance-journal-view');
+        if (attendanceJournalView && attendanceJournalView.style.display !== 'none') {
+          loadAttendanceJournal();
+        }
+      });
+    }
 
     // Group participant modal handlers
     const groupParticipantModeNew = document.getElementById('group-participant-mode-new');
