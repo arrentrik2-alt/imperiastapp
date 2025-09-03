@@ -47,33 +47,6 @@
       z-index: 1000;
     }
     
-    .sidebar.collapsed {
-      width: 70px;
-    }
-
-    .sidebar.collapsed .logo-text,
-    .sidebar.collapsed .link-text {
-      display: none;
-    }
-
-    .sidebar.collapsed .logo {
-      padding: 10px;
-    }
-
-    .sidebar.collapsed .nav-links {
-      padding: 0 10px;
-    }
-
-    .sidebar.collapsed .nav-links a {
-      justify-content: center;
-      padding: 15px 10px;
-    }
-
-    .sidebar.collapsed .nav-links a i {
-      margin-right: 0;
-      font-size: 1.3rem;
-    }
-    
     .logo {
       text-align: center;
       padding: 0 20px 20px;
@@ -122,11 +95,6 @@
       margin-left: 250px;
       padding: 20px;
       overflow-x: hidden;
-      transition: margin-left 0.3s ease;
-    }
-
-    .sidebar.collapsed + .main-content {
-      margin-left: 70px;
     }
     
     .header {
@@ -136,26 +104,6 @@
       margin-bottom: 30px;
       padding-bottom: 15px;
       border-bottom: 1px solid var(--border-dark);
-    }
-
-    .sidebar-toggle {
-      margin-right: 15px;
-      padding: 8px 12px;
-      background: transparent;
-      border: 1px solid var(--border-dark);
-      color: var(--text-primary);
-      cursor: pointer;
-      border-radius: 4px;
-      transition: all 0.2s ease;
-    }
-
-    .sidebar-toggle:hover {
-      background: var(--secondary-bg);
-      border-color: var(--gold);
-    }
-
-    .sidebar-toggle i {
-      font-size: 1.2rem;
     }
     
     .header h2 {
@@ -269,39 +217,22 @@
       gap: 10px;
     }
 
-    .days-selection {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 8px;
-      margin-top: 8px;
+    /* Day headers styling */
+    .day-header {
+      margin: 25px 0 15px 0;
+      padding: 10px 0;
+      border-bottom: 2px solid var(--gold);
+      background: linear-gradient(90deg, rgba(212, 175, 55, 0.1) 0%, transparent 100%);
     }
 
-    .day-checkbox {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      background: var(--secondary-bg);
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .day-checkbox:hover {
-      background: rgba(255, 165, 0, 0.1);
-    }
-
-    .day-checkbox input[type="checkbox"] {
+    .day-header h3 {
       margin: 0;
-      width: 16px;
-      height: 16px;
-      accent-color: var(--gold);
-    }
-
-    .day-checkbox span {
-      font-size: 0.9rem;
-      color: var(--text-primary);
-      user-select: none;
+      padding: 0 15px;
+      color: var(--gold);
+      font-size: 1.3rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     .view-switch-buttons {
@@ -637,16 +568,8 @@
         width: 0;
         overflow: hidden;
       }
-
-      .sidebar.collapsed {
-        width: 0;
-      }
       
       .main-content {
-        margin-left: 0;
-      }
-
-      .sidebar.collapsed + .main-content {
         margin-left: 0;
       }
     }
@@ -694,15 +617,18 @@
           <span class="link-text">Grupy</span>
         </a>
       </li>
+      <li>
+        <a href="#" id="logoutBtn">
+          <i class="fas fa-sign-out-alt"></i>
+          <span class="link-text">Wyloguj</span>
+        </a>
+      </li>
     </ul>
   </aside>
 
   <!-- Main Content -->
   <main class="main-content">
     <div class="header">
-      <button class="btn btn-outline sidebar-toggle" id="sidebar-toggle">
-        <i class="fas fa-bars"></i>
-      </button>
       <h2>Panel Administracyjny</h2>
       <div class="user-info">
         <span>Witaj, Admin!</span>
@@ -885,37 +811,16 @@
     </div>
 
       <div class="form-group">
-        <label>Dni tygodnia</label>
-        <div class="days-selection">
-          <label class="day-checkbox">
-            <input type="checkbox" value="Poniedziałek" id="day-poniedziałek">
-            <span>Poniedziałek</span>
-          </label>
-          <label class="day-checkbox">
-            <input type="checkbox" value="Wtorek" id="day-wtorek">
-            <span>Wtorek</span>
-          </label>
-          <label class="day-checkbox">
-            <input type="checkbox" value="Środa" id="day-środa">
-            <span>Środa</span>
-          </label>
-          <label class="day-checkbox">
-            <input type="checkbox" value="Czwartek" id="day-czwartek">
-            <span>Czwartek</span>
-          </label>
-          <label class="day-checkbox">
-            <input type="checkbox" value="Piątek" id="day-piątek">
-            <span>Piątek</span>
-          </label>
-          <label class="day-checkbox">
-            <input type="checkbox" value="Sobota" id="day-sobota">
-            <span>Sobota</span>
-          </label>
-          <label class="day-checkbox">
-            <input type="checkbox" value="Niedziela" id="day-niedziela">
-            <span>Niedziela</span>
-          </label>
-        </div>
+        <label for="group-day">Dzień tygodnia</label>
+        <select id="group-day" class="form-control">
+          <option value="Poniedziałek">Poniedziałek</option>
+          <option value="Wtorek">Wtorek</option>
+          <option value="Środa">Środa</option>
+          <option value="Czwartek">Czwartek</option>
+          <option value="Piątek">Piątek</option>
+          <option value="Sobota">Sobota</option>
+          <option value="Niedziela">Niedziela</option>
+        </select>
     </div>
 
       <div class="form-group">
@@ -931,7 +836,7 @@
       <div class="form-actions">
         <button class="btn btn-outline" id="cancel-group-btn">Anuluj</button>
         <button class="btn btn-primary" id="save-group-btn">
-          <i class="fas fa-save"></i> Zapisz grupę
+          <i class="fas fa-save"></i> <span id="save-group-btn-text">Zapisz grupę</span>
         </button>
         </div>
       </div>
@@ -1170,7 +1075,11 @@
       }
     }
     
-    // Logout function - moved to after dynamic button creation
+    // Logout function
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "login.html";
+    });
     
     // Navigation
     const homeLink = document.getElementById('nav-home');
@@ -1178,56 +1087,9 @@
     const homeSection = document.getElementById('home-section');
     const groupsSection = document.getElementById('groups-section');
     const groupParticipantsSection = document.getElementById('group-participants-section');
-
-    // Sidebar toggle functionality
-    const sidebar = document.querySelector('.sidebar');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    let sidebarCollapsed = false;
-
-    // Sidebar toggle functions
-    function toggleSidebar() {
-      sidebarCollapsed = !sidebarCollapsed;
-      if (sidebarCollapsed) {
-        sidebar.classList.add('collapsed');
-      } else {
-        sidebar.classList.remove('collapsed');
-      }
-      // Save state to localStorage
-      localStorage.setItem('sidebarCollapsed', sidebarCollapsed.toString());
-      updateToggleButton();
-    }
-
-    function updateToggleButton() {
-      const icon = sidebarToggle.querySelector('i');
-      if (sidebarCollapsed) {
-        icon.className = 'fas fa-angle-right';
-      } else {
-        icon.className = 'fas fa-bars';
-      }
-    }
-
-    function loadSidebarState() {
-      const savedState = localStorage.getItem('sidebarCollapsed');
-      if (savedState === 'true') {
-        sidebarCollapsed = true;
-        sidebar.classList.add('collapsed');
-      }
-      updateToggleButton();
-    }
-
-    // Initialize sidebar state
-    loadSidebarState();
-
-    // Sidebar toggle event listener
-    sidebarToggle.addEventListener('click', toggleSidebar);
     
     function setActiveNav(section) {
       console.log('setActiveNav wywołane z sekcją:', section, 'currentGroupId przed:', currentGroupId);
-
-      // Auto-collapse sidebar on navigation (only on mobile/tablet)
-      if (window.innerWidth <= 1024 && !sidebarCollapsed) {
-        toggleSidebar();
-      }
       
       if (section === 'home') {
         homeLink.classList.add('active');
@@ -1334,6 +1196,28 @@
         const yyyy = now.getFullYear();
         const mm = String(now.getMonth() + 1).padStart(2, '0');
       return `${yyyy}-${mm}`;
+    }
+
+    // Helper function to format time to hh:mm format
+    function formatTimeToHHMM(timeString) {
+      if (!timeString) return '';
+      // If already in hh:mm format, return as is
+      if (/^\d{2}:\d{2}$/.test(timeString)) return timeString;
+      // If it's a full datetime string, extract time part
+      if (timeString.includes('T') || timeString.includes(' ')) {
+        const time = timeString.split('T')[1] || timeString.split(' ')[1];
+        if (time) return time.substring(0, 5); // Extract hh:mm from hh:mm:ss
+      }
+      return timeString;
+    }
+
+    // Helper function to format date to dd:mm format
+    function formatDateToDDMM(dayOfMonth, monthString) {
+      if (!dayOfMonth || !monthString) return '';
+      // Extract month number from YYYY-MM format
+      const monthNum = parseInt(monthString.split('-')[1]);
+      // Format as dd:mm (day of month : month number)
+      return `${dayOfMonth.toString().padStart(2, '0')}:${monthNum.toString().padStart(2, '0')}`;
     }
     
     // Helper function to get available months (current + created)
@@ -1482,49 +1366,25 @@
           document.getElementById('participants-count').textContent = (participants || []).length;
         }
         
-        // Aggregate payments for overview (groups + lessons)
-        const { data: groupPayments, error: groupPayErr } = await supabase
+        // Aggregate payments for overview
+        const { data: paymentsAll, error: payErr } = await supabase
           .from('payments_month')
           .select('participant_id, amount, payment_method, confirmed')
           .eq('month', selectedMonth);
         
-        const { data: lessonPayments, error: lessonPayErr } = await supabase
-          .from('lesson_payments_month')
-          .select('participant_id, amount, confirmed')
-          .eq('month', selectedMonth);
-
         let paidSum = 0, unpaidSum = 0, totalSum = 0;
         const byMethod = {};
         const paidParticipants = new Set();
         const unpaidParticipants = new Set();
 
-        // Process group payments
-        if (!groupPayErr && groupPayments) {
-          groupPayments.forEach(p => {
+        if (!payErr && paymentsAll) {
+          paymentsAll.forEach(p => {
             const amt = parseFloat(p.amount || 0);
             totalSum += amt;
             if (p.confirmed) {
               paidSum += amt;
               paidParticipants.add(p.participant_id);
-              const m = p.payment_method || 'Inne (grupy)';
-              byMethod[m] = (byMethod[m] || 0) + amt;
-            } else {
-              unpaidSum += amt;
-              unpaidParticipants.add(p.participant_id);
-            }
-          });
-        }
-
-        // Process lesson payments (use actual payment method like for groups)
-        if (!lessonPayErr && lessonPayments) {
-          lessonPayments.forEach(p => {
-            const amt = parseFloat(p.amount || 0);
-            totalSum += amt;
-            if (p.confirmed) {
-              paidSum += amt;
-              paidParticipants.add(p.participant_id);
-              // Use actual payment method from database
-              const m = p.payment_method || 'Inne (lekcje)';
+              const m = p.payment_method || 'Inne';
               byMethod[m] = (byMethod[m] || 0) + amt;
             } else {
               unpaidSum += amt;
@@ -1712,22 +1572,42 @@
     const saveGroupBtn = document.getElementById('save-group-btn');
     const groupsList = document.getElementById('groups-list');
     const emptyState = document.getElementById('emptyState');
-    
+
+    // Track if we're editing or creating
+    let editingGroupId = null;
+
     function openModal() {
+      editingGroupId = null;
+      document.getElementById('group-modal-title').textContent = 'Dodaj nową grupę';
       addGroupModal.classList.add('active');
+      resetForm();
     }
-    
+
+    function openEditModal(groupData) {
+      editingGroupId = groupData.id;
+      document.getElementById('group-modal-title').textContent = 'Edytuj grupę';
+      document.getElementById('save-group-btn-text').textContent = 'Zapisz zmiany';
+      addGroupModal.classList.add('active');
+
+      // Fill form with existing data
+      document.getElementById('group-name').value = groupData.name || '';
+      document.getElementById('group-day').value = groupData.day || '';
+      document.getElementById('group-start').value = groupData.start_time ? groupData.start_time.substring(0, 5) : '';
+      document.getElementById('group-trainer').value = groupData.trainer || '';
+    }
+
     function closeModal() {
       addGroupModal.classList.remove('active');
-      // Reset form
+      editingGroupId = null;
+      resetForm();
+    }
+
+    function resetForm() {
       document.getElementById('group-name').value = '';
+      document.getElementById('group-day').value = '';
       document.getElementById('group-start').value = '';
       document.getElementById('group-trainer').value = '';
-
-      // Reset checkboxes
-      document.querySelectorAll('.days-selection input[type="checkbox"]').forEach(cb => {
-        cb.checked = false;
-      });
+      document.getElementById('save-group-btn-text').textContent = 'Zapisz grupę';
     }
     
     addGroupBtn.addEventListener('click', openModal);
@@ -1735,49 +1615,61 @@
     closeModalBtn.addEventListener('click', closeModal);
     cancelGroupBtn.addEventListener('click', closeModal);
 
-    // Save group function (add new group for selected month via RPC)
+    // Save group function (add new or update existing group)
     saveGroupBtn.addEventListener('click', async () => {
       const name = document.getElementById('group-name').value.trim();
+      const day = document.getElementById('group-day').value;
       const start = document.getElementById('group-start').value;
       const trainer = document.getElementById('group-trainer').value.trim();
-      
-      // Collect selected days
-      const selectedDays = [];
-      document.querySelectorAll('.days-selection input[type="checkbox"]:checked').forEach(cb => {
-        selectedDays.push(cb.value);
-      });
 
-      if (!name || selectedDays.length === 0 || !start || !trainer) {
-        alert('Podaj nazwę, zaznacz przynajmniej jeden dzień tygodnia, godzinę startu i trenera');
+      if (!name || !day || !start || !trainer) {
+        alert('Podaj nazwę, dzień, godzinę startu i trenera');
         return;
       }
 
-      // Convert selected days to a string format for storage
-      const daysString = selectedDays.join(',');
-      
       const selectedMonth = document.getElementById('groups-month-select').value;
-      
+
       const originalText = saveGroupBtn.innerHTML;
       saveGroupBtn.innerHTML = '<span class="loading"></span> Zapisywanie...';
       saveGroupBtn.disabled = true;
-      
+
       try {
-        const resp = await supabase.rpc('insert_group_month', {
-          p_month: selectedMonth,
-          p_name: name,
-          p_day: daysString,
-          p_start_time: start,
-          p_trainer: trainer
-        });
-        
-        if (resp.error) throw resp.error;
-        
+        if (editingGroupId) {
+          // Update existing group
+          const { error } = await supabase
+            .from('groups_month')
+            .update({
+              name: name,
+              day: day,
+              start_time: start,
+              trainer: trainer
+            })
+            .eq('id', editingGroupId)
+            .eq('month', selectedMonth);
+
+          if (error) throw error;
+
           closeModal();
-        await loadGroups();
-        await loadHomeData(); // Refresh home page data too
-        // Removed success alert per user's request
+          await loadGroups();
+          await loadHomeData();
+        } else {
+          // Add new group
+          const resp = await supabase.rpc('insert_group_month', {
+            p_month: selectedMonth,
+            p_name: name,
+            p_day: day,
+            p_start_time: start,
+            p_trainer: trainer
+          });
+
+          if (resp.error) throw resp.error;
+
+          closeModal();
+          await loadGroups();
+          await loadHomeData();
+        }
       } catch (err) {
-        alert('Błąd dodawania grupy: ' + (err.message || 'Nieznany'));
+        alert('Błąd ' + (editingGroupId ? 'aktualizacji' : 'dodawania') + ' grupy: ' + (err.message || 'Nieznany'));
       } finally {
         saveGroupBtn.disabled = false;
         saveGroupBtn.innerHTML = originalText;
@@ -1828,14 +1720,25 @@
           else { s.unpaidCount += 1; s.unpaidSum += parseFloat(p.amount || 0); }
         });
 
-        // Clear and render groups
+        // Clear and render groups grouped by day
         groupsList.innerHTML = '';
-
-        // Sort groups by start time
-        data.sort((a,b) => (a.start_time || '').localeCompare(b.start_time || ''));
-
-        // Render all groups
-        data.forEach(group => {
+        const daysOrder = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
+        const groupsByDay = {};
+        data.forEach(g => {
+          if (!groupsByDay[g.day]) groupsByDay[g.day] = [];
+          groupsByDay[g.day].push(g);
+        });
+        // For each day in order, if we have groups, render a header and the groups sorted by start_time
+        daysOrder.forEach(dayName => {
+          const list = groupsByDay[dayName];
+          if (!list || list.length === 0) return;
+          // sort by start_time
+          list.sort((a,b) => (a.start_time || '').localeCompare(b.start_time || ''));
+          const dayHeader = document.createElement('div');
+          dayHeader.className = 'day-header';
+          dayHeader.innerHTML = `<h3>${dayName}</h3>`;
+          groupsList.appendChild(dayHeader);
+          list.forEach(group => {
           const groupCard = document.createElement('div');
           groupCard.className = 'group-card';
             groupCard.style.cursor = 'pointer';
@@ -1847,7 +1750,7 @@
               <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
             <div class="group-detail">
               <i class="fas fa-calendar-day"></i>
-                <span>${formatGroupDays(group.day)}, ${group.start_time}</span>
+                <span>${group.day}, ${formatTimeToHHMM(group.start_time)}</span>
             </div>
             <div class="group-detail">
               <i class="fas fa-user-tie"></i>
@@ -1869,10 +1772,15 @@
               setActiveNav('participants');
             });
             // action buttons
-            groupCard.querySelector('.edit-btn').addEventListener('click', (e) => { e.stopPropagation(); alert('Funkcja edycji będzie dostępna wkrótce'); });
+            groupCard.querySelector('.edit-btn').addEventListener('click', (e) => {
+              e.stopPropagation();
+              openEditModal(group);
+            });
             groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => { e.stopPropagation(); if (!confirm('Usunąć grupę?')) return; /* reuse existing delete logic by triggering click on original button */ const btn = e.currentTarget; btn.disabled = true; try { /* call same handler code inline to avoid duplication */ const selectedMonth = document.getElementById('groups-month-select').value; const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, group_id: group.id }); if (payErr) throw payErr; const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, group_id: group.id }); if (pgErr) throw pgErr; const { data: participantsAll, error: pAllErr } = await supabase.from('participants_month').select('id').eq('month', selectedMonth); if (pAllErr) throw pAllErr; const { data: assoc, error: assocErr } = await supabase.from('participant_groups_month').select('participant_id').eq('month', selectedMonth); if (assocErr) throw assocErr; const assocSet = new Set((assoc || []).map(a => a.participant_id)); const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id)); if (orphanIds.length > 0) { const { error: delOrphansErr } = await supabase.from('participants_month').delete().in('id', orphanIds).eq('month', selectedMonth); if (delOrphansErr) throw delOrphansErr; } const { error } = await supabase.from('groups_month').delete().match({ id: group.id, month: selectedMonth }); if (error) throw error; await loadGroups(); await loadHomeData(); } catch (err) { alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany')); } finally { btn.disabled = false; } });
           groupsList.appendChild(groupCard);
           });
+        });
+         
       } catch (err) {
         console.error('Nieoczekiwany błąd:', err);
         groupsList.innerHTML = '<div class="empty-state"><p>Wystąpił nieoczekiwany błąd: ' + err.message + '</p></div>';
@@ -1893,8 +1801,6 @@
     
     let currentGroupId = null; // Store current group ID for adding participants
     let currentGroupData = null; // Store current group data for attendance journal
-    let isEditingParticipant = false; // Flag to track if we're editing
-    let editingParticipantId = null; // ID of participant being edited
 
     function openGroupParticipantsPage(group) {
       if (!group || !group.id) {
@@ -1927,65 +1833,30 @@
     closeAddParticipantModalBtn.addEventListener('click', closeAddParticipantModal);
     cancelParticipantBtn.addEventListener('click', closeAddParticipantModal);
 
-    function openAddParticipantModal(participantData = null) {
+    function openAddParticipantModal() {
       addParticipantModal.classList.add('active');
-
-      if (participantData) {
-        // Edit mode
-        isEditingParticipant = true;
-        editingParticipantId = participantData.participant_id;
-        document.querySelector('#add-participant-modal .modal-header h3').textContent = 'Edytuj uczestnika';
-        document.getElementById('save-participant-btn').innerHTML = '<i class="fas fa-save"></i> Zapisz zmiany';
-
-        // Fill form with participant data
-        participantNameInput.value = participantData.name || '';
-        participantPhoneInput.value = participantData.phone || '';
-        participantAmountInput.value = participantData.amount || '';
-
-        // Hide mode buttons in edit mode
-        document.querySelector('.form-group .btn').parentElement.style.display = 'none';
-
-        // Show new participant form (since we're editing existing participant)
-        document.getElementById('group-participant-new-container').style.display = 'block';
-        document.getElementById('group-participant-existing-container').style.display = 'none';
-
-      } else {
-        // Add mode
-        isEditingParticipant = false;
-        editingParticipantId = null;
-        document.querySelector('#add-participant-modal .modal-header h3').textContent = 'Dodaj uczestnika do grupy';
-        document.getElementById('save-participant-btn').innerHTML = '<i class="fas fa-save"></i> Dodaj uczestnika';
-
       participantNameInput.value = '';
-        participantPhoneInput.value = '';
+      participantPhoneInput.value = '';
       participantPhoneInput.value = '';
       participantAmountInput.value = '';
 
-        // Show mode buttons in add mode
-        document.querySelector('.form-group .btn').parentElement.style.display = 'flex';
+      // Reset participant mode buttons
+      document.getElementById('group-participant-mode-new').classList.add('active');
+      document.getElementById('group-participant-mode-existing').classList.remove('active');
 
-        // Reset participant mode buttons
-        document.getElementById('group-participant-mode-new').classList.add('active');
-        document.getElementById('group-participant-mode-existing').classList.remove('active');
+      // Show new participant form, hide existing search
+      document.getElementById('group-participant-new-container').style.display = 'block';
+      document.getElementById('group-participant-existing-container').style.display = 'none';
 
-        // Show new participant form, hide existing search
-        document.getElementById('group-participant-new-container').style.display = 'block';
-        document.getElementById('group-participant-existing-container').style.display = 'none';
-
-        // Reset existing participant search
-        document.getElementById('group-participant-search').value = '';
-        document.getElementById('group-participant-selected-id').value = '';
-        document.getElementById('group-participant-search-results').innerHTML = '';
-        document.getElementById('group-participant-badge').style.display = 'none';
-      }
+      // Reset existing participant search
+      document.getElementById('group-participant-search').value = '';
+      document.getElementById('group-participant-selected-id').value = '';
+      document.getElementById('group-participant-search-results').innerHTML = '';
+      document.getElementById('group-participant-badge').style.display = 'none';
     }
 
     function closeAddParticipantModal() {
       addParticipantModal.classList.remove('active');
-
-      // Reset editing flags when modal is closed
-      isEditingParticipant = false;
-      editingParticipantId = null;
     }
 
     saveParticipantBtn.addEventListener('click', async () => {
@@ -2011,69 +1882,16 @@
       saveParticipantBtn.disabled = true;
 
       try {
-        if (isEditingParticipant) {
-          // Edit existing participant
-          console.log('Editing participant:', editingParticipantId);
+        let participantId;
 
-          // Update participant data
-          const { error: updateError } = await supabase
-            .from('participants_month')
-            .update({
-              name: name,
-              phone: phone || null
-            })
-            .eq('id', editingParticipantId);
-
-          if (updateError) throw updateError;
-
-          // Update or create payment record
-          const { data: existingPayment, error: paymentCheckError } = await supabase
-            .from('payments_month')
-            .select('*')
-            .eq('month', selectedMonth)
-            .eq('group_id', currentGroupId)
-            .eq('participant_id', editingParticipantId)
-            .single();
-
-          if (paymentCheckError && paymentCheckError.code !== 'PGRST116') {
-            throw paymentCheckError;
-          }
-
-          if (existingPayment) {
-            // Update existing payment
-            const { error: paymentUpdateError } = await supabase
-              .from('payments_month')
-              .update({ amount: amount })
-              .eq('id', existingPayment.id);
-            if (paymentUpdateError) throw paymentUpdateError;
-          } else if (amount > 0) {
-            // Create new payment record
-            const { error: paymentCreateError } = await supabase
-              .from('payments_month')
-              .insert({
-                month: selectedMonth,
-                group_id: currentGroupId,
-                participant_id: editingParticipantId,
-                amount: amount,
-                confirmed: false
-              });
-            if (paymentCreateError) throw paymentCreateError;
-          }
-
-          console.log('Participant updated successfully');
-
+        if (isExistingParticipant) {
+          // Use existing participant
+          participantId = selectedParticipantId;
+          console.log('Using existing participant:', participantId);
         } else {
-          // Add new participant
-          let participantId;
-
-          if (isExistingParticipant) {
-            // Use existing participant
-            participantId = selectedParticipantId;
-            console.log('Using existing participant:', participantId);
-          } else {
-            // 1. Add new participant
+          // 1. Add new participant
         const rodoValue = !!document.getElementById('participant-rodo').checked;
-            const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
+          const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
           p_month: selectedMonth,
           p_name: name,
           p_email: null,
@@ -2082,7 +1900,7 @@
         });
 
         if (participantError) throw participantError;
-            participantId = newParticipantId;
+          participantId = newParticipantId;
 
         // Ensure RODO persisted even if RPC signature mismatch: update directly
         try {
@@ -2093,8 +1911,10 @@
           if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
         } catch (e) {
           console.warn('RODO update exception:', e);
-            }
+          }
         }
+
+
 
         // 2. Add participant to group
         const { error: groupError } = await supabase.rpc('add_participant_to_group_month', {
@@ -2116,30 +1936,13 @@
           });
 
           if (paymentError) throw paymentError;
-          }
         }
-
-        // Remember if we were editing for success message
-        const wasEditing = isEditingParticipant;
-
-        // Reset editing flags
-        isEditingParticipant = false;
-        editingParticipantId = null;
 
         closeAddParticipantModal();
         await loadGroupParticipants(currentGroupId);
-
-        // Show success message
-        const successMessage = wasEditing ?
-          'Uczestnik został pomyślnie zaktualizowany!' :
-          'Uczestnik został pomyślnie dodany do grupy!';
-        alert(successMessage);
-
+        // Removed success alert per user's request
       } catch (err) {
-        const errorMessage = isEditingParticipant ?
-          'Błąd aktualizacji uczestnika: ' + (err.message || 'Nieznany') :
-          'Błąd dodawania uczestnika: ' + (err.message || 'Nieznany');
-        alert(errorMessage);
+        alert('Błąd dodawania uczestnika: ' + (err.message || 'Nieznany'));
       } finally {
         saveParticipantBtn.disabled = false;
         saveParticipantBtn.innerHTML = originalText;
@@ -2296,55 +2099,10 @@
           `;
 
           // Add event listeners for action buttons
-          participantCard.querySelector('.edit-btn').addEventListener('click', async (e) => {
+          participantCard.querySelector('.edit-btn').addEventListener('click', (e) => {
             e.stopPropagation();
-
-            try {
-              // Get participant data from database
-              const selectedMonth = document.getElementById('participants-month-select').value;
-              const { data: participantData, error: participantError } = await supabase
-                .from('participant_groups_month')
-                .select(`
-                  participant_id,
-                  participants_month!inner (
-                    id, name, phone
-                  )
-                `)
-                .eq('month', selectedMonth)
-                .eq('group_id', groupId)
-                .eq('participant_id', participant.participant_id)
-                .single();
-
-              if (participantError) throw participantError;
-
-              // Get payment amount for this participant
-              const { data: paymentData, error: paymentError } = await supabase
-                .from('payments_month')
-                .select('amount')
-                .eq('month', selectedMonth)
-                .eq('group_id', groupId)
-                .eq('participant_id', participant.participant_id)
-                .single();
-
-              if (paymentError && paymentError.code !== 'PGRST116') { // PGRST116 = not found
-                console.warn('Payment data not found:', paymentError);
-              }
-
-              // Prepare participant data for editing
-              const editData = {
-                participant_id: participant.participant_id,
-                name: participantData.participants_month.name,
-                phone: participantData.participants_month.phone,
-                amount: paymentData ? paymentData.amount : 0
-              };
-
-              // Open modal in edit mode
-              openAddParticipantModal(editData);
-
-            } catch (err) {
-              console.error('Error loading participant data for editing:', err);
-              alert('Błąd podczas ładowania danych uczestnika: ' + err.message);
-            }
+            // TODO: Implement edit functionality
+            alert('Funkcja edycji uczestników będzie dostępna wkrótce');
           });
 
           participantCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
@@ -3305,7 +3063,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div style="flex:1;">
                 <h4 style="margin:0;color:var(--gold);">${lesson.title}</h4>
-                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}<div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
+                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}${lesson.day_of_month ? ' <span style="color:var(--gold);font-weight:500;">(' + formatDateToDDMM(lesson.day_of_month, month) + ')</span>' : ''}<div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
               </div>
               <div style="text-align:right; min-width:160px;">
                 <div style="font-size:0.85rem;color:var(--text-gray);">Kwota lekcji</div>
@@ -3522,17 +3280,6 @@
     document.querySelector('.nav-links').appendChild(navLessons);
     document.getElementById('nav-lessons').addEventListener('click', (e) => { e.preventDefault(); setActiveNav('lessons'); });
 
-    // Add logout button after lessons button
-    const navLogout = document.createElement('li');
-    navLogout.innerHTML = `<a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="link-text">Wyloguj</span></a>`;
-    document.querySelector('.nav-links').appendChild(navLogout);
-
-    // Add logout event listener to the dynamically created button
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      window.location.href = "login.html";
-    });
-
     // extend setActiveNav to handle lessons
     const _origSetActive = setActiveNav;
     setActiveNav = function(section) {
@@ -3667,7 +3414,7 @@
         console.log('Group day property:', group.day);
         console.log('Group day_of_week property:', group.day_of_week);
 
-        // Get training dates for the month (based on group days)
+        // Get training dates for the month (based on group day)
         const dayOfWeek = group.day || group.day_of_week;
         console.log('Using dayOfWeek:', dayOfWeek);
 
@@ -3675,9 +3422,7 @@
           throw new Error('Brak informacji o dniu tygodnia grupy');
         }
 
-        // Handle multiple days (comma-separated)
-        const daysArray = dayOfWeek.includes(',') ? dayOfWeek.split(',') : [dayOfWeek];
-        const trainingDates = getTrainingDatesForMonth(selectedMonth, daysArray);
+        const trainingDates = getTrainingDatesForMonth(selectedMonth, dayOfWeek);
 
         // Create attendance table
         const tableHTML = createAttendanceTable(participantsData, trainingDates, selectedMonth);
@@ -3694,8 +3439,8 @@
       }
     }
 
-    // Get training dates for a month based on day(s) of week
-    function getTrainingDatesForMonth(month, daysOfWeek) {
+    // Get training dates for a month based on day of week
+    function getTrainingDatesForMonth(month, dayOfWeek) {
       const dates = [];
       const [year, monthNum] = month.split('-').map(Number);
 
@@ -3704,26 +3449,18 @@
         'niedziela': 0, 'poniedziałek': 1, 'wtorek': 2, 'środa': 3,
         'czwartek': 4, 'piątek': 5, 'sobota': 6
       };
+      const targetDay = dayMap[dayOfWeek.toLowerCase()];
 
-      // Handle both single day (string) and multiple days (array)
-      const targetDays = Array.isArray(daysOfWeek) ? daysOfWeek : [daysOfWeek];
-      const targetDayNumbers = targetDays
-        .map(day => dayMap[day.toLowerCase()])
-        .filter(dayNum => dayNum !== undefined);
-
-      if (targetDayNumbers.length === 0) return dates;
+      if (targetDay === undefined) return dates;
 
       const firstDay = new Date(year, monthNum - 1, 1);
       const lastDay = new Date(year, monthNum, 0);
 
       for (let date = new Date(firstDay); date <= lastDay; date.setDate(date.getDate() + 1)) {
-        if (targetDayNumbers.includes(date.getDay())) {
+        if (date.getDay() === targetDay) {
           dates.push(new Date(date));
         }
       }
-
-      // Sort dates chronologically
-      dates.sort((a, b) => a - b);
 
       return dates;
     }
@@ -4078,24 +3815,6 @@
     }
 
     // Attendance month selector is now handled by populateMonthSelectors()
-
-    // Helper function to format group days for display
-    function formatGroupDays(daysString) {
-      if (!daysString) return 'Brak dni';
-
-      // If it's a single day (old format), return it
-      if (!daysString.includes(',')) return daysString;
-
-      // Split the days and format them
-      const days = daysString.split(',');
-      if (days.length === 1) return days[0];
-      if (days.length === 2) return days.join(' i ');
-      if (days.length === 7) return 'Codziennie';
-
-      // For 3-6 days, show first few with "itp."
-      if (days.length <= 4) return days.join(', ');
-      return days.slice(0, 3).join(', ') + ' itp.';
-    }
 
     // Group participant modal handlers
     const groupParticipantModeNew = document.getElementById('group-participant-mode-new');
