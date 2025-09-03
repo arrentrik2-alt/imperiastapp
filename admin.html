@@ -1238,7 +1238,7 @@
       } else if (view === 'attendance') {
         viewAttendanceJournalBtn.classList.add('active');
         document.getElementById('attendance-journal-view').classList.add('active');
-        loadAttendanceJournal(); // Load attendance data when switching to journal view
+        loadAttendanceJournal(); // Always reload attendance data when switching to journal view
       }
     }
 
@@ -3530,25 +3530,16 @@
     let currentAttendanceMonth = getCurrentMonth();
     let attendanceData = {}; // Store attendance data for current session
 
-    // View switch buttons for group participants section
-    const viewGroupDetailsBtn = document.getElementById('view-group-details-btn');
-    const viewAttendanceJournalBtn = document.getElementById('view-attendance-journal-btn');
+    // Update existing view switch buttons to reload attendance journal
+    const existingViewAttendanceJournalBtn = document.getElementById('view-attendance-journal-btn');
+    if (existingViewAttendanceJournalBtn) {
+      // Clone and replace to remove existing listeners
+      const newAttendanceBtn = existingViewAttendanceJournalBtn.cloneNode(true);
+      existingViewAttendanceJournalBtn.parentNode.replaceChild(newAttendanceBtn, existingViewAttendanceJournalBtn);
 
-    if (viewGroupDetailsBtn && viewAttendanceJournalBtn) {
-      viewGroupDetailsBtn.addEventListener('click', () => {
-        viewGroupDetailsBtn.classList.add('active');
-        viewAttendanceJournalBtn.classList.remove('active');
-        document.getElementById('group-details-view').style.display = 'block';
-        document.getElementById('attendance-journal-view').style.display = 'none';
-      });
-
-      viewAttendanceJournalBtn.addEventListener('click', () => {
-        viewGroupDetailsBtn.classList.remove('active');
-        viewAttendanceJournalBtn.classList.add('active');
-        document.getElementById('group-details-view').style.display = 'none';
-        document.getElementById('attendance-journal-view').style.display = 'block';
-        // Always reload attendance journal when switching to this view
-        loadAttendanceJournal();
+      // Add new click handler
+      newAttendanceBtn.addEventListener('click', () => {
+        switchGroupView('attendance');
       });
     }
 
