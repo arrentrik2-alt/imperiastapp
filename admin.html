@@ -269,6 +269,41 @@
       gap: 10px;
     }
 
+    .days-selection {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .day-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--secondary-bg);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .day-checkbox:hover {
+      background: rgba(255, 165, 0, 0.1);
+    }
+
+    .day-checkbox input[type="checkbox"] {
+      margin: 0;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--gold);
+    }
+
+    .day-checkbox span {
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      user-select: none;
+    }
+
     .view-switch-buttons {
       display: flex;
       gap: 10px;
@@ -849,18 +884,39 @@
         <input type="text" id="group-name" class="form-control" placeholder="Nazwa grupy">
     </div>
 
-      <div class="form-group">
-        <label for="group-day">Dzień tygodnia</label>
-        <select id="group-day" class="form-control">
-          <option value="Poniedziałek">Poniedziałek</option>
-          <option value="Wtorek">Wtorek</option>
-          <option value="Środa">Środa</option>
-          <option value="Czwartek">Czwartek</option>
-          <option value="Piątek">Piątek</option>
-          <option value="Sobota">Sobota</option>
-          <option value="Niedziela">Niedziela</option>
-        </select>
-    </div>
+            <div class="form-group">
+        <label>Dni tygodnia</label>
+        <div class="days-selection">
+          <label class="day-checkbox">
+            <input type="checkbox" value="Poniedziałek" id="day-poniedziałek">
+            <span>Poniedziałek</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Wtorek" id="day-wtorek">
+            <span>Wtorek</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Środa" id="day-środa">
+            <span>Środa</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Czwartek" id="day-czwartek">
+            <span>Czwartek</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Piątek" id="day-piątek">
+            <span>Piątek</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Sobota" id="day-sobota">
+            <span>Sobota</span>
+          </label>
+          <label class="day-checkbox">
+            <input type="checkbox" value="Niedziela" id="day-niedziela">
+            <span>Niedziela</span>
+          </label>
+        </div>
+      </div>
 
       <div class="form-group">
         <label for="group-start">Godzina rozpoczęcia</label>
@@ -1667,6 +1723,11 @@
       document.getElementById('group-name').value = '';
       document.getElementById('group-start').value = '';
       document.getElementById('group-trainer').value = '';
+
+      // Reset checkboxes
+      document.querySelectorAll('.days-selection input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+      });
     }
     
     addGroupBtn.addEventListener('click', openModal);
@@ -1677,14 +1738,22 @@
     // Save group function (add new group for selected month via RPC)
     saveGroupBtn.addEventListener('click', async () => {
       const name = document.getElementById('group-name').value.trim();
-      const day = document.getElementById('group-day').value;
       const start = document.getElementById('group-start').value;
       const trainer = document.getElementById('group-trainer').value.trim();
-      
-      if (!name || !day || !start || !trainer) { 
-        alert('Podaj nazwę, dzień, godzinę startu i trenera'); 
+
+      // Collect selected days
+      const selectedDays = [];
+      document.querySelectorAll('.days-selection input[type="checkbox"]:checked').forEach(cb => {
+        selectedDays.push(cb.value);
+      });
+
+      if (!name || selectedDays.length === 0 || !start || !trainer) {
+        alert('Podaj nazwę, zaznacz przynajmniej jeden dzień tygodnia, godzinę startu i trenera');
         return;
       }
+
+      // Convert selected days to a string format for storage
+      const daysString = selectedDays.join(',');
       
       const selectedMonth = document.getElementById('groups-month-select').value;
       
@@ -1696,7 +1765,7 @@
         const resp = await supabase.rpc('insert_group_month', {
           p_month: selectedMonth,
           p_name: name,
-          p_day: day,
+          p_day: daysString,
           p_start_time: start,
           p_trainer: trainer
         });
@@ -1759,25 +1828,14 @@
           else { s.unpaidCount += 1; s.unpaidSum += parseFloat(p.amount || 0); }
         });
 
-        // Clear and render groups grouped by day
+        // Clear and render groups
         groupsList.innerHTML = '';
-        const daysOrder = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
-        const groupsByDay = {};
-        data.forEach(g => {
-          if (!groupsByDay[g.day]) groupsByDay[g.day] = [];
-          groupsByDay[g.day].push(g);
-        });
-        // For each day in order, if we have groups, render a header and the groups sorted by start_time
-        daysOrder.forEach(dayName => {
-          const list = groupsByDay[dayName];
-          if (!list || list.length === 0) return;
-          // sort by start_time
-          list.sort((a,b) => (a.start_time || '').localeCompare(b.start_time || ''));
-          const dayHeader = document.createElement('div');
-          dayHeader.style.margin = '10px 0 6px';
-          dayHeader.innerHTML = `<strong style="color: var(--text-gray);">${dayName}</strong>`;
-          groupsList.appendChild(dayHeader);
-          list.forEach(group => {
+
+        // Sort groups by start time
+        data.sort((a,b) => (a.start_time || '').localeCompare(b.start_time || ''));
+
+        // Render all groups
+        data.forEach(group => {
           const groupCard = document.createElement('div');
           groupCard.className = 'group-card';
             groupCard.style.cursor = 'pointer';
@@ -1789,7 +1847,7 @@
               <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
             <div class="group-detail">
               <i class="fas fa-calendar-day"></i>
-                <span>${group.day}, ${group.start_time}</span>
+                <span>${formatGroupDays(group.day)}, ${group.start_time}</span>
             </div>
             <div class="group-detail">
               <i class="fas fa-user-tie"></i>
@@ -1814,9 +1872,7 @@
             groupCard.querySelector('.edit-btn').addEventListener('click', (e) => { e.stopPropagation(); alert('Funkcja edycji będzie dostępna wkrótce'); });
             groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => { e.stopPropagation(); if (!confirm('Usunąć grupę?')) return; /* reuse existing delete logic by triggering click on original button */ const btn = e.currentTarget; btn.disabled = true; try { /* call same handler code inline to avoid duplication */ const selectedMonth = document.getElementById('groups-month-select').value; const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, group_id: group.id }); if (payErr) throw payErr; const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, group_id: group.id }); if (pgErr) throw pgErr; const { data: participantsAll, error: pAllErr } = await supabase.from('participants_month').select('id').eq('month', selectedMonth); if (pAllErr) throw pAllErr; const { data: assoc, error: assocErr } = await supabase.from('participant_groups_month').select('participant_id').eq('month', selectedMonth); if (assocErr) throw assocErr; const assocSet = new Set((assoc || []).map(a => a.participant_id)); const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id)); if (orphanIds.length > 0) { const { error: delOrphansErr } = await supabase.from('participants_month').delete().in('id', orphanIds).eq('month', selectedMonth); if (delOrphansErr) throw delOrphansErr; } const { error } = await supabase.from('groups_month').delete().match({ id: group.id, month: selectedMonth }); if (error) throw error; await loadGroups(); await loadHomeData(); } catch (err) { alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany')); } finally { btn.disabled = false; } });
           groupsList.appendChild(groupCard);
-          });
         });
-         
       } catch (err) {
         console.error('Nieoczekiwany błąd:', err);
         groupsList.innerHTML = '<div class="empty-state"><p>Wystąpił nieoczekiwany błąd: ' + err.message + '</p></div>';
@@ -3611,7 +3667,7 @@
         console.log('Group day property:', group.day);
         console.log('Group day_of_week property:', group.day_of_week);
 
-        // Get training dates for the month (based on group day)
+        // Get training dates for the month (based on group days)
         const dayOfWeek = group.day || group.day_of_week;
         console.log('Using dayOfWeek:', dayOfWeek);
 
@@ -3619,7 +3675,9 @@
           throw new Error('Brak informacji o dniu tygodnia grupy');
         }
 
-        const trainingDates = getTrainingDatesForMonth(selectedMonth, dayOfWeek);
+        // Handle multiple days (comma-separated)
+        const daysArray = dayOfWeek.includes(',') ? dayOfWeek.split(',') : [dayOfWeek];
+        const trainingDates = getTrainingDatesForMonth(selectedMonth, daysArray);
 
         // Create attendance table
         const tableHTML = createAttendanceTable(participantsData, trainingDates, selectedMonth);
@@ -3636,8 +3694,8 @@
       }
     }
 
-    // Get training dates for a month based on day of week
-    function getTrainingDatesForMonth(month, dayOfWeek) {
+    // Get training dates for a month based on day(s) of week
+    function getTrainingDatesForMonth(month, daysOfWeek) {
       const dates = [];
       const [year, monthNum] = month.split('-').map(Number);
 
@@ -3646,18 +3704,26 @@
         'niedziela': 0, 'poniedziałek': 1, 'wtorek': 2, 'środa': 3,
         'czwartek': 4, 'piątek': 5, 'sobota': 6
       };
-      const targetDay = dayMap[dayOfWeek.toLowerCase()];
 
-      if (targetDay === undefined) return dates;
+      // Handle both single day (string) and multiple days (array)
+      const targetDays = Array.isArray(daysOfWeek) ? daysOfWeek : [daysOfWeek];
+      const targetDayNumbers = targetDays
+        .map(day => dayMap[day.toLowerCase()])
+        .filter(dayNum => dayNum !== undefined);
+
+      if (targetDayNumbers.length === 0) return dates;
 
       const firstDay = new Date(year, monthNum - 1, 1);
       const lastDay = new Date(year, monthNum, 0);
 
       for (let date = new Date(firstDay); date <= lastDay; date.setDate(date.getDate() + 1)) {
-        if (date.getDay() === targetDay) {
+        if (targetDayNumbers.includes(date.getDay())) {
           dates.push(new Date(date));
         }
       }
+
+      // Sort dates chronologically
+      dates.sort((a, b) => a - b);
 
       return dates;
     }
@@ -4012,6 +4078,24 @@
     }
 
     // Attendance month selector is now handled by populateMonthSelectors()
+
+    // Helper function to format group days for display
+    function formatGroupDays(daysString) {
+      if (!daysString) return 'Brak dni';
+
+      // If it's a single day (old format), return it
+      if (!daysString.includes(',')) return daysString;
+
+      // Split the days and format them
+      const days = daysString.split(',');
+      if (days.length === 1) return days[0];
+      if (days.length === 2) return days.join(' i ');
+      if (days.length === 7) return 'Codziennie';
+
+      // For 3-6 days, show first few with "itp."
+      if (days.length <= 4) return days.join(', ');
+      return days.slice(0, 3).join(', ') + ' itp.';
+    }
 
     // Group participant modal handlers
     const groupParticipantModeNew = document.getElementById('group-participant-mode-new');
