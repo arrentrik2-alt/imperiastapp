@@ -2026,6 +2026,8 @@
     
     let currentGroupId = null; // Store current group ID for adding participants
     let currentGroupData = null; // Store current group data for attendance journal
+    let isEditingParticipant = false; // Track if we're editing or adding a participant
+    let editingParticipantId = null; // Store participant ID when editing
 
     function openGroupParticipantsPage(group) {
       if (!group || !group.id) {
@@ -2076,11 +2078,17 @@
     cancelParticipantBtn.addEventListener('click', closeAddParticipantModal);
 
     function openAddParticipantModal() {
+      isEditingParticipant = false;
+      editingParticipantId = null;
       addParticipantModal.classList.add('active');
       participantNameInput.value = '';
       participantPhoneInput.value = '';
-      participantPhoneInput.value = '';
       participantAmountInput.value = '';
+      document.getElementById('participant-rodo').checked = false;
+
+      // Reset modal title and button
+      document.querySelector('#add-participant-modal .modal-header h3').textContent = 'Dodaj uczestnika do grupy';
+      document.getElementById('save-participant-btn').innerHTML = '<i class="fas fa-save"></i> Dodaj uczestnika';
 
       // Reset participant mode buttons
       document.getElementById('group-participant-mode-new').classList.add('active');
@@ -2097,8 +2105,36 @@
       document.getElementById('group-participant-badge').style.display = 'none';
     }
 
+    function editParticipant(participantId, name, phone, payment) {
+      isEditingParticipant = true;
+      editingParticipantId = participantId;
+      addParticipantModal.classList.add('active');
+
+      // Fill form with participant data
+      participantNameInput.value = name || '';
+      participantPhoneInput.value = phone || '';
+      participantAmountInput.value = payment ? payment.amount || '' : '';
+      document.getElementById('participant-rodo').checked = true; // Assume RODO is already accepted for existing participants
+
+      // Update modal title and button
+      document.querySelector('#add-participant-modal .modal-header h3').textContent = 'Edytuj uczestnika';
+      document.getElementById('save-participant-btn').innerHTML = '<i class="fas fa-save"></i> Zapisz zmiany';
+
+      // Hide participant mode selection for editing (we're editing existing participant)
+      document.getElementById('group-participant-new-container').style.display = 'block';
+      document.getElementById('group-participant-existing-container').style.display = 'none';
+      document.getElementById('group-participant-mode-new').style.display = 'none';
+      document.getElementById('group-participant-mode-existing').style.display = 'none';
+    }
+
     function closeAddParticipantModal() {
       addParticipantModal.classList.remove('active');
+      // Reset editing state
+      isEditingParticipant = false;
+      editingParticipantId = null;
+      // Restore participant mode buttons visibility
+      document.getElementById('group-participant-mode-new').style.display = 'inline-block';
+      document.getElementById('group-participant-mode-existing').style.display = 'inline-block';
     }
 
     saveParticipantBtn.addEventListener('click', async () => {
@@ -2126,7 +2162,60 @@
       try {
         let participantId;
 
-        if (isExistingParticipant) {
+        if (isEditingParticipant) {
+          // Edit existing participant
+          participantId = editingParticipantId;
+          console.log('Editing participant:', participantId);
+
+          // Update participant data
+          const { error: updateError } = await supabase
+            .from('participants_month')
+            .update({
+              name: name,
+              phone: phone || null
+            })
+            .eq('id', participantId)
+            .eq('month', selectedMonth);
+
+          if (updateError) throw updateError;
+
+          // Update payment if amount changed
+          if (amount > 0) {
+            // Check if payment already exists
+            const { data: existingPayment, error: paymentCheckError } = await supabase
+              .from('payments_month')
+              .select('id, amount')
+              .eq('month', selectedMonth)
+              .eq('participant_id', participantId)
+              .eq('group_id', currentGroupId)
+              .single();
+
+            if (paymentCheckError && paymentCheckError.code !== 'PGRST116') {
+              throw paymentCheckError;
+            }
+
+            if (existingPayment) {
+              // Update existing payment
+              const { error: paymentUpdateError } = await supabase
+                .from('payments_month')
+                .update({ amount: amount })
+                .eq('id', existingPayment.id);
+
+              if (paymentUpdateError) throw paymentUpdateError;
+            } else {
+              // Create new payment
+              const { error: paymentError } = await supabase.rpc('insert_payment_month', {
+                p_month: selectedMonth,
+                p_participant_id: participantId,
+                p_group_id: currentGroupId,
+                p_amount: amount,
+                p_payment_method: null
+              });
+
+              if (paymentError) throw paymentError;
+            }
+          }
+        } else if (isExistingParticipant) {
           // Use existing participant
           participantId = selectedParticipantId;
           console.log('Using existing participant:', participantId);
@@ -2158,17 +2247,19 @@
 
 
 
-        // 2. Add participant to group
-        const { error: groupError } = await supabase.rpc('add_participant_to_group_month', {
-          p_month: selectedMonth,
-          p_participant_id: participantId,
-          p_group_id: currentGroupId
-        });
+        // 2. Add participant to group (only for new participants)
+        if (!isEditingParticipant) {
+          const { error: groupError } = await supabase.rpc('add_participant_to_group_month', {
+            p_month: selectedMonth,
+            p_participant_id: participantId,
+            p_group_id: currentGroupId
+          });
 
-        if (groupError) throw groupError;
+          if (groupError) throw groupError;
+        }
 
-        // 3. Add payment record
-        if (amount > 0) {
+        // 3. Add payment record (only for new participants)
+        if (!isEditingParticipant && amount > 0) {
           const { error: paymentError } = await supabase.rpc('insert_payment_month', {
             p_month: selectedMonth,
             p_participant_id: participantId,
@@ -2182,9 +2273,10 @@
 
         closeAddParticipantModal();
         await loadGroupParticipants(currentGroupId);
+        await loadHomeData(); // Refresh home page data
         // Removed success alert per user's request
       } catch (err) {
-        alert('Błąd dodawania uczestnika: ' + (err.message || 'Nieznany'));
+        alert('Błąd ' + (isEditingParticipant ? 'edycji' : 'dodawania') + ' uczestnika: ' + (err.message || 'Nieznany'));
       } finally {
         saveParticipantBtn.disabled = false;
         saveParticipantBtn.innerHTML = originalText;
@@ -2343,8 +2435,7 @@
           // Add event listeners for action buttons
           participantCard.querySelector('.edit-btn').addEventListener('click', (e) => {
             e.stopPropagation();
-            // TODO: Implement edit functionality
-            alert('Funkcja edycji uczestników będzie dostępna wkrótce');
+            editParticipant(participant.participant_id, participant.participants_month.name, participant.participants_month.phone, payment);
           });
 
           participantCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
