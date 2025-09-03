@@ -699,10 +699,14 @@
       <div class="content-box">
         <h4 style="margin-bottom: 15px; color: var(--gold);">Podsumowanie dla wybranego miesiąca:</h4>
         <div style="display: grid; grid-template-columns: 1fr 320px; gap: 15px; align-items: center;">
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
             <div class="stat-card">
               <div style="color: var(--text-gray); font-size: 0.9rem;">Liczba grup</div>
               <div style="color: var(--gold); font-size: 1.5rem; font-weight: bold;" id="groups-count">0</div>
+        </div>
+            <div class="stat-card">
+              <div style="color: var(--text-gray); font-size: 0.9rem;">Liczba lekcji</div>
+              <div style="color: var(--gold); font-size: 1.5rem; font-weight: bold;" id="lessons-count">0</div>
         </div>
             <div class="stat-card">
               <div style="color: var(--text-gray); font-size: 0.9rem;">Liczba uczestników</div>
@@ -728,9 +732,12 @@
 
       </div>
       
-      <div style="margin-top: 20px;">
+      <div style="margin-top: 20px; display: flex; gap: 12px;">
         <button class="btn btn-primary" id="go-to-groups-btn">
-          <i class="fas fa-users"></i> Przejdź do zarządzania grupami
+          <i class="fas fa-users"></i> Zarządzaj grupami
+        </button>
+        <button class="btn btn-outline" id="go-to-lessons-btn">
+          <i class="fas fa-chalkboard-teacher"></i> Zarządzaj lekcjami
         </button>
       </div>
     </div>
@@ -1165,6 +1172,8 @@
         homeSection.style.display = 'block';
         groupsSection.style.display = 'none';
         groupParticipantsSection.style.display = 'none'; // Hide participants section
+        const lessonsSection = document.getElementById('lessons-section');
+        if (lessonsSection) lessonsSection.style.display = 'none';
         // Reset to current month when switching to home
         document.getElementById('current-month-select').value = getCurrentMonth();
         loadHomeData();
@@ -1174,6 +1183,8 @@
         homeSection.style.display = 'none';
         groupsSection.style.display = 'block';
         groupParticipantsSection.style.display = 'none'; // Hide participants section
+        const lessonsSection = document.getElementById('lessons-section');
+        if (lessonsSection) lessonsSection.style.display = 'none';
         // Reset to current month when switching to groups
         document.getElementById('groups-month-select').value = getCurrentMonth();
         loadGroups();
@@ -1183,6 +1194,8 @@
         homeSection.style.display = 'none';
         groupsSection.style.display = 'none';
         groupParticipantsSection.style.display = 'block';
+        const lessonsSection = document.getElementById('lessons-section');
+        if (lessonsSection) lessonsSection.style.display = 'none';
         // Don't reset month selector for participants - keep the current selection
         // No specific data loading needed here, as it's a new section
       } else if (section === 'lessons') {
@@ -1193,6 +1206,11 @@
         homeSection.style.display = 'none';
         groupsSection.style.display = 'none';
         groupParticipantsSection.style.display = 'none';
+
+        const lessonsSection = document.getElementById('lessons-section');
+        if (lessonsSection) {
+          lessonsSection.style.display = 'block';
+        }
       }
       
       console.log('setActiveNav zakończone, currentGroupId po:', currentGroupId);
@@ -1206,6 +1224,17 @@
     groupsLink.addEventListener('click', (e) => {
       e.preventDefault();
       setActiveNav('groups');
+    });
+
+    // Home page navigation buttons
+    document.getElementById('go-to-groups-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('groups');
+    });
+
+    document.getElementById('go-to-lessons-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('lessons');
     });
 
     // View switch buttons
@@ -1423,30 +1452,63 @@
         if (!groupsError) {
           document.getElementById('groups-count').textContent = (groups || []).length;
         }
+
+        // Load lessons count
+        const { data: lessons, error: lessonsError } = await supabase
+          .from('lessons_month')
+          .select('id')
+          .eq('month', selectedMonth);
+
+        if (!lessonsError) {
+          const lessonsCountEl = document.getElementById('lessons-count');
+          if (lessonsCountEl) {
+            lessonsCountEl.textContent = (lessons || []).length;
+          }
+        }
         
-        // Load participants count
-        const { data: participants, error: participantsError } = await supabase
+        // Load participants count (from both groups and lessons)
+        const { data: groupParticipants, error: groupParticipantsError } = await supabase
           .from('participants_month')
           .select('id')
           .eq('month', selectedMonth);
-        
-        if (!participantsError) {
-          document.getElementById('participants-count').textContent = (participants || []).length;
+
+        const { data: lessonParticipants, error: lessonParticipantsError } = await supabase
+          .from('lesson_participants_month')
+          .select('participant_id')
+          .eq('month', selectedMonth);
+
+        // Combine and deduplicate participant IDs
+        const allParticipantIds = new Set();
+
+        if (!groupParticipantsError && groupParticipants) {
+          groupParticipants.forEach(p => allParticipantIds.add(p.id));
         }
+
+        if (!lessonParticipantsError && lessonParticipants) {
+          lessonParticipants.forEach(p => allParticipantIds.add(p.participant_id));
+        }
+
+        document.getElementById('participants-count').textContent = allParticipantIds.size;
         
-        // Aggregate payments for overview
-        const { data: paymentsAll, error: payErr } = await supabase
+        // Aggregate payments for overview (groups + lessons)
+        const { data: groupPayments, error: groupPayErr } = await supabase
           .from('payments_month')
           .select('participant_id, amount, payment_method, confirmed')
           .eq('month', selectedMonth);
-        
+
+        const { data: lessonPayments, error: lessonPayErr } = await supabase
+          .from('lesson_payments_month')
+          .select('participant_id, amount, payment_method, confirmed')
+          .eq('month', selectedMonth);
+
         let paidSum = 0, unpaidSum = 0, totalSum = 0;
         const byMethod = {};
         const paidParticipants = new Set();
         const unpaidParticipants = new Set();
 
-        if (!payErr && paymentsAll) {
-          paymentsAll.forEach(p => {
+        // Process group payments
+        if (!groupPayErr && groupPayments) {
+          groupPayments.forEach(p => {
             const amt = parseFloat(p.amount || 0);
             totalSum += amt;
             if (p.confirmed) {
@@ -1457,9 +1519,26 @@
             } else {
               unpaidSum += amt;
               unpaidParticipants.add(p.participant_id);
+            }
+          });
         }
-      });
-    }
+
+        // Process lesson payments
+        if (!lessonPayErr && lessonPayments) {
+          lessonPayments.forEach(p => {
+            const amt = parseFloat(p.amount || 0);
+            totalSum += amt;
+            if (p.confirmed) {
+              paidSum += amt;
+              paidParticipants.add(p.participant_id);
+              const m = p.payment_method || 'Lekcje';
+              byMethod[m] = (byMethod[m] || 0) + amt;
+            } else {
+              unpaidSum += amt;
+              unpaidParticipants.add(p.participant_id);
+            }
+          });
+        }
     
         // Render paid/unpaid summary on home
         const paidEl = document.getElementById('home-paid');
