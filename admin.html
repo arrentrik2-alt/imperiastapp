@@ -3571,22 +3571,52 @@
         console.log('Group day property:', group.day);
         console.log('Group day_of_week property:', group.day_of_week);
 
-        // Get training dates for the month (based on group day)
-        const dayOfWeek = group.day || group.day_of_week;
-        console.log('Using dayOfWeek:', dayOfWeek);
-
-        if (!dayOfWeek) {
-          throw new Error('Brak informacji o dniu tygodnia grupy');
+        // Parse days for the group - handle both single day and multiple days
+        let groupDays = [];
+        if (group.day) {
+          try {
+            // Try to parse as JSON array (multiple days)
+            const parsed = JSON.parse(group.day);
+            if (Array.isArray(parsed)) {
+              groupDays = parsed;
+            } else {
+              // It's a single day string
+              groupDays = [group.day];
+            }
+          } catch (e) {
+            // It's a single day string
+            groupDays = [group.day];
+          }
+        } else if (group.day_of_week) {
+          groupDays = [group.day_of_week];
         }
 
-        const trainingDates = getTrainingDatesForMonth(selectedMonth, dayOfWeek);
+        console.log('Group days:', groupDays);
+
+        if (groupDays.length === 0) {
+          throw new Error('Brak informacji o dniach tygodnia grupy');
+        }
+
+        // Get training dates for all days of the group
+        const allTrainingDates = [];
+        groupDays.forEach(dayOfWeek => {
+          const datesForDay = getTrainingDatesForMonth(selectedMonth, dayOfWeek);
+          allTrainingDates.push(...datesForDay.map(date => ({
+            date: date,
+            dayOfWeek: dayOfWeek,
+            dayName: dayOfWeek
+          })));
+        });
+
+        // Sort dates chronologically
+        allTrainingDates.sort((a, b) => new Date(a.date) - new Date(b.date));
 
         // Create attendance table
-        const tableHTML = createAttendanceTable(participantsData, trainingDates, selectedMonth);
+        const tableHTML = createAttendanceTable(participantsData, allTrainingDates, selectedMonth);
         container.innerHTML = tableHTML;
 
         // Load existing attendance data
-        await loadExistingAttendanceData(currentGroupId, selectedMonth, participantsData, trainingDates);
+        await loadExistingAttendanceData(currentGroupId, selectedMonth, participantsData, allTrainingDates);
 
         console.log('Attendance journal loaded successfully');
 
@@ -3632,7 +3662,8 @@
       `;
 
       // Add date columns with approve/edit buttons
-      trainingDates.forEach(date => {
+      trainingDates.forEach(dateObj => {
+        const date = new Date(dateObj.date);
         const dateStr = date.toISOString().split('T')[0];
         const formattedDate = date.toLocaleDateString('pl-PL', {
           day: '2-digit',
@@ -3640,8 +3671,9 @@
         });
 
         tableHTML += `
-          <th class="date-column" data-date="${dateStr}">
+          <th class="date-column" data-date="${dateStr}" data-day="${dateObj.dayOfWeek}">
             <div>${formattedDate}</div>
+            <div style="font-size: 0.7rem; color: var(--text-gray); margin-top: 2px;">${dateObj.dayName}</div>
             <button class="btn approve-btn" data-date="${dateStr}">Zatwierdź</button>
           </th>
         `;
@@ -3662,13 +3694,15 @@
         `;
 
         // Add checkbox cells for each training date
-        trainingDates.forEach(date => {
+        trainingDates.forEach(dateObj => {
+          const date = new Date(dateObj.date);
           const dateStr = date.toISOString().split('T')[0];
           tableHTML += `
             <td>
               <input type="checkbox" class="attendance-checkbox"
                      data-participant-id="${p.id}"
-                     data-date="${dateStr}">
+                     data-date="${dateStr}"
+                     data-day="${dateObj.dayOfWeek}">
             </td>
           `;
         });
@@ -3722,7 +3756,8 @@
         // Set checkboxes based on loaded data
         participants.forEach(participant => {
           const p = participant.participants_month;
-          trainingDates.forEach(date => {
+          trainingDates.forEach(dateObj => {
+            const date = new Date(dateObj.date);
             const dateStr = date.toISOString().split('T')[0];
             const checkbox = document.querySelector(
               `input[data-participant-id="${p.id}"][data-date="${dateStr}"]`
@@ -3753,7 +3788,8 @@
 
     // Update approve/edit buttons based on approval status
     function updateApproveButtons(trainingDates) {
-      trainingDates.forEach(date => {
+      trainingDates.forEach(dateObj => {
+        const date = new Date(dateObj.date);
         const dateStr = date.toISOString().split('T')[0];
         const approveBtn = document.querySelector(`button[data-date="${dateStr}"].approve-btn`);
 
