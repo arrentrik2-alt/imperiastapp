@@ -46,7 +46,7 @@
       transition: all 0.3s ease;
       z-index: 1000;
     }
-
+    
     .sidebar.collapsed {
       width: 70px;
     }
@@ -641,7 +641,7 @@
       .sidebar.collapsed {
         width: 0;
       }
-
+      
       .main-content {
         margin-left: 0;
       }
@@ -884,7 +884,7 @@
         <input type="text" id="group-name" class="form-control" placeholder="Nazwa grupy">
     </div>
 
-            <div class="form-group">
+      <div class="form-group">
         <label>Dni tygodnia</label>
         <div class="days-selection">
           <label class="day-checkbox">
@@ -916,7 +916,7 @@
             <span>Niedziela</span>
           </label>
         </div>
-      </div>
+    </div>
 
       <div class="form-group">
         <label for="group-start">Godzina rozpoczęcia</label>
@@ -1220,7 +1220,7 @@
 
     // Sidebar toggle event listener
     sidebarToggle.addEventListener('click', toggleSidebar);
-
+    
     function setActiveNav(section) {
       console.log('setActiveNav wywołane z sekcją:', section, 'currentGroupId przed:', currentGroupId);
 
@@ -1228,7 +1228,7 @@
       if (window.innerWidth <= 1024 && !sidebarCollapsed) {
         toggleSidebar();
       }
-
+      
       if (section === 'home') {
         homeLink.classList.add('active');
         groupsLink.classList.remove('active');
@@ -1487,7 +1487,7 @@
           .from('payments_month')
           .select('participant_id, amount, payment_method, confirmed')
           .eq('month', selectedMonth);
-
+        
         const { data: lessonPayments, error: lessonPayErr } = await supabase
           .from('lesson_payments_month')
           .select('participant_id, amount, confirmed')
@@ -1515,7 +1515,7 @@
           });
         }
 
-        // Process lesson payments (treat them as a default payment method)
+        // Process lesson payments (use actual payment method like for groups)
         if (!lessonPayErr && lessonPayments) {
           lessonPayments.forEach(p => {
             const amt = parseFloat(p.amount || 0);
@@ -1523,15 +1523,15 @@
             if (p.confirmed) {
               paidSum += amt;
               paidParticipants.add(p.participant_id);
-              // Use a default payment method for lessons (you can customize this)
-              const m = 'Przelew'; // Default payment method for lessons
+              // Use actual payment method from database
+              const m = p.payment_method || 'Inne (lekcje)';
               byMethod[m] = (byMethod[m] || 0) + amt;
             } else {
               unpaidSum += amt;
               unpaidParticipants.add(p.participant_id);
-            }
-          });
         }
+      });
+    }
     
         // Render paid/unpaid summary on home
         const paidEl = document.getElementById('home-paid');
@@ -1740,7 +1740,7 @@
       const name = document.getElementById('group-name').value.trim();
       const start = document.getElementById('group-start').value;
       const trainer = document.getElementById('group-trainer').value.trim();
-
+      
       // Collect selected days
       const selectedDays = [];
       document.querySelectorAll('.days-selection input[type="checkbox"]:checked').forEach(cb => {
@@ -1872,7 +1872,7 @@
             groupCard.querySelector('.edit-btn').addEventListener('click', (e) => { e.stopPropagation(); alert('Funkcja edycji będzie dostępna wkrótce'); });
             groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => { e.stopPropagation(); if (!confirm('Usunąć grupę?')) return; /* reuse existing delete logic by triggering click on original button */ const btn = e.currentTarget; btn.disabled = true; try { /* call same handler code inline to avoid duplication */ const selectedMonth = document.getElementById('groups-month-select').value; const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, group_id: group.id }); if (payErr) throw payErr; const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, group_id: group.id }); if (pgErr) throw pgErr; const { data: participantsAll, error: pAllErr } = await supabase.from('participants_month').select('id').eq('month', selectedMonth); if (pAllErr) throw pAllErr; const { data: assoc, error: assocErr } = await supabase.from('participant_groups_month').select('participant_id').eq('month', selectedMonth); if (assocErr) throw assocErr; const assocSet = new Set((assoc || []).map(a => a.participant_id)); const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id)); if (orphanIds.length > 0) { const { error: delOrphansErr } = await supabase.from('participants_month').delete().in('id', orphanIds).eq('month', selectedMonth); if (delOrphansErr) throw delOrphansErr; } const { error } = await supabase.from('groups_month').delete().match({ id: group.id, month: selectedMonth }); if (error) throw error; await loadGroups(); await loadHomeData(); } catch (err) { alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany')); } finally { btn.disabled = false; } });
           groupsList.appendChild(groupCard);
-        });
+          });
       } catch (err) {
         console.error('Nieoczekiwany błąd:', err);
         groupsList.innerHTML = '<div class="empty-state"><p>Wystąpił nieoczekiwany błąd: ' + err.message + '</p></div>';
@@ -1956,10 +1956,10 @@
         document.querySelector('#add-participant-modal .modal-header h3').textContent = 'Dodaj uczestnika do grupy';
         document.getElementById('save-participant-btn').innerHTML = '<i class="fas fa-save"></i> Dodaj uczestnika';
 
-        participantNameInput.value = '';
+      participantNameInput.value = '';
         participantPhoneInput.value = '';
-        participantPhoneInput.value = '';
-        participantAmountInput.value = '';
+      participantPhoneInput.value = '';
+      participantAmountInput.value = '';
 
         // Show mode buttons in add mode
         document.querySelector('.form-group .btn').parentElement.style.display = 'flex';
@@ -2072,50 +2072,50 @@
             console.log('Using existing participant:', participantId);
           } else {
             // 1. Add new participant
-            const rodoValue = !!document.getElementById('participant-rodo').checked;
+        const rodoValue = !!document.getElementById('participant-rodo').checked;
             const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
-              p_month: selectedMonth,
-              p_name: name,
-              p_email: null,
-              p_phone: phone || null,
-              p_rodo: rodoValue
-            });
+          p_month: selectedMonth,
+          p_name: name,
+          p_email: null,
+          p_phone: phone || null,
+          p_rodo: rodoValue
+        });
 
-            if (participantError) throw participantError;
+        if (participantError) throw participantError;
             participantId = newParticipantId;
 
-            // Ensure RODO persisted even if RPC signature mismatch: update directly
-            try {
-              const { error: rodoErr } = await supabase
-                .from('participants_month')
-                .update({ rodo: rodoValue })
-                .eq('id', participantId);
-              if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
-            } catch (e) {
-              console.warn('RODO update exception:', e);
+        // Ensure RODO persisted even if RPC signature mismatch: update directly
+        try {
+          const { error: rodoErr } = await supabase
+            .from('participants_month')
+            .update({ rodo: rodoValue })
+            .eq('id', participantId);
+          if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
+        } catch (e) {
+          console.warn('RODO update exception:', e);
             }
-          }
+        }
 
-          // 2. Add participant to group
-          const { error: groupError } = await supabase.rpc('add_participant_to_group_month', {
+        // 2. Add participant to group
+        const { error: groupError } = await supabase.rpc('add_participant_to_group_month', {
+          p_month: selectedMonth,
+          p_participant_id: participantId,
+          p_group_id: currentGroupId
+        });
+
+        if (groupError) throw groupError;
+
+        // 3. Add payment record
+        if (amount > 0) {
+          const { error: paymentError } = await supabase.rpc('insert_payment_month', {
             p_month: selectedMonth,
             p_participant_id: participantId,
-            p_group_id: currentGroupId
+            p_group_id: currentGroupId,
+            p_amount: amount,
+            p_payment_method: null
           });
 
-          if (groupError) throw groupError;
-
-          // 3. Add payment record
-          if (amount > 0) {
-            const { error: paymentError } = await supabase.rpc('insert_payment_month', {
-              p_month: selectedMonth,
-              p_participant_id: participantId,
-              p_group_id: currentGroupId,
-              p_amount: amount,
-              p_payment_method: null
-            });
-
-            if (paymentError) throw paymentError;
+          if (paymentError) throw paymentError;
           }
         }
 
