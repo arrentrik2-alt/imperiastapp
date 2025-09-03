@@ -796,11 +796,14 @@
         </div>
     
       <div id="group-participants-info" style="margin-bottom: 20px; display:flex; align-items:center; justify-content:space-between; gap:20px;">
-        <h4 id="group-participants-name" style="color: var(--gold); margin: 0;"></h4>
+        <div>
+          <h4 id="group-participants-name" style="color: var(--gold); margin: 0;"></h4>
+          <div id="group-participants-days" style="color: var(--text-gray); font-size: 0.9rem; margin-top: 5px;"></div>
+        </div>
         <div style="display:flex; align-items:center; gap:12px;">
           <canvas id="group-donut" width="80" height="80"></canvas>
           <div id="group-participants-summary" style="color:var(--text-gray); font-size:0.95rem; text-align:right;"></div>
-      </div>
+        </div>
       </div>
 
       <div style="margin-bottom: 20px;">
@@ -1666,12 +1669,22 @@
       if (startField) startField.value = groupData.start_time ? groupData.start_time.substring(0, 5) : '';
       if (trainerField) trainerField.value = groupData.trainer || '';
 
-      // Handle days - support both single day (backward compatibility) and multiple days
+      // Handle days - support both single day and JSON string with multiple days
       let days = [];
-      if (groupData.days && Array.isArray(groupData.days)) {
-        days = groupData.days;
-      } else if (groupData.day) {
-        days = [groupData.day];
+      if (groupData.day) {
+        try {
+          // Try to parse as JSON array
+          const parsedDays = JSON.parse(groupData.day);
+          if (Array.isArray(parsedDays)) {
+            days = parsedDays;
+          } else {
+            // It's a single day string
+            days = [groupData.day];
+          }
+        } catch (e) {
+          // It's a single day string
+          days = [groupData.day];
+        }
       }
       setSelectedDays(days);
     }
@@ -1743,12 +1756,12 @@
 
       try {
         if (editingGroupId) {
-          // Update existing group - use the first selected day for backward compatibility
+          // Update existing group - store all selected days as JSON string
           const { error } = await supabase
             .from('groups_month')
             .update({
               name: name,
-              day: selectedDays[0], // Use first day for single group update
+              day: selectedDays.length === 1 ? selectedDays[0] : JSON.stringify(selectedDays),
               start_time: start,
               trainer: trainer
             })
@@ -1761,18 +1774,16 @@
           await loadGroups();
           await loadHomeData();
         } else {
-          // Add new groups - create one group per selected day
-          for (const day of selectedDays) {
-            const resp = await supabase.rpc('insert_group_month', {
-              p_month: selectedMonth,
-              p_name: name,
-              p_day: day,
-              p_start_time: start,
-              p_trainer: trainer
-            });
+          // Add new group - store all selected days as JSON string
+          const resp = await supabase.rpc('insert_group_month', {
+            p_month: selectedMonth,
+            p_name: name,
+            p_day: selectedDays.length === 1 ? selectedDays[0] : JSON.stringify(selectedDays),
+            p_start_time: start,
+            p_trainer: trainer
+          });
 
-            if (resp.error) throw resp.error;
-          }
+          if (resp.error) throw resp.error;
 
           closeModal();
           await loadGroups();
@@ -1834,9 +1845,28 @@
         groupsList.innerHTML = '';
         const daysOrder = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
         const groupsByDay = {};
+
+        // Helper function to get all days for a group
+        function getGroupDays(group) {
+          if (!group.day) return [];
+          try {
+            const parsed = JSON.parse(group.day);
+            return Array.isArray(parsed) ? parsed : [group.day];
+          } catch (e) {
+            return [group.day];
+          }
+        }
+
+        // Group groups by their days - each group can appear under multiple days
         data.forEach(g => {
-          if (!groupsByDay[g.day]) groupsByDay[g.day] = [];
-          groupsByDay[g.day].push(g);
+          const groupDays = getGroupDays(g);
+          // Use first day for grouping in the list
+          const primaryDay = groupDays[0] || 'Poniedziałek';
+          if (!groupsByDay[primaryDay]) groupsByDay[primaryDay] = [];
+          groupsByDay[primaryDay].push({
+            ...g,
+            allDays: groupDays // Store all days for display
+          });
         });
         // For each day in order, if we have groups, render a header and the groups sorted by start_time
         daysOrder.forEach(dayName => {
@@ -1856,11 +1886,17 @@
             const paidText = `<span style="color: var(--success); font-weight:600; margin-left:10px;">Zapłacili: ${sums.paidCount}</span>`;
             const unpaidColor = sums.unpaidCount > 0 ? 'var(--error)' : 'var(--success)';
             const unpaidText = `<span style="color: ${unpaidColor}; font-weight:600; margin-left:10px;">Nie zapłacili: ${sums.unpaidCount}</span>`;
+          // Format days display
+          const daysToShow = group.allDays || [group.day];
+          const daysText = daysToShow.length === 1
+            ? daysToShow[0]
+            : daysToShow.slice(0, 3).join(', ') + (daysToShow.length > 3 ? '...' : '');
+
           groupCard.innerHTML = `
               <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
             <div class="group-detail">
               <i class="fas fa-calendar-day"></i>
-                <span>${group.day}, ${formatTimeToHHMM(group.start_time)}</span>
+                <span>${daysText}, ${formatTimeToHHMM(group.start_time)}</span>
             </div>
             <div class="group-detail">
               <i class="fas fa-user-tie"></i>
@@ -1924,11 +1960,22 @@
       currentGroupData = group; // Store full group data for attendance journal
       console.log('Ustawiono currentGroupId:', currentGroupId, 'currentGroupName:', currentGroupName, 'currentGroupData:', currentGroupData);
       groupParticipantsName.textContent = group.name;
-      
+
+      // Display all days for the group
+      const daysElement = document.getElementById('group-participants-days');
+      if (daysElement) {
+        const allDays = group.allDays || [group.day];
+        if (allDays.length === 1) {
+          daysElement.textContent = `Dzień: ${allDays[0]}`;
+        } else {
+          daysElement.textContent = `Dni: ${allDays.join(', ')}`;
+        }
+      }
+
       // Set participants month selector to match groups month selector
       const groupsMonth = document.getElementById('groups-month-select').value;
       document.getElementById('participants-month-select').value = groupsMonth;
-      
+
       // Load participants for the current group and month
       loadGroupParticipants(group.id);
     }
