@@ -2251,7 +2251,7 @@
       trainer: {}    // {participantId: {trainerIndex: {amount: number, confirmed: boolean}}}
     };
 
-    // Initialize payment cache for current camp
+    // Initialize payment cache for current camp - SUPER FAST VERSION
     async function initializePaymentCache(campId, participants) {
       console.log('[CACHE] Initializing payment cache for camp:', campId);
       // Clear cache first to ensure clean state
@@ -2260,56 +2260,71 @@
 
       const participantIds = participants.map(p => p.id);
 
-      // Load all camp payments at once
-      try {
-        const { data: campPayments, error: campError } = await supabase
+      // PARALLEL LOADING - Load all payments at the same time for maximum speed
+      const promises = [];
+
+      // Load camp payments
+      promises.push(
+        supabase
           .from('camp_payments')
           .select('participant_id, amount, confirmed')
           .eq('camp_id', campId)
-          .in('participant_id', participantIds);
+          .in('participant_id', participantIds)
+          .then(({ data, error }) => {
+            if (!error && data) {
+              data.forEach(payment => {
+                paymentCache.camp[payment.participant_id] = {
+                  amount: parseFloat(payment.amount) || 0,
+                  confirmed: payment.confirmed || false
+                };
+              });
+            }
+            return { type: 'camp', error };
+          })
+          .catch(err => ({ type: 'camp', error: err }))
+      );
 
-        if (!campError && campPayments) {
-          campPayments.forEach(payment => {
-            paymentCache.camp[payment.participant_id] = {
-              amount: parseFloat(payment.amount) || 0,
-              confirmed: payment.confirmed || false
-            };
-          });
-        }
-      } catch (err) {
-        console.error('[CACHE] Error loading camp payments:', err);
-      }
-
-      // Load all trainer payments at once
+      // Load trainer payments for each trainer in parallel
       const camp = window.currentCamp;
       if (camp && camp.trainers && camp.trainers.length > 0) {
-        for (const [index, trainer] of camp.trainers.entries()) {
+        camp.trainers.forEach((trainer, index) => {
           if (trainer) {
-            try {
-              const { data: trainerPayments, error: trainerError } = await supabase
+            promises.push(
+              supabase
                 .from('trainer_payments')
                 .select('participant_id, amount, confirmed')
                 .eq('camp_id', campId)
                 .eq('trainer_index', index)
-                .in('participant_id', participantIds);
-
-              if (!trainerError && trainerPayments) {
-                trainerPayments.forEach(payment => {
-                  if (!paymentCache.trainer[payment.participant_id]) {
-                    paymentCache.trainer[payment.participant_id] = {};
+                .in('participant_id', participantIds)
+                .then(({ data, error }) => {
+                  if (!error && data) {
+                    data.forEach(payment => {
+                      if (!paymentCache.trainer[payment.participant_id]) {
+                        paymentCache.trainer[payment.participant_id] = {};
+                      }
+                      paymentCache.trainer[payment.participant_id][index] = {
+                        amount: parseFloat(payment.amount) || 0,
+                        confirmed: payment.confirmed || false
+                      };
+                    });
                   }
-                  paymentCache.trainer[payment.participant_id][index] = {
-                    amount: parseFloat(payment.amount) || 0,
-                    confirmed: payment.confirmed || false
-                  };
-                });
-              }
-            } catch (err) {
-              console.error(`[CACHE] Error loading trainer ${index} payments:`, err);
-            }
+                  return { type: `trainer_${index}`, error };
+                })
+                .catch(err => ({ type: `trainer_${index}`, error: err }))
+            );
           }
-        }
+        });
       }
+
+      // Wait for all queries to complete in parallel
+      const results = await Promise.all(promises);
+
+      // Log any errors but don't block initialization
+      results.forEach(result => {
+        if (result.error) {
+          console.error(`[CACHE] Error loading ${result.type} payments:`, result.error);
+        }
+      });
 
       console.log('[CACHE] Payment cache initialized with', Object.keys(paymentCache.camp).length, 'camp payments');
     }
@@ -2774,8 +2789,7 @@
           });
         }
 
-        // Ensure financial summary is updated with latest data
-        await updateFinancialSummary();
+        // Financial summary already updated above, no need to call again
 
         // Set currency data for payment inputs and calculate totals immediately
           document.querySelectorAll('.payment-input').forEach(input => {
@@ -3635,12 +3649,16 @@
         await removePayment(campId, participantId, columnType, trainerIndex);
       }
 
-      // Update row styling and summaries immediately for real-time updates using cache
-      await updateRowStyling(participantId);
-      await updateParticipantTotalsFast(campId, participantId);
-      await updateSummariesFast();
-      await updateFinancialSummary();
-      await updateCampStatus(campId);
+      // ULTRA FAST UI UPDATES - Execute all updates in parallel for maximum speed
+      const uiUpdates = [
+        updateRowStyling(participantId),
+        updateParticipantTotalsFast(campId, participantId),
+        updateSummariesFast(),
+        updateFinancialSummary(),
+        updateCampStatus(campId)
+      ];
+
+      await Promise.all(uiUpdates);
     }
 
     async function handleConfirmPayment(button) {
@@ -4110,147 +4128,200 @@
 
     async function savePayment(campId, participantId, columnType, amount, trainerIndex = null) {
       try {
-        showGlobalLoader('Zapisuję płatność...');
-
-        // Ensure proper number handling - clean the input and convert to number
+        // INSTANT UI UPDATE - No spinner, immediate feedback
         let cleanAmount = amount.toString().trim().replace(',', '.');
-
-        // Handle cases where amount might be empty or invalid
         if (!cleanAmount || cleanAmount === '' || cleanAmount === '0') {
           cleanAmount = 0;
         }
-
         const numericAmount = parseFloat(cleanAmount);
 
-        // Validate the amount is a valid number
         if (isNaN(numericAmount)) {
           console.error('Invalid amount provided:', amount);
-          hideGlobalLoader();
           return;
         }
 
-        const paymentData = {
-          camp_id: campId,
-          participant_id: participantId,
-          amount: numericAmount, // Store as number, not string
-          confirmed: false,
-          updated_at: new Date().toISOString()
-        };
+        // Update cache immediately for instant UI feedback
+        updatePaymentCache(participantId, columnType, numericAmount, false, trainerIndex);
 
-        if (columnType === 'trainer') {
-          paymentData.trainer_index = trainerIndex;
+        // Update UI immediately using cache
+        await updateParticipantTotalsFast(campId, participantId);
+        if (typeof updateSummariesFast === 'function') await updateSummariesFast();
+        await updateFinancialSummary();
+        if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
+        await updateCampStatus(campId);
+
+        // Add visual feedback - highlight the input briefly
+        const input = document.querySelector(`input[data-camp-id="${campId}"][data-participant-id="${participantId}"][data-column-type="${columnType}"]${trainerIndex !== null ? `[data-trainer-index="${trainerIndex}"]` : ''}`);
+        if (input) {
+          input.style.backgroundColor = '#d4edda'; // Light green
+          setTimeout(() => {
+            input.style.backgroundColor = '';
+          }, 500);
         }
 
-        // Determine currency
-        const camp = window.currentCamp;
-        if (columnType === 'camp') {
-          paymentData.currency = camp.currency;
-        } else if (columnType === 'trainer' && camp.trainers && camp.trainers[parseInt(trainerIndex, 10)]) {
-          paymentData.currency = camp.trainers[parseInt(trainerIndex, 10)].currency;
-        }
-
-        let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
-
-        // Upsert (insert or update) in a single call to avoid relying on update counts
-        const onConflict = columnType === 'camp' ? ['camp_id', 'participant_id'] : ['camp_id', 'participant_id', 'trainer_index'];
-        const { data: upsertData, error: upsertError } = await supabase
-          .from(tableName)
-          .upsert(paymentData, { onConflict })
-          .select();
-
-        if (upsertError) {
-          console.error('Error upserting payment:', upsertError);
-        } else {
-          // Update cache with new payment data
-          updatePaymentCache(participantId, columnType, numericAmount, false, trainerIndex);
-
-          // Update UI after successful save using cache (much faster)
+        // BACKGROUND SAVING - Save to database without blocking UI
+        setTimeout(async () => {
           try {
-            // Refresh participant totals and summaries
-            await updateParticipantTotalsFast(campId, participantId);
-            if (typeof updateSummariesFast === 'function') await updateSummariesFast();
-            await updateFinancialSummary(); // Also update financial summary
-            if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
-            await updateCampStatus(campId);
-          } catch (uiErr) {
-            console.error('Error updating UI after savePayment:', uiErr);
+            const paymentData = {
+              camp_id: campId,
+              participant_id: participantId,
+              amount: numericAmount,
+              confirmed: false,
+              updated_at: new Date().toISOString()
+            };
+
+            if (columnType === 'trainer') {
+              paymentData.trainer_index = trainerIndex;
+            }
+
+            const camp = window.currentCamp;
+            if (columnType === 'camp') {
+              paymentData.currency = camp.currency;
+            } else if (columnType === 'trainer' && camp.trainers && camp.trainers[parseInt(trainerIndex, 10)]) {
+              paymentData.currency = camp.trainers[parseInt(trainerIndex, 10)].currency;
+            }
+
+            let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
+            const onConflict = columnType === 'camp' ? ['camp_id', 'participant_id'] : ['camp_id', 'participant_id', 'trainer_index'];
+
+            const { error: upsertError } = await supabase
+              .from(tableName)
+              .upsert(paymentData, { onConflict });
+
+            if (upsertError) {
+              console.error('Background save error:', upsertError);
+              // Could add error feedback here if needed
+            } else {
+              console.log('Background save successful');
+            }
+          } catch (err) {
+            console.error('Background save failed:', err);
           }
-        }
-        hideGlobalLoader();
+        }, 100); // Small delay to ensure UI updates first
+
       } catch (err) {
         console.error('Error in savePayment:', err);
-        hideGlobalLoader();
       }
     }
 
     async function confirmPayment(campId, participantId, columnType, trainerIndex = null) {
       try {
-        showGlobalLoader('Potwierdzam płatność...');
-        let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
+        // INSTANT UI UPDATE - No spinner, immediate feedback
+        const currentPayment = getCachedPayment(participantId, columnType, trainerIndex);
 
-        const updateData = {
-          confirmed: true,
-          updated_at: new Date().toISOString()
-        };
+        // Update cache immediately for instant UI feedback
+        updatePaymentCache(participantId, columnType, currentPayment.amount, true, trainerIndex);
 
-        const { error } = await supabase
-          .from(tableName)
-          .update(updateData)
-          .eq('camp_id', campId)
-          .eq('participant_id', participantId)
-          .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : campId);
+        // Update UI immediately using cache
+        await updateParticipantTotalsFast(campId, participantId);
+        if (typeof updateSummariesFast === 'function') await updateSummariesFast();
+        await updateFinancialSummary();
+        if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
+        await updateCampStatus(campId);
 
-        if (error) {
-          console.error('Error confirming payment:', error);
-        } else {
-          // Update cache to reflect confirmed status
-          const currentPayment = getCachedPayment(participantId, columnType, trainerIndex);
-          updatePaymentCache(participantId, columnType, currentPayment.amount, true, trainerIndex);
-
-          // Update UI after successful confirmation using cache (much faster)
-          try {
-            await updateParticipantTotalsFast(campId, participantId);
-            if (typeof updateSummariesFast === 'function') await updateSummariesFast();
-            if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
-            await updateCampStatus(campId);
-          } catch (uiErr) {
-            console.error('Error updating UI after confirmPayment:', uiErr);
-          }
+        // Add visual feedback - highlight the button briefly
+        const button = document.querySelector(`button[data-camp-id="${campId}"][data-participant-id="${participantId}"][data-column-type="${columnType}"]${trainerIndex !== null ? `[data-trainer-index="${trainerIndex}"]` : ''}.confirm-payment-btn`);
+        if (button) {
+          const originalColor = button.style.backgroundColor;
+          button.style.backgroundColor = '#28a745'; // Green
+          button.innerHTML = '<i class="fas fa-check"></i>';
+          setTimeout(() => {
+            button.style.backgroundColor = originalColor;
+            button.innerHTML = '<i class="fas fa-check-circle"></i>';
+          }, 1000);
         }
-        hideGlobalLoader();
+
+        // BACKGROUND CONFIRMATION - Confirm in database without blocking UI
+        setTimeout(async () => {
+          try {
+            let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
+            const updateData = {
+              confirmed: true,
+              updated_at: new Date().toISOString()
+            };
+
+            const { error } = await supabase
+              .from(tableName)
+              .update(updateData)
+              .eq('camp_id', campId)
+              .eq('participant_id', participantId)
+              .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : campId);
+
+            if (error) {
+              console.error('Background confirmation error:', error);
+              // Could add error feedback here if needed
+            } else {
+              console.log('Background confirmation successful');
+            }
+          } catch (err) {
+            console.error('Background confirmation failed:', err);
+          }
+        }, 100); // Small delay to ensure UI updates first
+
       } catch (err) {
         console.error('Error in confirmPayment:', err);
-        hideGlobalLoader();
       }
     }
 
     async function removePayment(campId, participantId, columnType, trainerIndex = null) {
       try {
-        let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
+        // INSTANT UI UPDATE - No spinner, immediate feedback
 
-        const { error } = await supabase
-          .from(tableName)
-          .delete()
-          .eq('camp_id', campId)
-          .eq('participant_id', participantId)
-          .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : campId);
+        // Update cache immediately for instant UI feedback
+        updatePaymentCache(participantId, columnType, 0, false, trainerIndex);
 
-        if (error) {
-          console.error('Error removing payment:', error);
-        } else {
-          // Update cache to remove payment
-          updatePaymentCache(participantId, columnType, 0, false, trainerIndex);
+        // Update UI immediately using cache
+        await updateParticipantTotalsFast(campId, participantId);
+        if (typeof updateSummariesFast === 'function') await updateSummariesFast();
+        await updateFinancialSummary();
+        if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
+        await updateCampStatus(campId);
 
-          // Update UI after successful removal using cache (much faster)
-          try {
-            await updateParticipantTotalsFast(campId, participantId);
-            if (typeof updateSummariesFast === 'function') await updateSummariesFast();
-            if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
-            await updateCampStatus(campId);
-          } catch (uiErr) {
-            console.error('Error updating UI after removePayment:', uiErr);
-          }
+        // Add visual feedback - highlight the remove button briefly
+        const button = document.querySelector(`button[data-camp-id="${campId}"][data-participant-id="${participantId}"][data-column-type="${columnType}"]${trainerIndex !== null ? `[data-trainer-index="${trainerIndex}"]` : ''}.remove-payment-btn`);
+        if (button) {
+          const originalColor = button.style.backgroundColor;
+          button.style.backgroundColor = '#dc3545'; // Red
+          button.innerHTML = '<i class="fas fa-trash"></i>';
+          setTimeout(() => {
+            button.style.backgroundColor = originalColor;
+            button.innerHTML = '<i class="fas fa-times"></i>';
+          }, 1000);
         }
+
+        // Clear the input field
+        const input = document.querySelector(`input[data-camp-id="${campId}"][data-participant-id="${participantId}"][data-column-type="${columnType}"]${trainerIndex !== null ? `[data-trainer-index="${trainerIndex}"]` : ''}`);
+        if (input) {
+          input.value = '';
+          input.style.backgroundColor = '#f8d7da'; // Light red
+          setTimeout(() => {
+            input.style.backgroundColor = '';
+          }, 500);
+        }
+
+        // BACKGROUND REMOVAL - Remove from database without blocking UI
+        setTimeout(async () => {
+          try {
+            let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
+
+            const { error } = await supabase
+              .from(tableName)
+              .delete()
+              .eq('camp_id', campId)
+              .eq('participant_id', participantId)
+              .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : campId);
+
+            if (error) {
+              console.error('Background removal error:', error);
+              // Could add error feedback here if needed
+            } else {
+              console.log('Background removal successful');
+            }
+          } catch (err) {
+            console.error('Background removal failed:', err);
+          }
+        }, 100); // Small delay to ensure UI updates first
+
       } catch (err) {
         console.error('Error in removePayment:', err);
       }
