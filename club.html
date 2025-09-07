@@ -4773,11 +4773,11 @@
         }
       }
 
-      // Create table row HTML
+      // Create table row HTML - ensure proper structure with all necessary classes
       let rowHtml = `
         <tr data-participant-id="${participant.id}">
-          <td class="participant-name">${participant.name}</td>
-          <td class="payment-cell">
+          <td class="participant-name" style="width: 200px; text-align: left;">${participant.name}</td>
+          <td class="payment-cell" style="width: 120px;">
             <input type="text" class="payment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" data-column-type="camp" placeholder="0.00" value="">
             <button class="confirm-payment-btn" data-camp-id="${camp.id}" data-participant-id="${participant.id}" data-column-type="camp" style="display: none;" title="Potwierdź płatność">
               <i class="fas fa-check-circle"></i>
@@ -4787,12 +4787,12 @@
             </button>
           </td>`;
 
-      // Add trainer columns
+      // Add trainer columns - match the exact same logic as createCampDetailsTable
       if (camp.trainers && camp.trainers.length > 0) {
         camp.trainers.forEach((trainer, index) => {
-          if (trainer) {
+          if (trainer) { // Only add if trainer exists at this index - SAME AS createCampDetailsTable
             rowHtml += `
-              <td class="payment-cell">
+              <td class="payment-cell" style="width: 120px;">
                 <input type="text" class="payment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" data-column-type="trainer" data-trainer-index="${index}" placeholder="0.00" value="">
                 <button class="confirm-payment-btn" data-camp-id="${camp.id}" data-participant-id="${participant.id}" data-column-type="trainer" data-trainer-index="${index}" style="display: none;" title="Potwierdź płatność">
                   <i class="fas fa-check-circle"></i>
@@ -4807,10 +4807,10 @@
 
       // Add attention, comment, and total columns
       rowHtml += `
-          <td class="attention-cell">
+          <td class="attention-cell" style="width: 50px;">
             <input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}">
           </td>
-          <td class="comment-cell">
+          <td class="comment-cell" style="width: 150px;">
             <input type="text" class="comment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" placeholder="Komentarz..." value="">
           </td>`;
 
@@ -4819,10 +4819,10 @@
       const hasEURPayments = camp.currency === 'EUR' || (camp.trainers && camp.trainers.some(t => t.currency === 'EUR'));
 
       if (hasPLNPayments) {
-        rowHtml += `<td class="total-cell total-pln">0.00</td>`;
+        rowHtml += `<td class="total-cell total-pln" style="width: 80px;">0.00</td>`;
       }
       if (hasEURPayments) {
-        rowHtml += `<td class="total-cell total-eur">0.00</td>`;
+        rowHtml += `<td class="total-cell total-eur" style="width: 80px;">0.00</td>`;
       }
 
       rowHtml += `</tr>`;
@@ -4830,16 +4830,35 @@
       // Add row to table
       tbody.insertAdjacentHTML('beforeend', rowHtml);
 
-      // Setup event listeners for the new row
-      setupPaymentEventListenersForRow(participant.id);
+      // Verify the row was added correctly
+      const addedRow = tbody.querySelector(`tr[data-participant-id="${participant.id}"]`);
+      if (addedRow) {
+        const cells = addedRow.querySelectorAll('td');
+        const inputs = addedRow.querySelectorAll('input');
+        const buttons = addedRow.querySelectorAll('button');
 
-      console.log('[ADD-ROW] Row added successfully for participant:', participant.name);
+        console.log(`[ADD-ROW] Row added successfully for participant: ${participant.name}`);
+        console.log(`[ADD-ROW] Cells: ${cells.length}, Inputs: ${inputs.length}, Buttons: ${buttons.length}`);
+
+        // Log details about each cell for debugging
+        cells.forEach((cell, index) => {
+          console.log(`[ADD-ROW] Cell ${index}: class="${cell.className}"`);
+        });
+
+        // Setup event listeners for the new row
+        setupPaymentEventListenersForRow(participant.id);
+      } else {
+        console.error('[ADD-ROW] Failed to add row for participant:', participant.name);
+      }
     }
 
     // Setup payment event listeners for a specific participant row
     function setupPaymentEventListenersForRow(participantId) {
+      console.log(`[SETUP-EVENTS] Setting up events for participant: ${participantId}`);
+
       // Payment input handlers
       document.querySelectorAll(`input[data-participant-id="${participantId}"].payment-input`).forEach(input => {
+        console.log(`[SETUP-EVENTS] Adding input event for: ${input.getAttribute('data-column-type')}`);
         input.addEventListener('input', async (e) => {
           await handlePaymentInput(e.target);
         });
@@ -4847,6 +4866,7 @@
 
       // Confirm payment button handlers
       document.querySelectorAll(`button[data-participant-id="${participantId}"].confirm-payment-btn`).forEach(button => {
+        console.log(`[SETUP-EVENTS] Adding confirm button event`);
         button.addEventListener('click', async (e) => {
           await handleConfirmPayment(e.target);
         });
@@ -4854,6 +4874,7 @@
 
       // Remove payment button handlers
       document.querySelectorAll(`button[data-participant-id="${participantId}"].remove-payment-btn`).forEach(button => {
+        console.log(`[SETUP-EVENTS] Adding remove button event`);
         button.addEventListener('click', async (e) => {
           await handleRemovePayment(e.target);
         });
