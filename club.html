@@ -3636,8 +3636,8 @@
         confirmBtn.style.display = '';
         removeBtn.style.display = 'none';
 
-        // Save payment temporarily
-        await savePayment(campId, participantId, columnType, value, trainerIndex);
+        // Save payment instantly
+        savePayment(campId, participantId, columnType, value, trainerIndex);
       } else {
         // No value - hide both buttons, remove styling
         input.classList.remove('unconfirmed', 'confirmed');
@@ -3645,20 +3645,16 @@
         confirmBtn.style.display = 'none';
         removeBtn.style.display = 'none';
 
-        // Remove payment from storage
-        await removePayment(campId, participantId, columnType, trainerIndex);
+        // Remove payment instantly
+        removePayment(campId, participantId, columnType, trainerIndex);
       }
 
-      // ULTRA FAST UI UPDATES - Execute all updates in parallel for maximum speed
-      const uiUpdates = [
-        updateRowStyling(participantId),
-        updateParticipantTotalsFast(campId, participantId),
-        updateSummariesFast(),
-        updateFinancialSummary(),
-        updateCampStatus(campId)
-      ];
-
-      await Promise.all(uiUpdates);
+      // ULTRA FAST UI UPDATES - Execute all updates instantly
+      updateRowStyling(participantId);
+      updateParticipantTotalsFast(campId, participantId);
+      updateSummariesFast();
+      updateFinancialSummary();
+      updateCampStatus(campId);
     }
 
     async function handleConfirmPayment(button) {
@@ -3676,10 +3672,7 @@
       const confirmBtn = paymentCell.querySelector('.confirm-payment-btn');
       const removeBtn = paymentCell.querySelector('.remove-payment-btn');
 
-      // Mark as confirmed (this already updates UI and cache)
-      await confirmPayment(campId, participantId, columnType, trainerIndex);
-
-      // Update UI immediately (confirmPayment may still be running)
+      // INSTANT UI UPDATE - No waiting, immediate visual feedback
       input.classList.remove('unconfirmed');
       input.classList.add('confirmed');
       cell.classList.remove('unconfirmed');
@@ -3687,8 +3680,9 @@
       confirmBtn.style.display = 'none';
       removeBtn.style.display = '';
 
-      // Additional UI updates if needed (but confirmPayment already handles most)
-      await updateRowStyling(participantId);
+      // Background confirmation (UI already updated instantly)
+      // Don't await - let it run in background
+      confirmPayment(campId, participantId, columnType, trainerIndex);
     }
 
     async function handleRemovePayment(button) {
@@ -3706,18 +3700,16 @@
       const confirmBtn = paymentCell.querySelector('.confirm-payment-btn');
       const removeBtn = paymentCell.querySelector('.remove-payment-btn');
 
-      // Remove payment from storage (this already updates UI and cache)
-      await removePayment(campId, participantId, columnType, trainerIndex);
-
-      // Clear the input completely
+      // INSTANT UI UPDATE - No waiting, immediate visual feedback
       input.value = '';
       input.classList.remove('unconfirmed', 'confirmed');
       cell.classList.remove('unconfirmed', 'confirmed');
       confirmBtn.style.display = 'none';
       removeBtn.style.display = 'none';
 
-      // Additional UI updates if needed (but removePayment already handles most)
-      await updateRowStyling(participantId);
+      // Background removal (UI already updated instantly)
+      // Don't await - let it run in background
+      removePayment(campId, participantId, columnType, trainerIndex);
     }
 
     async function updateRowStyling(participantId) {
@@ -4126,7 +4118,7 @@
       }
     }
 
-    async function savePayment(campId, participantId, columnType, amount, trainerIndex = null) {
+    function savePayment(campId, participantId, columnType, amount, trainerIndex = null) {
       try {
         // INSTANT UI UPDATE - No spinner, immediate feedback
         let cleanAmount = amount.toString().trim().replace(',', '.');
@@ -4144,11 +4136,11 @@
         updatePaymentCache(participantId, columnType, numericAmount, false, trainerIndex);
 
         // Update UI immediately using cache
-        await updateParticipantTotalsFast(campId, participantId);
-        if (typeof updateSummariesFast === 'function') await updateSummariesFast();
-        await updateFinancialSummary();
-        if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
-        await updateCampStatus(campId);
+        updateParticipantTotalsFast(campId, participantId);
+        if (typeof updateSummariesFast === 'function') updateSummariesFast();
+        updateFinancialSummary();
+        if (typeof updateRowStyling === 'function') updateRowStyling(participantId);
+        updateCampStatus(campId);
 
         // Add visual feedback - highlight the input briefly
         const input = document.querySelector(`input[data-camp-id="${campId}"][data-participant-id="${participantId}"][data-column-type="${columnType}"]${trainerIndex !== null ? `[data-trainer-index="${trainerIndex}"]` : ''}`);
@@ -4160,7 +4152,7 @@
         }
 
         // BACKGROUND SAVING - Save to database without blocking UI
-        setTimeout(async () => {
+        setTimeout(() => {
           try {
             const paymentData = {
               camp_id: campId,
@@ -4184,18 +4176,21 @@
             let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
             const onConflict = columnType === 'camp' ? ['camp_id', 'participant_id'] : ['camp_id', 'participant_id', 'trainer_index'];
 
-            const { error: upsertError } = await supabase
+            supabase
               .from(tableName)
-              .upsert(paymentData, { onConflict });
-
-            if (upsertError) {
-              console.error('Background save error:', upsertError);
-              // Could add error feedback here if needed
-            } else {
-              console.log('Background save successful');
-            }
+              .upsert(paymentData, { onConflict })
+              .then(({ error: upsertError }) => {
+                if (upsertError) {
+                  console.error('Background save error:', upsertError);
+                } else {
+                  console.log('Background save successful');
+                }
+              })
+              .catch(err => {
+                console.error('Background save failed:', err);
+              });
           } catch (err) {
-            console.error('Background save failed:', err);
+            console.error('Background save setup failed:', err);
           }
         }, 100); // Small delay to ensure UI updates first
 
@@ -4204,7 +4199,7 @@
       }
     }
 
-    async function confirmPayment(campId, participantId, columnType, trainerIndex = null) {
+    function confirmPayment(campId, participantId, columnType, trainerIndex = null) {
       try {
         // INSTANT UI UPDATE - No spinner, immediate feedback
         const currentPayment = getCachedPayment(participantId, columnType, trainerIndex);
@@ -4213,11 +4208,11 @@
         updatePaymentCache(participantId, columnType, currentPayment.amount, true, trainerIndex);
 
         // Update UI immediately using cache
-        await updateParticipantTotalsFast(campId, participantId);
-        if (typeof updateSummariesFast === 'function') await updateSummariesFast();
-        await updateFinancialSummary();
-        if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
-        await updateCampStatus(campId);
+        updateParticipantTotalsFast(campId, participantId);
+        if (typeof updateSummariesFast === 'function') updateSummariesFast();
+        updateFinancialSummary();
+        if (typeof updateRowStyling === 'function') updateRowStyling(participantId);
+        updateCampStatus(campId);
 
         // Add visual feedback - highlight the button briefly
         const button = document.querySelector(`button[data-camp-id="${campId}"][data-participant-id="${participantId}"][data-column-type="${columnType}"]${trainerIndex !== null ? `[data-trainer-index="${trainerIndex}"]` : ''}.confirm-payment-btn`);
@@ -4232,7 +4227,7 @@
         }
 
         // BACKGROUND CONFIRMATION - Confirm in database without blocking UI
-        setTimeout(async () => {
+        setTimeout(() => {
           try {
             let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
             const updateData = {
@@ -4240,21 +4235,24 @@
               updated_at: new Date().toISOString()
             };
 
-            const { error } = await supabase
+            supabase
               .from(tableName)
               .update(updateData)
               .eq('camp_id', campId)
               .eq('participant_id', participantId)
-              .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : campId);
-
-            if (error) {
-              console.error('Background confirmation error:', error);
-              // Could add error feedback here if needed
-            } else {
-              console.log('Background confirmation successful');
-            }
+              .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : campId)
+              .then(({ error }) => {
+                if (error) {
+                  console.error('Background confirmation error:', error);
+                } else {
+                  console.log('Background confirmation successful');
+                }
+              })
+              .catch(err => {
+                console.error('Background confirmation failed:', err);
+              });
           } catch (err) {
-            console.error('Background confirmation failed:', err);
+            console.error('Background confirmation setup failed:', err);
           }
         }, 100); // Small delay to ensure UI updates first
 
@@ -4263,7 +4261,7 @@
       }
     }
 
-    async function removePayment(campId, participantId, columnType, trainerIndex = null) {
+    function removePayment(campId, participantId, columnType, trainerIndex = null) {
       try {
         // INSTANT UI UPDATE - No spinner, immediate feedback
 
@@ -4271,11 +4269,11 @@
         updatePaymentCache(participantId, columnType, 0, false, trainerIndex);
 
         // Update UI immediately using cache
-        await updateParticipantTotalsFast(campId, participantId);
-        if (typeof updateSummariesFast === 'function') await updateSummariesFast();
-        await updateFinancialSummary();
-        if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
-        await updateCampStatus(campId);
+        updateParticipantTotalsFast(campId, participantId);
+        if (typeof updateSummariesFast === 'function') updateSummariesFast();
+        updateFinancialSummary();
+        if (typeof updateRowStyling === 'function') updateRowStyling(participantId);
+        updateCampStatus(campId);
 
         // Add visual feedback - highlight the remove button briefly
         const button = document.querySelector(`button[data-camp-id="${campId}"][data-participant-id="${participantId}"][data-column-type="${columnType}"]${trainerIndex !== null ? `[data-trainer-index="${trainerIndex}"]` : ''}.remove-payment-btn`);
@@ -4300,25 +4298,28 @@
         }
 
         // BACKGROUND REMOVAL - Remove from database without blocking UI
-        setTimeout(async () => {
+        setTimeout(() => {
           try {
             let tableName = columnType === 'camp' ? 'camp_payments' : 'trainer_payments';
 
-            const { error } = await supabase
+            supabase
               .from(tableName)
               .delete()
               .eq('camp_id', campId)
               .eq('participant_id', participantId)
-              .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : campId);
-
-            if (error) {
-              console.error('Background removal error:', error);
-              // Could add error feedback here if needed
-            } else {
-              console.log('Background removal successful');
-            }
+              .eq(columnType === 'trainer' ? 'trainer_index' : 'camp_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : campId)
+              .then(({ error }) => {
+                if (error) {
+                  console.error('Background removal error:', error);
+                } else {
+                  console.log('Background removal successful');
+                }
+              })
+              .catch(err => {
+                console.error('Background removal failed:', err);
+              });
           } catch (err) {
-            console.error('Background removal failed:', err);
+            console.error('Background removal setup failed:', err);
           }
         }, 100); // Small delay to ensure UI updates first
 
