@@ -2040,11 +2040,18 @@
       const camp = window.currentCamp;
       const participants = window.currentParticipants;
 
-      if (!camp || !participants) return;
+      if (!camp || !participants) {
+        console.log('[UPDATE-FINANCIAL-SUMMARY] Missing camp or participants');
+        return;
+      }
 
       const summaryCurrencies = document.getElementById('summary-currencies');
       if (summaryCurrencies) {
+        console.log('[UPDATE-FINANCIAL-SUMMARY] Updating financial summary...');
         summaryCurrencies.innerHTML = await createFinancialSummaryHTML(camp, participants);
+        console.log('[UPDATE-FINANCIAL-SUMMARY] Financial summary updated');
+      } else {
+        console.error('[UPDATE-FINANCIAL-SUMMARY] summary-currencies element not found');
       }
     }
 
@@ -2065,19 +2072,18 @@
         const participantId = participant.id;
         console.log(`[STATUS-CHECK] Checking ${participant.name} (${participantId})`);
 
-        // Check camp payment status
-        const campPayment = await getSavedPayment(camp.id, participantId, 'camp');
-        const campConfirmed = await getPaymentStatus(camp.id, participantId, 'camp');
+        // Check camp payment status using cache
+        const campPayment = getCachedPayment(participantId, 'camp');
 
-        console.log(`[STATUS-CHECK] ${participant.name}: campPayment="${campPayment}", campConfirmed=${campConfirmed}`);
+        console.log(`[STATUS-CHECK] ${participant.name}: campPayment=${campPayment.amount}, campConfirmed=${campPayment.confirmed}`);
 
-        // Consider payment as existing if it's not empty and not zero
-        const hasValidPayment = campPayment && campPayment !== '' && campPayment !== '0' && campPayment !== '0.00';
+        // Consider payment as existing if amount > 0
+        const hasValidPayment = campPayment.amount > 0;
         console.log(`[STATUS-CHECK] ${participant.name}: hasValidPayment=${hasValidPayment}`);
 
         if (hasValidPayment) {
           hasAnyPayments = true;
-          if (!campConfirmed) {
+          if (!campPayment.confirmed) {
             hasUnconfirmedPayments = true;
             console.log(`[STATUS-CHECK] ${participant.name}: Found unconfirmed payment - setting RED status`);
           }
@@ -2087,13 +2093,12 @@
         if (camp.trainers && camp.trainers.length > 0) {
           for (const [trainerIndex, trainer] of camp.trainers.entries()) {
             if (trainer) { // Only check if trainer exists at this index
-              const trainerPayment = await getSavedPayment(camp.id, participantId, 'trainer', trainerIndex);
-              const trainerConfirmed = await getPaymentStatus(camp.id, participantId, 'trainer', trainerIndex);
+              const trainerPayment = getCachedPayment(participantId, 'trainer', trainerIndex);
 
-              const hasValidTrainerPayment = trainerPayment && trainerPayment !== '' && trainerPayment !== '0' && trainerPayment !== '0.00';
+              const hasValidTrainerPayment = trainerPayment.amount > 0;
               if (hasValidTrainerPayment) {
                 hasAnyPayments = true;
-                if (!trainerConfirmed) {
+                if (!trainerPayment.confirmed) {
                   hasUnconfirmedPayments = true;
                   console.log(`[STATUS-CHECK] ${participant.name}: Found unconfirmed trainer payment - setting RED status`);
                 }
@@ -2249,6 +2254,8 @@
     // Initialize payment cache for current camp
     async function initializePaymentCache(campId, participants) {
       console.log('[CACHE] Initializing payment cache for camp:', campId);
+      // Clear cache first to ensure clean state
+      clearPaymentCache();
       paymentCache = { camp: {}, trainer: {} };
 
       const participantIds = participants.map(p => p.id);
@@ -2734,11 +2741,14 @@
         // Cache participants for later use
         window.currentParticipants = allParticipants;
 
-        // Initialize payment cache for fast access
+        // Initialize payment cache for fast access BEFORE creating table
+        console.log('[CAMP-DETAILS] Initializing payment cache...');
         await initializePaymentCache(camp.id, allParticipants);
+        console.log('[CAMP-DETAILS] Payment cache initialized, participants cached');
 
         const detailsContent = document.getElementById('camp-details-content');
         detailsContent.innerHTML = await createCampDetailsTable(camp, allParticipants);
+        console.log('[CAMP-DETAILS] Camp details table created');
 
         // Setup participant search
         setupParticipantSearch();
@@ -2756,7 +2766,16 @@
           // createFinancialSummaryHTML returns a Promise
           summaryCurrencies.innerHTML = await createFinancialSummaryHTML(camp, allParticipants);
           financialSummary.style.display = 'block';
+          console.log('[CAMP-DETAILS] Financial summary displayed');
+        } else {
+          console.error('[CAMP-DETAILS] Financial summary elements not found:', {
+            financialSummary: !!financialSummary,
+            summaryCurrencies: !!summaryCurrencies
+          });
         }
+
+        // Ensure financial summary is updated with latest data
+        await updateFinancialSummary();
 
         // Set currency data for payment inputs and calculate totals immediately
           document.querySelectorAll('.payment-input').forEach(input => {
@@ -2779,13 +2798,21 @@
           });
 
         // Calculate UI totals for every participant immediately using cache
-          const participantsToUpdate = window.currentParticipants || [];
-          for (const p of participantsToUpdate) {
-            await updateParticipantTotalsFast(camp.id, p.id);
-          }
+        console.log('[CAMP-DETAILS] Calculating participant totals...');
+        const participantsToUpdate = window.currentParticipants || [];
+        for (const p of participantsToUpdate) {
+          await updateParticipantTotalsFast(camp.id, p.id);
+        }
+        console.log('[CAMP-DETAILS] Participant totals calculated');
 
         // Update summaries immediately using cache
-          if (typeof updateSummariesFast === 'function') await updateSummariesFast();
+        console.log('[CAMP-DETAILS] Updating summaries...');
+        if (typeof updateSummariesFast === 'function') {
+          await updateSummariesFast();
+          console.log('[CAMP-DETAILS] Summaries updated');
+        } else {
+          console.error('[CAMP-DETAILS] updateSummariesFast function not found');
+        }
 
         // Camp statuses are updated globally when members data is loaded
 
@@ -2807,37 +2834,35 @@
       let totalAmount = 0; // Wszystkie kwoty (potwierdzone + niepotwierdzone)
       let paidAmount = 0;  // Tylko potwierdzone kwoty
 
-      // Calculate camp payments
+      // Calculate camp payments using cache (much faster!)
       for (const participant of participants) {
-        const campPayment = parseFloat(await getSavedPayment(camp.id, participant.id, 'camp')) || 0;
-        const campConfirmed = await getPaymentStatus(camp.id, participant.id, 'camp');
+        const campPayment = getCachedPayment(participant.id, 'camp');
 
         if (camp.currency === currency) {
-          totalAmount += campPayment;
-          if (campConfirmed) {
-            paidAmount += campPayment;
+          totalAmount += campPayment.amount;
+          if (campPayment.confirmed) {
+            paidAmount += campPayment.amount;
           }
         }
       }
 
-      // Calculate trainer payments
+      // Calculate trainer payments using cache (much faster!)
       if (camp.trainers && camp.trainers.length > 0) {
         for (const [trainerIndex, trainer] of camp.trainers.entries()) {
           if (trainer.currency === currency) {
             for (const participant of participants) {
-              const trainerPayment = parseFloat(await getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
-              const trainerConfirmed = await getPaymentStatus(camp.id, participant.id, 'trainer', trainerIndex);
+              const trainerPayment = getCachedPayment(participant.id, 'trainer', trainerIndex);
 
-              totalAmount += trainerPayment;
-              if (trainerConfirmed) {
-                paidAmount += trainerPayment;
+              totalAmount += trainerPayment.amount;
+              if (trainerPayment.confirmed) {
+                paidAmount += trainerPayment.amount;
               }
             }
           }
         }
       }
 
-      // Calculate expenses and profit
+      // Calculate expenses and profit (this still needs database query)
       const totalExpenses = await getTotalExpenses(camp.id, currency);
       const profit = paidAmount - totalExpenses;
 
@@ -3633,10 +3658,10 @@
       const confirmBtn = paymentCell.querySelector('.confirm-payment-btn');
       const removeBtn = paymentCell.querySelector('.remove-payment-btn');
 
-      // Mark as confirmed
+      // Mark as confirmed (this already updates UI and cache)
       await confirmPayment(campId, participantId, columnType, trainerIndex);
 
-      // Update UI
+      // Update UI immediately (confirmPayment may still be running)
       input.classList.remove('unconfirmed');
       input.classList.add('confirmed');
       cell.classList.remove('unconfirmed');
@@ -3644,12 +3669,8 @@
       confirmBtn.style.display = 'none';
       removeBtn.style.display = '';
 
-      // Update row styling and summaries immediately for real-time updates using cache
+      // Additional UI updates if needed (but confirmPayment already handles most)
       await updateRowStyling(participantId);
-      await updateParticipantTotalsFast(campId, participantId);
-      await updateSummariesFast();
-      await updateFinancialSummary();
-      await updateCampStatus(campId);
     }
 
     async function handleRemovePayment(button) {
@@ -3667,7 +3688,7 @@
       const confirmBtn = paymentCell.querySelector('.confirm-payment-btn');
       const removeBtn = paymentCell.querySelector('.remove-payment-btn');
 
-      // Remove payment from storage
+      // Remove payment from storage (this already updates UI and cache)
       await removePayment(campId, participantId, columnType, trainerIndex);
 
       // Clear the input completely
@@ -3677,12 +3698,8 @@
       confirmBtn.style.display = 'none';
       removeBtn.style.display = 'none';
 
-      // Update row styling and summaries immediately for real-time updates using cache
+      // Additional UI updates if needed (but removePayment already handles most)
       await updateRowStyling(participantId);
-      await updateParticipantTotalsFast(campId, participantId);
-      await updateSummariesFast();
-      await updateFinancialSummary();
-      await updateCampStatus(campId);
     }
 
     async function updateRowStyling(participantId) {
@@ -3709,15 +3726,14 @@
         'payment-confirmed-trainer'
       );
 
-      // Determine new row classes based on current payment status
-      const campPayment = await getSavedPayment(currentCamp.id, participantId, 'camp');
-      const campConfirmed = await getPaymentStatus(currentCamp.id, participantId, 'camp');
+      // Determine new row classes based on current payment status using cache
+      const campPayment = getCachedPayment(participantId, 'camp');
 
       let rowClasses = '';
 
-      if (campPayment && campConfirmed) {
+      if (campPayment.amount > 0 && campPayment.confirmed) {
         rowClasses += ' payment-confirmed-camp';
-      } else if (campPayment && !campConfirmed) {
+      } else if (campPayment.amount > 0 && !campPayment.confirmed) {
         rowClasses += ' payment-unconfirmed-camp';
       }
 
@@ -3728,12 +3744,11 @@
 
         for (const [trainerIndex, trainer] of currentCamp.trainers.entries()) {
           if (trainer) { // Only check if trainer exists at this index
-            const trainerPayment = await getSavedPayment(currentCamp.id, participantId, 'trainer', trainerIndex);
-            const trainerConfirmed = await getPaymentStatus(currentCamp.id, participantId, 'trainer', trainerIndex);
+            const trainerPayment = getCachedPayment(participantId, 'trainer', trainerIndex);
 
-            if (trainerPayment && trainerConfirmed) {
+            if (trainerPayment.amount > 0 && trainerPayment.confirmed) {
               hasConfirmedTrainer = true;
-            } else if (trainerPayment && !trainerConfirmed) {
+            } else if (trainerPayment.amount > 0 && !trainerPayment.confirmed) {
               hasUnconfirmedTrainer = true;
             }
           }
@@ -4154,7 +4169,9 @@
             // Refresh participant totals and summaries
             await updateParticipantTotalsFast(campId, participantId);
             if (typeof updateSummariesFast === 'function') await updateSummariesFast();
+            await updateFinancialSummary(); // Also update financial summary
             if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
+            await updateCampStatus(campId);
           } catch (uiErr) {
             console.error('Error updating UI after savePayment:', uiErr);
           }
