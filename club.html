@@ -2328,10 +2328,8 @@
           campsList.appendChild(campCard);
         }
 
-        // Update camp statuses asynchronously (doesn't block rendering)
-        setTimeout(() => {
-          updateCampStatuses(camps, participantsByCamp);
-        }, 100);
+        // Calculate and apply camp statuses immediately to show colors on first load
+        await updateCampStatuses(camps, participantsByCamp);
 
         // Camp statuses will be updated when member data is loaded in showCampDetails()
 
@@ -2652,35 +2650,34 @@
           financialSummary.style.display = 'block';
         }
 
-        // After rendering table and summary, ensure payment inputs have currency data and recalc totals
-        setTimeout(async () => {
-          document.querySelectorAll('.payment-input').forEach(input => {
-            if (!input.dataset.currency) {
-              const tableType = input.getAttribute('data-column-type');
+        // Set currency data for payment inputs and calculate totals immediately
+        document.querySelectorAll('.payment-input').forEach(input => {
+          if (!input.dataset.currency) {
+            const tableType = input.getAttribute('data-column-type');
 
-              if (tableType === 'camp' && window.currentCamp) {
-                input.dataset.currency = window.currentCamp.currency || 'PLN';
-              } else if (tableType === 'trainer') {
-                const idxStr = input.getAttribute('data-trainer-index');
-                const idx = parseInt(idxStr, 10);
+            if (tableType === 'camp' && window.currentCamp) {
+              input.dataset.currency = window.currentCamp.currency || 'PLN';
+            } else if (tableType === 'trainer') {
+              const idxStr = input.getAttribute('data-trainer-index');
+              const idx = parseInt(idxStr, 10);
 
-                if (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[idx]) {
-                  input.dataset.currency = window.currentCamp.trainers[idx].currency || 'PLN';
-                } else {
-                  input.dataset.currency = 'PLN';
-                }
+              if (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[idx]) {
+                input.dataset.currency = window.currentCamp.trainers[idx].currency || 'PLN';
+              } else {
+                input.dataset.currency = 'PLN';
               }
             }
-          });
-
-          // recalc UI totals for every participant
-          const participantsToUpdate = window.currentParticipants || [];
-          for (const p of participantsToUpdate) {
-            await updateParticipantTotals(camp.id, p.id);
           }
+        });
 
-          if (typeof updateSummaries === 'function') await updateSummaries();
-        }, 50);
+        // Calculate UI totals for every participant immediately
+        const participantsToUpdate = window.currentParticipants || [];
+        for (const p of participantsToUpdate) {
+          await updateParticipantTotals(camp.id, p.id);
+        }
+
+        // Update summaries immediately
+        if (typeof updateSummaries === 'function') await updateSummaries();
 
         // Camp statuses are updated globally when members data is loaded
 
@@ -2877,72 +2874,115 @@
           <tbody>
       `;
 
-      // Load all attention and payment data for participants
+      // Batch load all attention data for all participants
+      const participantIds = participants.map(p => p.id);
+      let attentionData = {};
+      try {
+        const { data, error } = await supabase
+          .from('participant_attention')
+          .select('participant_id, has_attention')
+          .eq('camp_id', camp.id)
+          .in('participant_id', participantIds);
+
+        if (!error && data) {
+          data.forEach(item => {
+            attentionData[item.participant_id] = item.has_attention;
+          });
+        }
+      } catch (err) {
+        console.error('Error loading attention data:', err);
+      }
+
+      // Batch load all comment data for all participants
+      let commentData = {};
+      try {
+        const { data, error } = await supabase
+          .from('participant_comments')
+          .select('participant_id, comment')
+          .eq('camp_id', camp.id)
+          .in('participant_id', participantIds);
+
+        if (!error && data) {
+          data.forEach(item => {
+            commentData[item.participant_id] = item.comment;
+          });
+        }
+      } catch (err) {
+        console.error('Error loading comment data:', err);
+      }
+
+      // Batch load all camp payment data
+      let campPaymentData = {};
+      let campConfirmedData = {};
+      try {
+        const { data, error } = await supabase
+          .from('camp_payments')
+          .select('participant_id, amount, confirmed')
+          .eq('camp_id', camp.id)
+          .in('participant_id', participantIds);
+
+        if (!error && data) {
+          data.forEach(item => {
+            campPaymentData[item.participant_id] = item.amount?.toString() || '';
+            campConfirmedData[item.participant_id] = item.confirmed || false;
+          });
+        }
+      } catch (err) {
+        console.error('Error loading camp payment data:', err);
+      }
+
+      // Batch load all trainer payment data
+      let trainerPaymentData = {};
+      let trainerConfirmedData = {};
+      if (camp.trainers && camp.trainers.length > 0) {
+        for (const [index, trainer] of camp.trainers.entries()) {
+          if (trainer) {
+            try {
+              const { data, error } = await supabase
+                .from('trainer_payments')
+                .select('participant_id, amount, confirmed')
+                .eq('camp_id', camp.id)
+                .eq('trainer_index', index)
+                .in('participant_id', participantIds);
+
+              if (!error && data) {
+                data.forEach(item => {
+                  if (!trainerPaymentData[item.participant_id]) {
+                    trainerPaymentData[item.participant_id] = {};
+                    trainerConfirmedData[item.participant_id] = {};
+                  }
+                  trainerPaymentData[item.participant_id][index] = item.amount?.toString() || '';
+                  trainerConfirmedData[item.participant_id][index] = item.confirmed || false;
+                });
+              }
+            } catch (err) {
+              console.error(`Error loading trainer ${index} payment data:`, err);
+            }
+          }
+        }
+      }
+
+      // Process participants with batched data
       const dataPromises = participants.map(async participant => {
-        // Load attention
-        let hasAttention = false;
-        try {
-          const { data, error } = await supabase
-            .from('participant_attention')
-            .select('has_attention')
-            .eq('camp_id', camp.id)
-            .eq('participant_id', participant.id)
-            .maybeSingle();
+        const participantId = participant.id;
 
-          hasAttention = !error && data ? data.has_attention : false;
-        } catch (err) {
-          console.error('Error loading attention for participant:', participant.name, err);
-        }
+        // Get data from batched results
+        const hasAttention = attentionData[participantId] || false;
+        const comment = commentData[participantId] || '';
+        const campPayment = campPaymentData[participantId] || '';
+        const campConfirmed = campConfirmedData[participantId] || false;
 
-        // Load comment
-        let comment = '';
-        try {
-          const { data, error } = await supabase
-            .from('participant_comments')
-            .select('comment')
-            .eq('camp_id', camp.id)
-            .eq('participant_id', participant.id)
-            .maybeSingle();
-
-          comment = !error && data ? data.comment : '';
-        } catch (err) {
-          console.error('Error loading comment for participant:', participant.name, err);
-        }
-
-        // Load camp payment
-        let campPayment = '';
-        let campConfirmed = false;
-        try {
-          const paymentResult = await getSavedPayment(camp.id, participant.id, 'camp');
-          const statusResult = await getPaymentStatus(camp.id, participant.id, 'camp');
-          campPayment = paymentResult;
-          campConfirmed = statusResult;
-        } catch (err) {
-          console.error('Error loading camp payment for participant:', participant.name, err);
-        }
-
-        // Load trainer payments
-        console.log('[CREATE-CAMP-DETAILS-TABLE] Loading trainer payments for participant:', participant.name);
+        // Get trainer payments from batched results
         const trainerPayments = [];
         if (camp.trainers && camp.trainers.length > 0) {
-          console.log('[CREATE-CAMP-DETAILS-TABLE] Camp has trainers:', camp.trainers.length);
           for (const [index, trainer] of camp.trainers.entries()) {
-            console.log(`[CREATE-CAMP-DETAILS-TABLE] Processing trainer ${index}:`, trainer);
-            if (trainer) { // Only load if trainer exists at this index
-              try {
-                console.log(`[CREATE-CAMP-DETAILS-TABLE] Getting payment for trainer ${index}`);
-                console.log(`[CREATE-CAMP-DETAILS-TABLE] getSavedPayment function exists:`, typeof getSavedPayment);
-                const paymentResult = await getSavedPayment(camp.id, participant.id, 'trainer', index);
-                const statusResult = await getPaymentStatus(camp.id, participant.id, 'trainer', index);
-                console.log(`[CREATE-CAMP-DETAILS-TABLE] Payment result for trainer ${index}:`, paymentResult);
-                trainerPayments.push({
-                  amount: paymentResult,
-                  confirmed: statusResult
-                });
-              } catch (err) {
-                console.error('Error loading trainer payment for participant:', participant.name, 'trainer:', index, err);
-                trainerPayments.push({ amount: '', confirmed: false });
-              }
+            if (trainer) {
+              const payment = (trainerPaymentData[participantId] && trainerPaymentData[participantId][index]) || '';
+              const confirmed = (trainerConfirmedData[participantId] && trainerConfirmedData[participantId][index]) || false;
+              trainerPayments.push({
+                amount: payment,
+                confirmed: confirmed
+              });
             } else {
               trainerPayments.push({ amount: '', confirmed: false });
             }
@@ -3462,15 +3502,12 @@
         await removePayment(campId, participantId, columnType, trainerIndex);
       }
 
-      // Update row styling and summaries
+      // Update row styling and summaries immediately for real-time updates
       await updateRowStyling(participantId);
+      await updateParticipantTotals(campId, participantId);
       await updateSummaries();
-      // Use setTimeout to ensure DOM is updated before updating totals
-      setTimeout(async () => {
-        await updateParticipantTotals(campId, participantId);
-        await updateFinancialSummary();
-        await updateCampStatus(campId);
-      }, 10);
+      await updateFinancialSummary();
+      await updateCampStatus(campId);
     }
 
     async function handleConfirmPayment(button) {
@@ -3499,15 +3536,12 @@
       confirmBtn.style.display = 'none';
       removeBtn.style.display = '';
 
-      // Update row styling and summaries
+      // Update row styling and summaries immediately for real-time updates
       await updateRowStyling(participantId);
+      await updateParticipantTotals(campId, participantId);
       await updateSummaries();
-      // Use setTimeout to ensure DOM is updated before updating totals
-      setTimeout(async () => {
-        await updateParticipantTotals(campId, participantId);
-        await updateFinancialSummary();
-        await updateCampStatus(campId);
-      }, 10);
+      await updateFinancialSummary();
+      await updateCampStatus(campId);
     }
 
     async function handleRemovePayment(button) {
@@ -3535,15 +3569,12 @@
       confirmBtn.style.display = 'none';
       removeBtn.style.display = 'none';
 
-      // Update row styling and summaries
+      // Update row styling and summaries immediately for real-time updates
       await updateRowStyling(participantId);
+      await updateParticipantTotals(campId, participantId);
       await updateSummaries();
-      // Use setTimeout to ensure DOM is updated before updating totals
-      setTimeout(async () => {
-        await updateParticipantTotals(campId, participantId);
-        await updateFinancialSummary();
-        await updateCampStatus(campId);
-      }, 10);
+      await updateFinancialSummary();
+      await updateCampStatus(campId);
     }
 
     async function updateRowStyling(participantId) {
@@ -3882,7 +3913,8 @@
           return '';
         }
 
-        return data ? data.amount.toString() : '';
+        // Return the amount as stored in database (should be number), convert to string only if needed for display
+        return data ? (typeof data.amount === 'number' ? data.amount.toString() : data.amount) : '';
       } catch (err) {
         console.error('Error in getSavedPayment:', err);
         return '';
@@ -3928,10 +3960,28 @@
     async function savePayment(campId, participantId, columnType, amount, trainerIndex = null) {
       try {
         showGlobalLoader('Zapisuję płatność...');
+
+        // Ensure proper number handling - clean the input and convert to number
+        let cleanAmount = amount.toString().trim().replace(',', '.');
+
+        // Handle cases where amount might be empty or invalid
+        if (!cleanAmount || cleanAmount === '' || cleanAmount === '0') {
+          cleanAmount = 0;
+        }
+
+        const numericAmount = parseFloat(cleanAmount);
+
+        // Validate the amount is a valid number
+        if (isNaN(numericAmount)) {
+          console.error('Invalid amount provided:', amount);
+          hideGlobalLoader();
+          return;
+        }
+
         const paymentData = {
           camp_id: campId,
           participant_id: participantId,
-          amount: parseFloat(amount) || 0,
+          amount: numericAmount, // Store as number, not string
           confirmed: false,
           updated_at: new Date().toISOString()
         };
