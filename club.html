@@ -2238,6 +2238,111 @@
       console.log('[UPDATE-ALL-STATUSES] Finished updating all camp statuses');
     }
 
+    // ===========================================
+    // PAYMENT CACHE SYSTEM FOR PERFORMANCE
+    // ===========================================
+    let paymentCache = {
+      camp: {},      // {participantId: {amount: number, confirmed: boolean}}
+      trainer: {}    // {participantId: {trainerIndex: {amount: number, confirmed: boolean}}}
+    };
+
+    // Initialize payment cache for current camp
+    async function initializePaymentCache(campId, participants) {
+      console.log('[CACHE] Initializing payment cache for camp:', campId);
+      paymentCache = { camp: {}, trainer: {} };
+
+      const participantIds = participants.map(p => p.id);
+
+      // Load all camp payments at once
+      try {
+        const { data: campPayments, error: campError } = await supabase
+          .from('camp_payments')
+          .select('participant_id, amount, confirmed')
+          .eq('camp_id', campId)
+          .in('participant_id', participantIds);
+
+        if (!campError && campPayments) {
+          campPayments.forEach(payment => {
+            paymentCache.camp[payment.participant_id] = {
+              amount: parseFloat(payment.amount) || 0,
+              confirmed: payment.confirmed || false
+            };
+          });
+        }
+      } catch (err) {
+        console.error('[CACHE] Error loading camp payments:', err);
+      }
+
+      // Load all trainer payments at once
+      const camp = window.currentCamp;
+      if (camp && camp.trainers && camp.trainers.length > 0) {
+        for (const [index, trainer] of camp.trainers.entries()) {
+          if (trainer) {
+            try {
+              const { data: trainerPayments, error: trainerError } = await supabase
+                .from('trainer_payments')
+                .select('participant_id, amount, confirmed')
+                .eq('camp_id', campId)
+                .eq('trainer_index', index)
+                .in('participant_id', participantIds);
+
+              if (!trainerError && trainerPayments) {
+                trainerPayments.forEach(payment => {
+                  if (!paymentCache.trainer[payment.participant_id]) {
+                    paymentCache.trainer[payment.participant_id] = {};
+                  }
+                  paymentCache.trainer[payment.participant_id][index] = {
+                    amount: parseFloat(payment.amount) || 0,
+                    confirmed: payment.confirmed || false
+                  };
+                });
+              }
+            } catch (err) {
+              console.error(`[CACHE] Error loading trainer ${index} payments:`, err);
+            }
+          }
+        }
+      }
+
+      console.log('[CACHE] Payment cache initialized with', Object.keys(paymentCache.camp).length, 'camp payments');
+    }
+
+    // Update payment cache after saving
+    function updatePaymentCache(participantId, columnType, amount, confirmed, trainerIndex = null) {
+      if (columnType === 'camp') {
+        paymentCache.camp[participantId] = {
+          amount: parseFloat(amount) || 0,
+          confirmed: confirmed
+        };
+      } else if (columnType === 'trainer' && trainerIndex !== null) {
+        if (!paymentCache.trainer[participantId]) {
+          paymentCache.trainer[participantId] = {};
+        }
+        paymentCache.trainer[participantId][trainerIndex] = {
+          amount: parseFloat(amount) || 0,
+          confirmed: confirmed
+        };
+      }
+    }
+
+    // Get payment from cache
+    function getCachedPayment(participantId, columnType, trainerIndex = null) {
+      if (columnType === 'camp') {
+        return paymentCache.camp[participantId] || { amount: 0, confirmed: false };
+      } else if (columnType === 'trainer' && trainerIndex !== null) {
+        const trainerPayments = paymentCache.trainer[participantId];
+        if (trainerPayments && trainerPayments[trainerIndex]) {
+          return trainerPayments[trainerIndex];
+        }
+      }
+      return { amount: 0, confirmed: false };
+    }
+
+    // Clear payment cache
+    function clearPaymentCache() {
+      paymentCache = { camp: {}, trainer: {} };
+    }
+
     // Load camps for selected month
     async function loadCamps() {
       try {
@@ -2629,6 +2734,9 @@
         // Cache participants for later use
         window.currentParticipants = allParticipants;
 
+        // Initialize payment cache for fast access
+        await initializePaymentCache(camp.id, allParticipants);
+
         const detailsContent = document.getElementById('camp-details-content');
         detailsContent.innerHTML = await createCampDetailsTable(camp, allParticipants);
 
@@ -2651,33 +2759,33 @@
         }
 
         // Set currency data for payment inputs and calculate totals immediately
-        document.querySelectorAll('.payment-input').forEach(input => {
-          if (!input.dataset.currency) {
-            const tableType = input.getAttribute('data-column-type');
+          document.querySelectorAll('.payment-input').forEach(input => {
+            if (!input.dataset.currency) {
+              const tableType = input.getAttribute('data-column-type');
 
-            if (tableType === 'camp' && window.currentCamp) {
-              input.dataset.currency = window.currentCamp.currency || 'PLN';
-            } else if (tableType === 'trainer') {
-              const idxStr = input.getAttribute('data-trainer-index');
-              const idx = parseInt(idxStr, 10);
+              if (tableType === 'camp' && window.currentCamp) {
+                input.dataset.currency = window.currentCamp.currency || 'PLN';
+              } else if (tableType === 'trainer') {
+                const idxStr = input.getAttribute('data-trainer-index');
+                const idx = parseInt(idxStr, 10);
 
-              if (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[idx]) {
-                input.dataset.currency = window.currentCamp.trainers[idx].currency || 'PLN';
-              } else {
-                input.dataset.currency = 'PLN';
+                if (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[idx]) {
+                  input.dataset.currency = window.currentCamp.trainers[idx].currency || 'PLN';
+                } else {
+                  input.dataset.currency = 'PLN';
+                }
               }
             }
+          });
+
+        // Calculate UI totals for every participant immediately using cache
+          const participantsToUpdate = window.currentParticipants || [];
+          for (const p of participantsToUpdate) {
+            await updateParticipantTotalsFast(camp.id, p.id);
           }
-        });
 
-        // Calculate UI totals for every participant immediately
-        const participantsToUpdate = window.currentParticipants || [];
-        for (const p of participantsToUpdate) {
-          await updateParticipantTotals(camp.id, p.id);
-        }
-
-        // Update summaries immediately
-        if (typeof updateSummaries === 'function') await updateSummaries();
+        // Update summaries immediately using cache
+          if (typeof updateSummariesFast === 'function') await updateSummariesFast();
 
         // Camp statuses are updated globally when members data is loaded
 
@@ -2877,11 +2985,11 @@
       // Batch load all attention data for all participants
       const participantIds = participants.map(p => p.id);
       let attentionData = {};
-      try {
-        const { data, error } = await supabase
-          .from('participant_attention')
+        try {
+          const { data, error } = await supabase
+            .from('participant_attention')
           .select('participant_id, has_attention')
-          .eq('camp_id', camp.id)
+            .eq('camp_id', camp.id)
           .in('participant_id', participantIds);
 
         if (!error && data) {
@@ -2889,17 +2997,17 @@
             attentionData[item.participant_id] = item.has_attention;
           });
         }
-      } catch (err) {
+        } catch (err) {
         console.error('Error loading attention data:', err);
-      }
+        }
 
       // Batch load all comment data for all participants
       let commentData = {};
-      try {
-        const { data, error } = await supabase
-          .from('participant_comments')
+        try {
+          const { data, error } = await supabase
+            .from('participant_comments')
           .select('participant_id, comment')
-          .eq('camp_id', camp.id)
+            .eq('camp_id', camp.id)
           .in('participant_id', participantIds);
 
         if (!error && data) {
@@ -2907,7 +3015,7 @@
             commentData[item.participant_id] = item.comment;
           });
         }
-      } catch (err) {
+        } catch (err) {
         console.error('Error loading comment data:', err);
       }
 
@@ -2927,15 +3035,15 @@
             campConfirmedData[item.participant_id] = item.confirmed || false;
           });
         }
-      } catch (err) {
+        } catch (err) {
         console.error('Error loading camp payment data:', err);
       }
 
       // Batch load all trainer payment data
       let trainerPaymentData = {};
       let trainerConfirmedData = {};
-      if (camp.trainers && camp.trainers.length > 0) {
-        for (const [index, trainer] of camp.trainers.entries()) {
+        if (camp.trainers && camp.trainers.length > 0) {
+          for (const [index, trainer] of camp.trainers.entries()) {
           if (trainer) {
             try {
               const { data, error } = await supabase
@@ -2955,7 +3063,7 @@
                   trainerConfirmedData[item.participant_id][index] = item.confirmed || false;
                 });
               }
-            } catch (err) {
+              } catch (err) {
               console.error(`Error loading trainer ${index} payment data:`, err);
             }
           }
@@ -3502,10 +3610,10 @@
         await removePayment(campId, participantId, columnType, trainerIndex);
       }
 
-      // Update row styling and summaries immediately for real-time updates
+      // Update row styling and summaries immediately for real-time updates using cache
       await updateRowStyling(participantId);
-      await updateParticipantTotals(campId, participantId);
-      await updateSummaries();
+      await updateParticipantTotalsFast(campId, participantId);
+      await updateSummariesFast();
       await updateFinancialSummary();
       await updateCampStatus(campId);
     }
@@ -3536,10 +3644,10 @@
       confirmBtn.style.display = 'none';
       removeBtn.style.display = '';
 
-      // Update row styling and summaries immediately for real-time updates
+      // Update row styling and summaries immediately for real-time updates using cache
       await updateRowStyling(participantId);
-      await updateParticipantTotals(campId, participantId);
-      await updateSummaries();
+      await updateParticipantTotalsFast(campId, participantId);
+      await updateSummariesFast();
       await updateFinancialSummary();
       await updateCampStatus(campId);
     }
@@ -3569,10 +3677,10 @@
       confirmBtn.style.display = 'none';
       removeBtn.style.display = 'none';
 
-      // Update row styling and summaries immediately for real-time updates
+      // Update row styling and summaries immediately for real-time updates using cache
       await updateRowStyling(participantId);
-      await updateParticipantTotals(campId, participantId);
-      await updateSummaries();
+      await updateParticipantTotalsFast(campId, participantId);
+      await updateSummariesFast();
       await updateFinancialSummary();
       await updateCampStatus(campId);
     }
@@ -3886,6 +3994,13 @@
     // Payment functions using Supabase
     async function getSavedPayment(campId, participantId, columnType, trainerIndex = null) {
       try {
+        // First try to get from cache (much faster!)
+        const cachedPayment = getCachedPayment(participantId, columnType, trainerIndex);
+        if (cachedPayment.amount > 0 || cachedPayment.confirmed) {
+          return cachedPayment.amount.toString();
+        }
+
+        // Fallback to database query if not in cache
         let query;
 
         if (columnType === 'camp') {
@@ -3914,7 +4029,14 @@
         }
 
         // Return the amount as stored in database (should be number), convert to string only if needed for display
-        return data ? (typeof data.amount === 'number' ? data.amount.toString() : data.amount) : '';
+        const amount = data ? (typeof data.amount === 'number' ? data.amount.toString() : data.amount) : '';
+
+        // Update cache with the retrieved data
+        if (data) {
+          updatePaymentCache(participantId, columnType, parseFloat(amount) || 0, false, trainerIndex);
+        }
+
+        return amount;
       } catch (err) {
         console.error('Error in getSavedPayment:', err);
         return '';
@@ -3923,6 +4045,13 @@
 
     async function getPaymentStatus(campId, participantId, columnType, trainerIndex = null) {
       try {
+        // First try to get from cache (much faster!)
+        const cachedPayment = getCachedPayment(participantId, columnType, trainerIndex);
+        if (cachedPayment.amount > 0 || cachedPayment.confirmed) {
+          return cachedPayment.confirmed;
+        }
+
+        // Fallback to database query if not in cache
         let query;
 
         if (columnType === 'camp') {
@@ -3950,7 +4079,14 @@
           return false;
         }
 
-        return data ? data.confirmed : false;
+        const confirmed = data ? data.confirmed : false;
+
+        // Update cache with the retrieved data
+        if (data) {
+          updatePaymentCache(participantId, columnType, cachedPayment.amount, confirmed, trainerIndex);
+        }
+
+        return confirmed;
       } catch (err) {
         console.error('Error in getPaymentStatus:', err);
         return false;
@@ -4010,11 +4146,14 @@
         if (upsertError) {
           console.error('Error upserting payment:', upsertError);
         } else {
-          // Update UI after successful save
+          // Update cache with new payment data
+          updatePaymentCache(participantId, columnType, numericAmount, false, trainerIndex);
+
+          // Update UI after successful save using cache (much faster)
           try {
             // Refresh participant totals and summaries
-            await updateParticipantTotals(campId, participantId);
-            if (typeof updateSummaries === 'function') await updateSummaries();
+            await updateParticipantTotalsFast(campId, participantId);
+            if (typeof updateSummariesFast === 'function') await updateSummariesFast();
             if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
           } catch (uiErr) {
             console.error('Error updating UI after savePayment:', uiErr);
@@ -4046,6 +4185,20 @@
 
         if (error) {
           console.error('Error confirming payment:', error);
+        } else {
+          // Update cache to reflect confirmed status
+          const currentPayment = getCachedPayment(participantId, columnType, trainerIndex);
+          updatePaymentCache(participantId, columnType, currentPayment.amount, true, trainerIndex);
+
+          // Update UI after successful confirmation using cache (much faster)
+          try {
+            await updateParticipantTotalsFast(campId, participantId);
+            if (typeof updateSummariesFast === 'function') await updateSummariesFast();
+            if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
+            await updateCampStatus(campId);
+          } catch (uiErr) {
+            console.error('Error updating UI after confirmPayment:', uiErr);
+          }
         }
         hideGlobalLoader();
       } catch (err) {
@@ -4067,6 +4220,19 @@
 
         if (error) {
           console.error('Error removing payment:', error);
+        } else {
+          // Update cache to remove payment
+          updatePaymentCache(participantId, columnType, 0, false, trainerIndex);
+
+          // Update UI after successful removal using cache (much faster)
+          try {
+            await updateParticipantTotalsFast(campId, participantId);
+            if (typeof updateSummariesFast === 'function') await updateSummariesFast();
+            if (typeof updateRowStyling === 'function') await updateRowStyling(participantId);
+            await updateCampStatus(campId);
+          } catch (uiErr) {
+            console.error('Error updating UI after removePayment:', uiErr);
+          }
         }
       } catch (err) {
         console.error('Error in removePayment:', err);
@@ -4116,7 +4282,88 @@
       return `${numAmount.toFixed(2)} ${currency}`;
     }
 
-    // Update participant totals
+    // FAST VERSION: Update participant totals using cache
+    async function updateParticipantTotalsFast(campId, participantId) {
+      const camp = window.currentCamp;
+      const participants = window.currentParticipants;
+      if (!camp || !participants) return;
+
+      const participant = window.currentParticipants.find(p => p.id === participantId);
+      if (!participant) return;
+
+      // Find the participant's row
+      const participantRow = document.querySelector(`tr[data-participant-id="${participantId}"]`);
+      if (!participantRow) {
+        return;
+      }
+
+      // Calculate totals using cache (much faster!)
+      let totalPLN = 0;
+      let totalEUR = 0;
+
+      // Add camp payment to totals
+      const campPayment = getCachedPayment(participant.id, 'camp');
+      if (camp.currency === 'PLN') {
+        totalPLN += campPayment.amount;
+      } else if (camp.currency === 'EUR') {
+        totalEUR += campPayment.amount;
+      }
+
+      // Add trainer payments to totals
+      if (camp.trainers && camp.trainers.length > 0) {
+        for (const [trainerIndex, trainer] of camp.trainers.entries()) {
+          if (trainer) { // Only process if trainer exists at this index
+            const trainerPayment = getCachedPayment(participant.id, 'trainer', trainerIndex);
+
+            if (trainer.currency === 'PLN') {
+              totalPLN += trainerPayment.amount;
+            } else if (trainer.currency === 'EUR') {
+              totalEUR += trainerPayment.amount;
+            }
+          }
+        }
+      }
+
+      // Check which currency columns actually exist in the table
+      const cells = participantRow.querySelectorAll('td');
+
+      let cellIndex = 3; // Start after participant name, camp payment
+
+      if (camp.trainers && camp.trainers.length > 0) {
+        cellIndex += camp.trainers.length;
+      }
+
+      // Update PLN total
+      if (totalPLN > 0 || totalEUR === 0) { // Show if has PLN or no EUR
+        const plnCell = cells[cellIndex];
+        if (plnCell && plnCell.classList.contains('total-pln')) {
+          plnCell.textContent = totalPLN.toFixed(2);
+        } else {
+          // Try to find PLN cell by searching all cells
+          const foundPlnCell = Array.from(cells).find(cell => cell.classList.contains('total-pln'));
+          if (foundPlnCell) {
+            foundPlnCell.textContent = totalPLN.toFixed(2);
+          }
+        }
+        cellIndex++;
+      }
+
+      // Update EUR total
+      if (totalEUR > 0) {
+        const eurCell = cells[cellIndex];
+        if (eurCell && eurCell.classList.contains('total-eur')) {
+          eurCell.textContent = totalEUR.toFixed(2);
+        } else {
+          // Try to find EUR cell by searching all cells
+          const foundEurCell = Array.from(cells).find(cell => cell.classList.contains('total-eur'));
+          if (foundEurCell) {
+            foundEurCell.textContent = totalEUR.toFixed(2);
+          }
+        }
+      }
+    }
+
+    // LEGACY VERSION: Update participant totals (slower, with database queries)
     async function updateParticipantTotals(campId, participantId) {
       const camp = window.currentCamp;
       const participants = window.currentParticipants;
@@ -4196,7 +4443,67 @@
       }
     }
 
-    // Update summaries function
+    // FAST VERSION: Update summaries using cache
+    async function updateSummariesFast() {
+      const camp = window.currentCamp;
+      const participants = window.currentParticipants;
+      if (!camp || !participants) return;
+
+      // Calculate camp summary using cache
+      let campTotal = 0;
+      let campPaid = 0;
+      let campCurrency = camp.currency;
+
+      for (const participant of participants) {
+        const payment = getCachedPayment(participant.id, 'camp');
+        campTotal += payment.amount;
+        if (payment.confirmed) {
+          campPaid += payment.amount;
+        }
+      }
+
+      // Update camp summary elements
+      const campTotalElement = document.querySelector('.summary-row:nth-child(1) td:nth-child(2) .summary-amount');
+      const campPaidElement = document.querySelector('.summary-row:nth-child(2) td:nth-child(2) .summary-amount');
+
+      if (campTotalElement) {
+        campTotalElement.textContent = formatCurrency(campTotal, campCurrency);
+      }
+      if (campPaidElement) {
+        campPaidElement.textContent = formatCurrency(campPaid, campCurrency);
+      }
+
+      // Update trainer summaries using cache
+      if (camp.trainers && camp.trainers.length > 0) {
+        for (const [index, trainer] of camp.trainers.entries()) {
+          if (trainer) { // Only update if trainer exists at this index
+            let trainerTotal = 0;
+            let trainerPaid = 0;
+            let trainerCurrency = trainer.currency;
+
+            for (const participant of participants) {
+              const payment = getCachedPayment(participant.id, 'trainer', index);
+              trainerTotal += payment.amount;
+              if (payment.confirmed) {
+                trainerPaid += payment.amount;
+              }
+            }
+
+            const trainerTotalElement = document.querySelector(`.summary-row:nth-child(1) td:nth-child(${index + 3}) .summary-amount`);
+            const trainerPaidElement = document.querySelector(`.summary-row:nth-child(2) td:nth-child(${index + 3}) .summary-amount`);
+
+            if (trainerTotalElement) {
+              trainerTotalElement.textContent = formatCurrency(trainerTotal, trainerCurrency);
+            }
+            if (trainerPaidElement) {
+              trainerPaidElement.textContent = formatCurrency(trainerPaid, trainerCurrency);
+            }
+          }
+        }
+      }
+    }
+
+    // LEGACY VERSION: Update summaries function (slower, with database queries)
     async function updateSummaries() {
       const camp = window.currentCamp;
       if (!camp || !window.currentParticipants) return;
