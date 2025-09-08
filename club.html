@@ -1816,16 +1816,50 @@
           </tr>
         `;
 
+        // Try different query approaches
+        console.log('🔍 Loading trainers...');
+
+        // First try: Check if table is accessible
+        const { data: allProfiles, error: allError } = await supabase
+          .from('profiles')
+          .select('count')
+          .limit(1);
+
+        console.log('📊 Profiles table accessible:', !allError);
+        console.log('📊 All profiles count check:', allProfiles);
+
+        // Second try: Check all profiles with trainer roles
+        const { data: allTrainers, error: allTrainersError } = await supabase
+          .from('profiles')
+          .select('*')
+          .neq('role', 'user') // Get all non-user roles
+          .order('created_at', { ascending: false });
+
+        console.log('👥 All non-user profiles:', allTrainers);
+        console.log('👥 All non-user count:', allTrainers?.length || 0);
+
+        // Third try: Original query
         const { data: trainers, error } = await supabase
           .from('profiles')
           .select('*')
           .in('role', ['trainer', 'pending_trainer'])
           .order('created_at', { ascending: false });
 
-        console.log('🔍 Loading trainers...');
+        console.log('🎯 Trainers with trainer/pending_trainer role:');
         console.log('Error:', error);
         console.log('Trainers data:', trainers);
         console.log('Trainers count:', trainers?.length || 0);
+
+        // Check roles of all users
+        if (allTrainers && allTrainers.length > 0) {
+          console.log('📋 Roles found in system:');
+          const roles = [...new Set(allTrainers.map(t => t.role))];
+          console.log('Unique roles:', roles);
+
+          allTrainers.forEach((profile, index) => {
+            console.log(`${index + 1}. ${profile.email} - Role: ${profile.role}`);
+          });
+        }
 
         if (error) {
           console.error('❌ Error loading trainers:', error);
