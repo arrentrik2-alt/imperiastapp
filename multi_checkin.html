@@ -55,7 +55,7 @@
 
     /* Main container */
     .container {
-      max-width: 800px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 30px 20px;
       flex: 1;
@@ -64,7 +64,7 @@
     /* Search section */
     .search-section {
       background: var(--secondary-bg);
-      padding: 30px;
+      padding: 40px;
       border-radius: 12px;
       border: 1px solid var(--border-dark);
       margin-bottom: 30px;
@@ -143,7 +143,7 @@
     /* Selected member */
     .selected-member {
       background: var(--secondary-bg);
-      padding: 15px;
+      padding: 25px 30px;
       border-radius: 8px;
       border: 1px solid var(--border-dark);
       margin-bottom: 20px;
@@ -154,7 +154,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
+      gap: 20px;
     }
 
     .member-info {
@@ -163,12 +164,13 @@
 
     .member-info h3 {
       color: var(--gold);
-      margin-bottom: 5px;
+      margin-bottom: 8px;
+      font-size: 1.2rem;
     }
 
     .member-info p {
       color: var(--text-gray);
-      font-size: 0.9rem;
+      font-size: 0.95rem;
     }
 
     .checkin-button {
@@ -195,7 +197,7 @@
     /* Statistics section */
     .stats-section {
       background: var(--secondary-bg);
-      padding: 25px;
+      padding: 30px 40px;
       border-radius: 12px;
       border: 1px solid var(--border-dark);
       margin-bottom: 20px;
@@ -203,26 +205,27 @@
 
     .stats-section h3 {
       color: var(--gold);
-      margin-bottom: 20px;
-      font-size: 1.3rem;
+      margin-bottom: 25px;
+      font-size: 1.4rem;
+      text-align: center;
     }
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
     }
 
     .stat-card {
       background: var(--primary-bg);
-      padding: 20px;
+      padding: 15px 20px;
       border-radius: 8px;
       border: 1px solid var(--border-dark);
       text-align: center;
     }
 
     .stat-value {
-      font-size: 2rem;
+      font-size: 1.5rem;
       font-weight: bold;
       color: var(--gold);
       margin-bottom: 5px;
@@ -230,7 +233,7 @@
 
     .stat-label {
       color: var(--text-gray);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
 
     /* Loading and error states */
@@ -277,20 +280,53 @@
     @media (max-width: 768px) {
       .container {
         padding: 20px 15px;
+        max-width: 100%;
       }
 
       .search-section {
-        padding: 20px;
+        padding: 25px 20px;
+      }
+
+      .stats-section {
+        padding: 25px 20px;
       }
 
       .stats-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .selected-member {
+        padding: 20px 15px;
       }
 
       .selected-member-info {
         flex-direction: column;
         gap: 15px;
         text-align: center;
+      }
+
+      .checkin-button {
+        width: 100%;
+        padding: 15px 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stat-card {
+        padding: 12px 15px;
+      }
+
+      .stat-value {
+        font-size: 1.3rem;
+      }
+
+      .stat-label {
+        font-size: 0.8rem;
       }
     }
   </style>
@@ -299,6 +335,7 @@
   <!-- Header -->
   <header class="header">
     <h1><i class="fas fa-running"></i> MultiSport - Odbicia</h1>
+    <p>Rejestracja obecności w klubie fitness</p>
   </header>
 
   <!-- Main container -->
@@ -381,10 +418,8 @@
         if (error) throw error;
 
         membersList = members || [];
-        console.log('Loaded members:', membersList.length);
 
       } catch (err) {
-        console.error('Error loading members:', err);
         showError('Błąd ładowania listy członków');
       }
     }
@@ -536,9 +571,11 @@
         checkinButton.innerHTML = '<i class="fas fa-check-circle"></i> Odbicie zapisane!';
         checkinButton.disabled = true;
 
-        // Refresh stats
+        // Refresh all stats
         await loadStats();
-        await loadMemberStats(selectedMember.id);
+        if (selectedMember) {
+          await loadMemberStats(selectedMember.id);
+        }
 
         showSuccess('Odbicie zostało pomyślnie zapisane!');
 
@@ -569,7 +606,6 @@
         document.getElementById('member-monthly-checkins').textContent = memberMonthlyCheckins;
 
       } catch (err) {
-        console.error('Error loading member stats:', err);
         document.getElementById('member-monthly-checkins').textContent = '0';
       }
     }
@@ -603,7 +639,6 @@
         }
 
       } catch (err) {
-        console.error('Error loading stats:', err);
         document.getElementById('today-total-checkins').textContent = '0';
         document.getElementById('monthly-total-checkins').textContent = '0';
       }
