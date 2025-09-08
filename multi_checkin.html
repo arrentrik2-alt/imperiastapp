@@ -433,10 +433,32 @@
 
     // Initialize app
     document.addEventListener('DOMContentLoaded', async () => {
+      console.log('Starting MultiSport Check-in app...');
+      await testDatabaseConnection();
       await loadMembers();
       setupEventListeners();
       await loadStats();
     });
+
+    // Test database connection and table existence
+    async function testDatabaseConnection() {
+      try {
+        console.log('Testing database connection...');
+        const { data, error } = await supabase
+          .from('multi_checkins')
+          .select('count')
+          .limit(1);
+
+        if (error) {
+          console.error('Database connection error:', error);
+          alert('BŁĄD: Tabela multi_checkins nie istnieje w bazie danych!\n\nUruchom SQL z pliku: create_multi_checkins_table.sql');
+        } else {
+          console.log('Database connection OK, table exists');
+        }
+      } catch (err) {
+        console.error('Database test error:', err);
+      }
+    }
 
     // Load members with multi/multi_dzieci
     async function loadMembers() {
@@ -489,6 +511,13 @@
         searchResults.style.display = 'none';
         clearSearchBtn.style.display = 'none';
         searchInput.focus();
+
+        // Clear selected member info
+        selectedMember = null;
+        document.getElementById('selected-member').style.display = 'none';
+
+        // Reset member monthly stats
+        document.getElementById('member-monthly-checkins').textContent = '0';
       });
 
       // Search input focus
@@ -643,17 +672,22 @@
 
         const { data: memberCheckins, error } = await supabase
           .from('multi_checkins')
-          .select('checkin_date')
+          .select('*')
           .eq('member_id', memberId)
           .gte('checkin_date', `${currentMonth}-01`)
           .lte('checkin_date', `${currentMonth}-31`);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Member stats error:', error);
+          throw error;
+        }
 
         const memberMonthlyCheckins = memberCheckins ? memberCheckins.length : 0;
+        console.log(`Member ${memberId} checkins this month:`, memberMonthlyCheckins);
         document.getElementById('member-monthly-checkins').textContent = memberMonthlyCheckins;
 
       } catch (err) {
+        console.error('Error loading member stats:', err);
         document.getElementById('member-monthly-checkins').textContent = '0';
       }
     }
@@ -665,14 +699,20 @@
         const today = now.toISOString().split('T')[0];
         const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
 
+        console.log('Loading stats for:', { today, currentMonth });
+
         // Today's total checkins
         const { data: todayCheckins, error: todayError } = await supabase
           .from('multi_checkins')
           .select('id')
           .eq('checkin_date', today);
 
-        if (!todayError) {
-          document.getElementById('today-total-checkins').textContent = todayCheckins ? todayCheckins.length : 0;
+        if (todayError) {
+          console.error('Today checkins error:', todayError);
+        } else {
+          const todayCount = todayCheckins ? todayCheckins.length : 0;
+          console.log('Today checkins count:', todayCount);
+          document.getElementById('today-total-checkins').textContent = todayCount;
         }
 
         // Monthly total checkins
@@ -682,11 +722,16 @@
           .gte('checkin_date', `${currentMonth}-01`)
           .lte('checkin_date', `${currentMonth}-31`);
 
-        if (!monthlyError) {
-          document.getElementById('monthly-total-checkins').textContent = monthlyCheckins ? monthlyCheckins.length : 0;
+        if (monthlyError) {
+          console.error('Monthly checkins error:', monthlyError);
+        } else {
+          const monthlyCount = monthlyCheckins ? monthlyCheckins.length : 0;
+          console.log('Monthly checkins count:', monthlyCount);
+          document.getElementById('monthly-total-checkins').textContent = monthlyCount;
         }
 
       } catch (err) {
+        console.error('Error loading stats:', err);
         document.getElementById('today-total-checkins').textContent = '0';
         document.getElementById('monthly-total-checkins').textContent = '0';
       }
