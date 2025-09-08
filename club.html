@@ -1850,6 +1850,40 @@
         console.log('Trainers data:', trainers);
         console.log('Trainers count:', trainers?.length || 0);
 
+        // Fourth try: Direct SQL query to bypass any client-side issues
+        try {
+          const { data: sqlTrainers, error: sqlError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('role', 'trainer');
+
+          console.log('🔍 Direct trainer query (role = trainer):');
+          console.log('SQL Error:', sqlError);
+          console.log('SQL Trainers:', sqlTrainers);
+          console.log('SQL Count:', sqlTrainers?.length || 0);
+        } catch (sqlErr) {
+          console.error('SQL query error:', sqlErr);
+        }
+
+        // Fifth try: Check if the issue is with the IN clause
+        try {
+          const { data: trainerRole, error: trainerError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('role', 'trainer');
+
+          const { data: pendingRole, error: pendingError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('role', 'pending_trainer');
+
+          console.log('🔍 Separate queries:');
+          console.log('Trainer role count:', trainerRole?.length || 0, 'Error:', trainerError);
+          console.log('Pending trainer count:', pendingRole?.length || 0, 'Error:', pendingError);
+        } catch (sepErr) {
+          console.error('Separate queries error:', sepErr);
+        }
+
         // Check roles of all users
         if (allTrainers && allTrainers.length > 0) {
           console.log('📋 Roles found in system:');
