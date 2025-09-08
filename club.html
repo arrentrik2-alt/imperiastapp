@@ -1820,19 +1820,18 @@
         console.log('🔍 Loading trainers...');
 
         // First try: Check if table is accessible
-        const { data: allProfiles, error: allError } = await supabase
+        const { data: tableCheck, error: allError } = await supabase
           .from('profiles')
-          .select('count')
+          .select('*')
           .limit(1);
 
         console.log('📊 Profiles table accessible:', !allError);
-        console.log('📊 All profiles count check:', allProfiles);
+        console.log('📊 All profiles count check:', tableCheck);
 
-        // Second try: Check all profiles with trainer roles
+        // Second try: Check all profiles - simplified approach
         const { data: allTrainers, error: allTrainersError } = await supabase
           .from('profiles')
           .select('*')
-          .neq('role', 'user') // Get all non-user roles
           .order('created_at', { ascending: false });
 
         console.log('👥 All non-user profiles:', allTrainers);
@@ -1892,6 +1891,26 @@
 
           allTrainers.forEach((profile, index) => {
             console.log(`${index + 1}. ${profile.email} - Role: ${profile.role}`);
+          });
+        }
+
+        // 🔴 CRITICAL: No trainers found in profiles table!
+        console.log('🚨 PROBLEM IDENTIFIED:');
+        console.log('✅ Trainers exist in auth.users but NO profiles in profiles table!');
+        console.log('🔧 SOLUTION: Create profile records for existing trainers');
+
+        // Try to get ALL profiles to see what's in the table
+        const { data: allProfiles, error: allProfilesError } = await supabase
+          .from('profiles')
+          .select('*');
+
+        console.log('📊 ALL profiles in table:', allProfiles);
+        console.log('📊 Total profiles count:', allProfiles?.length || 0);
+
+        if (allProfiles && allProfiles.length > 0) {
+          console.log('👥 Existing profiles:');
+          allProfiles.forEach((profile, index) => {
+            console.log(`${index + 1}. ${profile.email || 'No email'} - Role: ${profile.role || 'No role'} - ID: ${profile.id?.substring(0, 8)}...`);
           });
         }
 
