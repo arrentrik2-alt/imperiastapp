@@ -236,25 +236,14 @@
       <div class="form-group">
         <label for="month-select">Miesiąc</label>
         <select id="month-select" class="form-control">
-          <option value="01">Styczeń</option>
-          <option value="02">Luty</option>
-          <option value="03">Marzec</option>
-          <option value="04">Kwiecień</option>
-          <option value="05">Maj</option>
-          <option value="06">Czerwiec</option>
-          <option value="07">Lipiec</option>
-          <option value="08">Sierpień</option>
-          <option value="09">Wrzesień</option>
-          <option value="10">Październik</option>
-          <option value="11">Listopad</option>
-          <option value="12">Grudzień</option>
+          <!-- Miesiące będą dodawane automatycznie -->
         </select>
       </div>
     </section>
 
     <!-- Checkins section -->
     <section class="checkins-section" id="checkins-section" style="display: none;">
-      <h3><i class="fas fa-calendar-check"></i> Odbicia w wybranym miesiącu</h3>
+      <h3><i class="fas fa-chart-bar"></i> Liczba odbić w wybranym miesiącu</h3>
       <div id="checkins-content">
         <div class="loading">
           <div class="loading-spinner"></div>
@@ -282,8 +271,14 @@
     // Initialize app
     document.addEventListener('DOMContentLoaded', async () => {
       await loadMembers();
-      setCurrentMonth();
+      populateMonthSelect();
       setupEventListeners();
+
+      // Refresh months list daily
+      setInterval(() => {
+        populateMonthSelect();
+        console.log('Months list refreshed');
+      }, 24 * 60 * 60 * 1000); // 24 hours
     });
 
     // Load members with multi/multi_dzieci
@@ -323,12 +318,36 @@
       });
     }
 
-    // Set current month as default
-    function setCurrentMonth() {
+    // Populate month select with current and future months
+    function populateMonthSelect() {
+      const monthSelect = document.getElementById('month-select');
       const now = new Date();
-      const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
-      document.getElementById('month-select').value = currentMonth;
+
+      // Clear existing options
+      monthSelect.innerHTML = '';
+
+      // Add current month and next 5 months
+      for (let i = 0; i < 6; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const monthValue = (date.getMonth() + 1).toString().padStart(2, '0');
+        const monthName = date.toLocaleDateString('pl-PL', {
+          month: 'long',
+          year: 'numeric'
+        });
+
+        const option = document.createElement('option');
+        option.value = `${monthValue}_${date.getFullYear()}`; // Store month_year format
+        option.textContent = monthName;
+
+        // Set current month as selected
+        if (i === 0) {
+          option.selected = true;
+        }
+
+        monthSelect.appendChild(option);
+      }
     }
+
 
     // Setup event listeners
     function setupEventListeners() {
@@ -372,26 +391,35 @@
       checkinsSection.style.display = 'block';
 
       try {
-        const selectedMonth = document.getElementById('month-select').value;
-        const currentYear = new Date().getFullYear();
+        const selectedValue = document.getElementById('month-select').value;
+        const [month, year] = selectedValue.split('_');
 
-        const startDate = `${currentYear}-${selectedMonth}-01`;
-        const endDate = new Date(currentYear, parseInt(selectedMonth), 0).toISOString().split('T')[0];
+        // Create proper date objects and format them
+        const startDate = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString().split('T')[0];
+        const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+
+        console.log('Loading checkins for:', {
+          memberId: selectedMemberId,
+          startDate,
+          endDate,
+          month,
+          year
+        });
 
         const { data: checkins, error } = await supabase
           .from('multi_checkins')
           .select('*')
           .eq('member_id', selectedMemberId)
           .gte('checkin_date', startDate)
-          .lte('checkin_date', endDate)
-          .order('checkin_date', { ascending: false })
-          .order('checkin_time', { ascending: false });
+          .lt('checkin_date', new Date(parseInt(year), parseInt(month), 1).toISOString().split('T')[0]);
 
         if (error) throw error;
 
+        console.log('Found checkins:', checkins?.length || 0);
         displayCheckins(checkins || []);
 
       } catch (err) {
+        console.error('Error loading checkins:', err);
         checkinsContent.innerHTML = `
           <div class="no-checkins">
             <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--error); margin-bottom: 15px;"></i>
@@ -401,38 +429,44 @@
       }
     }
 
-    // Display checkins in the UI
+    // Display checkins count in the UI
     function displayCheckins(checkins) {
       const checkinsContent = document.getElementById('checkins-content');
 
-      if (checkins.length === 0) {
+      const checkinsCount = checkins.length;
+
+      if (checkinsCount === 0) {
         checkinsContent.innerHTML = `
           <div class="no-checkins">
-            <i class="fas fa-calendar-times" style="font-size: 2rem; color: var(--text-gray); margin-bottom: 15px;"></i>
-            <p>Brak odbić w wybranym miesiącu</p>
+            <i class="fas fa-calendar-times" style="font-size: 3rem; color: var(--text-gray); margin-bottom: 20px;"></i>
+            <p style="font-size: 1.2rem; color: var(--text-gray);">Brak odbić w wybranym miesiącu</p>
           </div>
         `;
         return;
       }
 
       const checkinsHtml = `
-        <div class="checkins-list">
-          ${checkins.map(checkin => {
-            const date = new Date(checkin.checkin_date);
-            const formattedDate = date.toLocaleDateString('pl-PL', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            });
-
-            return `
-              <div class="checkin-item">
-                <div class="checkin-date">${formattedDate}</div>
-                <div class="checkin-time">${checkin.checkin_time}</div>
-              </div>
-            `;
-          }).join('')}
+        <div class="checkins-count" style="
+          text-align: center;
+          padding: 40px 20px;
+          background: var(--secondary-bg);
+          border-radius: 12px;
+          border: 2px solid var(--gold);
+        ">
+          <div style="
+            font-size: 4rem;
+            font-weight: bold;
+            color: var(--gold);
+            margin-bottom: 10px;
+          ">
+            ${checkinsCount}
+          </div>
+          <div style="
+            font-size: 1.3rem;
+            color: var(--text-light);
+          ">
+            odbić w wybranym miesiącu
+          </div>
         </div>
       `;
 
