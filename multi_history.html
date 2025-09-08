@@ -77,6 +77,93 @@
       text-align: center;
     }
 
+    /* Search input */
+    .search-container {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .search-input-container {
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 45px 12px 16px;
+      background: var(--primary-bg);
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      color: var(--text-light);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+    }
+
+    .clear-search-btn {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-gray);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 4px;
+      border-radius: 4px;
+      transition: color 0.2s;
+    }
+
+    .clear-search-btn:hover {
+      color: var(--gold);
+    }
+
+    /* Search results dropdown */
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--secondary-bg);
+      border: 1px solid var(--border-dark);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+    }
+
+    .search-result-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border-dark);
+      transition: background-color 0.2s;
+    }
+
+    .search-result-item:hover {
+      background: rgba(212, 175, 55, 0.1);
+    }
+
+    .search-result-item:last-child {
+      border-bottom: none;
+    }
+
+    .member-name {
+      font-weight: 600;
+      color: var(--text-light);
+    }
+
+    .member-details {
+      font-size: 0.85rem;
+      color: var(--text-gray);
+      margin-top: 4px;
+    }
+
     .form-group {
       margin-bottom: 20px;
     }
@@ -224,13 +311,16 @@
   <main class="container">
     <!-- Selection section -->
     <section class="selection-section">
-      <h2><i class="fas fa-search"></i> Wybierz członka i miesiąc</h2>
+      <h2><i class="fas fa-search"></i> Znajdź członka i wybierz miesiąc</h2>
 
-      <div class="form-group">
-        <label for="member-select">Członek</label>
-        <select id="member-select" class="form-control">
-          <option value="">-- Wybierz członka --</option>
-        </select>
+      <div class="search-container">
+        <div class="search-input-container">
+          <input type="text" id="member-search" class="search-input" placeholder="Wpisz imię i nazwisko członka..." autocomplete="off">
+          <button type="button" id="clear-search" class="clear-search-btn" style="display: none;">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div id="search-results" class="search-results"></div>
       </div>
 
       <div class="form-group">
@@ -266,7 +356,7 @@
 
     // Global variables
     let membersList = [];
-    let selectedMemberId = null;
+    let selectedMember = null;
 
     // Initialize app
     document.addEventListener('DOMContentLoaded', async () => {
@@ -293,28 +383,73 @@
         if (error) throw error;
 
         membersList = members || [];
-        populateMemberSelect();
+        console.log('Loaded members for search:', membersList.length);
 
       } catch (err) {
         showError('Błąd ładowania listy członków');
       }
     }
 
-    // Populate member select dropdown
-    function populateMemberSelect() {
-      const memberSelect = document.getElementById('member-select');
+    // Setup event listeners
+    function setupEventListeners() {
+      const searchInput = document.getElementById('member-search');
+      const searchResults = document.getElementById('search-results');
+      const clearSearchBtn = document.getElementById('clear-search');
+      const monthSelect = document.getElementById('month-select');
 
-      // Clear existing options except the first one
-      while (memberSelect.children.length > 1) {
-        memberSelect.removeChild(memberSelect.lastChild);
-      }
+      // Search input event
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim().toLowerCase();
 
-      // Add members to dropdown
-      membersList.forEach(member => {
-        const option = document.createElement('option');
-        option.value = member.id;
-        option.textContent = member.name;
-        memberSelect.appendChild(option);
+        // Show/hide clear button
+        clearSearchBtn.style.display = query.length > 0 ? 'block' : 'none';
+
+        if (query.length < 2) {
+          searchResults.style.display = 'none';
+          return;
+        }
+
+        const filteredMembers = membersList.filter(member =>
+          member.name.toLowerCase().includes(query)
+        );
+
+        displaySearchResults(filteredMembers);
+      });
+
+      // Clear search button
+      clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        searchResults.style.display = 'none';
+        clearSearchBtn.style.display = 'none';
+        searchInput.focus();
+
+        // Clear selected member
+        selectedMember = null;
+        hideCheckinsSection();
+      });
+
+      // Search input focus
+      searchInput.addEventListener('focus', () => {
+        if (searchInput.value.trim().length >= 2) {
+          const filteredMembers = membersList.filter(member =>
+            member.name.toLowerCase().includes(searchInput.value.trim().toLowerCase())
+          );
+          displaySearchResults(filteredMembers);
+        }
+      });
+
+      // Hide results when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+          searchResults.style.display = 'none';
+        }
+      });
+
+      // Month selection change
+      monthSelect.addEventListener('change', () => {
+        if (selectedMember) {
+          loadMemberCheckins();
+        }
       });
     }
 
@@ -349,32 +484,61 @@
     }
 
 
-    // Setup event listeners
-    function setupEventListeners() {
-      const memberSelect = document.getElementById('member-select');
-      const monthSelect = document.getElementById('month-select');
 
-      // Member selection change
-      memberSelect.addEventListener('change', (e) => {
-        selectedMemberId = e.target.value;
-        if (selectedMemberId) {
-          loadMemberCheckins();
-        } else {
-          hideCheckinsSection();
-        }
+    // Display search results
+    function displaySearchResults(members) {
+      const searchResults = document.getElementById('search-results');
+
+      if (members.length === 0) {
+        searchResults.innerHTML = `
+          <div class="search-result-item">
+            <div class="member-name">Nie znaleziono członków</div>
+          </div>
+        `;
+        searchResults.style.display = 'block';
+        return;
+      }
+
+      searchResults.innerHTML = members.map(member => `
+        <div class="search-result-item" data-member-id="${member.id}">
+          <div class="member-name">${member.name}</div>
+          <div class="member-details">
+            ${member.multi === 'multi' ? 'Multi' : 'Multi dzieci'} • ${member.style.toUpperCase()}
+          </div>
+        </div>
+      `).join('');
+
+      // Add click handlers
+      searchResults.querySelectorAll('.search-result-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const memberId = item.getAttribute('data-member-id');
+          selectMember(memberId);
+        });
       });
 
-      // Month selection change
-      monthSelect.addEventListener('change', () => {
-        if (selectedMemberId) {
-          loadMemberCheckins();
-        }
-      });
+      searchResults.style.display = 'block';
+    }
+
+    // Select member
+    async function selectMember(memberId) {
+      const member = membersList.find(m => m.id === memberId);
+      if (!member) return;
+
+      selectedMember = member;
+
+      // Update UI
+      document.getElementById('member-search').value = member.name;
+      document.getElementById('search-results').style.display = 'none';
+
+      // Load checkins if month is selected
+      if (document.getElementById('month-select').value) {
+        loadMemberCheckins();
+      }
     }
 
     // Load checkins for selected member and month
     async function loadMemberCheckins() {
-      if (!selectedMemberId) return;
+      if (!selectedMember) return;
 
       const checkinsContent = document.getElementById('checkins-content');
       const checkinsSection = document.getElementById('checkins-section');
@@ -392,6 +556,16 @@
 
       try {
         const selectedValue = document.getElementById('month-select').value;
+        if (!selectedValue) {
+          checkinsContent.innerHTML = `
+            <div class="no-checkins">
+              <i class="fas fa-calendar-times" style="font-size: 2rem; color: var(--text-gray); margin-bottom: 15px;"></i>
+              <p>Wybierz miesiąc</p>
+            </div>
+          `;
+          return;
+        }
+
         const [month, year] = selectedValue.split('_');
 
         // Create proper date objects and format them
@@ -399,7 +573,7 @@
         const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
 
         console.log('Loading checkins for:', {
-          memberId: selectedMemberId,
+          memberId: selectedMember.id,
           startDate,
           endDate,
           month,
@@ -409,7 +583,7 @@
         const { data: checkins, error } = await supabase
           .from('multi_checkins')
           .select('*')
-          .eq('member_id', selectedMemberId)
+          .eq('member_id', selectedMember.id)
           .gte('checkin_date', startDate)
           .lt('checkin_date', new Date(parseInt(year), parseInt(month), 1).toISOString().split('T')[0]);
 
