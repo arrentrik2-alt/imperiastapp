@@ -1296,6 +1296,7 @@
               <th style="width: 120px;">Telefon</th>
               <th style="width: 70px;">Styl</th>
               <th style="width: 80px;">Karnet</th>
+              <th style="width: 100px;">Multi</th>
               <th style="width: 100px;">Akcje</th>
             </tr>
           </thead>
@@ -1470,6 +1471,15 @@
           </select>
         </div>
 
+        <div class="form-group">
+          <label for="edit-member-multi">Multi</label>
+          <select id="edit-member-multi" name="edit-member-multi" class="form-control">
+            <option value="">Brak</option>
+            <option value="multi">Multi</option>
+            <option value="multi_dzieci">Multi dzieci</option>
+          </select>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn btn-outline" id="cancel-edit-member">Anuluj</button>
           <button type="submit" class="btn btn-primary" id="submit-edit-member">
@@ -1620,18 +1630,40 @@
           deleteMember(memberId, memberName);
         });
       });
+
+      // Multi select change handlers
+      document.querySelectorAll('.multi-select').forEach(select => {
+        select.addEventListener('change', async (e) => {
+          const memberId = e.target.getAttribute('data-member-id');
+          const newMulti = e.target.value;
+
+          try {
+            const { error } = await supabase
+              .from('members')
+              .update({ multi: newMulti || null })
+              .eq('id', memberId);
+
+            if (error) throw error;
+
+            console.log('Zaktualizowano pole multi dla członka:', memberId);
+          } catch (err) {
+            console.error('Błąd aktualizacji pola multi:', err);
+            alert('Błąd aktualizacji pola multi');
+          }
+        });
+      });
     }
 
     // Load members from database
     async function loadMembers() {
       try {
-        membersList.innerHTML = `
-          <tr>
-            <td colspan="8" style="text-align: center; padding: 40px;">
-              <div class="loading"></div>
-            </td>
-          </tr>
-        `;
+          membersList.innerHTML = `
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 40px;">
+                <div class="loading"></div>
+              </td>
+            </tr>
+          `;
 
         const { data: members, error } = await supabase
           .from('members')
@@ -1719,6 +1751,7 @@
             phone: memberData.phone || null,
             style: memberData.style,
             karnet: memberData.karnet,
+            multi: memberData.multi || null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }])
@@ -1728,6 +1761,7 @@
 
         closeModalFunc();
         await loadMembers();
+        setupActionButtons(); // Re-setup event listeners for new members
 
       } catch (err) {
         console.error('Błąd dodawania członka:', err);
@@ -1831,6 +1865,7 @@
         if (error) throw error;
 
         await loadMembers();
+        setupActionButtons(); // Re-setup event listeners after member deletion
 
       } catch (err) {
         console.error('Błąd usuwania członka:', err);
@@ -1874,7 +1909,8 @@
         email: formData.get('edit-member-email').trim(),
         phone: formData.get('edit-member-phone').trim(),
         style: formData.get('edit-member-style'),
-        karnet: formData.get('edit-member-karnet')
+        karnet: formData.get('edit-member-karnet'),
+        multi: formData.get('edit-member-multi')
       };
 
       // Basic validation
@@ -1898,6 +1934,7 @@
             phone: memberData.phone || null,
             style: memberData.style,
             karnet: memberData.karnet,
+            multi: memberData.multi || null,
             updated_at: new Date().toISOString()
           })
           .eq('id', memberData.id);
@@ -1907,6 +1944,7 @@
         editMemberModal.classList.remove('active');
         editMemberForm.reset();
         await loadMembers();
+        setupActionButtons(); // Re-setup event listeners after member edit
 
       } catch (err) {
         console.error('Błąd aktualizacji członka:', err);
