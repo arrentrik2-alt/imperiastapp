@@ -1416,6 +1416,15 @@
           </select>
         </div>
 
+        <div class="form-group">
+          <label for="member-multi">Multi</label>
+          <select id="member-multi" name="member-multi" class="form-control">
+            <option value="">Brak</option>
+            <option value="multi">Multi</option>
+            <option value="multi_dzieci">Multi dzieci</option>
+          </select>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn btn-outline" id="cancel-add-member">Anuluj</button>
           <button type="submit" class="btn btn-primary" id="submit-add-member">
@@ -1675,7 +1684,7 @@
         if (members.length === 0) {
           membersList.innerHTML = `
             <tr>
-              <td colspan="8" style="text-align: center; padding: 40px;">
+              <td colspan="9" style="text-align: center; padding: 40px;">
                 <div class="empty-state">
                   <i class="fas fa-users"></i>
                   <p>Brak członków w klubie</p>
@@ -1700,7 +1709,7 @@
         console.error('Błąd ładowania członków:', err);
         membersList.innerHTML = `
           <tr>
-            <td colspan="8" style="text-align: center; padding: 40px;">
+            <td colspan="9" style="text-align: center; padding: 40px;">
               <div class="empty-state">
                 <p>Błąd ładowania członków</p>
               </div>
@@ -1722,6 +1731,13 @@
         <td><span class="member-phone">${member.phone || '-'}</span></td>
         <td><span class="member-style">${member.style.toUpperCase()}</span></td>
         <td><span class="member-karnet">${member.karnet}</span></td>
+        <td>
+          <select class="multi-select" data-member-id="${member.id}" style="width: 100%; padding: 4px; background: var(--secondary-bg); color: var(--text-light); border: 1px solid var(--border-dark); border-radius: 4px;">
+            <option value="" ${member.multi === '' || !member.multi ? 'selected' : ''}>Brak</option>
+            <option value="multi" ${member.multi === 'multi' ? 'selected' : ''}>Multi</option>
+            <option value="multi_dzieci" ${member.multi === 'multi_dzieci' ? 'selected' : ''}>Multi dzieci</option>
+          </select>
+        </td>
         <td>
           <div class="action-buttons">
             <button class="btn-action btn-edit" data-member-id="${member.id}" title="Edytuj">
@@ -1844,6 +1860,7 @@
           document.getElementById('edit-member-phone').value = member.phone || '';
           document.getElementById('edit-member-style').value = member.style;
           document.getElementById('edit-member-karnet').value = member.karnet;
+          document.getElementById('edit-member-multi').value = member.multi || '';
 
           // Show modal
           document.getElementById('edit-member-modal').classList.add('active');
@@ -5078,6 +5095,10 @@
       if (!currentActiveNav || currentActiveNav.id !== 'nav-camps') {
         setActiveNav('members'); // Start with members page
       }
+
+      // Setup action buttons and event listeners after loading members
+      setupActionButtons();
+
       await setupPaymentEventListeners(); // Setup payment event listeners
       // Hide global loader when initialization finished
       hideGlobalLoader();
