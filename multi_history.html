@@ -37,43 +37,43 @@
     /* Header */
     .header {
       background: var(--secondary-bg);
-      padding: 20px;
+      padding: 15px 20px;
       border-bottom: 1px solid var(--border-dark);
       text-align: center;
     }
 
     .header h1 {
       color: var(--gold);
-      font-size: 2rem;
-      margin-bottom: 10px;
+      font-size: 1.8rem;
+      margin-bottom: 8px;
     }
 
     .header p {
       color: var(--text-gray);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
 
     /* Main container */
     .container {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 30px 20px;
+      padding: 20px 15px;
       flex: 1;
     }
 
     /* Selection section */
     .selection-section {
       background: var(--secondary-bg);
-      padding: 30px;
+      padding: 20px;
       border-radius: 12px;
       border: 1px solid var(--border-dark);
-      margin-bottom: 30px;
+      margin-bottom: 20px;
     }
 
     .selection-section h2 {
       color: var(--gold);
-      margin-bottom: 20px;
-      font-size: 1.4rem;
+      margin-bottom: 15px;
+      font-size: 1.3rem;
       text-align: center;
     }
 
@@ -198,15 +198,15 @@
     /* Checkins section */
     .checkins-section {
       background: var(--secondary-bg);
-      padding: 30px;
+      padding: 20px;
       border-radius: 12px;
       border: 1px solid var(--border-dark);
     }
 
     .checkins-section h3 {
       color: var(--gold);
-      margin-bottom: 20px;
-      font-size: 1.3rem;
+      margin-bottom: 15px;
+      font-size: 1.2rem;
       text-align: center;
     }
 
@@ -278,24 +278,132 @@
     }
 
     /* Responsive */
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
       .container {
         padding: 20px 15px;
-        max-width: 100%;
       }
 
       .selection-section {
-        padding: 20px;
+        padding: 18px;
+        margin-bottom: 15px;
       }
 
       .checkins-section {
-        padding: 20px;
+        padding: 18px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        padding: 12px 15px;
       }
 
-      .checkin-item {
-        flex-direction: column;
-        text-align: center;
-        gap: 8px;
+      .header h1 {
+        font-size: 1.5rem;
+        margin-bottom: 5px;
+      }
+
+      .header p {
+        font-size: 0.8rem;
+      }
+
+      .container {
+        padding: 15px 10px;
+      }
+
+      .selection-section {
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+      }
+
+      .selection-section h2 {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+      }
+
+      .checkins-section {
+        padding: 15px;
+        border-radius: 8px;
+      }
+
+      .checkins-section h3 {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+      }
+
+      .checkins-count {
+        padding: 20px 12px !important;
+      }
+
+      .checkins-count div:first-child {
+        font-size: 2rem !important;
+        margin-bottom: 6px !important;
+      }
+
+      .checkins-count div:last-child {
+        font-size: 1rem !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .header {
+        padding: 10px 12px;
+      }
+
+      .header h1 {
+        font-size: 1.3rem;
+      }
+
+      .container {
+        padding: 12px 8px;
+      }
+
+      .selection-section {
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .selection-section h2 {
+        font-size: 1rem;
+        margin-bottom: 10px;
+      }
+
+      .search-input {
+        font-size: 0.95rem;
+        padding: 10px 35px 10px 14px;
+      }
+
+      .form-control {
+        font-size: 0.95rem;
+        padding: 10px 14px;
+      }
+
+      .checkins-section {
+        padding: 12px;
+      }
+
+      .checkins-section h3 {
+        font-size: 1rem;
+        margin-bottom: 10px;
+      }
+
+      .checkins-count {
+        padding: 15px 10px !important;
+        border-radius: 8px;
+      }
+
+      .checkins-count div:first-child {
+        font-size: 1.8rem !important;
+        margin-bottom: 5px !important;
+      }
+
+      .checkins-count div:last-child {
+        font-size: 0.95rem !important;
+      }
+
+      .no-checkins p {
+        font-size: 1rem !important;
       }
     }
   </style>
@@ -622,21 +730,21 @@
       const checkinsHtml = `
         <div class="checkins-count" style="
           text-align: center;
-          padding: 40px 20px;
+          padding: 25px 15px;
           background: var(--secondary-bg);
           border-radius: 12px;
           border: 2px solid var(--gold);
         ">
           <div style="
-            font-size: 4rem;
+            font-size: 2.5rem;
             font-weight: bold;
             color: var(--gold);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
           ">
             ${checkinsCount}
           </div>
           <div style="
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             color: var(--text-light);
           ">
             odbić w wybranym miesiącu
