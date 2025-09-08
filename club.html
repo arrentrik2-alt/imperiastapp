@@ -1373,7 +1373,7 @@
     <div class="content-box" id="trainers-section" style="display: none;">
       <div class="content-header">
         <h3>Trenerzy</h3>
-        <button class="btn btn-primary" id="add-trainer-btn">
+        <button class="btn btn-primary" id="add-trainer-management-btn">
           <i class="fas fa-plus"></i> Dodaj trenera
         </button>
       </div>
@@ -1858,7 +1858,7 @@
     }
 
     // Trainer modal functionality
-    const addTrainerBtn = document.getElementById('add-trainer-btn');
+    const addTrainerManagementBtn = document.getElementById('add-trainer-management-btn');
     const addTrainerModal = document.getElementById('add-trainer-modal');
     const closeTrainerModal = document.getElementById('close-trainer-modal');
     const cancelTrainerBtn = document.getElementById('cancel-trainer-btn');
@@ -1866,7 +1866,7 @@
     const addTrainerForm = document.getElementById('add-trainer-form');
 
     // Show modal
-    addTrainerBtn.addEventListener('click', () => {
+    addTrainerManagementBtn.addEventListener('click', () => {
       addTrainerModal.classList.add('active');
     });
 
