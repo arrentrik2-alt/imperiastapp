@@ -1822,7 +1822,15 @@
           .in('role', ['trainer', 'pending_trainer'])
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        console.log('🔍 Loading trainers...');
+        console.log('Error:', error);
+        console.log('Trainers data:', trainers);
+        console.log('Trainers count:', trainers?.length || 0);
+
+        if (error) {
+          console.error('❌ Error loading trainers:', error);
+          throw error;
+        }
 
         if (trainers.length === 0) {
           trainersList.innerHTML = `
