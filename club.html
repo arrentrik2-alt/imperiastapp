@@ -2010,18 +2010,17 @@
         // Check if current user is admin - try different approaches
         let isAdmin = false;
 
-        // First try: Direct query
+        // First try: Direct query (without .single() to handle missing records)
         try {
-          const { data: currentProfile, error: profileError } = await supabase
+          const { data: profiles, error: profileError } = await supabase
             .from('profiles')
             .select('role')
-            .eq('id', currentUser.id)
-            .single();
+            .eq('id', currentUser.id);
 
-          if (!profileError && currentProfile) {
-            isAdmin = currentProfile.role === 'admin' || currentProfile.role === 'clubadmin';
+          if (!profileError && profiles && profiles.length > 0) {
+            isAdmin = profiles[0].role === 'admin' || profiles[0].role === 'clubadmin';
           } else {
-            console.warn('Direct profile query failed:', profileError?.message);
+            console.warn('Direct profile query failed or no profile found:', profileError?.message);
           }
         } catch (directError) {
           console.warn('Direct profile query error:', directError);
@@ -2086,28 +2085,27 @@
         // Try to create profile using upsert to bypass some RLS restrictions
         const { data: profileData, error: insertError } = await supabase
           .from('profiles')
-          .upsert([{
+          .upsert({
             id: authData.user.id,
             first_name: firstName,
             last_name: lastName,
             email: email,
             role: 'trainer'
-          }], {
-            onConflict: 'id',
-            ignoreDuplicates: false
+          }, {
+            onConflict: 'id'
           });
 
         if (insertError) {
           console.warn('Upsert failed, trying RPC approach:', insertError.message);
 
-          // Try RPC function approach
-          const { data: rpcData, error: rpcError } = await supabase.rpc('create_user_profile', {
-            user_id: authData.user.id,
-            user_email: email,
-            user_first_name: firstName,
-            user_last_name: lastName,
-            user_role: 'trainer'
-          });
+          // Try RPC function approach - use simple parameter format
+          const { data: rpcData, error: rpcError } = await supabase.rpc('create_user_profile',
+            authData.user.id,
+            email,
+            firstName,
+            lastName,
+            'trainer'
+          );
 
           if (rpcError) {
             console.warn('RPC also failed:', rpcError.message);
