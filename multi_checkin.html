@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MultiSport - Odbicia</title>
+  <title>MultiSport - Historia odbić</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
@@ -61,34 +61,36 @@
       flex: 1;
     }
 
-    /* Search section */
-    .search-section {
+    /* Selection section */
+    .selection-section {
       background: var(--secondary-bg);
-      padding: 40px;
+      padding: 30px;
       border-radius: 12px;
       border: 1px solid var(--border-dark);
       margin-bottom: 30px;
     }
 
-    .search-section h2 {
+    .selection-section h2 {
       color: var(--gold);
       margin-bottom: 20px;
       font-size: 1.4rem;
+      text-align: center;
     }
 
-    /* Search input */
-    .search-container {
-      position: relative;
+    .form-group {
       margin-bottom: 20px;
     }
 
-    .search-input-container {
-      position: relative;
+    .form-group label {
+      display: block;
+      color: var(--text-light);
+      margin-bottom: 8px;
+      font-weight: 500;
     }
 
-    .search-input {
+    .form-control {
       width: 100%;
-      padding: 12px 45px 12px 16px;
+      padding: 12px 16px;
       background: var(--primary-bg);
       border: 1px solid var(--border-dark);
       border-radius: 8px;
@@ -97,169 +99,67 @@
       outline: none;
     }
 
-    .clear-search-btn {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: var(--text-gray);
-      cursor: pointer;
-      font-size: 1.2rem;
-      padding: 4px;
-      border-radius: 4px;
-      transition: color 0.2s;
-    }
-
-    .clear-search-btn:hover {
-      color: var(--gold);
-    }
-
-    .search-input:focus {
+    .form-control:focus {
       border-color: var(--gold);
       box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
     }
 
-    /* Search results dropdown */
-    .search-results {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: var(--secondary-bg);
-      border: 1px solid var(--border-dark);
-      border-top: none;
-      border-radius: 0 0 8px 8px;
-      max-height: 300px;
-      overflow-y: auto;
-      z-index: 1000;
-      display: none;
-    }
-
-    .search-result-item {
-      padding: 12px 16px;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border-dark);
-      transition: background-color 0.2s;
-    }
-
-    .search-result-item:hover {
-      background: rgba(212, 175, 55, 0.1);
-    }
-
-    .search-result-item:last-child {
-      border-bottom: none;
-    }
-
-    .member-name {
-      font-weight: 600;
-      color: var(--text-light);
-    }
-
-    .member-details {
-      font-size: 0.85rem;
-      color: var(--text-gray);
-      margin-top: 4px;
-    }
-
-    /* Selected member */
-    .selected-member {
-      background: var(--secondary-bg);
-      padding: 25px 30px;
-      border-radius: 8px;
-      border: 1px solid var(--border-dark);
-      margin-bottom: 20px;
-      display: none;
-    }
-
-    .selected-member-info {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-      gap: 20px;
-    }
-
-    .member-info {
-      flex: 1;
-    }
-
-    .member-info h3 {
-      color: var(--gold);
-      margin-bottom: 8px;
-      font-size: 1.2rem;
-    }
-
-    .member-info p {
-      color: var(--text-gray);
-      font-size: 0.95rem;
-    }
-
-    .checkin-button {
-      background: var(--success);
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-
-    .checkin-button:hover {
-      background: #218838;
-    }
-
-    .checkin-button:disabled {
-      background: var(--text-gray);
-      cursor: not-allowed;
-    }
-
-    /* Statistics section */
-    .stats-section {
-      background: var(--secondary-bg);
-      padding: 15px 20px;
-      border-radius: 8px;
-      border: 1px solid var(--border-dark);
-      margin-bottom: 20px;
-    }
-
-    .stats-section h3 {
-      color: var(--gold);
-      margin-bottom: 15px;
-      font-size: 1.1rem;
-      text-align: center;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 10px;
-    }
-
-    .stat-card {
+    .form-control option {
       background: var(--primary-bg);
-      padding: 8px 12px;
-      border-radius: 6px;
+    }
+
+    /* Checkins section */
+    .checkins-section {
+      background: var(--secondary-bg);
+      padding: 30px;
+      border-radius: 12px;
       border: 1px solid var(--border-dark);
+    }
+
+    .checkins-section h3 {
+      color: var(--gold);
+      margin-bottom: 20px;
+      font-size: 1.3rem;
       text-align: center;
     }
 
-    .stat-value {
-      font-size: 1.2rem;
-      font-weight: bold;
+    .checkins-list {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .checkin-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      border-bottom: 1px solid var(--border-dark);
+      background: var(--primary-bg);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .checkin-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .checkin-date {
+      font-weight: 600;
       color: var(--gold);
-      margin-bottom: 3px;
     }
 
-    .stat-label {
+    .checkin-time {
       color: var(--text-gray);
-      font-size: 0.75rem;
     }
 
-    /* Loading and error states */
+    .no-checkins {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-gray);
+      font-style: italic;
+    }
+
+    /* Loading */
     .loading {
       text-align: center;
       padding: 40px;
@@ -275,20 +175,11 @@
       margin: 0 auto 20px;
     }
 
+    /* Error messages */
     .error-message {
       background: rgba(220, 53, 69, 0.1);
       border: 1px solid var(--error);
       color: var(--error);
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-
-    .success-message {
-      background: rgba(40, 167, 69, 0.1);
-      border: 1px solid var(--success);
-      color: var(--success);
       padding: 15px;
       border-radius: 8px;
       margin-bottom: 20px;
@@ -306,55 +197,18 @@
         max-width: 100%;
       }
 
-      .search-section {
-        padding: 25px 20px;
+      .selection-section {
+        padding: 20px;
       }
 
-      .stats-section {
-        padding: 25px 20px;
+      .checkins-section {
+        padding: 20px;
       }
 
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-      }
-
-      .selected-member {
-        padding: 20px 15px;
-      }
-
-      .selected-member-info {
+      .checkin-item {
         flex-direction: column;
-        gap: 15px;
         text-align: center;
-      }
-
-      .checkin-button {
-        width: 100%;
-        padding: 15px 20px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
         gap: 8px;
-      }
-
-      .stat-card {
-        padding: 6px 8px;
-      }
-
-      .stat-value {
-        font-size: 1.1rem;
-      }
-
-      .stat-label {
-        font-size: 0.7rem;
-      }
-
-      .stats-section h3 {
-        font-size: 1rem;
       }
     }
   </style>
@@ -362,55 +216,38 @@
 <body>
   <!-- Header -->
   <header class="header">
-    <h1><i class="fas fa-running"></i> MultiSport - Odbicia</h1>
-    <p>Rejestracja obecności w klubie fitness</p>
+    <h1><i class="fas fa-history"></i> MultiSport - Historia odbić</h1>
+    <p>Przegląd odbić członków klubu</p>
   </header>
 
   <!-- Main container -->
   <main class="container">
-    <!-- Search section -->
-    <section class="search-section">
-      <h2><i class="fas fa-search"></i> Znajdź członka</h2>
+    <!-- Selection section -->
+    <section class="selection-section">
+      <h2><i class="fas fa-search"></i> Wybierz członka i miesiąc</h2>
 
-      <div class="search-container">
-        <div class="search-input-container">
-          <input type="text" id="member-search" class="search-input" placeholder="Wpisz imię i nazwisko członka..." autocomplete="off">
-          <button type="button" id="clear-search" class="clear-search-btn" style="display: none;">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div id="search-results" class="search-results"></div>
+      <div class="form-group">
+        <label for="member-select">Członek</label>
+        <select id="member-select" class="form-control">
+          <option value="">-- Wybierz członka --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="month-select">Miesiąc</label>
+        <select id="month-select" class="form-control">
+          <!-- Miesiące będą dodawane automatycznie -->
+        </select>
       </div>
     </section>
 
-    <!-- Selected member section -->
-    <section class="selected-member" id="selected-member">
-      <div class="selected-member-info">
-        <div class="member-info">
-          <h3 id="selected-member-name">Nazwa członka</h3>
-          <p id="selected-member-details">Szczegóły członka</p>
-        </div>
-        <button id="checkin-button" class="checkin-button" disabled>
-          <i class="fas fa-check"></i> Zapisz odbicie
-        </button>
-      </div>
-    </section>
-
-    <!-- Statistics section -->
-    <section class="stats-section">
-      <h3><i class="fas fa-chart-bar"></i> Statystyki</h3>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value" id="member-monthly-checkins">0</div>
-          <div class="stat-label">Odbić członka w miesiącu</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="today-total-checkins">0</div>
-          <div class="stat-label">Odbić wszystkich dziś</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="monthly-total-checkins">0</div>
-          <div class="stat-label">Odbić wszystkich w miesiącu</div>
+    <!-- Checkins section -->
+    <section class="checkins-section" id="checkins-section" style="display: none;">
+      <h3><i class="fas fa-chart-bar"></i> Liczba odbić w wybranym miesiącu</h3>
+      <div id="checkins-content">
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p>Ładowanie odbić...</p>
         </div>
       </div>
     </section>
@@ -428,37 +265,21 @@
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Global variables
-    let selectedMember = null;
     let membersList = [];
+    let selectedMemberId = null;
 
     // Initialize app
     document.addEventListener('DOMContentLoaded', async () => {
-      console.log('Starting MultiSport Check-in app...');
-      await testDatabaseConnection();
       await loadMembers();
+      populateMonthSelect();
       setupEventListeners();
-      await loadStats();
+
+      // Refresh months list daily
+      setInterval(() => {
+        populateMonthSelect();
+        console.log('Months list refreshed');
+      }, 24 * 60 * 60 * 1000); // 24 hours
     });
-
-    // Test database connection and table existence
-    async function testDatabaseConnection() {
-      try {
-        console.log('Testing database connection...');
-        const { data, error } = await supabase
-          .from('multi_checkins')
-          .select('count')
-          .limit(1);
-
-        if (error) {
-          console.error('Database connection error:', error);
-          alert('BŁĄD: Tabela multi_checkins nie istnieje w bazie danych!\n\nUruchom SQL z pliku: create_multi_checkins_table.sql');
-        } else {
-          console.log('Database connection OK, table exists');
-        }
-      } catch (err) {
-        console.error('Database test error:', err);
-      }
-    }
 
     // Load members with multi/multi_dzieci
     async function loadMembers() {
@@ -467,274 +288,194 @@
           .from('members')
           .select('*')
           .or('multi.eq.multi,multi.eq.multi_dzieci')
-          .neq('multi', null)
           .order('name', { ascending: true });
 
         if (error) throw error;
 
         membersList = members || [];
+        populateMemberSelect();
 
       } catch (err) {
         showError('Błąd ładowania listy członków');
       }
     }
 
+    // Populate member select dropdown
+    function populateMemberSelect() {
+      const memberSelect = document.getElementById('member-select');
+
+      // Clear existing options except the first one
+      while (memberSelect.children.length > 1) {
+        memberSelect.removeChild(memberSelect.lastChild);
+      }
+
+      // Add members to dropdown
+      membersList.forEach(member => {
+        const option = document.createElement('option');
+        option.value = member.id;
+        option.textContent = member.name;
+        memberSelect.appendChild(option);
+      });
+    }
+
+    // Populate month select with current and future months
+    function populateMonthSelect() {
+      const monthSelect = document.getElementById('month-select');
+      const now = new Date();
+
+      // Clear existing options
+      monthSelect.innerHTML = '';
+
+      // Add current month and next 5 months
+      for (let i = 0; i < 6; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const monthValue = (date.getMonth() + 1).toString().padStart(2, '0');
+        const monthName = date.toLocaleDateString('pl-PL', {
+          month: 'long',
+          year: 'numeric'
+        });
+
+        const option = document.createElement('option');
+        option.value = `${monthValue}_${date.getFullYear()}`; // Store month_year format
+        option.textContent = monthName;
+
+        // Set current month as selected
+        if (i === 0) {
+          option.selected = true;
+        }
+
+        monthSelect.appendChild(option);
+      }
+    }
+
+
     // Setup event listeners
     function setupEventListeners() {
-      const searchInput = document.getElementById('member-search');
-      const searchResults = document.getElementById('search-results');
-      const checkinButton = document.getElementById('checkin-button');
-      const clearSearchBtn = document.getElementById('clear-search');
+      const memberSelect = document.getElementById('member-select');
+      const monthSelect = document.getElementById('month-select');
 
-      // Search input event
-      searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.trim().toLowerCase();
-
-        // Show/hide clear button
-        clearSearchBtn.style.display = query.length > 0 ? 'block' : 'none';
-
-        if (query.length < 2) {
-          searchResults.style.display = 'none';
-          return;
-        }
-
-        const filteredMembers = membersList.filter(member =>
-          member.name.toLowerCase().includes(query)
-        );
-
-        displaySearchResults(filteredMembers);
-      });
-
-      // Clear search button
-      clearSearchBtn.addEventListener('click', () => {
-        searchInput.value = '';
-        searchResults.style.display = 'none';
-        clearSearchBtn.style.display = 'none';
-        searchInput.focus();
-
-        // Clear selected member info
-        selectedMember = null;
-        document.getElementById('selected-member').style.display = 'none';
-
-        // Reset member monthly stats
-        document.getElementById('member-monthly-checkins').textContent = '0';
-      });
-
-      // Search input focus
-      searchInput.addEventListener('focus', () => {
-        if (searchInput.value.trim().length >= 2) {
-          const filteredMembers = membersList.filter(member =>
-            member.name.toLowerCase().includes(searchInput.value.trim().toLowerCase())
-          );
-          displaySearchResults(filteredMembers);
+      // Member selection change
+      memberSelect.addEventListener('change', (e) => {
+        selectedMemberId = e.target.value;
+        if (selectedMemberId) {
+          loadMemberCheckins();
+        } else {
+          hideCheckinsSection();
         }
       });
 
-      // Hide results when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-          searchResults.style.display = 'none';
+      // Month selection change
+      monthSelect.addEventListener('change', () => {
+        if (selectedMemberId) {
+          loadMemberCheckins();
         }
-      });
-
-      // Check-in button
-      checkinButton.addEventListener('click', async () => {
-        if (!selectedMember) return;
-
-        await performCheckin();
       });
     }
 
-    // Display search results
-    function displaySearchResults(members) {
-      const searchResults = document.getElementById('search-results');
+    // Load checkins for selected member and month
+    async function loadMemberCheckins() {
+      if (!selectedMemberId) return;
 
-      if (members.length === 0) {
-        searchResults.innerHTML = `
-          <div class="search-result-item">
-            <div class="member-name">Nie znaleziono członków</div>
-          </div>
-        `;
-        searchResults.style.display = 'block';
-        return;
-      }
+      const checkinsContent = document.getElementById('checkins-content');
+      const checkinsSection = document.getElementById('checkins-section');
 
-      searchResults.innerHTML = members.map(member => `
-        <div class="search-result-item" data-member-id="${member.id}">
-          <div class="member-name">${member.name}</div>
-          <div class="member-details">
-            ${member.multi === 'multi' ? 'Multi' : 'Multi dzieci'} • ${member.style.toUpperCase()}
-          </div>
+      // Show loading
+      checkinsContent.innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p>Ładowanie odbić...</p>
         </div>
-      `).join('');
+      `;
 
-      // Add click handlers
-      searchResults.querySelectorAll('.search-result-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const memberId = item.getAttribute('data-member-id');
-          selectMember(memberId);
-        });
-      });
-
-      searchResults.style.display = 'block';
-    }
-
-    // Select member
-    async function selectMember(memberId) {
-      const member = membersList.find(m => m.id === memberId);
-      if (!member) return;
-
-      selectedMember = member;
-
-      // Update UI
-      document.getElementById('selected-member-name').textContent = member.name;
-      document.getElementById('selected-member-details').textContent =
-        `${member.multi === 'multi' ? 'Multi' : 'Multi dzieci'} • ${member.style.toUpperCase()} • #${member.id}`;
-
-      document.getElementById('selected-member').style.display = 'block';
-      document.getElementById('member-search').value = member.name;
-      document.getElementById('search-results').style.display = 'none';
-
-      // Check if already checked in today
-      const today = new Date().toISOString().split('T')[0];
-      const { data: existingCheckins, error } = await supabase
-        .from('multi_checkins')
-        .select('id')
-        .eq('member_id', memberId)
-        .eq('checkin_date', today);
-
-      const checkinButton = document.getElementById('checkin-button');
-      if (existingCheckins && existingCheckins.length > 0) {
-        checkinButton.disabled = true;
-        checkinButton.innerHTML = '<i class="fas fa-check-circle"></i> Już odbity dzisiaj';
-      } else {
-        checkinButton.disabled = false;
-        checkinButton.innerHTML = '<i class="fas fa-check"></i> Zapisz odbicie';
-      }
-
-      // Load member statistics
-      await loadMemberStats(memberId);
-
-      // Refresh general stats too
-      await loadStats();
-    }
-
-    // Perform check-in
-    async function performCheckin() {
-      if (!selectedMember) return;
-
-      const checkinButton = document.getElementById('checkin-button');
-      const originalText = checkinButton.innerHTML;
+      // Show section
+      checkinsSection.style.display = 'block';
 
       try {
-        checkinButton.disabled = true;
-        checkinButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zapisywanie...';
+        const selectedValue = document.getElementById('month-select').value;
+        const [month, year] = selectedValue.split('_');
 
-        const now = new Date();
-        const checkinDate = now.toISOString().split('T')[0];
-        const checkinTime = now.toTimeString().split(' ')[0];
+        const startDate = `${year}-${month}-01`;
+        const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
 
-        const { error } = await supabase
+        console.log('Loading checkins for:', {
+          memberId: selectedMemberId,
+          startDate,
+          endDate,
+          month,
+          year
+        });
+
+        const { data: checkins, error } = await supabase
           .from('multi_checkins')
-          .insert({
-            member_id: selectedMember.id,
-            checkin_date: checkinDate,
-            checkin_time: checkinTime
-          });
+          .select('*')
+          .eq('member_id', selectedMemberId)
+          .gte('checkin_date', startDate)
+          .lte('checkin_date', endDate);
 
         if (error) throw error;
 
-        // Update UI
-        checkinButton.innerHTML = '<i class="fas fa-check-circle"></i> Odbicie zapisane!';
-        checkinButton.disabled = true;
-
-        // Refresh all stats
-        await loadStats();
-        if (selectedMember) {
-          await loadMemberStats(selectedMember.id);
-        }
-
-        showSuccess('Odbicie zostało pomyślnie zapisane!');
+        console.log('Found checkins:', checkins?.length || 0);
+        displayCheckins(checkins || []);
 
       } catch (err) {
-        console.error('Error performing check-in:', err);
-        checkinButton.innerHTML = originalText;
-        checkinButton.disabled = false;
-        showError('Błąd zapisywania odbicia: ' + (err.message || 'Nieznany błąd'));
+        console.error('Error loading checkins:', err);
+        checkinsContent.innerHTML = `
+          <div class="no-checkins">
+            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--error); margin-bottom: 15px;"></i>
+            <p>Błąd ładowania odbić</p>
+          </div>
+        `;
       }
     }
 
-    // Load member statistics
-    async function loadMemberStats(memberId) {
-      try {
-        const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+    // Display checkins count in the UI
+    function displayCheckins(checkins) {
+      const checkinsContent = document.getElementById('checkins-content');
 
-        const { data: memberCheckins, error } = await supabase
-          .from('multi_checkins')
-          .select('*')
-          .eq('member_id', memberId)
-          .gte('checkin_date', `${currentMonth}-01`)
-          .lte('checkin_date', `${currentMonth}-31`);
+      const checkinsCount = checkins.length;
 
-        if (error) {
-          console.error('Member stats error:', error);
-          throw error;
-        }
-
-        const memberMonthlyCheckins = memberCheckins ? memberCheckins.length : 0;
-        console.log(`Member ${memberId} checkins this month:`, memberMonthlyCheckins);
-        document.getElementById('member-monthly-checkins').textContent = memberMonthlyCheckins;
-
-      } catch (err) {
-        console.error('Error loading member stats:', err);
-        document.getElementById('member-monthly-checkins').textContent = '0';
+      if (checkinsCount === 0) {
+        checkinsContent.innerHTML = `
+          <div class="no-checkins">
+            <i class="fas fa-calendar-times" style="font-size: 3rem; color: var(--text-gray); margin-bottom: 20px;"></i>
+            <p style="font-size: 1.2rem; color: var(--text-gray);">Brak odbić w wybranym miesiącu</p>
+          </div>
+        `;
+        return;
       }
+
+      const checkinsHtml = `
+        <div class="checkins-count" style="
+          text-align: center;
+          padding: 40px 20px;
+          background: var(--secondary-bg);
+          border-radius: 12px;
+          border: 2px solid var(--gold);
+        ">
+          <div style="
+            font-size: 4rem;
+            font-weight: bold;
+            color: var(--gold);
+            margin-bottom: 10px;
+          ">
+            ${checkinsCount}
+          </div>
+          <div style="
+            font-size: 1.3rem;
+            color: var(--text-light);
+          ">
+            odbić w wybranym miesiącu
+          </div>
+        </div>
+      `;
+
+      checkinsContent.innerHTML = checkinsHtml;
     }
 
-    // Load general statistics
-    async function loadStats() {
-      try {
-        const now = new Date();
-        const today = now.toISOString().split('T')[0];
-        const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-
-        console.log('Loading stats for:', { today, currentMonth });
-
-        // Today's total checkins
-        const { data: todayCheckins, error: todayError } = await supabase
-          .from('multi_checkins')
-          .select('id')
-          .eq('checkin_date', today);
-
-        if (todayError) {
-          console.error('Today checkins error:', todayError);
-        } else {
-          const todayCount = todayCheckins ? todayCheckins.length : 0;
-          console.log('Today checkins count:', todayCount);
-          document.getElementById('today-total-checkins').textContent = todayCount;
-        }
-
-        // Monthly total checkins
-        const { data: monthlyCheckins, error: monthlyError } = await supabase
-          .from('multi_checkins')
-          .select('id')
-          .gte('checkin_date', `${currentMonth}-01`)
-          .lte('checkin_date', `${currentMonth}-31`);
-
-        if (monthlyError) {
-          console.error('Monthly checkins error:', monthlyError);
-        } else {
-          const monthlyCount = monthlyCheckins ? monthlyCheckins.length : 0;
-          console.log('Monthly checkins count:', monthlyCount);
-          document.getElementById('monthly-total-checkins').textContent = monthlyCount;
-        }
-
-      } catch (err) {
-        console.error('Error loading stats:', err);
-        document.getElementById('today-total-checkins').textContent = '0';
-        document.getElementById('monthly-total-checkins').textContent = '0';
-      }
+    // Hide checkins section
+    function hideCheckinsSection() {
+      const checkinsSection = document.getElementById('checkins-section');
+      checkinsSection.style.display = 'none';
     }
 
     // Show error message
@@ -744,15 +485,6 @@
       setTimeout(() => {
         statusDiv.innerHTML = '';
       }, 5000);
-    }
-
-    // Show success message
-    function showSuccess(message) {
-      const statusDiv = document.getElementById('status-message');
-      statusDiv.innerHTML = `<div class="success-message">${message}</div>`;
-      setTimeout(() => {
-        statusDiv.innerHTML = '';
-      }, 3000);
     }
   </script>
 </body>
