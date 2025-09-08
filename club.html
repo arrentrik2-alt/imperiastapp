@@ -1253,6 +1253,12 @@
         </a>
       </li>
       <li>
+        <a href="#" id="nav-trainers">
+          <i class="fas fa-chalkboard-teacher"></i>
+          <span class="link-text">Trenerzy</span>
+        </a>
+      </li>
+      <li>
         <a href="#" id="nav-profile">
           <i class="fas fa-user"></i>
           <span class="link-text">Profil</span>
@@ -1362,7 +1368,64 @@
         </div>
       </div>
     </div>
+
+    <!-- Trainers Section -->
+    <div class="content-box" id="trainers-section" style="display: none;">
+      <div class="content-header">
+        <h3>Trenerzy</h3>
+        <button class="btn btn-primary" id="add-trainer-btn">
+          <i class="fas fa-plus"></i> Dodaj trenera
+        </button>
+      </div>
+
+      <div class="trainers-table-container">
+        <table class="members-table" id="trainers-table">
+          <thead>
+            <tr>
+              <th style="width: 50px;">Lp.</th>
+              <th style="width: 200px;">Imię i nazwisko</th>
+              <th style="width: 250px;">Email</th>
+              <th style="width: 150px;">Data rejestracji</th>
+              <th style="width: 100px;">Akcje</th>
+            </tr>
+          </thead>
+          <tbody id="trainers-list">
+            <!-- Trainers will be loaded here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
   </main>
+
+  <!-- Add Trainer Modal -->
+  <div class="modal" id="add-trainer-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-trainer-modal">&times;</button>
+      <div class="modal-header">
+        <h3>Dodaj nowego trenera</h3>
+      </div>
+      <div class="modal-body">
+        <form id="add-trainer-form">
+          <div class="form-group">
+            <label for="trainer-first-name">Imię:</label>
+            <input type="text" id="trainer-first-name" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="trainer-last-name">Nazwisko:</label>
+            <input type="text" id="trainer-last-name" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="trainer-email">Email:</label>
+            <input type="email" id="trainer-email" class="form-control" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancel-trainer-btn">Anuluj</button>
+        <button class="btn btn-primary" id="save-trainer-btn">Zapisz trenera</button>
+      </div>
+    </div>
+  </div>
 
   <div id="global-loader">
     <div class="loader-backdrop"></div>
@@ -1719,6 +1782,162 @@
       }
     }
 
+    // Trainers functionality
+    async function loadTrainers() {
+      try {
+        const trainersList = document.getElementById('trainers-list');
+        trainersList.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 40px;">
+              <div class="loading"></div>
+            </td>
+          </tr>
+        `;
+
+        const { data: trainers, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'trainer')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (trainers.length === 0) {
+          trainersList.innerHTML = `
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 40px;">
+                <div class="empty-state">
+                  <i class="fas fa-chalkboard-teacher"></i>
+                  <p>Brak trenerów w systemie</p>
+                  <p>Kliknij "Dodaj trenera" aby dodać pierwszego trenera</p>
+                </div>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        trainersList.innerHTML = '';
+        trainers.forEach((trainer, index) => {
+          const trainerRow = createTrainerRow(trainer, index + 1);
+          trainersList.appendChild(trainerRow);
+        });
+
+      } catch (err) {
+        console.error('Błąd ładowania trenerów:', err);
+        document.getElementById('trainers-list').innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 40px;">
+              <div class="empty-state">
+                <p>Błąd ładowania trenerów</p>
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    function createTrainerRow(trainer, number) {
+      const row = document.createElement('tr');
+
+      const createdDate = new Date(trainer.created_at).toLocaleDateString('pl-PL');
+
+      row.innerHTML = `
+        <td>${number}</td>
+        <td>${trainer.first_name || ''} ${trainer.last_name || ''}</td>
+        <td>${trainer.email || ''}</td>
+        <td>${createdDate}</td>
+        <td>
+          <button class="btn btn-sm btn-danger delete-trainer-btn" data-id="${trainer.id}">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      `;
+
+      return row;
+    }
+
+    // Trainer modal functionality
+    const addTrainerBtn = document.getElementById('add-trainer-btn');
+    const addTrainerModal = document.getElementById('add-trainer-modal');
+    const closeTrainerModal = document.getElementById('close-trainer-modal');
+    const cancelTrainerBtn = document.getElementById('cancel-trainer-btn');
+    const saveTrainerBtn = document.getElementById('save-trainer-btn');
+    const addTrainerForm = document.getElementById('add-trainer-form');
+
+    // Show modal
+    addTrainerBtn.addEventListener('click', () => {
+      addTrainerModal.classList.add('active');
+    });
+
+    // Close modal
+    closeTrainerModal.addEventListener('click', () => {
+      addTrainerModal.classList.remove('active');
+      addTrainerForm.reset();
+    });
+
+    cancelTrainerBtn.addEventListener('click', () => {
+      addTrainerModal.classList.remove('active');
+      addTrainerForm.reset();
+    });
+
+    // Save trainer
+    saveTrainerBtn.addEventListener('click', async () => {
+      const firstName = document.getElementById('trainer-first-name').value.trim();
+      const lastName = document.getElementById('trainer-last-name').value.trim();
+      const email = document.getElementById('trainer-email').value.trim();
+
+      if (!firstName || !lastName || !email) {
+        alert('Wypełnij wszystkie pola!');
+        return;
+      }
+
+      try {
+        saveTrainerBtn.disabled = true;
+        saveTrainerBtn.textContent = 'Zapisywanie...';
+
+        // Create user account with Supabase Auth (no password - trainer will set it via email)
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: email,
+          password: Math.random().toString(36) + Math.random().toString(36), // Random password
+          options: {
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              role: 'trainer'
+            }
+          }
+        });
+
+        if (authError) throw authError;
+
+        // Create profile entry
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: authData.user.id,
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            role: 'trainer'
+          }]);
+
+        if (profileError) throw profileError;
+
+        alert('Trener został dodany! Wysyłamy email z linkiem do ustawienia hasła.');
+        addTrainerModal.classList.remove('active');
+        addTrainerForm.reset();
+        loadTrainers();
+
+      } catch (err) {
+        console.error('Błąd dodawania trenera:', err);
+        alert('Błąd dodawania trenera: ' + err.message);
+      } finally {
+        saveTrainerBtn.disabled = false;
+        saveTrainerBtn.textContent = 'Zapisz trenera';
+      }
+    });
+
     // Create member table row element
     function createMemberCard(member, number) {
       const row = document.createElement('tr');
@@ -1978,6 +2197,7 @@
       document.getElementById('members-section').style.display = 'none';
       document.getElementById('camps-section').style.display = 'none';
       document.getElementById('camp-details-section').style.display = 'none';
+      document.getElementById('trainers-section').style.display = 'none';
 
       // Remove active class from all nav links
       document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
@@ -1990,6 +2210,10 @@
         document.getElementById('camps-section').style.display = 'block';
         document.getElementById('nav-camps').classList.add('active');
         loadCamps();
+      } else if (section === 'trainers') {
+        document.getElementById('trainers-section').style.display = 'block';
+        document.getElementById('nav-trainers').classList.add('active');
+        loadTrainers();
       }
     }
 
@@ -3572,6 +3796,11 @@
     document.getElementById('nav-camps').addEventListener('click', (e) => {
       e.preventDefault();
       setActiveNav('camps');
+    });
+
+    document.getElementById('nav-trainers').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('trainers');
     });
 
     // Update the original navigation function
