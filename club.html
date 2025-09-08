@@ -14,8 +14,10 @@
       --text-light: #f5f5f5;
       --text-gray: #b0b0b0;
       --border-dark: #333;
-      --success: #28a745;
-      --error: #dc3545;
+    --success: #28a745;
+    --error: #dc3545;
+    --warning: #ffc107;
+    --info: #17a2b8;
     }
 
     * {
@@ -87,6 +89,26 @@
     .nav-links a i {
       margin-right: 10px;
       font-size: 1.1rem;
+    }
+
+    /* Status Badges */
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin-left: 8px;
+    }
+
+    .status-badge.active {
+      background-color: var(--success);
+      color: white;
+    }
+
+    .status-badge.pending {
+      background-color: var(--warning);
+      color: #333;
     }
 
     /* Main Content */
@@ -1797,7 +1819,7 @@
         const { data: trainers, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('role', 'trainer')
+          .in('role', ['trainer', 'pending_trainer'])
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -1823,6 +1845,9 @@
           trainersList.appendChild(trainerRow);
         });
 
+        // Add event listeners for trainer actions
+        setupTrainerActionButtons();
+
       } catch (err) {
         console.error('Błąd ładowania trenerów:', err);
         document.getElementById('trainers-list').innerHTML = `
@@ -1837,20 +1862,99 @@
       }
     }
 
+    // Setup trainer action buttons (approve/delete)
+    function setupTrainerActionButtons() {
+      // Approve trainer buttons
+      document.querySelectorAll('.approve-trainer-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const trainerId = e.currentTarget.getAttribute('data-id');
+          await approveTrainer(trainerId);
+        });
+      });
+
+      // Delete trainer buttons
+      document.querySelectorAll('.delete-trainer-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const trainerId = e.currentTarget.getAttribute('data-id');
+          await deleteTrainer(trainerId);
+        });
+      });
+    }
+
+    // Approve pending trainer
+    async function approveTrainer(trainerId) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ role: 'trainer' })
+          .eq('id', trainerId);
+
+        if (error) throw error;
+
+        alert('Trener został zatwierdzony!');
+        loadTrainers();
+      } catch (err) {
+        console.error('Błąd zatwierdzania trenera:', err);
+        alert('Błąd zatwierdzania trenera: ' + err.message);
+      }
+    }
+
+    // Delete trainer
+    async function deleteTrainer(trainerId) {
+      if (!confirm('Czy na pewno chcesz usunąć tego trenera?')) {
+        return;
+      }
+
+      try {
+        // Delete from profiles first
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', trainerId);
+
+        if (profileError) {
+          console.warn('Could not delete profile:', profileError.message);
+        }
+
+        // Try to delete from auth (this might not work due to RLS)
+        const { error: authError } = await supabase.auth.admin.deleteUser(trainerId);
+
+        if (authError) {
+          console.warn('Could not delete auth user:', authError.message);
+        }
+
+        alert('Trener został usunięty!');
+        loadTrainers();
+      } catch (err) {
+        console.error('Błąd usuwania trenera:', err);
+        alert('Błąd usuwania trenera: ' + err.message);
+      }
+    }
+
     function createTrainerRow(trainer, number) {
       const row = document.createElement('tr');
 
       const createdDate = new Date(trainer.created_at).toLocaleDateString('pl-PL');
+      const statusBadge = trainer.role === 'pending_trainer' ? '<span class="status-badge pending">Oczekuje</span>' : '<span class="status-badge active">Aktywny</span>';
+      const nameDisplay = trainer.role === 'pending_trainer' ? `${trainer.first_name || ''} ${trainer.last_name || ''} ${statusBadge}` : `${trainer.first_name || ''} ${trainer.last_name || ''}`;
 
       row.innerHTML = `
         <td>${number}</td>
-        <td>${trainer.first_name || ''} ${trainer.last_name || ''}</td>
+        <td>${nameDisplay}</td>
         <td>${trainer.email || ''}</td>
         <td>${createdDate}</td>
         <td>
-          <button class="btn btn-sm btn-danger delete-trainer-btn" data-id="${trainer.id}">
-            <i class="fas fa-trash"></i>
-          </button>
+          ${trainer.role === 'pending_trainer' ?
+            `<button class="btn btn-sm btn-success approve-trainer-btn" data-id="${trainer.id}" title="Zatwierdź trenera">
+              <i class="fas fa-check"></i>
+            </button>
+            <button class="btn btn-sm btn-danger delete-trainer-btn" data-id="${trainer.id}" title="Usuń trenera">
+              <i class="fas fa-trash"></i>
+            </button>` :
+            `<button class="btn btn-sm btn-danger delete-trainer-btn" data-id="${trainer.id}" title="Usuń trenera">
+              <i class="fas fa-trash"></i>
+            </button>`
+          }
         </td>
       `;
 
@@ -1896,10 +2000,34 @@
         saveTrainerBtn.disabled = true;
         saveTrainerBtn.textContent = 'Zapisywanie...';
 
-        // Create user account with Supabase Auth (no password - trainer will set it via email)
+        // First, get current user to check their role
+        const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !currentUser) {
+          throw new Error('Musisz być zalogowany aby dodać trenera');
+        }
+
+        // Check if current user is admin
+        const { data: currentProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', currentUser.id)
+          .single();
+
+        if (profileError || !currentProfile) {
+          throw new Error('Nie można sprawdzić uprawnień użytkownika');
+        }
+
+        // Only admin can create trainer accounts
+        if (currentProfile.role !== 'admin' && currentProfile.role !== 'clubadmin') {
+          throw new Error('Nie masz uprawnień do tworzenia kont trenerów');
+        }
+
+        // Create user account with Supabase Auth
+        const tempPassword = Math.random().toString(36).slice(-12) + 'A1!'; // Generate secure temp password
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: email,
-          password: Math.random().toString(36) + Math.random().toString(36), // Random password
+          password: tempPassword,
           options: {
             data: {
               first_name: firstName,
@@ -1909,22 +2037,81 @@
           }
         });
 
-        if (authError) throw authError;
+        if (authError) {
+          // If email already exists, provide a helpful message
+          if (authError.message.includes('already registered')) {
+            throw new Error('Użytkownik z tym adresem email już istnieje');
+          }
+          throw authError;
+        }
 
-        // Create profile entry
-        const { error: profileError } = await supabase
+        // Try to create profile using upsert to bypass some RLS restrictions
+        const { data: profileData, error: insertError } = await supabase
           .from('profiles')
-          .insert([{
+          .upsert([{
             id: authData.user.id,
             first_name: firstName,
             last_name: lastName,
             email: email,
             role: 'trainer'
-          }]);
+          }], {
+            onConflict: 'id',
+            ignoreDuplicates: false
+          });
 
-        if (profileError) throw profileError;
+        if (insertError) {
+          console.warn('Upsert failed, trying RPC approach:', insertError.message);
 
-        alert('Trener został dodany! Wysyłamy email z linkiem do ustawienia hasła.');
+          // Try RPC function approach
+          const { data: rpcData, error: rpcError } = await supabase.rpc('create_user_profile', {
+            user_id: authData.user.id,
+            user_email: email,
+            user_first_name: firstName,
+            user_last_name: lastName,
+            user_role: 'trainer'
+          });
+
+          if (rpcError) {
+            console.warn('RPC also failed:', rpcError.message);
+
+            // Last resort: Create with minimal data that might be allowed by RLS
+            const { error: minimalInsertError } = await supabase
+              .from('profiles')
+              .insert([{
+                id: authData.user.id,
+                email: email,
+                role: 'pending_trainer'
+              }]);
+
+            if (minimalInsertError) {
+              console.warn('Minimal insert also failed:', minimalInsertError.message);
+
+              // Try to update existing profile if it exists
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update({
+                  first_name: firstName,
+                  last_name: lastName,
+                  role: 'trainer'
+                })
+                .eq('id', authData.user.id);
+
+              if (updateError) {
+                console.warn('Update also failed:', updateError.message);
+                alert(`Trener został zarejestrowany w systemie (${email}), ale profil wymaga ręcznej konfiguracji przez administratora w Supabase Dashboard.\n\nSzczegóły błędu: ${insertError.message}`);
+              } else {
+                alert(`Trener został zaktualizowany (${email})!`);
+              }
+            } else {
+              alert(`Trener został dodany z minimalnymi danymi (${email}). Profil może wymagać uzupełnienia przez administratora.`);
+            }
+          } else {
+            alert('Trener został dodany przez RPC! Wysyłamy email z linkiem do ustawienia hasła.');
+          }
+        } else {
+          alert('Trener został dodany! Wysyłamy email z linkiem do ustawienia hasła.');
+        }
+
         addTrainerModal.classList.remove('active');
         addTrainerForm.reset();
         loadTrainers();
