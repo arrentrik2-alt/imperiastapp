@@ -1818,22 +1818,25 @@
     }
 
     async function openModal() {
-      await loadTrainersIntoDropdowns();
       editingGroupId = null;
       const modalTitle = document.getElementById('group-modal-title');
       if (modalTitle) modalTitle.textContent = 'Dodaj nową grupę';
+
+      // Load trainers first, then show modal
+      await loadTrainersIntoDropdowns();
       addGroupModal.classList.add('active');
       resetForm();
     }
 
     async function openEditModal(groupData) {
-      await loadTrainersIntoDropdowns();
       editingGroupId = groupData.id;
       const modalTitle = document.getElementById('group-modal-title');
       if (modalTitle) modalTitle.textContent = 'Edytuj grupę';
       const saveBtnText = document.getElementById('save-group-btn-text');
       if (saveBtnText) saveBtnText.textContent = 'Zapisz zmiany';
-      addGroupModal.classList.add('active');
+
+      // Load trainers first, then fill form data
+      await loadTrainersIntoDropdowns();
 
       // Fill form with existing data
       const nameField = document.getElementById('group-name');
@@ -1843,6 +1846,8 @@
       if (nameField) nameField.value = groupData.name || '';
       if (startField) startField.value = groupData.start_time ? groupData.start_time.substring(0, 5) : '';
       if (trainerField) trainerField.value = groupData.trainer || '';
+
+      addGroupModal.classList.add('active');
 
       // Handle days - support both single day and JSON string with multiple days
       let days = [];
@@ -2017,8 +2022,9 @@
         });
 
         // Get all trainer IDs and load trainer data
-        const trainerIds = [...new Set(data.map(g => g.trainer).filter(id => id))];
+        const trainerIds = [...new Set(data.map(g => g.trainer).filter(id => id && id !== 'null' && id !== ''))];
         const trainerLookup = {};
+
         if (trainerIds.length > 0) {
           try {
             const { data: trainers, error } = await supabase
@@ -2802,6 +2808,7 @@
       await populateMonthSelectors();
       await loadHomeData();
       await loadTrainersIntoDropdowns();
+      await loadGroups();
       // initialize lesson type buttons and set default so create modal uses correct type
       try { ensureLessonTypeButtons(); setLessonType(currentLessonType); } catch (e) { console.warn('Lesson type init skipped:', e); }
     });
@@ -2995,7 +3002,10 @@
     const lessonsList = document.getElementById('lessons-list');
 
     // Open create/edit lesson modal (if lessonObj provided -> edit mode)
-    function openCreateLessonModal(lessonObj = null) {
+    async function openCreateLessonModal(lessonObj = null) {
+      // Load trainers first, then populate form
+      await loadTrainersIntoDropdowns();
+
       // populate or clear
       if (lessonObj) {
         currentEditingLessonId = lessonObj.id;
@@ -3021,8 +3031,7 @@
     }
 
     addLessonBtn.addEventListener('click', async () => {
-      await loadTrainersIntoDropdowns();
-      openCreateLessonModal(null);
+      await openCreateLessonModal(null);
     });
     closeCreateLessonModal.addEventListener('click', () => { createLessonModal.classList.remove('active'); currentEditingLessonId = null; });
     cancelCreateLessonBtn.addEventListener('click', () => { createLessonModal.classList.remove('active'); currentEditingLessonId = null; });
@@ -3548,8 +3557,7 @@
               // fetch lesson details and open modal populated
               const { data: lessonDetail, error: ldErr } = await supabase.from('lessons_month').select('*').eq('id', lesson.id).single();
               if (ldErr) { alert('Błąd pobierania lekcji: ' + (ldErr.message || 'Nieznany')); return; }
-              await loadTrainersIntoDropdowns();
-              openCreateLessonModal(lessonDetail);
+              await openCreateLessonModal(lessonDetail);
             });
           }
 
