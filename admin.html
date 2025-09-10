@@ -2690,7 +2690,7 @@
               
               <div class="amount-section" style="min-width: 120px;">
                 <div style="display: flex; align-items: center; gap: 5px;">
-                  <input type="number" class="amount-input form-control" value="${amount}" step="0.01" min="0" 
+                  <input type="number" class="amount-input form-control" value="${(payment.amount || 0).toFixed(2)}" step="0.01" min="0" 
                          data-participant-id="${participant.participant_id}" data-group-id="${groupId}" 
                          style="width: 100px; text-align: center;">
                   <span style="font-size: 0.9rem; color: var(--text-gray);">zł</span>
@@ -2982,10 +2982,31 @@
     // Currently editing lesson id (null when creating)
     let currentEditingLessonId = null;
 
+    // Funkcja czekająca na Supabase
+    function waitForSupabase(callback, timeout = 5000) {
+      const startTime = Date.now();
+
+      function checkSupabase() {
+        if (window.supabaseClient) {
+          console.log('Supabase gotowy w admin.html, wykonuję callback');
+          callback();
+        } else if (Date.now() - startTime > timeout) {
+          console.error('Timeout oczekiwania na Supabase w admin.html');
+          alert('Błąd ładowania aplikacji - odśwież stronę');
+        } else {
+          setTimeout(checkSupabase, 100);
+        }
+      }
+
+      checkSupabase();
+    }
+
     // Initialize
     console.log('Rozpoczynam inicjalizację admin.html...');
 
-    checkPermissions().then(async (hasPermission) => {
+    // Czekaj na Supabase przed sprawdzeniem uprawnień
+    waitForSupabase(() => {
+      checkPermissions().then(async (hasPermission) => {
       console.log('checkPermissions zakończone z wynikiem:', hasPermission);
       if (!hasPermission) {
         console.log('Brak uprawnień, kończę inicjalizację');
@@ -3016,9 +3037,11 @@
 
       // initialize lesson type buttons and set default so create modal uses correct type
       try { ensureLessonTypeButtons(); setLessonType(currentLessonType); } catch (e) { console.warn('Lesson type init skipped:', e); }
-    }).catch(err => {
-      console.error('Błąd podczas inicjalizacji:', err);
-      alert('Błąd inicjalizacji: ' + err.message);
+        }).catch(err => {
+          console.error('Błąd podczas inicjalizacji:', err);
+          alert('Błąd inicjalizacji: ' + err.message);
+        });
+      });
     });
 
     // Draw donut chart helper (paid/unpaid)
@@ -3859,7 +3882,7 @@
                   </div>
                 <div class="amount-section" style="min-width:120px;">
                   <div style="display:flex;align-items:center;gap:6px;">
-                    <input type="number" class="lesson-amount-input form-control" value="${amountVal}" step="0.01" min="0" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:100px;text-align:center;" />
+                    <input type="number" class="lesson-amount-input form-control" value="${(pay.amount || 0).toFixed(2)}" step="0.01" min="0" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:100px;text-align:center;" />
                     <span style="font-size:0.9rem;color:var(--text-gray);">zł</span>
                   </div>
                 </div>
