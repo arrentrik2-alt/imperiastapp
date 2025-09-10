@@ -269,11 +269,30 @@
 
     initSupabase();
     
+    // Funkcja czekająca na Supabase
+    function waitForSupabase(callback, timeout = 5000) {
+      const startTime = Date.now();
+
+      function checkSupabase() {
+        if (window.supabaseClient) {
+          console.log('Supabase gotowy, wykonuję callback');
+          callback();
+        } else if (Date.now() - startTime > timeout) {
+          console.error('Timeout oczekiwania na Supabase');
+          alert('Błąd ładowania aplikacji - odśwież stronę');
+        } else {
+          setTimeout(checkSupabase, 100);
+        }
+      }
+
+      checkSupabase();
+    }
+
     // Pokazuj/ukryj informacje diagnostyczne
     document.getElementById('debugToggle').addEventListener('click', function() {
       const debugInfo = document.getElementById('debugInfo');
       debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
-      this.innerHTML = debugInfo.style.display === 'none' ? 
+      this.innerHTML = debugInfo.style.display === 'none' ?
         'Pokaż informacje diagnostyczne ▼' : 'Ukryj informacje diagnostyczne ▲';
     });
     
@@ -404,15 +423,23 @@
       }
     }
     
-    // Dodaj nasłuchiwanie zdarzeń
-    document.getElementById('loginBtn').addEventListener('click', login);
-    
-    // Zezwól na logowanie po wciśnięciu Enter
-    document.getElementById('password').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        login();
-      }
-    });
+    // Funkcje do wywołania po załadowaniu Supabase
+    function setupLoginHandlers() {
+      console.log('Ustawiam obsługę logowania');
+
+      // Dodaj nasłuchiwanie zdarzeń
+      document.getElementById('loginBtn').addEventListener('click', login);
+
+      // Zezwól na logowanie po wciśnięciu Enter
+      document.getElementById('password').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          login();
+        }
+      });
+    }
+
+    // Czekaj na Supabase i wtedy ustaw obsługę
+    waitForSupabase(setupLoginHandlers);
     
     // Automatycznie pokazuj panel debugowania jeśli były wcześniejsze problemy
     const urlParams = new URLSearchParams(window.location.search);
