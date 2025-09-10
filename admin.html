@@ -1266,6 +1266,12 @@
           if (groupsNav) groupsNav.classList.add('active');
         }
 
+        // Hide add group button for trainers
+        const addGroupBtn = document.getElementById('add-group-btn');
+        if (addGroupBtn) {
+          addGroupBtn.style.display = 'none';
+        }
+
         console.log('Trainer interface configuration completed');
       };
 
@@ -2251,10 +2257,13 @@
               <i class="fas fa-calendar-day"></i>
                 <span>${daysText}, ${formatTimeToHHMM(group.start_time)}</span>
             </div>
+            ${window.currentUser && window.currentUser.role === 'trainer' ? '' : `
             <div class="group-detail">
               <i class="fas fa-user-tie"></i>
               <span id="trainer-${group.id}">${trainerLookup[group.trainer] || group.trainer || 'Nieprzypisany'}</span>
             </div>
+            `}
+            ${window.currentUser && window.currentUser.role === 'trainer' ? '' : `
             <div class="group-actions">
               <button class="btn btn-outline edit-btn" data-id="${group.id}">
                 <i class="fas fa-edit"></i>
@@ -2263,6 +2272,7 @@
                 <i class="fas fa-trash"></i>
               </button>
             </div>
+            `}
           `;
             // click handler
             groupCard.addEventListener('click', (e) => {
@@ -3405,7 +3415,23 @@
           // on edit, fetch participants to construct title
           const { data: partsExisting } = await supabase.from('participants_lessons_month').select('participants_month(name)').eq('month', month).eq('lesson_id', currentEditingLessonId);
           const names = (partsExisting || []).map(x => x.participants_month?.name).filter(Boolean);
-          const titleGen = buildTitle(trainer);
+
+          // Get trainer name from profiles table
+          let trainerName = trainer;
+          if (trainer) {
+            const { data: trainerData } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, email')
+              .eq('id', trainer)
+              .single();
+            if (trainerData) {
+              trainerName = (trainerData.first_name || trainerData.last_name)
+                ? `${trainerData.first_name || ''} ${trainerData.last_name || ''}`.trim()
+                : trainerData.email || trainer;
+            }
+          }
+
+          const titleGen = buildTitle(trainerName);
 
           const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, start_time: start, trainer: trainer, amount: amount }).match({ id: currentEditingLessonId, month: month });
           if (updErr) throw updErr;
@@ -3442,7 +3468,23 @@
         const participantsForTitle = [];
         if (p1name) participantsForTitle.push(p1name);
         if (p2name) participantsForTitle.push(p2name);
-        const titleGen = buildTitle(trainer);
+
+        // Get trainer name from profiles table
+        let trainerName = trainer;
+        if (trainer) {
+          const { data: trainerData } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('id', trainer)
+            .single();
+          if (trainerData) {
+            trainerName = (trainerData.first_name || trainerData.last_name)
+              ? `${trainerData.first_name || ''} ${trainerData.last_name || ''}`.trim()
+              : trainerData.email || trainer;
+          }
+        }
+
+        const titleGen = buildTitle(trainerName);
 
         // Try RPC insertion first (may exist after SQL update). Fallback to direct insert with/without day_of_month.
         let lessonId = null;
