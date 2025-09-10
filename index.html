@@ -241,39 +241,78 @@
     </div>
   </div>
 
-  <script type="module">
+  <script>
     console.log('🚀 Uruchamianie skryptu logowania...');
 
-    import { supabase } from './supabaseClient.js';
+    // Prosty test czy JavaScript działa
+    console.log('✅ JavaScript działa!');
+  </script>
 
-    console.log('📦 Supabase zaimportowany:', supabase ? 'tak' : 'nie');
+  <script type="module">
+    console.log('📦 Moduł JavaScript uruchomiony');
+
+    try {
+      const { supabase } = await import('./supabaseClient.js');
+      console.log('📦 Supabase zaimportowany:', supabase ? 'tak' : 'nie');
+
+      window.supabase = supabase;
+      console.log('🌐 Supabase dostępny globalnie');
+    } catch (error) {
+      console.error('❌ Błąd importu supabase:', error);
+    }
     
-    // Pokazuj/ukryj informacje diagnostyczne
-    document.getElementById('debugToggle').addEventListener('click', function() {
-      const debugInfo = document.getElementById('debugInfo');
-      debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
-      this.innerHTML = debugInfo.style.display === 'none' ? 
-        'Pokaż informacje diagnostyczne ▼' : 'Ukryj informacje diagnostyczne ▲';
+    // Inicjalizuj po załadowaniu strony
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('📄 DOM załadowany');
+
+      // Pokazuj/ukryj informacje diagnostyczne
+      const debugToggle = document.getElementById('debugToggle');
+      if (debugToggle) {
+        debugToggle.addEventListener('click', function() {
+          const debugInfo = document.getElementById('debugInfo');
+          if (debugInfo) {
+            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+            this.innerHTML = debugInfo.style.display === 'none' ?
+              'Pokaż informacje diagnostyczne ▼' : 'Ukryj informacje diagnostyczne ▲';
+          }
+        });
+        console.log('✅ Debug toggle podłączony');
+      }
+
+      // Kopiuj zapytanie SQL do schowka
+      const copySqlBtn = document.getElementById('copySqlBtn');
+      if (copySqlBtn) {
+        copySqlBtn.addEventListener('click', function() {
+          const sqlCode = document.getElementById('sqlCode');
+          const userIdDisplay = document.getElementById('userIdDisplay');
+          if (sqlCode && userIdDisplay) {
+            const sqlCodeText = sqlCode.textContent;
+            const userId = userIdDisplay.textContent;
+            const finalSql = sqlCodeText.replace(/twoje_id/g, userId);
+
+            navigator.clipboard.writeText(finalSql).then(() => {
+              const originalText = this.innerHTML;
+              this.innerHTML = '<i class="fas fa-check"></i> Skopiowano!';
+
+              setTimeout(() => {
+                this.innerHTML = originalText;
+              }, 2000);
+            });
+          }
+        });
+        console.log('✅ Copy SQL button podłączony');
+      }
     });
     
-    // Kopiuj zapytanie SQL do schowka
-    document.getElementById('copySqlBtn').addEventListener('click', function() {
-      const sqlCode = document.getElementById('sqlCode').textContent;
-      const userId = document.getElementById('userIdDisplay').textContent;
-      const finalSql = sqlCode.replace(/twoje_id/g, userId);
-      
-      navigator.clipboard.writeText(finalSql).then(() => {
-        const originalText = this.innerHTML;
-        this.innerHTML = '<i class="fas fa-check"></i> Skopiowano!';
-        
-        setTimeout(() => {
-          this.innerHTML = originalText;
-        }, 2000);
-      });
-    });
-    
-    async function login() {
+    // Funkcja login dostępna globalnie
+    window.login = async function() {
       console.log('🔄 Funkcja login() została wywołana');
+
+      if (!window.supabase) {
+        console.error('❌ Supabase nie jest dostępny!');
+        alert('Błąd: Supabase nie został załadowany');
+        return;
+      }
 
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
@@ -287,20 +326,20 @@
       console.log('🔑 Hasło wprowadzone:', password ? 'tak' : 'nie');
 
       // Reset error message
-      errorMsg.style.display = 'none';
+      if (errorMsg) errorMsg.style.display = 'none';
 
       // Prosta walidacja
       if (!email || !password) {
         console.log('❌ Brak email lub hasła');
-        errorText.textContent = 'Proszę wypełnić wszystkie pola';
-        errorMsg.style.display = 'block';
+        if (errorText) errorText.textContent = 'Proszę wypełnić wszystkie pola';
+        if (errorMsg) errorMsg.style.display = 'block';
         return;
       }
-      
+
       try {
         console.log('🔐 Próba logowania do Supabase...');
 
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await window.supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -309,20 +348,20 @@
 
         if (error) {
           console.log('❌ Błąd logowania:', error.message);
-          errorText.textContent = 'Błąd logowania: ' + error.message;
-          errorMsg.style.display = 'block';
+          if (errorText) errorText.textContent = 'Błąd logowania: ' + error.message;
+          if (errorMsg) errorMsg.style.display = 'block';
           return;
         }
 
         console.log('✅ Logowanie udane, użytkownik:', data.user.id);
-        
+
         // Wyświetl ID użytkownika do debugowania
-        userIdDisplay.textContent = data.user.id;
-        
+        if (userIdDisplay) userIdDisplay.textContent = data.user.id;
+
         // Sprawdź czy użytkownik ma uprawnienia administratora
         console.log('🔍 Sprawdzanie roli użytkownika w profiles...');
 
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await window.supabase
           .from('profiles')
           .select('role')
           .eq('id', data.user.id)
@@ -335,34 +374,38 @@
 
         // Wyświetl rolę użytkownika do debugowania
         if (profile) {
-          userRoleDisplay.textContent = profile.role;
+          if (userRoleDisplay) userRoleDisplay.textContent = profile.role;
           console.log('✅ Znaleziono rolę:', profile.role);
         } else {
-          userRoleDisplay.textContent = 'BRAK REKORDU W TABELI PROFILES';
-          userRoleDisplay.style.color = '#ff6b6b';
+          if (userRoleDisplay) {
+            userRoleDisplay.textContent = 'BRAK REKORDU W TABELI PROFILES';
+            userRoleDisplay.style.color = '#ff6b6b';
+          }
           console.log('❌ Brak rekordu w profiles dla użytkownika:', data.user.id);
         }
 
         if (profileError) {
           console.error('Błąd odczytu profilu:', profileError);
-          errorText.textContent = 'Błąd odczytu uprawnień: ' + profileError.message;
-          errorMsg.style.display = 'block';
-          await supabase.auth.signOut();
+          if (errorText) errorText.textContent = 'Błąd odczytu uprawnień: ' + profileError.message;
+          if (errorMsg) errorMsg.style.display = 'block';
+          await window.supabase.auth.signOut();
           return;
         }
 
         if (!profile) {
-          errorText.textContent = 'BRAK REKORDU W TABELI PROFILES';
-          errorMsg.style.display = 'block';
+          if (errorText) errorText.textContent = 'BRAK REKORDU W TABELI PROFILES';
+          if (errorMsg) errorMsg.style.display = 'block';
 
           // Pokaż panel debugowania
-          document.getElementById('debugInfo').style.display = 'block';
-          document.getElementById('debugToggle').innerHTML = 'Ukryj informacje diagnostyczne ▲';
+          const debugInfo = document.getElementById('debugInfo');
+          const debugToggle = document.getElementById('debugToggle');
+          if (debugInfo) debugInfo.style.display = 'block';
+          if (debugToggle) debugToggle.innerHTML = 'Ukryj informacje diagnostyczne ▲';
 
           // Aktualizuj zapytanie SQL z prawidłowym ID
-          sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
+          if (sqlCode) sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
 
-          await supabase.auth.signOut();
+          await window.supabase.auth.signOut();
           return;
         }
 
@@ -383,56 +426,72 @@
 
         // in all other cases deny access
         console.log('❌ Nieobsługiwana rola:', profile.role, '- odmowa dostępu');
-        errorText.textContent = 'Nie masz uprawnień dostępu do systemu.';
-        errorMsg.style.display = 'block';
+        if (errorText) errorText.textContent = 'Nie masz uprawnień dostępu do systemu.';
+        if (errorMsg) errorMsg.style.display = 'block';
 
         // Pokaż panel debugowania
-        document.getElementById('debugInfo').style.display = 'block';
-        document.getElementById('debugToggle').innerHTML = 'Ukryj informacje diagnostyczne ▲';
+        if (debugInfo) debugInfo.style.display = 'block';
+        if (debugToggle) debugToggle.innerHTML = 'Ukryj informacje diagnostyczne ▲';
 
         // Aktualizuj zapytanie SQL z prawidłowym ID
-        sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
+        if (sqlCode) sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
 
-        await supabase.auth.signOut();
+        await window.supabase.auth.signOut();
         return;
-        
+
       } catch (err) {
         console.error('Nieoczekiwany błąd:', err);
-        errorText.textContent = 'Wystąpił nieoczekiwany błąd: ' + err.message;
-        errorMsg.style.display = 'block';
+        if (errorText) errorText.textContent = 'Wystąpił nieoczekiwany błąd: ' + err.message;
+        if (errorMsg) errorMsg.style.display = 'block';
       }
-    }
+    };
     
-    // Dodaj nasłuchiwanie zdarzeń
-    console.log('🔧 Podłączanie event listenerów...');
+    // Dodaj nasłuchiwanie zdarzeń po załadowaniu strony
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🔧 Podłączanie event listenerów...');
 
-    const loginForm = document.getElementById('loginForm');
-    console.log('📋 Formularz login:', loginForm ? 'znaleziony' : 'nie znaleziony');
+      const loginForm = document.getElementById('loginForm');
+      console.log('📋 Formularz login:', loginForm ? 'znaleziony' : 'nie znaleziony');
 
-    if (loginForm) {
-      loginForm.addEventListener('submit', function(e) {
-        e.preventDefault(); // Zatrzymaj domyślne zachowanie formularza
-        console.log('🚫 Zatrzymano domyślne zachowanie formularza');
-        login();
-      });
-      console.log('✅ Event listener dla formularza login podłączony');
-    } else {
-      console.log('❌ Nie znaleziono formularza login!');
-    }
-    
-    // Zezwól na logowanie po wciśnięciu Enter
-    document.getElementById('password').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        login();
+      if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+          e.preventDefault(); // Zatrzymaj domyślne zachowanie formularza
+          console.log('🚫 Zatrzymano domyślne zachowanie formularza');
+          if (window.login) {
+            window.login();
+          } else {
+            console.error('❌ Funkcja login nie jest dostępna');
+          }
+        });
+        console.log('✅ Event listener dla formularza login podłączony');
+      } else {
+        console.log('❌ Nie znaleziono formularza login!');
+      }
+
+      // Zezwól na logowanie po wciśnięciu Enter
+      const passwordField = document.getElementById('password');
+      if (passwordField) {
+        passwordField.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            if (window.login) {
+              window.login();
+            } else {
+              console.error('❌ Funkcja login nie jest dostępna');
+            }
+          }
+        });
+        console.log('✅ Event listener dla pola hasła podłączony');
+      }
+
+      // Automatycznie pokazuj panel debugowania jeśli były wcześniejsze problemy
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('debug') === '1') {
+        const debugInfo = document.getElementById('debugInfo');
+        const debugToggle = document.getElementById('debugToggle');
+        if (debugInfo) debugInfo.style.display = 'block';
+        if (debugToggle) debugToggle.innerHTML = 'Ukryj informacje diagnostyczne ▲';
       }
     });
-    
-    // Automatycznie pokazuj panel debugowania jeśli były wcześniejsze problemy
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('debug') === '1') {
-      document.getElementById('debugInfo').style.display = 'block';
-      document.getElementById('debugToggle').innerHTML = 'Ukryj informacje diagnostyczne ▲';
-    }
   </script>
 </body>
 </html>
