@@ -2679,62 +2679,175 @@
           participantCard.className = 'group-card'; // Reusing group-card style
           participantCard.style.cursor = 'default'; // No pointer for participant cards
           
-          // Use the same subtle background as other group cards; avoid aggressive red/green inline styles
-          participantCard.innerHTML = `
-            <div class="participant-row ${payment && payment.confirmed ? 'payment-paid' : 'payment-unpaid'}" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-              <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
-              <div class="participant-info" style="flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;">
-                <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
-                <div style="color: var(--text-gray); font-size: 0.9rem;">${participantData.phone || 'Brak'}</div>
-              </div>
-              
-              <div class="amount-section" style="min-width: 120px;">
-                <div style="display: flex; align-items: center; gap: 5px;">
-                  <input type="number" class="amount-input form-control" value="${(payment.amount || 0).toFixed(2)}" step="0.01" min="0" 
-                         data-participant-id="${participant.participant_id}" data-group-id="${groupId}" 
-                         style="width: 100px; text-align: center;">
-                  <span style="font-size: 0.9rem; color: var(--text-gray);">zł</span>
-              </div>
-              </div>
-              
-              <div class="payment-method-section" style="min-width: 150px;">
-                <select class="payment-method-select form-control" data-participant-id="${participant.participant_id}" style="width: 130px;">
-                  <option value="">Sposób płatności</option>
-                  <option value="karta" ${payment.payment_method === 'karta' ? 'selected' : ''}>Karta</option>
-                  <option value="przelew" ${payment.payment_method === 'przelew' ? 'selected' : ''}>Przelew</option>
-                  <option value="gotowka" ${payment.payment_method === 'gotowka' ? 'selected' : ''}>Gotówka</option>
-                </select>
-              </div>
-              
-              <div class="comment-section" style="flex: 1 1 200px; overflow: hidden; text-overflow: ellipsis;">
-                <input type="text" class="payment-comment form-control" placeholder="Komentarz" 
-                       value="${payment.comment || ''}" data-participant-id="${participant.participant_id}" 
-                       style="width: 100%;">
-              </div>
-              <div style="min-width:110px; display:flex; align-items:center; gap:8px;">
-                <label style="color:var(--text-gray); font-size:0.85rem;">RODO</label>
-                <input type="checkbox" class="rodo-checkbox" data-participant-id="${participant.participant_id}" ${participantData.rodo ? 'checked' : ''}>
-              </div>
-              
-              <div class="action-buttons" style="display: flex; gap: 10px; min-width: 120px;">
-                ${payment && payment.confirmed ? `
-                  <button class="btn btn-outline delete-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}">
-                    <i class="fas fa-times"></i>
-                  </button>
-                ` : `
-                  <button class="btn btn-primary confirm-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}">
-                    <i class="fas fa-check"></i>
-                  </button>
-                `}
-                <button class="btn btn-outline edit-btn" data-id="${participant.participant_id}">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-outline delete-btn" data-id="${participant.participant_id}">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </div>
-          `;
+          // Create elements programmatically to avoid interpolation issues
+          const participantRow = document.createElement('div');
+          participantRow.className = 'participant-row';
+          participantRow.style.cssText = 'display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;';
+
+          if (payment && payment.confirmed) {
+            participantRow.classList.add('payment-paid');
+          } else {
+            participantRow.classList.add('payment-unpaid');
+          }
+
+          // Participant number
+          const participantNumber = document.createElement('div');
+          participantNumber.className = 'participant-number';
+          participantNumber.style.cssText = 'min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);';
+          participantNumber.textContent = `${index + 1}.`;
+
+          // Participant info
+          const participantInfo = document.createElement('div');
+          participantInfo.className = 'participant-info';
+          participantInfo.style.cssText = 'flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;';
+
+          const nameDiv = document.createElement('div');
+          nameDiv.style.cssText = 'font-weight: bold; margin-bottom: 5px;';
+          nameDiv.textContent = participantData.name;
+
+          const phoneDiv = document.createElement('div');
+          phoneDiv.style.cssText = 'color: var(--text-gray); font-size: 0.9rem;';
+          phoneDiv.textContent = participantData.phone || 'Brak';
+
+          participantInfo.appendChild(nameDiv);
+          participantInfo.appendChild(phoneDiv);
+
+          // Amount section
+          const amountSection = document.createElement('div');
+          amountSection.className = 'amount-section';
+          amountSection.style.minWidth = '120px';
+
+          const amountContainer = document.createElement('div');
+          amountContainer.style.cssText = 'display: flex; align-items: center; gap: 5px;';
+
+          const amountInput = document.createElement('input');
+          amountInput.type = 'number';
+          amountInput.className = 'amount-input form-control';
+          amountInput.value = (payment.amount || 0).toFixed(2);
+          amountInput.step = '0.01';
+          amountInput.min = '0';
+          amountInput.dataset.participantId = participant.participant_id;
+          amountInput.dataset.groupId = groupId;
+          amountInput.style.cssText = 'width: 100px; text-align: center;';
+
+          const currencySpan = document.createElement('span');
+          currencySpan.style.cssText = 'font-size: 0.9rem; color: var(--text-gray);';
+          currencySpan.textContent = 'zł';
+
+          amountContainer.appendChild(amountInput);
+          amountContainer.appendChild(currencySpan);
+          amountSection.appendChild(amountContainer);
+
+          // Payment method section
+          const paymentMethodSection = document.createElement('div');
+          paymentMethodSection.className = 'payment-method-section';
+          paymentMethodSection.style.minWidth = '150px';
+
+          const paymentSelect = document.createElement('select');
+          paymentSelect.className = 'payment-method-select form-control';
+          paymentSelect.dataset.participantId = participant.participant_id;
+          paymentSelect.style.width = '130px';
+
+          const defaultOption = document.createElement('option');
+          defaultOption.value = '';
+          defaultOption.textContent = 'Sposób płatności';
+          paymentSelect.appendChild(defaultOption);
+
+          const cardOption = document.createElement('option');
+          cardOption.value = 'karta';
+          cardOption.textContent = 'Karta';
+          if (payment.payment_method === 'karta') cardOption.selected = true;
+          paymentSelect.appendChild(cardOption);
+
+          const transferOption = document.createElement('option');
+          transferOption.value = 'przelew';
+          transferOption.textContent = 'Przelew';
+          if (payment.payment_method === 'przelew') transferOption.selected = true;
+          paymentSelect.appendChild(transferOption);
+
+          const cashOption = document.createElement('option');
+          cashOption.value = 'gotowka';
+          cashOption.textContent = 'Gotówka';
+          if (payment.payment_method === 'gotowka') cashOption.selected = true;
+          paymentSelect.appendChild(cashOption);
+
+          paymentMethodSection.appendChild(paymentSelect);
+
+          // Comment section
+          const commentSection = document.createElement('div');
+          commentSection.className = 'comment-section';
+          commentSection.style.cssText = 'flex: 1 1 200px; overflow: hidden; text-overflow: ellipsis;';
+
+          const commentInput = document.createElement('input');
+          commentInput.type = 'text';
+          commentInput.className = 'payment-comment form-control';
+          commentInput.placeholder = 'Komentarz';
+          commentInput.value = payment.comment || '';
+          commentInput.dataset.participantId = participant.participant_id;
+          commentInput.style.width = '100%';
+
+          commentSection.appendChild(commentInput);
+
+          // RODO section
+          const rodoSection = document.createElement('div');
+          rodoSection.style.cssText = 'min-width:110px; display:flex; align-items:center; gap:8px;';
+
+          const rodoLabel = document.createElement('label');
+          rodoLabel.style.cssText = 'color:var(--text-gray); font-size:0.85rem;';
+          rodoLabel.textContent = 'RODO';
+
+          const rodoCheckbox = document.createElement('input');
+          rodoCheckbox.type = 'checkbox';
+          rodoCheckbox.className = 'rodo-checkbox';
+          rodoCheckbox.dataset.participantId = participant.participant_id;
+          if (participantData.rodo) rodoCheckbox.checked = true;
+
+          rodoSection.appendChild(rodoLabel);
+          rodoSection.appendChild(rodoCheckbox);
+
+          // Action buttons
+          const actionButtons = document.createElement('div');
+          actionButtons.className = 'action-buttons';
+          actionButtons.style.cssText = 'display: flex; gap: 10px; min-width: 120px;';
+
+          if (payment && payment.confirmed) {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-outline delete-payment-btn';
+            deleteBtn.dataset.participantId = participant.participant_id;
+            deleteBtn.dataset.groupId = groupId;
+            deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+            actionButtons.appendChild(deleteBtn);
+          } else {
+            const confirmBtn = document.createElement('button');
+            confirmBtn.className = 'btn btn-primary confirm-payment-btn';
+            confirmBtn.dataset.participantId = participant.participant_id;
+            confirmBtn.dataset.groupId = groupId;
+            confirmBtn.innerHTML = '<i class="fas fa-check"></i>';
+            actionButtons.appendChild(confirmBtn);
+          }
+
+          const editBtn = document.createElement('button');
+          editBtn.className = 'btn btn-outline edit-btn';
+          editBtn.dataset.id = participant.participant_id;
+          editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+          actionButtons.appendChild(editBtn);
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'btn btn-outline delete-btn';
+          deleteBtn.dataset.id = participant.participant_id;
+          deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+          actionButtons.appendChild(deleteBtn);
+
+          // Add all elements to row
+          participantRow.appendChild(participantNumber);
+          participantRow.appendChild(participantInfo);
+          participantRow.appendChild(amountSection);
+          participantRow.appendChild(paymentMethodSection);
+          participantRow.appendChild(commentSection);
+          participantRow.appendChild(rodoSection);
+          participantRow.appendChild(actionButtons);
+
+          participantCard.appendChild(participantRow);
 
           // Add event listeners for action buttons
           participantCard.querySelector('.edit-btn').addEventListener('click', (e) => {
@@ -3874,33 +3987,129 @@
               if (pay && pay.confirmed) { row.classList.add('payment-paid'); row.classList.remove('payment-unpaid'); }
               else { row.classList.add('payment-unpaid'); row.classList.remove('payment-paid'); }
 
-              row.innerHTML = `
-                <div class="participant-number" style="min-width:30px;text-align:center;font-weight:bold;color:var(--text-gray);">${idx+1}.</div>
-                <div class="participant-info" style="flex:0 0 220px; overflow:hidden; text-overflow:ellipsis;">
-                  <div style="font-weight:bold">${pdata.name || 'Brak'}</div>
-                  <div style="color:var(--text-gray);font-size:0.9rem">${pdata.phone || 'Brak'}</div>
-                  </div>
-                <div class="amount-section" style="min-width:120px;">
-                  <div style="display:flex;align-items:center;gap:6px;">
-                    <input type="number" class="lesson-amount-input form-control" value="${(pay.amount || 0).toFixed(2)}" step="0.01" min="0" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:100px;text-align:center;" />
-                    <span style="font-size:0.9rem;color:var(--text-gray);">zł</span>
-                  </div>
-                </div>
-                <div class="payment-method-section" style="min-width:150px;">
-                  <select class="lesson-payment-method-select form-control" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:130px;">
-                    <option value="">Sposób płatności</option>
-                    <option value="karta" ${pay.payment_method === 'karta' ? 'selected' : ''}>Karta</option>
-                    <option value="przelew" ${pay.payment_method === 'przelew' ? 'selected' : ''}>Przelew</option>
-                    <option value="gotowka" ${pay.payment_method === 'gotowka' ? 'selected' : ''}>Gotówka</option>
-                    </select>
-                  </div>
-                <div class="comment-section" style="flex:1;min-width:120px;">
-                  <input type="text" class="lesson-payment-comment form-control" placeholder="Komentarz" value="${pay.comment || ''}" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:100%;" />
-                  </div>
-                <div class="action-buttons" style="min-width:120px;display:flex;align-items:center;gap:8px;">
-                  ${pay.confirmed ? `<button class="btn btn-outline lesson-delete-payment-btn" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}"><i class="fas fa-times"></i></button>` : `<button class="btn btn-primary lesson-confirm-payment-btn" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}"><i class="fas fa-check"></i></button>`}
-                </div>
-              `;
+              // Create elements programmatically to avoid interpolation issues
+              const participantNumber = document.createElement('div');
+              participantNumber.className = 'participant-number';
+              participantNumber.style.cssText = 'min-width:30px;text-align:center;font-weight:bold;color:var(--text-gray);';
+              participantNumber.textContent = `${idx+1}.`;
+
+              const participantInfo = document.createElement('div');
+              participantInfo.className = 'participant-info';
+              participantInfo.style.cssText = 'flex:0 0 220px; overflow:hidden; text-overflow:ellipsis;';
+
+              const nameDiv = document.createElement('div');
+              nameDiv.style.fontWeight = 'bold';
+              nameDiv.textContent = pdata.name || 'Brak';
+
+              const phoneDiv = document.createElement('div');
+              phoneDiv.style.cssText = 'color:var(--text-gray);font-size:0.9rem';
+              phoneDiv.textContent = pdata.phone || 'Brak';
+
+              participantInfo.appendChild(nameDiv);
+              participantInfo.appendChild(phoneDiv);
+
+              const amountSection = document.createElement('div');
+              amountSection.className = 'amount-section';
+              amountSection.style.minWidth = '120px';
+
+              const amountContainer = document.createElement('div');
+              amountContainer.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+              const amountInput = document.createElement('input');
+              amountInput.type = 'number';
+              amountInput.className = 'lesson-amount-input form-control';
+              amountInput.value = (pay.amount || 0).toFixed(2);
+              amountInput.step = '0.01';
+              amountInput.min = '0';
+              amountInput.dataset.participantId = p.participant_id;
+              amountInput.dataset.lessonId = lesson.id;
+              amountInput.style.cssText = 'width:100px;text-align:center;';
+
+              const currencySpan = document.createElement('span');
+              currencySpan.style.cssText = 'font-size:0.9rem;color:var(--text-gray);';
+              currencySpan.textContent = 'zł';
+
+              amountContainer.appendChild(amountInput);
+              amountContainer.appendChild(currencySpan);
+              amountSection.appendChild(amountContainer);
+
+              const paymentMethodSection = document.createElement('div');
+              paymentMethodSection.className = 'payment-method-section';
+              paymentMethodSection.style.minWidth = '150px';
+
+              const paymentSelect = document.createElement('select');
+              paymentSelect.className = 'lesson-payment-method-select form-control';
+              paymentSelect.dataset.participantId = p.participant_id;
+              paymentSelect.dataset.lessonId = lesson.id;
+              paymentSelect.style.width = '130px';
+
+              const defaultOption = document.createElement('option');
+              defaultOption.value = '';
+              defaultOption.textContent = 'Sposób płatności';
+              paymentSelect.appendChild(defaultOption);
+
+              const cardOption = document.createElement('option');
+              cardOption.value = 'karta';
+              cardOption.textContent = 'Karta';
+              if (pay.payment_method === 'karta') cardOption.selected = true;
+              paymentSelect.appendChild(cardOption);
+
+              const transferOption = document.createElement('option');
+              transferOption.value = 'przelew';
+              transferOption.textContent = 'Przelew';
+              if (pay.payment_method === 'przelew') transferOption.selected = true;
+              paymentSelect.appendChild(transferOption);
+
+              const cashOption = document.createElement('option');
+              cashOption.value = 'gotowka';
+              cashOption.textContent = 'Gotówka';
+              if (pay.payment_method === 'gotowka') cashOption.selected = true;
+              paymentSelect.appendChild(cashOption);
+
+              paymentMethodSection.appendChild(paymentSelect);
+
+              const commentSection = document.createElement('div');
+              commentSection.className = 'comment-section';
+              commentSection.style.cssText = 'flex:1;min-width:120px;';
+
+              const commentInput = document.createElement('input');
+              commentInput.type = 'text';
+              commentInput.className = 'lesson-payment-comment form-control';
+              commentInput.placeholder = 'Komentarz';
+              commentInput.value = pay.comment || '';
+              commentInput.dataset.participantId = p.participant_id;
+              commentInput.dataset.lessonId = lesson.id;
+              commentInput.style.width = '100%';
+
+              commentSection.appendChild(commentInput);
+
+              const actionButtons = document.createElement('div');
+              actionButtons.className = 'action-buttons';
+              actionButtons.style.cssText = 'min-width:120px;display:flex;align-items:center;gap:8px;';
+
+              if (pay.confirmed) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-outline lesson-delete-payment-btn';
+                deleteBtn.dataset.participantId = p.participant_id;
+                deleteBtn.dataset.lessonId = lesson.id;
+                deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                actionButtons.appendChild(deleteBtn);
+              } else {
+                const confirmBtn = document.createElement('button');
+                confirmBtn.className = 'btn btn-primary lesson-confirm-payment-btn';
+                confirmBtn.dataset.participantId = p.participant_id;
+                confirmBtn.dataset.lessonId = lesson.id;
+                confirmBtn.innerHTML = '<i class="fas fa-check"></i>';
+                actionButtons.appendChild(confirmBtn);
+              }
+
+              // Add all elements to row
+              row.appendChild(participantNumber);
+              row.appendChild(participantInfo);
+              row.appendChild(amountSection);
+              row.appendChild(paymentMethodSection);
+              row.appendChild(commentSection);
+              row.appendChild(actionButtons);
 
               // amount change -> update payment amount and recompute lesson total, update header in-place with a short fade
               const lessonAmountInput = row.querySelector('.lesson-amount-input');
