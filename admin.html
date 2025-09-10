@@ -2032,15 +2032,23 @@
         console.log('Filtered trainer IDs found in groups:', trainerIds);
         console.log('Number of groups with trainers:', trainerIds.length);
 
-        // Try to load trainers by ID first
-        if (trainerIds.length > 0) {
+        // Separate UUIDs from names
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const uuidTrainers = trainerIds.filter(id => uuidPattern.test(id));
+        const nameTrainers = trainerIds.filter(id => !uuidPattern.test(id));
+
+        console.log('UUID trainers:', uuidTrainers);
+        console.log('Name trainers:', nameTrainers);
+
+        // Try to load trainers by UUID first
+        if (uuidTrainers.length > 0) {
           try {
             const { data: trainers, error } = await supabase
               .from('profiles')
               .select('id, first_name, last_name, email')
-              .in('id', trainerIds);
+              .in('id', uuidTrainers);
 
-            console.log('Loaded trainers from database:', trainers);
+            console.log('Loaded UUID trainers from database:', trainers);
 
             if (!error && trainers) {
               trainers.forEach(trainer => {
@@ -2051,39 +2059,55 @@
                 console.log(`Mapped trainer ID "${trainer.id}" -> "${fullName}"`);
               });
             } else {
-              console.error('Error loading trainers:', error);
+              console.error('Error loading UUID trainers:', error);
             }
           } catch (error) {
-            console.error('Błąd ładowania danych trenerów:', error);
+            console.error('Błąd ładowania UUID trenerów:', error);
           }
         }
 
-        // If we couldn't find trainers by ID, try to load all trainers and create name-to-name mapping
-        if (Object.keys(trainerLookup).length === 0 && trainerIds.length > 0) {
-          console.log('No trainers found by ID, trying to load all trainers for name mapping...');
+        // Try to load trainers by name
+        if (nameTrainers.length > 0) {
           try {
+            // Load all trainers and try to match by name
             const { data: allTrainers, error } = await supabase
               .from('profiles')
               .select('id, first_name, last_name, email')
               .eq('role', 'trainer');
 
+            console.log('Loaded all trainers for name matching:', allTrainers);
+
             if (!error && allTrainers) {
-              allTrainers.forEach(trainer => {
-                const fullName = (trainer.first_name || trainer.last_name)
-                  ? `${trainer.first_name || ''} ${trainer.last_name || ''}`.trim()
-                  : trainer.email;
-                // Map both ID and name to the full name
-                trainerLookup[trainer.id] = fullName;
-                trainerLookup[fullName] = fullName;
-                console.log(`Fallback mapping: ID "${trainer.id}" and name "${fullName}" -> "${fullName}"`);
+              nameTrainers.forEach(nameToFind => {
+                // Try to find trainer by full name
+                const foundTrainer = allTrainers.find(trainer => {
+                  const fullName = (trainer.first_name || trainer.last_name)
+                    ? `${trainer.first_name || ''} ${trainer.last_name || ''}`.trim()
+                    : trainer.email;
+                  return fullName === nameToFind || trainer.first_name === nameToFind || trainer.last_name === nameToFind;
+                });
+
+                if (foundTrainer) {
+                  const fullName = (foundTrainer.first_name || foundTrainer.last_name)
+                    ? `${foundTrainer.first_name || ''} ${foundTrainer.last_name || ''}`.trim()
+                    : foundTrainer.email;
+                  trainerLookup[nameToFind] = fullName;
+                  console.log(`Mapped trainer name "${nameToFind}" -> "${fullName}"`);
+                } else {
+                  // If no match found, keep the name as is
+                  trainerLookup[nameToFind] = nameToFind;
+                  console.log(`No match found for "${nameToFind}", keeping as is`);
+                }
               });
             }
           } catch (error) {
-            console.error('Błąd ładowania wszystkich trenerów:', error);
+            console.error('Błąd ładowania trenerów po nazwach:', error);
           }
         }
 
+
         console.log('Final trainer lookup:', trainerLookup);
+        console.log('Trainer lookup size:', Object.keys(trainerLookup).length);
 
         // Clear and render groups grouped by day
         groupsList.innerHTML = '';
