@@ -2899,9 +2899,9 @@
                 .from('payments_month')
                 .update({ payment_method: newMethod || null })
                 .eq('month', selectedMonth)
-            .eq('participant_id', participantId)
+                .eq('participant_id', participantId)
                 .eq('group_id', groupId);
-              
+
           if (error) throw error;
         } catch (err) {
               alert('Błąd aktualizacji sposobu płatności: ' + (err.message || 'Nieznany'));
@@ -2921,7 +2921,7 @@
                 .eq('month', selectedMonth)
                 .eq('participant_id', participantId)
                 .eq('group_id', groupId);
-              
+
           if (error) throw error;
         } catch (err) {
               alert('Błąd aktualizacji komentarza: ' + (err.message || 'Nieznany'));
@@ -2946,7 +2946,7 @@
                   p_payment_method: paymentMethod,
                   p_comment: comment || null
                 });
-        if (error) throw error;
+                if (error) throw error;
                 await loadGroupParticipants(groupId);
               } catch (err) { alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
             });
