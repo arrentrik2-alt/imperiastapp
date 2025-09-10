@@ -1200,12 +1200,20 @@
         .select('role')
         .eq('id', user.id)
         .single();
-        
-      if (error || !profile || profile.role !== "admin") {
-        alert("Nie masz uprawnień administratora");
+
+      console.log('DEBUG - User ID:', user.id);
+      console.log('DEBUG - Profile:', profile);
+      console.log('DEBUG - Profile role:', profile?.role);
+      console.log('DEBUG - Error:', error);
+
+      if (error || !profile || (profile.role !== "admin" && profile.role !== "trainer")) {
+        console.log('DEBUG - Access denied. Role check failed.');
+        alert("Nie masz uprawnień administratora lub trenera. Twoja rola: " + (profile?.role || 'brak'));
         window.location.href = "login.html";
         return;
       }
+
+      console.log('DEBUG - Access granted for role:', profile.role);
     }
     
     // Logout function
