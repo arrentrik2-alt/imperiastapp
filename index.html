@@ -241,29 +241,157 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     console.log('🚀 Uruchamianie skryptu logowania...');
 
-    // Prosty test czy JavaScript działa
-    console.log('✅ JavaScript działa!');
-  </script>
+    // Inicjalizuj Supabase
+    const supabaseUrl = 'https://xsowdwnpguftmlvsogdb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI';
 
-  <script type="module">
-    console.log('📦 Moduł JavaScript uruchomiony');
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-    try {
-      const { supabase } = await import('./supabaseClient.js');
-      console.log('📦 Supabase zaimportowany:', supabase ? 'tak' : 'nie');
+    console.log('📦 Supabase zainicjalizowany:', supabase ? 'tak' : 'nie');
 
-      window.supabase = supabase;
-      console.log('🌐 Supabase dostępny globalnie');
-    } catch (error) {
-      console.error('❌ Błąd importu supabase:', error);
-    }
-    
-    // Inicjalizuj po załadowaniu strony
+    // Funkcja login dostępna globalnie
+    window.login = async function() {
+      console.log('🔄 Funkcja login() została wywołana');
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorMsg = document.getElementById('errorMsg');
+      const errorText = document.getElementById('errorText');
+      const userIdDisplay = document.getElementById('userIdDisplay');
+      const userRoleDisplay = document.getElementById('userRoleDisplay');
+      const sqlCode = document.getElementById('sqlCode');
+
+      console.log('📧 Email:', email);
+      console.log('🔑 Hasło wprowadzone:', password ? 'tak' : 'nie');
+
+      // Reset error message
+      if (errorMsg) errorMsg.style.display = 'none';
+
+      // Prosta walidacja
+      if (!email || !password) {
+        console.log('❌ Brak email lub hasła');
+        if (errorText) errorText.textContent = 'Proszę wypełnić wszystkie pola';
+        if (errorMsg) errorMsg.style.display = 'block';
+        return;
+      }
+
+      try {
+        console.log('🔐 Próba logowania do Supabase...');
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        console.log('📊 Wynik logowania:', { data: data ? 'sukces' : null, error: error ? error.message : null });
+
+        if (error) {
+          console.log('❌ Błąd logowania:', error.message);
+          if (errorText) errorText.textContent = 'Błąd logowania: ' + error.message;
+          if (errorMsg) errorMsg.style.display = 'block';
+          return;
+        }
+
+        console.log('✅ Logowanie udane, użytkownik:', data.user.id);
+
+        // Wyświetl ID użytkownika do debugowania
+        if (userIdDisplay) userIdDisplay.textContent = data.user.id;
+
+        // Sprawdź czy użytkownik ma uprawnienia administratora
+        console.log('🔍 Sprawdzanie roli użytkownika w profiles...');
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        console.log('👤 Wynik sprawdzenia profilu:', {
+          profile: profile ? { role: profile.role } : null,
+          error: profileError ? profileError.message : null
+        });
+
+        // Wyświetl rolę użytkownika do debugowania
+        if (profile) {
+          if (userRoleDisplay) userRoleDisplay.textContent = profile.role;
+          console.log('✅ Znaleziono rolę:', profile.role);
+        } else {
+          if (userRoleDisplay) {
+            userRoleDisplay.textContent = 'BRAK REKORDU W TABELI PROFILES';
+            userRoleDisplay.style.color = '#ff6b6b';
+          }
+          console.log('❌ Brak rekordu w profiles dla użytkownika:', data.user.id);
+        }
+
+        if (profileError) {
+          console.error('Błąd odczytu profilu:', profileError);
+          if (errorText) errorText.textContent = 'Błąd odczytu uprawnień: ' + profileError.message;
+          if (errorMsg) errorMsg.style.display = 'block';
+          await supabase.auth.signOut();
+          return;
+        }
+
+        if (!profile) {
+          if (errorText) errorText.textContent = 'BRAK REKORDU W TABELI PROFILES';
+          if (errorMsg) errorMsg.style.display = 'block';
+
+          // Pokaż panel debugowania
+          const debugInfo = document.getElementById('debugInfo');
+          const debugToggle = document.getElementById('debugToggle');
+          if (debugInfo) debugInfo.style.display = 'block';
+          if (debugToggle) debugToggle.innerHTML = 'Ukryj informacje diagnostyczne ▲';
+
+          // Aktualizuj zapytanie SQL z prawidłowym ID
+          if (sqlCode) sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
+
+          await supabase.auth.signOut();
+          return;
+        }
+
+        // Redirect based on role
+        console.log('🔀 Sprawdzanie przekierowania dla roli:', profile.role);
+
+        if (profile.role === 'admin' || profile.role === 'trainer') {
+          console.log('🎯 Przekierowanie do admin.html dla roli:', profile.role);
+          window.location.href = 'admin.html';
+          return;
+        }
+
+        if (profile.role === 'clubadmin') {
+          console.log('🎯 Przekierowanie do club.html dla roli clubadmin');
+          window.location.href = 'club.html';
+          return;
+        }
+
+        // in all other cases deny access
+        console.log('❌ Nieobsługiwana rola:', profile.role, '- odmowa dostępu');
+        if (errorText) errorText.textContent = 'Nie masz uprawnień dostępu do systemu.';
+        if (errorMsg) errorMsg.style.display = 'block';
+
+        // Pokaż panel debugowania
+        if (debugInfo) debugInfo.style.display = 'block';
+        if (debugToggle) debugToggle.innerHTML = 'Ukryj informacje diagnostyczne ▲';
+
+        // Aktualizuj zapytanie SQL z prawidłowym ID
+        if (sqlCode) sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
+
+        await supabase.auth.signOut();
+        return;
+
+      } catch (err) {
+        console.error('Nieoczekiwany błąd:', err);
+        if (errorText) errorText.textContent = 'Wystąpił nieoczekiwany błąd: ' + err.message;
+        if (errorMsg) errorMsg.style.display = 'block';
+      }
+    };
+
+    // Dodaj nasłuchiwanie zdarzeń po załadowaniu strony
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('📄 DOM załadowany');
+      console.log('🔧 Podłączanie event listenerów...');
 
       // Pokazuj/ukryj informacje diagnostyczne
       const debugToggle = document.getElementById('debugToggle');
@@ -302,153 +430,6 @@
         });
         console.log('✅ Copy SQL button podłączony');
       }
-    });
-    
-    // Funkcja login dostępna globalnie
-    window.login = async function() {
-      console.log('🔄 Funkcja login() została wywołana');
-
-      if (!window.supabase) {
-        console.error('❌ Supabase nie jest dostępny!');
-        alert('Błąd: Supabase nie został załadowany');
-        return;
-      }
-
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const errorMsg = document.getElementById('errorMsg');
-      const errorText = document.getElementById('errorText');
-      const userIdDisplay = document.getElementById('userIdDisplay');
-      const userRoleDisplay = document.getElementById('userRoleDisplay');
-      const sqlCode = document.getElementById('sqlCode');
-
-      console.log('📧 Email:', email);
-      console.log('🔑 Hasło wprowadzone:', password ? 'tak' : 'nie');
-
-      // Reset error message
-      if (errorMsg) errorMsg.style.display = 'none';
-
-      // Prosta walidacja
-      if (!email || !password) {
-        console.log('❌ Brak email lub hasła');
-        if (errorText) errorText.textContent = 'Proszę wypełnić wszystkie pola';
-        if (errorMsg) errorMsg.style.display = 'block';
-        return;
-      }
-
-      try {
-        console.log('🔐 Próba logowania do Supabase...');
-
-        const { data, error } = await window.supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        console.log('📊 Wynik logowania:', { data: data ? 'sukces' : null, error: error ? error.message : null });
-
-        if (error) {
-          console.log('❌ Błąd logowania:', error.message);
-          if (errorText) errorText.textContent = 'Błąd logowania: ' + error.message;
-          if (errorMsg) errorMsg.style.display = 'block';
-          return;
-        }
-
-        console.log('✅ Logowanie udane, użytkownik:', data.user.id);
-
-        // Wyświetl ID użytkownika do debugowania
-        if (userIdDisplay) userIdDisplay.textContent = data.user.id;
-
-        // Sprawdź czy użytkownik ma uprawnienia administratora
-        console.log('🔍 Sprawdzanie roli użytkownika w profiles...');
-
-        const { data: profile, error: profileError } = await window.supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .maybeSingle();
-
-        console.log('👤 Wynik sprawdzenia profilu:', {
-          profile: profile ? { role: profile.role } : null,
-          error: profileError ? profileError.message : null
-        });
-
-        // Wyświetl rolę użytkownika do debugowania
-        if (profile) {
-          if (userRoleDisplay) userRoleDisplay.textContent = profile.role;
-          console.log('✅ Znaleziono rolę:', profile.role);
-        } else {
-          if (userRoleDisplay) {
-            userRoleDisplay.textContent = 'BRAK REKORDU W TABELI PROFILES';
-            userRoleDisplay.style.color = '#ff6b6b';
-          }
-          console.log('❌ Brak rekordu w profiles dla użytkownika:', data.user.id);
-        }
-
-        if (profileError) {
-          console.error('Błąd odczytu profilu:', profileError);
-          if (errorText) errorText.textContent = 'Błąd odczytu uprawnień: ' + profileError.message;
-          if (errorMsg) errorMsg.style.display = 'block';
-          await window.supabase.auth.signOut();
-          return;
-        }
-
-        if (!profile) {
-          if (errorText) errorText.textContent = 'BRAK REKORDU W TABELI PROFILES';
-          if (errorMsg) errorMsg.style.display = 'block';
-
-          // Pokaż panel debugowania
-          const debugInfo = document.getElementById('debugInfo');
-          const debugToggle = document.getElementById('debugToggle');
-          if (debugInfo) debugInfo.style.display = 'block';
-          if (debugToggle) debugToggle.innerHTML = 'Ukryj informacje diagnostyczne ▲';
-
-          // Aktualizuj zapytanie SQL z prawidłowym ID
-          if (sqlCode) sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
-
-          await window.supabase.auth.signOut();
-          return;
-        }
-
-        // Redirect based on role
-        console.log('🔀 Sprawdzanie przekierowania dla roli:', profile.role);
-
-        if (profile.role === 'admin' || profile.role === 'trainer') {
-          console.log('🎯 Przekierowanie do admin.html dla roli:', profile.role);
-          window.location.href = 'admin.html';
-          return;
-        }
-
-        if (profile.role === 'clubadmin') {
-          console.log('🎯 Przekierowanie do club.html dla roli clubadmin');
-          window.location.href = 'club.html';
-          return;
-        }
-
-        // in all other cases deny access
-        console.log('❌ Nieobsługiwana rola:', profile.role, '- odmowa dostępu');
-        if (errorText) errorText.textContent = 'Nie masz uprawnień dostępu do systemu.';
-        if (errorMsg) errorMsg.style.display = 'block';
-
-        // Pokaż panel debugowania
-        if (debugInfo) debugInfo.style.display = 'block';
-        if (debugToggle) debugToggle.innerHTML = 'Ukryj informacje diagnostyczne ▲';
-
-        // Aktualizuj zapytanie SQL z prawidłowym ID
-        if (sqlCode) sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
-
-        await window.supabase.auth.signOut();
-        return;
-
-      } catch (err) {
-        console.error('Nieoczekiwany błąd:', err);
-        if (errorText) errorText.textContent = 'Wystąpił nieoczekiwany błąd: ' + err.message;
-        if (errorMsg) errorMsg.style.display = 'block';
-      }
-    };
-    
-    // Dodaj nasłuchiwanie zdarzeń po załadowaniu strony
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🔧 Podłączanie event listenerów...');
 
       const loginForm = document.getElementById('loginForm');
       console.log('📋 Formularz login:', loginForm ? 'znaleziony' : 'nie znaleziony');
