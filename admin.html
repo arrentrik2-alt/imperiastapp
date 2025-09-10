@@ -1051,8 +1051,8 @@
     <div id="trainers-list">
       <!-- Trainers will be loaded here -->
     </div>
-  </div>
-
+      </div>
+      
   <!-- Create Lesson Modal -->
   <div class="modal" id="create-lesson-modal">
     <div class="modal-content">
@@ -1182,26 +1182,110 @@
     </div>
   </div>
 
-  <script type="module">
-    import { supabase } from './supabaseClient.js';
+  <!-- Ładuj Supabase z CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    console.log('Inicjalizacja Supabase w admin.html...');
+
+    // Czekaj na załadowanie Supabase z CDN
+    function initSupabase() {
+      console.log('Sprawdzam dostępność Supabase w admin.html...');
+
+      if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+        console.log('Tworzę klienta Supabase w admin.html...');
+        try {
+          const { createClient } = window.supabase;
+          window.supabaseClient = createClient(
+            'https://xsowdwnpguftmlvsogdb.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI'
+          );
+          console.log('Supabase klient utworzony pomyślnie w admin.html');
+        } catch (error) {
+          console.error('Błąd tworzenia klienta Supabase w admin.html:', error);
+        }
+      } else {
+        console.log('Supabase jeszcze nie załadowane w admin.html, czekam...');
+        setTimeout(initSupabase, 100);
+      }
+    }
+
+    initSupabase();
+  </script>
     
-    // Check if user is admin
-    async function checkAdmin() {
-      const { data: { user } } = await supabase.auth.getUser();
+    // Check user permissions and role
+    let currentUserRole = null;
+    let currentUserId = null;
+
+    async function checkPermissions() {
+      try {
+        console.log('Sprawdzanie uprawnień...');
+        const { data: { user }, error: authError } = await window.supabaseClient.auth.getUser();
+
+        if (authError) {
+          console.error('Błąd autoryzacji:', authError);
+          alert("Błąd autoryzacji: " + authError.message);
+          window.location.href = "login.html";
+          return false;
+        }
       
       if (!user) {
+          console.log('Brak zalogowanego użytkownika');
         alert("Nie jesteś zalogowany");
         window.location.href = "login.html";
-        return;
+          return false;
       }
       
-      const { data: profile, error } = await supabase
+        console.log('Użytkownik zalogowany:', user.id, user.email);
+        currentUserId = user.id;
+
+        const { data: profile, error } = await window.supabaseClient
         .from('profiles')
-        .select('role')
+          .select('role, first_name, last_name, email')
         .eq('id', user.id)
         .single();
         
-      if (error || !profile || profile.role !== "admin") {
+        if (error) {
+          console.error('Błąd pobierania profilu:', error);
+          alert("Błąd pobierania profilu: " + error.message + "\n\nSprawdź czy masz rekord w tabeli profiles.");
+          window.location.href = "login.html";
+          return false;
+        }
+
+        if (!profile) {
+          console.log('Brak profilu dla użytkownika:', user.id);
+          alert("Brak profilu użytkownika w systemie. Skontaktuj się z administratorem.\n\nWykonaj SQL: INSERT INTO profiles (id, role) VALUES ('" + user.id + "', 'trainer')");
+          window.location.href = "login.html";
+          return false;
+        }
+
+        console.log('Profil znaleziony:', profile);
+        currentUserRole = profile.role;
+
+        // Allow both admin and trainer roles
+        if (profile.role !== "admin" && profile.role !== "trainer") {
+          console.log('Nieprawidłowa rola:', profile.role);
+          alert("Nie masz odpowiednich uprawnień dostępu do systemu. Twoja rola: " + profile.role);
+          window.location.href = "login.html";
+          return false;
+        }
+
+        console.log(`User ${profile.first_name || profile.email} logged in with role: ${profile.role}`);
+        return true;
+      } catch (err) {
+        console.error('Nieoczekiwany błąd w checkPermissions:', err);
+        alert("Nieoczekiwany błąd: " + err.message);
+        window.location.href = "login.html";
+        return false;
+      }
+    }
+
+    // Legacy function for backward compatibility
+    async function checkAdmin() {
+      const hasPermission = await checkPermissions();
+      if (!hasPermission) return;
+
+      if (currentUserRole !== "admin") {
         alert("Nie masz uprawnień administratora");
         window.location.href = "login.html";
         return;
@@ -1210,7 +1294,7 @@
     
     // Logout function
     document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await supabase.auth.signOut();
+      await window.supabaseClient.auth.signOut();
       window.location.href = "login.html";
     });
     
@@ -1222,9 +1306,28 @@
     const groupsSection = document.getElementById('groups-section');
     const trainersSection = document.getElementById('trainers-section');
     const groupParticipantsSection = document.getElementById('group-participants-section');
+
+    // Hide restricted navigation items for trainers
+    function setupNavigationForRole() {
+      if (currentUserRole === 'trainer') {
+        if (homeLink) homeLink.style.display = 'none';
+        if (trainersLink) trainersLink.style.display = 'none';
+
+        // Auto-navigate to groups for trainers
+        setActiveNav('groups');
+      }
+    }
     
     function setActiveNav(section) {
       console.log('setActiveNav wywołane z sekcją:', section, 'currentGroupId przed:', currentGroupId);
+
+      // Restrict access for trainers
+      if (currentUserRole === 'trainer') {
+        if (section === 'home' || section === 'trainers') {
+          console.log('Trainer tried to access restricted section:', section);
+          return; // Don't allow access to home or trainers section for trainers
+        }
+      }
       
       if (section === 'home') {
         homeLink.classList.add('active');
@@ -1530,7 +1633,7 @@
       
       try {
         // Load groups count
-        const { data: groups, error: groupsError } = await supabase.rpc('list_groups_month', { p_month: selectedMonth });
+        const { data: groups, error: groupsError } = await window.supabaseClient.rpc('list_groups_month', { p_month: selectedMonth });
         if (!groupsError) {
           document.getElementById('groups-count').textContent = (groups || []).length;
         }
@@ -1559,9 +1662,9 @@
         let lessonParticipantsError = null;
         try {
           const result = await supabase
-            .from('lesson_participants_month')
-            .select('participant_id')
-            .eq('month', selectedMonth);
+          .from('lesson_participants_month')
+          .select('participant_id')
+          .eq('month', selectedMonth);
           lessonParticipants = result.data;
           lessonParticipantsError = result.error;
         } catch (err) {
@@ -1732,7 +1835,7 @@
         if (monthError) throw monthError;
         
         // 2. Copy groups from previous month
-        const { error: copyError } = await supabase.rpc('copy_groups_month', {
+        const { error: copyError } = await window.supabaseClient.rpc('copy_groups_month', {
           p_from_month: monthInput,
           p_to_month: monthInput
         });
@@ -1740,7 +1843,7 @@
         if (copyError) throw copyError;
 
         // 3. Copy participants and their payments from previous month
-        const { error: copyParticipantsError } = await supabase.rpc('copy_participants_month', {
+        const { error: copyParticipantsError } = await window.supabaseClient.rpc('copy_participants_month', {
           p_from_month: monthInput,
           p_to_month: monthInput
         });
@@ -1945,7 +2048,7 @@
           await loadHomeData();
         } else {
           // Add new group - store all selected days as JSON string
-          const resp = await supabase.rpc('insert_group_month', {
+          const resp = await window.supabaseClient.rpc('insert_group_month', {
             p_month: selectedMonth,
             p_name: name,
             p_day: selectedDays.length === 1 ? selectedDays[0] : JSON.stringify(selectedDays),
@@ -1971,7 +2074,7 @@
     async function loadGroups() {
       console.log('=== loadGroups called ===');
       groupsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie grup...</p></div>';
-
+      
       try {
         const selectedMonth = document.getElementById('groups-month-select').value;
         console.log('Selected month for groups:', selectedMonth);
@@ -1982,7 +2085,7 @@
           return;
         }
 
-        const { data, error } = await supabase.rpc('list_groups_month', { p_month: selectedMonth });
+        const { data, error } = await window.supabaseClient.rpc('list_groups_month', { p_month: selectedMonth });
         console.log('Groups data received:', data);
         console.log('First group trainer field:', data?.[0]?.trainer);
           
@@ -2169,8 +2272,11 @@
             trainerLookupLength: Object.keys(trainerLookup).length
           });
 
+          // Hide financial summary for trainers
+          const financialSummary = currentUserRole === 'admin' ? `<span style="font-size:0.9rem">${paidText}${unpaidText}</span>` : '';
+
           groupCard.innerHTML = `
-              <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
+              <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span>${financialSummary}</h4>
             <div class="group-detail">
               <i class="fas fa-calendar-day"></i>
                 <span>${daysText}, ${formatTimeToHHMM(group.start_time)}</span>
@@ -2402,7 +2508,7 @@
               if (paymentUpdateError) throw paymentUpdateError;
             } else {
               // Create new payment
-              const { error: paymentError } = await supabase.rpc('insert_payment_month', {
+              const { error: paymentError } = await window.supabaseClient.rpc('insert_payment_month', {
                 p_month: selectedMonth,
                 p_participant_id: participantId,
                 p_group_id: currentGroupId,
@@ -2420,7 +2526,7 @@
         } else {
           // 1. Add new participant
         const rodoValue = !!document.getElementById('participant-rodo').checked;
-          const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
+          const { data: newParticipantId, error: participantError } = await window.supabaseClient.rpc('insert_participant_month', {
           p_month: selectedMonth,
           p_name: name,
           p_email: null,
@@ -2447,7 +2553,7 @@
 
         // 2. Add participant to group (only for new participants)
         if (!isEditingParticipant) {
-          const { error: groupError } = await supabase.rpc('add_participant_to_group_month', {
+          const { error: groupError } = await window.supabaseClient.rpc('add_participant_to_group_month', {
             p_month: selectedMonth,
             p_participant_id: participantId,
             p_group_id: currentGroupId
@@ -2458,7 +2564,7 @@
 
         // 3. Add payment record (only for new participants)
         if (!isEditingParticipant && amount > 0) {
-          const { error: paymentError } = await supabase.rpc('insert_payment_month', {
+          const { error: paymentError } = await window.supabaseClient.rpc('insert_payment_month', {
             p_month: selectedMonth,
             p_participant_id: participantId,
             p_group_id: currentGroupId,
@@ -2805,7 +2911,7 @@
               const comment = participantCard.querySelector('.payment-comment').value || null;
               if (!paymentMethod) { alert('Wybierz sposób płatności'); return; }
               try {
-                const { error } = await supabase.rpc('update_payment_confirmation', {
+                const { error } = await window.supabaseClient.rpc('update_payment_confirmation', {
                   p_month: selectedMonth,
                   p_participant_id: participantId,
                   p_group_id: groupId,
@@ -2826,7 +2932,7 @@
               const participantId = e.currentTarget.dataset.participantId;
               const groupId = e.currentTarget.dataset.groupId;
               try {
-                const { error } = await supabase.rpc('remove_payment_confirmation', {
+                const { error } = await window.supabaseClient.rpc('remove_payment_confirmation', {
                   p_month: selectedMonth,
                   p_participant_id: participantId,
                   p_group_id: groupId
@@ -2877,19 +2983,42 @@
     let currentEditingLessonId = null;
 
     // Initialize
-    checkAdmin().then(async () => {
+    console.log('Rozpoczynam inicjalizację admin.html...');
+
+    checkPermissions().then(async (hasPermission) => {
+      console.log('checkPermissions zakończone z wynikiem:', hasPermission);
+      if (!hasPermission) {
+        console.log('Brak uprawnień, kończę inicjalizację');
+        return;
+      }
+
+      console.log('Mamy uprawnienia, kontynuuję inicjalizację...');
+
       await populateMonthSelectors();
-      console.log('Month selectors populated, now loading data...');
+      console.log('Month selectors populated, now setting up navigation...');
+      setupNavigationForRole();
+
+      console.log('Loading data based on role...');
+      if (currentUserRole === 'admin') {
+        console.log('Ładuję dane dla admina...');
       await loadHomeData();
-      console.log('Home data loaded, now loading trainers into dropdowns...');
-      await loadTrainersIntoDropdowns();
-      console.log('Trainers loaded into dropdowns, now loading groups...');
+        console.log('Home data loaded, now loading trainers into dropdowns...');
+        await loadTrainersIntoDropdowns();
+      } else if (currentUserRole === 'trainer') {
+        console.log('Trainer role detected, skipping home data and trainer dropdowns');
+      }
+
+      console.log('Loading groups...');
       await loadGroups();
       console.log('Groups loaded, now loading lessons...');
       await loadLessons();
       console.log('All data loaded successfully');
+
       // initialize lesson type buttons and set default so create modal uses correct type
       try { ensureLessonTypeButtons(); setLessonType(currentLessonType); } catch (e) { console.warn('Lesson type init skipped:', e); }
+    }).catch(err => {
+      console.error('Błąd podczas inicjalizacji:', err);
+      alert('Błąd inicjalizacji: ' + err.message);
     });
 
     // Draw donut chart helper (paid/unpaid)
@@ -3088,6 +3217,12 @@
         document.getElementById('lesson-day').value = lessonObj.day || 'Poniedziałek';
         document.getElementById('lesson-day-of-month').value = lessonObj.day_of_month || '';
         document.getElementById('lesson-start').value = lessonObj.start_time || '';
+        // For trainers, only allow editing their own lessons
+        if (currentUserRole === 'trainer' && lessonObj.trainer !== currentUserId) {
+          alert('Możesz edytować tylko swoje własne lekcje.');
+          return;
+        }
+
         document.getElementById('lesson-trainer').value = lessonObj.trainer || '';
         document.getElementById('lesson-amount').value = lessonObj.amount || '';
         // participants fields left empty for editing participants separately
@@ -3096,7 +3231,14 @@
         document.getElementById('lesson-day').value = 'Poniedziałek';
         document.getElementById('lesson-day-of-month').value = '';
         document.getElementById('lesson-start').value = '';
+
+        // For trainers, auto-select themselves as the trainer
+        if (currentUserRole === 'trainer' && currentUserId) {
+          document.getElementById('lesson-trainer').value = currentUserId;
+        } else {
         document.getElementById('lesson-trainer').value = '';
+        }
+
         document.getElementById('lesson-amount').value = '';
         document.getElementById('participant1-name').value = '';
         document.getElementById('participant1-phone').value = '';
@@ -3313,6 +3455,16 @@
       const trainer = document.getElementById('lesson-trainer').value.trim();
       const amount = parseFloat(document.getElementById('lesson-amount').value) || 0;
 
+      // For trainers, force their own ID as trainer
+      let finalTrainer = trainer;
+      if (currentUserRole === 'trainer') {
+        if (!trainer || trainer !== currentUserId) {
+          console.log('Trainer tried to create lesson for someone else, forcing their own ID');
+          finalTrainer = currentUserId;
+          document.getElementById('lesson-trainer').value = currentUserId;
+        }
+      }
+
       const p1name = document.getElementById('participant1-name').value.trim();
       const p1phone = document.getElementById('participant1-phone').value.trim();
       const p2name = document.getElementById('participant2-name').value.trim();
@@ -3329,9 +3481,9 @@
           // on edit, fetch participants to construct title
           const { data: partsExisting } = await supabase.from('participants_lessons_month').select('participants_month(name)').eq('month', month).eq('lesson_id', currentEditingLessonId);
           const names = (partsExisting || []).map(x => x.participants_month?.name).filter(Boolean);
-          const titleGen = buildTitle(trainerId);
+          const titleGen = buildTitle(finalTrainer);
 
-          const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, start_time: start, trainer: trainerId, amount: amount }).match({ id: currentEditingLessonId, month: month });
+          const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, start_time: start, trainer: finalTrainer, amount: amount }).match({ id: currentEditingLessonId, month: month });
           if (updErr) throw updErr;
 
           // optional: try to set day_of_month if column exists
@@ -3366,23 +3518,23 @@
         const participantsForTitle = [];
         if (p1name) participantsForTitle.push(p1name);
         if (p2name) participantsForTitle.push(p2name);
-        const titleGen = buildTitle(trainerId);
+        const titleGen = buildTitle(finalTrainer);
 
         // Try RPC insertion first (may exist after SQL update). Fallback to direct insert with/without day_of_month.
         let lessonId = null;
         try {
-          const { data: rpcId, error: rpcErr } = await supabase.rpc('insert_lesson_month', { p_month: month, p_title: titleGen, p_day: day, p_day_of_month: dayOfMonth, p_start_time: start, p_trainer: trainerId, p_amount: amount, p_lesson_type: currentLessonType });
+          const { data: rpcId, error: rpcErr } = await window.supabaseClient.rpc('insert_lesson_month', { p_month: month, p_title: titleGen, p_day: day, p_day_of_month: dayOfMonth, p_start_time: start, p_trainer: finalTrainer, p_amount: amount, p_lesson_type: currentLessonType });
           if (rpcErr) throw rpcErr;
           lessonId = rpcId;
         } catch (rpcCatch) {
           // fallback: try direct insert including day_of_month
           try {
-            const { data: insertedLesson, error: insErr } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, day_of_month: dayOfMonth, start_time: start, trainer: trainerId, amount: amount, lesson_type: currentLessonType }).select('id').single();
+            const { data: insertedLesson, error: insErr } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, day_of_month: dayOfMonth, start_time: start, trainer: finalTrainer, amount: amount, lesson_type: currentLessonType }).select('id').single();
             if (insErr) throw insErr;
             lessonId = insertedLesson ? insertedLesson.id : null;
           } catch (insCatch) {
             // final fallback: insert without day_of_month (older schema)
-            const { data: insertedLesson2, error: insErr2 } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, start_time: start, trainer: trainerId, amount: amount, lesson_type: currentLessonType }).select('id').single();
+            const { data: insertedLesson2, error: insErr2 } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, start_time: start, trainer: finalTrainer, amount: amount, lesson_type: currentLessonType }).select('id').single();
             if (insErr2) throw insErr2;
             lessonId = insertedLesson2 ? insertedLesson2.id : null;
           }
@@ -3429,7 +3581,7 @@
               await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
               await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
             } else {
-              const { data: createdPid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
+              const { data: createdPid1, error: e1 } = await window.supabaseClient.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
               if (e1) console.warn('Error creating participant1:', e1);
               else {
                 primaryParticipantId = createdPid1;
@@ -3439,7 +3591,7 @@
             }
           } catch (e) {
             console.warn('Error checking/creating participant1:', e);
-            const { data: createdPid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
+            const { data: createdPid1, error: e1 } = await window.supabaseClient.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
             if (e1) console.warn('Error creating participant1 fallback:', e1);
             else {
               primaryParticipantId = createdPid1;
@@ -3503,7 +3655,7 @@
                 await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
               }
             } else {
-              const { data: createdPid2, error: e2 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
+              const { data: createdPid2, error: e2 } = await window.supabaseClient.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
               if (e2) console.warn('Error creating participant2:', e2);
               else {
                 partnerParticipantId = createdPid2;
@@ -3523,7 +3675,7 @@
             }
           } catch (e) {
             console.warn('Error checking/creating participant2:', e);
-            const { data: createdPid2, error: e2 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
+            const { data: createdPid2, error: e2 } = await window.supabaseClient.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
             if (e2) console.warn('Error creating participant2 fallback:', e2);
             else {
               partnerParticipantId = createdPid2;
@@ -3557,15 +3709,25 @@
       const month = document.getElementById('lessons-month-select').value;
       const typeToUse = lessonType || currentLessonType || null;
       try {
-        const { data: lessons, error: lessonErr } = await supabase.rpc('list_lessons_month', { p_month: month, p_type: typeToUse });
-        if (lessonErr) throw lessonErr;
-        // If a newer load started, abort
-        if (myToken !== lessonsLoadToken) return;
-        if (!lessons || lessons.length === 0) { lessonsList.innerHTML = '<div class="empty-state"><p>Brak lekcji w tym miesiącu</p></div>'; return; }
+        let filteredLessons = lessons;
+
+        // Filter lessons for trainers - only show their own lessons
+        if (currentUserRole === 'trainer' && currentUserId) {
+          console.log('Filtering lessons for trainer:', currentUserId);
+          filteredLessons = lessons.filter(lesson => lesson.trainer === currentUserId);
+          console.log('Filtered lessons count:', filteredLessons.length, 'out of', lessons.length);
+        }
+
+        if (!filteredLessons || filteredLessons.length === 0) {
+          lessonsList.innerHTML = '<div class="empty-state"><p>' +
+            (currentUserRole === 'trainer' ? 'Brak Twoich lekcji w tym miesiącu' : 'Brak lekcji w tym miesiącu') +
+            '</p></div>';
+          return;
+        }
 
         lessonsList.innerHTML = '';
 
-        for (const lesson of lessons) {
+        for (const lesson of filteredLessons) {
           // if a newer load started, stop processing
           if (myToken !== lessonsLoadToken) return;
           // fetch participants for this lesson
@@ -3573,10 +3735,10 @@
           let partsErr = null;
           try {
             const result = await supabase
-              .from('participants_lessons_month')
-              .select('participant_id, participants_month(id, name, phone)')
-              .eq('month', month)
-              .eq('lesson_id', lesson.id);
+            .from('participants_lessons_month')
+            .select('participant_id, participants_month(id, name, phone)')
+            .eq('month', month)
+            .eq('lesson_id', lesson.id);
             parts = result.data;
             partsErr = result.error;
           } catch (err) {
@@ -3647,7 +3809,7 @@
                 const pids = (assoc || []).map(a => a.participant_id).filter(Boolean);
 
                 // call RPC to delete lesson and its payments/links
-                const { error: rpcErr } = await supabase.rpc('delete_lesson_month', { p_month: month, p_id: lesson.id });
+                const { error: rpcErr } = await window.supabaseClient.rpc('delete_lesson_month', { p_month: month, p_id: lesson.id });
                 if (rpcErr) throw rpcErr;
 
                 // remove orphan participants for this month
