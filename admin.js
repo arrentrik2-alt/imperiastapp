@@ -1,3 +1,8 @@
+<script src="supabaseClient.js"></script>
+<script src="login.js"></script>
+<script src="admin.js"></script>
+
+
 // Sprawdzenie, czy użytkownik jest zalogowany i admin
 async function checkAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -14,7 +19,7 @@ async function checkAdmin() {
     .eq('id', user.id)
     .single();
 
-  if (error || !profile || (profile.role !== "admin" && profile.role !== "trainer")) {
+  if (error || !profile || profile.role !== "admin") {
     alert("Nie masz uprawnień administratora");
     window.location.href = "/login.html";
     return;
