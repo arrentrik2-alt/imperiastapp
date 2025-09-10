@@ -1887,11 +1887,21 @@
     
     // Load groups for selected month
     async function loadGroups() {
+      console.log('loadGroups called');
       groupsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie grup...</p></div>';
-      
+
       try {
         const selectedMonth = document.getElementById('groups-month-select').value;
+        console.log('Selected month for groups:', selectedMonth);
+
+        if (!selectedMonth) {
+          console.log('No month selected, skipping loadGroups');
+          groupsList.innerHTML = '<div class="empty-state"><p>Wybierz miesiąc aby zobaczyć grupy</p></div>';
+          return;
+        }
+
         const { data, error } = await supabase.rpc('list_groups_month', { p_month: selectedMonth });
+        console.log('Groups data received:', data);
           
         if (error) {
           console.error('Błąd wczytywania grup:', error);
@@ -1937,7 +1947,9 @@
 
         // For now, just map names to themselves since we don't have ID mapping
         uniqueTrainerNames.forEach(name => {
-          trainerLookup[name] = name || 'Nieprzypisany';
+          const trimmedName = (name || '').trim();
+          trainerLookup[trimmedName] = trimmedName || 'Nieprzypisany';
+          console.log(`Mapped trainer: "${name}" -> "${trimmedName}"`);
         });
 
         console.log('Trainer lookup:', trainerLookup);
@@ -1993,6 +2005,13 @@
             ? daysToShow[0]
             : daysToShow.slice(0, 3).join(', ') + (daysToShow.length > 3 ? '...' : '');
 
+          console.log(`Group ${group.name}:`, {
+            trainer: group.trainer,
+            trainerType: typeof group.trainer,
+            lookupResult: trainerLookup[group.trainer],
+            allLookupKeys: Object.keys(trainerLookup)
+          });
+
           groupCard.innerHTML = `
               <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
             <div class="group-detail">
@@ -2001,7 +2020,7 @@
             </div>
             <div class="group-detail">
               <i class="fas fa-user-tie"></i>
-              <span>${trainerLookup[group.trainer] || 'Nieprzypisany'}</span>
+              <span id="trainer-${group.id}">${(group.trainer && trainerLookup[group.trainer]) ? trainerLookup[group.trainer] : (group.trainer || 'Nieprzypisany')}</span>
             </div>
             <div class="group-actions">
               <button class="btn btn-outline edit-btn" data-id="${group.id}">
@@ -2703,9 +2722,13 @@
     // Initialize
     checkAdmin().then(async () => {
       await populateMonthSelectors();
+      console.log('Month selectors populated, now loading data...');
       await loadHomeData();
+      console.log('Home data loaded, now loading groups...');
       await loadGroups();
+      console.log('Groups loaded, now loading lessons...');
       await loadLessons();
+      console.log('All data loaded successfully');
       // initialize lesson type buttons and set default so create modal uses correct type
       try { ensureLessonTypeButtons(); setLessonType(currentLessonType); } catch (e) { console.warn('Lesson type init skipped:', e); }
     });
