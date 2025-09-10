@@ -339,7 +339,7 @@
         }
 
         // Redirect based on role
-        if (profile.role === 'admin' || profile.role === 'trainer') {
+        if (profile.role === 'admin') {
           window.location.href = 'admin.html';
           return;
         }
@@ -350,7 +350,7 @@
         }
 
         // in all other cases deny access
-        errorText.textContent = 'Nie masz uprawnień dostępu do systemu.';
+        errorText.textContent = 'Nie masz uprawnień administratora.';
         errorMsg.style.display = 'block';
 
         // Pokaż panel debugowania
