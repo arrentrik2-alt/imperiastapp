@@ -1969,7 +1969,7 @@
     
     // Load groups for selected month
     async function loadGroups() {
-      console.log('loadGroups called');
+      console.log('=== loadGroups called ===');
       groupsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie grup...</p></div>';
 
       try {
@@ -1984,6 +1984,7 @@
 
         const { data, error } = await supabase.rpc('list_groups_month', { p_month: selectedMonth });
         console.log('Groups data received:', data);
+        console.log('First group trainer field:', data?.[0]?.trainer);
           
         if (error) {
           console.error('Błąd wczytywania grup:', error);
@@ -2022,19 +2023,32 @@
         });
 
         // Get all trainer IDs from groups data
+        const rawTrainerValues = data.map(g => g.trainer);
+        console.log('Raw trainer values from groups:', rawTrainerValues);
+
         const trainerIds = [...new Set(data.map(g => g.trainer).filter(id => id && id !== 'null' && id !== ''))];
         const trainerLookup = {};
 
-        console.log('Trainer IDs found in groups:', trainerIds);
+        console.log('Filtered trainer IDs found in groups:', trainerIds);
+        console.log('Number of groups with trainers:', trainerIds.length);
 
-        if (trainerIds.length > 0) {
+        // Separate UUIDs from names
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const uuidTrainers = trainerIds.filter(id => uuidPattern.test(id));
+        const nameTrainers = trainerIds.filter(id => !uuidPattern.test(id));
+
+        console.log('UUID trainers:', uuidTrainers);
+        console.log('Name trainers:', nameTrainers);
+
+        // Try to load trainers by UUID first
+        if (uuidTrainers.length > 0) {
           try {
             const { data: trainers, error } = await supabase
               .from('profiles')
               .select('id, first_name, last_name, email')
-              .in('id', trainerIds);
+              .in('id', uuidTrainers);
 
-            console.log('Loaded trainers from database:', trainers);
+            console.log('Loaded UUID trainers from database:', trainers);
 
             if (!error && trainers) {
               trainers.forEach(trainer => {
@@ -2045,14 +2059,55 @@
                 console.log(`Mapped trainer ID "${trainer.id}" -> "${fullName}"`);
               });
             } else {
-              console.error('Error loading trainers:', error);
+              console.error('Error loading UUID trainers:', error);
             }
           } catch (error) {
-            console.error('Błąd ładowania danych trenerów:', error);
+            console.error('Błąd ładowania UUID trenerów:', error);
           }
         }
 
+        // Try to load trainers by name
+        if (nameTrainers.length > 0) {
+          try {
+            // Load all trainers and try to match by name
+            const { data: allTrainers, error } = await supabase
+              .from('profiles')
+              .select('id, first_name, last_name, email')
+              .eq('role', 'trainer');
+
+            console.log('Loaded all trainers for name matching:', allTrainers);
+
+            if (!error && allTrainers) {
+              nameTrainers.forEach(nameToFind => {
+                // Try to find trainer by full name
+                const foundTrainer = allTrainers.find(trainer => {
+                  const fullName = (trainer.first_name || trainer.last_name)
+                    ? `${trainer.first_name || ''} ${trainer.last_name || ''}`.trim()
+                    : trainer.email;
+                  return fullName === nameToFind || trainer.first_name === nameToFind || trainer.last_name === nameToFind;
+                });
+
+                if (foundTrainer) {
+                  const fullName = (foundTrainer.first_name || foundTrainer.last_name)
+                    ? `${foundTrainer.first_name || ''} ${foundTrainer.last_name || ''}`.trim()
+                    : foundTrainer.email;
+                  trainerLookup[nameToFind] = fullName;
+                  console.log(`Mapped trainer name "${nameToFind}" -> "${fullName}"`);
+                } else {
+                  // If no match found, keep the name as is
+                  trainerLookup[nameToFind] = nameToFind;
+                  console.log(`No match found for "${nameToFind}", keeping as is`);
+                }
+              });
+            }
+          } catch (error) {
+            console.error('Błąd ładowania trenerów po nazwach:', error);
+          }
+        }
+
+
         console.log('Final trainer lookup:', trainerLookup);
+        console.log('Trainer lookup size:', Object.keys(trainerLookup).length);
 
         // Clear and render groups grouped by day
         groupsList.innerHTML = '';
@@ -2109,7 +2164,9 @@
             trainer: group.trainer,
             trainerType: typeof group.trainer,
             lookupResult: trainerLookup[group.trainer],
-            allLookupKeys: Object.keys(trainerLookup)
+            allLookupKeys: Object.keys(trainerLookup),
+            trainerLookupExists: !!trainerLookup,
+            trainerLookupLength: Object.keys(trainerLookup).length
           });
 
           groupCard.innerHTML = `
@@ -2120,7 +2177,7 @@
             </div>
             <div class="group-detail">
               <i class="fas fa-user-tie"></i>
-              <span id="trainer-${group.id}">${(group.trainer && trainerLookup[group.trainer]) ? trainerLookup[group.trainer] : (group.trainer || 'Nieprzypisany')}</span>
+              <span id="trainer-${group.id}">${trainerLookup[group.trainer] || group.trainer || 'Nieprzypisany'}</span>
             </div>
             <div class="group-actions">
               <button class="btn btn-outline edit-btn" data-id="${group.id}">
