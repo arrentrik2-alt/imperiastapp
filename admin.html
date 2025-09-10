@@ -2613,8 +2613,8 @@
     async function loadGroupParticipants(groupId) {
       if (!groupId) {
         console.error('Brak ID grupy');
-          return;
-        }
+        return;
+      }
       
       const selectedMonth = document.getElementById('participants-month-select').value;
       console.log('Ładowanie uczestników dla grupy:', groupId, 'miesiąc:', selectedMonth, 'currentGroupName:', currentGroupName);
