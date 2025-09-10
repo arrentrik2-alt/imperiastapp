@@ -245,16 +245,29 @@
   <script>
     console.log('Inicjalizacja Supabase...');
 
-    // Sprawdź czy Supabase jest dostępne
-    if (typeof supabase === 'undefined' && typeof window.supabase === 'undefined') {
-      console.log('Tworzę klienta Supabase...');
-      window.supabase = supabase.createClient(
-        'https://xsowdwnpguftmlvsogdb.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI'
-      );
+    // Czekaj na załadowanie Supabase z CDN
+    function initSupabase() {
+      console.log('Sprawdzam dostępność Supabase...');
+
+      if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+        console.log('Tworzę klienta Supabase...');
+        try {
+          const { createClient } = window.supabase;
+          window.supabaseClient = createClient(
+            'https://xsowdwnpguftmlvsogdb.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI'
+          );
+          console.log('Supabase klient utworzony pomyślnie');
+        } catch (error) {
+          console.error('Błąd tworzenia klienta Supabase:', error);
+        }
+      } else {
+        console.log('Supabase jeszcze nie załadowane, czekam...');
+        setTimeout(initSupabase, 100);
+      }
     }
 
-    console.log('Supabase gotowy:', typeof window.supabase);
+    initSupabase();
     
     // Pokazuj/ukryj informacje diagnostyczne
     document.getElementById('debugToggle').addEventListener('click', function() {
@@ -301,7 +314,7 @@
       
       try {
         console.log('Próba logowania dla:', email);
-        const { data, error } = await window.supabase.auth.signInWithPassword({
+        const { data, error } = await window.supabaseClient.auth.signInWithPassword({
           email,
           password,
         });
@@ -317,7 +330,7 @@
         
         // Sprawdź czy użytkownik ma uprawnienia administratora
         console.log('Sprawdzam profil dla użytkownika:', data.user.id);
-        const { data: profile, error: profileError } = await window.supabase
+        const { data: profile, error: profileError } = await window.supabaseClient
           .from('profiles')
           .select('role')
           .eq('id', data.user.id)
@@ -335,7 +348,7 @@
           console.error('Błąd odczytu profilu:', profileError);
           errorText.textContent = 'Błąd odczytu uprawnień: ' + profileError.message;
           errorMsg.style.display = 'block';
-          await window.supabase.auth.signOut();
+          await window.supabaseClient.auth.signOut();
           return;
         }
 
@@ -350,7 +363,7 @@
           // Aktualizuj zapytanie SQL z prawidłowym ID
           sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
 
-          await window.supabase.auth.signOut();
+          await window.supabaseClient.auth.signOut();
           return;
         }
 
