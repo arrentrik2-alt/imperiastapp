@@ -2965,7 +2965,7 @@
                   p_participant_id: participantId,
                   p_group_id: groupId
                 });
-        if (error) throw error;
+                if (error) throw error;
                 await loadGroupParticipants(groupId);
               } catch (err) { alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany')); }
             });
