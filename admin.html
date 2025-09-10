@@ -2548,16 +2548,16 @@
           console.log('Using existing participant:', participantId);
         } else {
           // 1. Add new participant
-        const rodoValue = !!document.getElementById('participant-rodo').checked;
+          const rodoValue = !!document.getElementById('participant-rodo').checked;
           const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
-          p_month: selectedMonth,
-          p_name: name,
-          p_email: null,
-          p_phone: phone || null,
-          p_rodo: rodoValue
-        });
+            p_month: selectedMonth,
+            p_name: name,
+            p_email: null,
+            p_phone: phone || null,
+            p_rodo: rodoValue
+          });
 
-        if (participantError) throw participantError;
+          if (participantError) throw participantError;
           participantId = newParticipantId;
 
         // Ensure RODO persisted even if RPC signature mismatch: update directly
@@ -2569,7 +2569,7 @@
           if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
         } catch (e) {
           console.warn('RODO update exception:', e);
-          }
+        }
         }
 
 
