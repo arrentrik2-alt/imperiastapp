@@ -660,6 +660,12 @@
         </a>
       </li>
       <li>
+        <a href="#" id="nav-trainers">
+          <i class="fas fa-chalkboard-teacher"></i>
+          <span class="link-text">Trenerzy</span>
+        </a>
+      </li>
+      <li>
         <a href="#" id="logoutBtn">
           <i class="fas fa-sign-out-alt"></i>
           <span class="link-text">Wyloguj</span>
@@ -905,7 +911,10 @@
 
       <div class="form-group">
         <label for="group-trainer">Trener</label>
-        <input type="text" id="group-trainer" class="form-control" placeholder="Imię i nazwisko trenera">
+        <select id="group-trainer" class="form-control">
+          <option value="">Wybierz trenera...</option>
+          <!-- Trainers will be loaded here -->
+        </select>
     </div>
 
       <div class="form-actions">
@@ -1029,7 +1038,21 @@
       <!-- Lessons will be loaded here -->
     </div>
       </div>
-      
+
+  <!-- Trainers Section -->
+  <div class="content-box" id="trainers-section" style="display:none;">
+    <div class="content-header">
+      <h3>Lista trenerów</h3>
+      <button class="btn btn-primary" id="add-trainer-btn">
+        <i class="fas fa-plus"></i> Dodaj trenera
+      </button>
+    </div>
+
+    <div id="trainers-list">
+      <!-- Trainers will be loaded here -->
+    </div>
+  </div>
+
   <!-- Create Lesson Modal -->
   <div class="modal" id="create-lesson-modal">
     <div class="modal-content">
@@ -1063,7 +1086,10 @@
       
       <div class="form-group">
         <label for="lesson-trainer">Trener</label>
-        <input type="text" id="lesson-trainer" class="form-control" placeholder="Imię i nazwisko">
+        <select id="lesson-trainer" class="form-control">
+          <option value="">Wybierz trenera...</option>
+          <!-- Trainers will be loaded here -->
+        </select>
       </div>
       
       <div class="form-group">
@@ -1124,6 +1150,38 @@
     </div>
   </div>
 
+  <!-- Create Trainer Modal -->
+  <div class="modal" id="create-trainer-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-create-trainer-modal"><i class="fas fa-times"></i></button>
+      <div class="modal-header">
+        <h3>Dodaj trenera</h3>
+      </div>
+
+      <div class="form-group">
+        <label for="trainer-first-name">Imię</label>
+        <input type="text" id="trainer-first-name" class="form-control" placeholder="Wprowadź imię trenera" required>
+      </div>
+
+      <div class="form-group">
+        <label for="trainer-last-name">Nazwisko</label>
+        <input type="text" id="trainer-last-name" class="form-control" placeholder="Wprowadź nazwisko trenera" required>
+      </div>
+
+      <div class="form-group">
+        <label for="trainer-email">Email</label>
+        <input type="email" id="trainer-email" class="form-control" placeholder="Wprowadź email trenera" required>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-outline" id="cancel-create-trainer-btn">Anuluj</button>
+        <button class="btn btn-primary" id="save-create-trainer-btn">
+          <i class="fas fa-save"></i> Dodaj trenera
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { supabase } from './supabaseClient.js';
     
@@ -1159,8 +1217,10 @@
     // Navigation
     const homeLink = document.getElementById('nav-home');
     const groupsLink = document.getElementById('nav-groups');
+    const trainersLink = document.getElementById('nav-trainers');
     const homeSection = document.getElementById('home-section');
     const groupsSection = document.getElementById('groups-section');
+    const trainersSection = document.getElementById('trainers-section');
     const groupParticipantsSection = document.getElementById('group-participants-section');
     
     function setActiveNav(section) {
@@ -1169,8 +1229,10 @@
       if (section === 'home') {
         homeLink.classList.add('active');
         groupsLink.classList.remove('active');
+        if (trainersLink) trainersLink.classList.remove('active');
         homeSection.style.display = 'block';
         groupsSection.style.display = 'none';
+        if (trainersSection) trainersSection.style.display = 'none';
         groupParticipantsSection.style.display = 'none'; // Hide participants section
         const lessonsSection = document.getElementById('lessons-section');
         if (lessonsSection) lessonsSection.style.display = 'none';
@@ -1180,8 +1242,10 @@
       } else if (section === 'groups') {
         groupsLink.classList.add('active');
         homeLink.classList.remove('active');
+        if (trainersLink) trainersLink.classList.remove('active');
         homeSection.style.display = 'none';
         groupsSection.style.display = 'block';
+        if (trainersSection) trainersSection.style.display = 'none';
         groupParticipantsSection.style.display = 'none'; // Hide participants section
         const lessonsSection = document.getElementById('lessons-section');
         if (lessonsSection) lessonsSection.style.display = 'none';
@@ -1211,6 +1275,17 @@
         if (lessonsSection) {
           lessonsSection.style.display = 'block';
         }
+      } else if (section === 'trainers') {
+        homeLink.classList.remove('active');
+        groupsLink.classList.remove('active');
+        if (trainersLink) trainersLink.classList.add('active');
+        homeSection.style.display = 'none';
+        groupsSection.style.display = 'none';
+        if (trainersSection) trainersSection.style.display = 'block';
+        groupParticipantsSection.style.display = 'none';
+        const lessonsSection = document.getElementById('lessons-section');
+        if (lessonsSection) lessonsSection.style.display = 'none';
+        loadTrainers();
       }
       
       console.log('setActiveNav zakończone, currentGroupId po:', currentGroupId);
@@ -1225,6 +1300,13 @@
       e.preventDefault();
       setActiveNav('groups');
     });
+
+    if (trainersLink) {
+      trainersLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveNav('trainers');
+      });
+    }
 
     // Home page navigation buttons
     document.getElementById('go-to-groups-btn').addEventListener('click', (e) => {
@@ -1939,20 +2021,38 @@
           else { s.unpaidCount += 1; s.unpaidSum += parseFloat(p.amount || 0); }
         });
 
-        // Create trainer lookup based on trainer names (since data is stored as names, not IDs)
+        // Get all trainer IDs from groups data
+        const trainerIds = [...new Set(data.map(g => g.trainer).filter(id => id && id !== 'null' && id !== ''))];
         const trainerLookup = {};
-        const uniqueTrainerNames = [...new Set(data.map(g => g.trainer).filter(name => name && name.trim()))];
 
-        console.log('Unique trainer names found:', uniqueTrainerNames);
+        console.log('Trainer IDs found in groups:', trainerIds);
 
-        // For now, just map names to themselves since we don't have ID mapping
-        uniqueTrainerNames.forEach(name => {
-          const trimmedName = (name || '').trim();
-          trainerLookup[trimmedName] = trimmedName || 'Nieprzypisany';
-          console.log(`Mapped trainer: "${name}" -> "${trimmedName}"`);
-        });
+        if (trainerIds.length > 0) {
+          try {
+            const { data: trainers, error } = await supabase
+              .from('profiles')
+              .select('id, first_name, last_name, email')
+              .in('id', trainerIds);
 
-        console.log('Trainer lookup:', trainerLookup);
+            console.log('Loaded trainers from database:', trainers);
+
+            if (!error && trainers) {
+              trainers.forEach(trainer => {
+                const fullName = (trainer.first_name || trainer.last_name)
+                  ? `${trainer.first_name || ''} ${trainer.last_name || ''}`.trim()
+                  : trainer.email;
+                trainerLookup[trainer.id] = fullName;
+                console.log(`Mapped trainer ID "${trainer.id}" -> "${fullName}"`);
+              });
+            } else {
+              console.error('Error loading trainers:', error);
+            }
+          } catch (error) {
+            console.error('Błąd ładowania danych trenerów:', error);
+          }
+        }
+
+        console.log('Final trainer lookup:', trainerLookup);
 
         // Clear and render groups grouped by day
         groupsList.innerHTML = '';
@@ -2724,7 +2824,9 @@
       await populateMonthSelectors();
       console.log('Month selectors populated, now loading data...');
       await loadHomeData();
-      console.log('Home data loaded, now loading groups...');
+      console.log('Home data loaded, now loading trainers into dropdowns...');
+      await loadTrainersIntoDropdowns();
+      console.log('Trainers loaded into dropdowns, now loading groups...');
       await loadGroups();
       console.log('Groups loaded, now loading lessons...');
       await loadLessons();
@@ -3170,9 +3272,9 @@
           // on edit, fetch participants to construct title
           const { data: partsExisting } = await supabase.from('participants_lessons_month').select('participants_month(name)').eq('month', month).eq('lesson_id', currentEditingLessonId);
           const names = (partsExisting || []).map(x => x.participants_month?.name).filter(Boolean);
-          const titleGen = buildTitle(trainer);
+          const titleGen = buildTitle(trainerId);
 
-          const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, start_time: start, trainer: trainer, amount: amount }).match({ id: currentEditingLessonId, month: month });
+          const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, start_time: start, trainer: trainerId, amount: amount }).match({ id: currentEditingLessonId, month: month });
           if (updErr) throw updErr;
 
           // optional: try to set day_of_month if column exists
@@ -3207,23 +3309,23 @@
         const participantsForTitle = [];
         if (p1name) participantsForTitle.push(p1name);
         if (p2name) participantsForTitle.push(p2name);
-        const titleGen = buildTitle(trainer);
+        const titleGen = buildTitle(trainerId);
 
         // Try RPC insertion first (may exist after SQL update). Fallback to direct insert with/without day_of_month.
         let lessonId = null;
         try {
-          const { data: rpcId, error: rpcErr } = await supabase.rpc('insert_lesson_month', { p_month: month, p_title: titleGen, p_day: day, p_day_of_month: dayOfMonth, p_start_time: start, p_trainer: trainer, p_amount: amount, p_lesson_type: currentLessonType });
+          const { data: rpcId, error: rpcErr } = await supabase.rpc('insert_lesson_month', { p_month: month, p_title: titleGen, p_day: day, p_day_of_month: dayOfMonth, p_start_time: start, p_trainer: trainerId, p_amount: amount, p_lesson_type: currentLessonType });
           if (rpcErr) throw rpcErr;
           lessonId = rpcId;
         } catch (rpcCatch) {
           // fallback: try direct insert including day_of_month
           try {
-            const { data: insertedLesson, error: insErr } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, day_of_month: dayOfMonth, start_time: start, trainer: trainer, amount: amount, lesson_type: currentLessonType }).select('id').single();
+            const { data: insertedLesson, error: insErr } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, day_of_month: dayOfMonth, start_time: start, trainer: trainerId, amount: amount, lesson_type: currentLessonType }).select('id').single();
             if (insErr) throw insErr;
             lessonId = insertedLesson ? insertedLesson.id : null;
           } catch (insCatch) {
             // final fallback: insert without day_of_month (older schema)
-            const { data: insertedLesson2, error: insErr2 } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, start_time: start, trainer: trainer, amount: amount, lesson_type: currentLessonType }).select('id').single();
+            const { data: insertedLesson2, error: insErr2 } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, start_time: start, trainer: trainerId, amount: amount, lesson_type: currentLessonType }).select('id').single();
             if (insErr2) throw insErr2;
             lessonId = insertedLesson2 ? insertedLesson2.id : null;
           }
@@ -4335,6 +4437,206 @@
       groupParticipantSearch.disabled = false;
       delete groupParticipantSearch.dataset.selected;
     });
+
+    // Trainer functionality
+    const createTrainerModal = document.getElementById('create-trainer-modal');
+    const closeCreateTrainerModal = document.getElementById('close-create-trainer-modal');
+    const cancelCreateTrainerBtn = document.getElementById('cancel-create-trainer-btn');
+    const saveCreateTrainerBtn = document.getElementById('save-create-trainer-btn');
+    const addTrainerBtn = document.getElementById('add-trainer-btn');
+
+    // Load trainers into dropdowns
+    async function loadTrainersIntoDropdowns() {
+      try {
+        const { data: trainers, error } = await supabase
+          .from('profiles')
+          .select('id, email, first_name, last_name')
+          .eq('role', 'trainer');
+
+        if (error) throw error;
+
+        // Get all trainer dropdowns
+        const groupTrainerSelect = document.getElementById('group-trainer');
+        const lessonTrainerSelect = document.getElementById('lesson-trainer');
+
+        // Clear existing options except the first one
+        [groupTrainerSelect, lessonTrainerSelect].forEach(select => {
+          if (select) {
+            const firstOption = select.querySelector('option[value=""]');
+            select.innerHTML = '';
+            if (firstOption) select.appendChild(firstOption);
+          }
+        });
+
+        // Add trainer options
+        if (trainers && trainers.length > 0) {
+          trainers.forEach(trainer => {
+            const fullName = (trainer.first_name || trainer.last_name)
+              ? `${trainer.first_name || ''} ${trainer.last_name || ''}`.trim()
+              : trainer.email;
+
+            const option = document.createElement('option');
+            option.value = trainer.id;
+            option.textContent = fullName;
+
+            if (groupTrainerSelect) groupTrainerSelect.appendChild(option.cloneNode(true));
+            if (lessonTrainerSelect) lessonTrainerSelect.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('Błąd podczas ładowania trenerów do dropdownów:', error);
+      }
+    }
+
+    // Load trainers from database
+    async function loadTrainers() {
+      try {
+        const { data: trainers, error } = await supabase
+          .from('profiles')
+          .select('id, email, role, created_at, first_name, last_name')
+          .eq('role', 'trainer');
+
+        if (error) throw error;
+
+        const trainersList = document.getElementById('trainers-list');
+        trainersList.innerHTML = '';
+
+        if (trainers && trainers.length > 0) {
+          trainers.forEach(trainer => {
+            const trainerCard = document.createElement('div');
+            trainerCard.className = 'card';
+            const fullName = (trainer.first_name || trainer.last_name)
+              ? `${trainer.first_name || ''} ${trainer.last_name || ''}`.trim()
+              : 'Trener';
+
+            trainerCard.innerHTML = `
+              <div class="card-header">
+                <h4>${fullName}</h4>
+                <div class="card-actions">
+                  <button class="btn btn-sm btn-outline edit-trainer-btn" data-id="${trainer.id}">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-danger delete-trainer-btn" data-id="${trainer.id}">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <p><strong>Email:</strong> ${trainer.email || ''}</p>
+                <p><strong>Rola:</strong> Trener</p>
+                <p><strong>Data utworzenia:</strong> ${new Date(trainer.created_at).toLocaleDateString('pl-PL')}</p>
+              </div>
+            `;
+            trainersList.appendChild(trainerCard);
+          });
+
+          // Add event listeners for edit and delete buttons
+          document.querySelectorAll('.edit-trainer-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              const trainerId = e.currentTarget.dataset.id;
+              editTrainer(trainerId);
+            });
+          });
+
+          document.querySelectorAll('.delete-trainer-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const trainerId = e.currentTarget.dataset.id;
+              if (confirm('Czy na pewno chcesz usunąć tego trenera?')) {
+                await deleteTrainer(trainerId);
+              }
+            });
+          });
+        } else {
+          trainersList.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--text-gray);">Brak trenerów w systemie.</p>';
+        }
+      } catch (error) {
+        console.error('Błąd podczas ładowania trenerów:', error);
+        alert('Wystąpił błąd podczas ładowania listy trenerów.');
+      }
+    }
+
+    // Open create trainer modal
+    addTrainerBtn.addEventListener('click', () => {
+      document.getElementById('trainer-first-name').value = '';
+      document.getElementById('trainer-last-name').value = '';
+      document.getElementById('trainer-email').value = '';
+      createTrainerModal.style.display = 'block';
+    });
+
+    // Close trainer modal
+    closeCreateTrainerModal.addEventListener('click', () => {
+      createTrainerModal.style.display = 'none';
+    });
+
+    cancelCreateTrainerBtn.addEventListener('click', () => {
+      createTrainerModal.style.display = 'none';
+    });
+
+    // Save trainer
+    saveCreateTrainerBtn.addEventListener('click', async () => {
+      const firstName = document.getElementById('trainer-first-name').value.trim();
+      const lastName = document.getElementById('trainer-last-name').value.trim();
+      const email = document.getElementById('trainer-email').value.trim();
+
+      if (!firstName || !lastName || !email) {
+        alert('Wszystkie pola są wymagane!');
+        return;
+      }
+
+      try {
+        // Create auth user
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: email,
+          password: 'TempPass123!', // Temporary password that trainer will change
+        });
+
+        if (authError) throw authError;
+
+        // Create profile with trainer role
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: authData.user.id,
+            email: email,
+            first_name: firstName,
+            last_name: last_name,
+            role: 'trainer'
+          }]);
+
+        if (profileError) throw profileError;
+
+        alert('Trener został pomyślnie dodany! Trener otrzyma email z instrukcjami logowania.');
+        createTrainerModal.style.display = 'none';
+        loadTrainers();
+        loadTrainersIntoDropdowns();
+      } catch (error) {
+        console.error('Błąd podczas tworzenia trenera:', error);
+        alert('Wystąpił błąd podczas tworzenia trenera: ' + error.message);
+      }
+    });
+
+    // Edit trainer (placeholder for future implementation)
+    async function editTrainer(trainerId) {
+      alert('Funkcjonalność edycji trenera będzie dostępna wkrótce.');
+    }
+
+    // Delete trainer
+    async function deleteTrainer(trainerId) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', trainerId);
+
+        if (error) throw error;
+
+        loadTrainers();
+        alert('Trener został usunięty.');
+      } catch (error) {
+        console.error('Błąd podczas usuwania trenera:', error);
+        alert('Wystąpił błąd podczas usuwania trenera.');
+      }
+    }
 
   </script>
 </body>
