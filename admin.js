@@ -19,7 +19,7 @@ async function checkAdmin() {
     .eq('id', user.id)
     .single();
 
-  if (error || !profile || profile.role !== "admin") {
+  if (error || !profile || (profile.role !== "admin" && profile.role !== "trainer")) {
     alert("Nie masz uprawnień administratora");
     window.location.href = "/login.html";
     return;
