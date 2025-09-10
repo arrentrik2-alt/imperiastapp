@@ -174,17 +174,19 @@
       <p>Panel administracyjny</p>
     </div>
     
-    <div class="input-group">
-      <i class="fas fa-envelope"></i>
-      <input type="email" id="email" placeholder="Email" value="admin@example.com">
-    </div>
-    
-    <div class="input-group">
-      <i class="fas fa-lock"></i>
-      <input type="password" id="password" placeholder="Hasło" value="admin123">
-    </div>
-    
-    <button class="btn" id="loginBtn">Zaloguj</button>
+    <form id="loginForm">
+      <div class="input-group">
+        <i class="fas fa-envelope"></i>
+        <input type="email" id="email" placeholder="Email" value="admin@example.com">
+      </div>
+
+      <div class="input-group">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="password" placeholder="Hasło" value="admin123">
+      </div>
+
+      <button type="submit" class="btn" id="loginBtn">Zaloguj</button>
+    </form>
     
     <div class="error-message" id="errorMsg">
       <i class="fas fa-exclamation-circle"></i> 
@@ -240,7 +242,11 @@
   </div>
 
   <script type="module">
+    console.log('🚀 Uruchamianie skryptu logowania...');
+
     import { supabase } from './supabaseClient.js';
+
+    console.log('📦 Supabase zaimportowany:', supabase ? 'tak' : 'nie');
     
     // Pokazuj/ukryj informacje diagnostyczne
     document.getElementById('debugToggle').addEventListener('click', function() {
@@ -267,6 +273,8 @@
     });
     
     async function login() {
+      console.log('🔄 Funkcja login() została wywołana');
+
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const errorMsg = document.getElementById('errorMsg');
@@ -274,47 +282,67 @@
       const userIdDisplay = document.getElementById('userIdDisplay');
       const userRoleDisplay = document.getElementById('userRoleDisplay');
       const sqlCode = document.getElementById('sqlCode');
-      
+
+      console.log('📧 Email:', email);
+      console.log('🔑 Hasło wprowadzone:', password ? 'tak' : 'nie');
+
       // Reset error message
       errorMsg.style.display = 'none';
-      
+
       // Prosta walidacja
       if (!email || !password) {
+        console.log('❌ Brak email lub hasła');
         errorText.textContent = 'Proszę wypełnić wszystkie pola';
         errorMsg.style.display = 'block';
         return;
       }
       
       try {
+        console.log('🔐 Próba logowania do Supabase...');
+
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        
+
+        console.log('📊 Wynik logowania:', { data: data ? 'sukces' : null, error: error ? error.message : null });
+
         if (error) {
+          console.log('❌ Błąd logowania:', error.message);
           errorText.textContent = 'Błąd logowania: ' + error.message;
           errorMsg.style.display = 'block';
           return;
         }
+
+        console.log('✅ Logowanie udane, użytkownik:', data.user.id);
         
         // Wyświetl ID użytkownika do debugowania
         userIdDisplay.textContent = data.user.id;
         
         // Sprawdź czy użytkownik ma uprawnienia administratora
+        console.log('🔍 Sprawdzanie roli użytkownika w profiles...');
+
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', data.user.id)
           .maybeSingle();
-          
+
+        console.log('👤 Wynik sprawdzenia profilu:', {
+          profile: profile ? { role: profile.role } : null,
+          error: profileError ? profileError.message : null
+        });
+
         // Wyświetl rolę użytkownika do debugowania
         if (profile) {
           userRoleDisplay.textContent = profile.role;
+          console.log('✅ Znaleziono rolę:', profile.role);
         } else {
           userRoleDisplay.textContent = 'BRAK REKORDU W TABELI PROFILES';
           userRoleDisplay.style.color = '#ff6b6b';
+          console.log('❌ Brak rekordu w profiles dla użytkownika:', data.user.id);
         }
-        
+
         if (profileError) {
           console.error('Błąd odczytu profilu:', profileError);
           errorText.textContent = 'Błąd odczytu uprawnień: ' + profileError.message;
@@ -339,17 +367,22 @@
         }
 
         // Redirect based on role
+        console.log('🔀 Sprawdzanie przekierowania dla roli:', profile.role);
+
         if (profile.role === 'admin' || profile.role === 'trainer') {
+          console.log('🎯 Przekierowanie do admin.html dla roli:', profile.role);
           window.location.href = 'admin.html';
           return;
         }
 
         if (profile.role === 'clubadmin') {
+          console.log('🎯 Przekierowanie do club.html dla roli clubadmin');
           window.location.href = 'club.html';
           return;
         }
 
         // in all other cases deny access
+        console.log('❌ Nieobsługiwana rola:', profile.role, '- odmowa dostępu');
         errorText.textContent = 'Nie masz uprawnień dostępu do systemu.';
         errorMsg.style.display = 'block';
 
@@ -371,7 +404,21 @@
     }
     
     // Dodaj nasłuchiwanie zdarzeń
-    document.getElementById('loginBtn').addEventListener('click', login);
+    console.log('🔧 Podłączanie event listenerów...');
+
+    const loginForm = document.getElementById('loginForm');
+    console.log('📋 Formularz login:', loginForm ? 'znaleziony' : 'nie znaleziony');
+
+    if (loginForm) {
+      loginForm.addEventListener('submit', function(e) {
+        e.preventDefault(); // Zatrzymaj domyślne zachowanie formularza
+        console.log('🚫 Zatrzymano domyślne zachowanie formularza');
+        login();
+      });
+      console.log('✅ Event listener dla formularza login podłączony');
+    } else {
+      console.log('❌ Nie znaleziono formularza login!');
+    }
     
     // Zezwól na logowanie po wciśnięciu Enter
     document.getElementById('password').addEventListener('keypress', function(e) {
