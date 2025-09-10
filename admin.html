@@ -1185,35 +1185,103 @@
   <script type="module">
     import { supabase } from './supabaseClient.js';
     
-    // Check if user is admin
+    // Check if user is admin or trainer
     async function checkAdmin() {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         alert("Nie jesteś zalogowany");
         window.location.href = "login.html";
         return;
       }
-      
+
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('*')
         .eq('id', user.id)
         .single();
 
-      console.log('DEBUG - User ID:', user.id);
-      console.log('DEBUG - Profile:', profile);
-      console.log('DEBUG - Profile role:', profile?.role);
-      console.log('DEBUG - Error:', error);
-
       if (error || !profile || (profile.role !== "admin" && profile.role !== "trainer")) {
-        console.log('DEBUG - Access denied. Role check failed.');
         alert("Nie masz uprawnień administratora lub trenera. Twoja rola: " + (profile?.role || 'brak'));
         window.location.href = "login.html";
         return;
       }
 
-      console.log('DEBUG - Access granted for role:', profile.role);
+      // Configure UI based on role
+      if (profile.role === "trainer") {
+        configureTrainerInterface(profile);
+      } else {
+        configureAdminInterface();
+      }
+
+      // Store current user profile globally
+      window.currentUser = profile;
+    }
+
+    // Configure interface for trainer role
+    function configureTrainerInterface(profile) {
+      console.log('Configuring interface for trainer:', profile);
+
+      // Function to hide navigation items
+      const hideNavItems = () => {
+        console.log('Running trainer interface configuration...');
+
+        // Hide navigation items for trainers
+        const homeNav = document.getElementById('nav-home');
+        const trainersNav = document.getElementById('nav-trainers');
+
+        console.log('Home nav element:', homeNav);
+        console.log('Trainers nav element:', trainersNav);
+
+        if (homeNav && homeNav.closest('li')) {
+          homeNav.closest('li').style.display = 'none';
+          console.log('Home nav hidden');
+        }
+        if (trainersNav && trainersNav.closest('li')) {
+          trainersNav.closest('li').style.display = 'none';
+          console.log('Trainers nav hidden');
+        }
+
+        // Hide content sections for trainers
+        const homeSection = document.getElementById('home-section');
+        const trainersSection = document.getElementById('trainers-section');
+
+        if (homeSection) homeSection.style.display = 'none';
+        if (trainersSection) trainersSection.style.display = 'none';
+
+        // Change welcome message to trainer's name
+        const welcomeElement = document.querySelector('#home-section h3');
+        if (welcomeElement) {
+          const trainerName = (profile.first_name || profile.last_name)
+            ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+            : profile.email || 'Trener';
+          welcomeElement.textContent = `Witaj ${trainerName}`;
+        }
+
+        // Show groups section by default for trainers
+        const groupsSection = document.getElementById('groups-section');
+        if (groupsSection) {
+          groupsSection.style.display = 'block';
+          const groupsNav = document.getElementById('nav-groups');
+          if (groupsNav) groupsNav.classList.add('active');
+        }
+
+        console.log('Trainer interface configuration completed');
+      };
+
+      // Try to configure immediately
+      hideNavItems();
+
+      // Also try after a short delay in case elements weren't ready
+      setTimeout(hideNavItems, 100);
+
+      // And try again after a longer delay for dynamically created elements
+      setTimeout(hideNavItems, 500);
+    }
+
+    // Configure interface for admin role (default behavior)
+    function configureAdminInterface() {
+      console.log('Configuring interface for admin - no changes needed');
     }
     
     // Logout function
@@ -3569,11 +3637,18 @@
         if (lessonErr) throw lessonErr;
         // If a newer load started, abort
         if (myToken !== lessonsLoadToken) return;
-        if (!lessons || lessons.length === 0) { lessonsList.innerHTML = '<div class="empty-state"><p>Brak lekcji w tym miesiącu</p></div>'; return; }
+
+        // Filter lessons for trainers - show only their own lessons
+        let filteredLessons = lessons;
+        if (window.currentUser && window.currentUser.role === 'trainer') {
+          filteredLessons = lessons.filter(lesson => lesson.trainer === window.currentUser.id);
+        }
+
+        if (!filteredLessons || filteredLessons.length === 0) { lessonsList.innerHTML = '<div class="empty-state"><p>Brak lekcji w tym miesiącu</p></div>'; return; }
 
         lessonsList.innerHTML = '';
 
-        for (const lesson of lessons) {
+        for (const lesson of filteredLessons) {
           // if a newer load started, stop processing
           if (myToken !== lessonsLoadToken) return;
           // fetch participants for this lesson
@@ -3836,6 +3911,12 @@
     const logoutBtn = document.getElementById('logoutBtn').closest('li');
     navLinks.insertBefore(navLessons, logoutBtn);
     document.getElementById('nav-lessons').addEventListener('click', (e) => { e.preventDefault(); setActiveNav('lessons'); });
+
+    // Re-configure interface for trainers after lessons navigation is created
+    if (window.currentUser && window.currentUser.role === 'trainer') {
+      console.log('Re-configuring trainer interface after lessons nav creation');
+      configureTrainerInterface(window.currentUser);
+    }
 
     // extend setActiveNav to handle lessons
     const _origSetActive = setActiveNav;
@@ -4513,12 +4594,21 @@
     // Load trainers into dropdowns
     async function loadTrainersIntoDropdowns() {
       try {
-        const { data: trainers, error } = await supabase
-          .from('profiles')
-          .select('id, email, first_name, last_name')
-          .eq('role', 'trainer');
+        let trainers;
 
-        if (error) throw error;
+        // If current user is a trainer, show only themselves
+        if (window.currentUser && window.currentUser.role === 'trainer') {
+          trainers = [window.currentUser];
+        } else {
+          // Admin sees all trainers
+          const { data: allTrainers, error } = await supabase
+            .from('profiles')
+            .select('id, email, first_name, last_name')
+            .eq('role', 'trainer');
+
+          if (error) throw error;
+          trainers = allTrainers;
+        }
 
         // Get all trainer dropdowns
         const groupTrainerSelect = document.getElementById('group-trainer');
