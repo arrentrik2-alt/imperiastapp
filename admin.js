@@ -19,8 +19,8 @@ async function checkAdmin() {
     .eq('id', user.id)
     .single();
 
-  if (error || !profile || profile.role !== "admin") {
-    alert("Nie masz uprawnień administratora");
+  if (error || !profile || (profile.role !== "admin" && profile.role !== "trainer")) {
+    alert("Nie masz uprawnień administratora lub trenera");
     window.location.href = "/login.html";
     return;
   }
