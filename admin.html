@@ -1185,6 +1185,29 @@
   <script type="module">
     import { supabase } from './supabaseClient.js';
     
+    // Check if user is admin
+    async function checkAdmin() {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        alert("Nie jesteś zalogowany");
+        window.location.href = "login.html";
+        return;
+      }
+      
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+        
+      if (error || !profile || profile.role !== "admin") {
+        alert("Nie masz uprawnień administratora");
+        window.location.href = "login.html";
+        return;
+      }
+    }
+    
     // Logout function
     document.getElementById("logoutBtn").addEventListener("click", async () => {
       await supabase.auth.signOut();
@@ -4673,10 +4696,5 @@
     }
 
   </script>
-
-  <!-- Ładuj zewnętrzne pliki JavaScript -->
-  <script src="supabaseClient.js"></script>
-  <script src="login.js"></script>
-  <script src="admin.js"></script>
 </body>
 </html>
