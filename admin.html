@@ -1979,8 +1979,12 @@
       });
     }
     
-    addGroupBtn.addEventListener('click', openModal);
-    addFirstGroupBtn.addEventListener('click', openModal);
+    if (addGroupBtn) {
+      addGroupBtn.addEventListener('click', openModal);
+    }
+    if (addFirstGroupBtn) {
+      addFirstGroupBtn.addEventListener('click', openModal);
+    }
     closeModalBtn.addEventListener('click', closeModal);
     cancelGroupBtn.addEventListener('click', closeModal);
 
@@ -2280,12 +2284,19 @@
               openGroupParticipantsPage(group);
               setActiveNav('participants');
             });
-            // action buttons
-            groupCard.querySelector('.edit-btn').addEventListener('click', (e) => {
-              e.stopPropagation();
-              openEditModal(group);
-            });
-            groupCard.querySelector('.delete-btn').addEventListener('click', async (e) => { e.stopPropagation(); if (!confirm('Usunąć grupę?')) return; /* reuse existing delete logic by triggering click on original button */ const btn = e.currentTarget; btn.disabled = true; try { /* call same handler code inline to avoid duplication */ const selectedMonth = document.getElementById('groups-month-select').value; const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, group_id: group.id }); if (payErr) throw payErr; const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, group_id: group.id }); if (pgErr) throw pgErr; const { data: participantsAll, error: pAllErr } = await supabase.from('participants_month').select('id').eq('month', selectedMonth); if (pAllErr) throw pAllErr; const { data: assoc, error: assocErr } = await supabase.from('participant_groups_month').select('participant_id').eq('month', selectedMonth); if (assocErr) throw assocErr; const assocSet = new Set((assoc || []).map(a => a.participant_id)); const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id)); if (orphanIds.length > 0) { const { error: delOrphansErr } = await supabase.from('participants_month').delete().in('id', orphanIds).eq('month', selectedMonth); if (delOrphansErr) throw delOrphansErr; } const { error } = await supabase.from('groups_month').delete().match({ id: group.id, month: selectedMonth }); if (error) throw error; await loadGroups(); await loadHomeData(); } catch (err) { alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany')); } finally { btn.disabled = false; } });
+            // action buttons - only add listeners if buttons exist (not hidden for trainers)
+            const editBtn = groupCard.querySelector('.edit-btn');
+            if (editBtn) {
+              editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openEditModal(group);
+              });
+            }
+
+            const deleteBtn = groupCard.querySelector('.delete-btn');
+            if (deleteBtn) {
+              deleteBtn.addEventListener('click', async (e) => { e.stopPropagation(); if (!confirm('Usunąć grupę?')) return; /* reuse existing delete logic by triggering click on original button */ const btn = e.currentTarget; btn.disabled = true; try { /* call same handler code inline to avoid duplication */ const selectedMonth = document.getElementById('groups-month-select').value; const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, group_id: group.id }); if (payErr) throw payErr; const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, group_id: group.id }); if (pgErr) throw pgErr; const { data: participantsAll, error: pAllErr } = await supabase.from('participants_month').select('id').eq('month', selectedMonth); if (pAllErr) throw pAllErr; const { data: assoc, error: assocErr } = await supabase.from('participant_groups_month').select('participant_id').eq('month', selectedMonth); if (assocErr) throw assocErr; const assocSet = new Set((assoc || []).map(a => a.participant_id)); const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id)); if (orphanIds.length > 0) { const { error: delOrphansErr } = await supabase.from('participants_month').delete().in('id', orphanIds).eq('month', selectedMonth); if (delOrphansErr) throw delOrphansErr; } const { error } = await supabase.from('groups_month').delete().match({ id: group.id, month: selectedMonth }); if (error) throw error; await loadGroups(); await loadHomeData(); } catch (err) { alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany')); } finally { btn.disabled = false; } });
+            }
           groupsList.appendChild(groupCard);
           });
         });
@@ -2717,12 +2728,17 @@
           `;
 
           // Add event listeners for action buttons
-          participantCard.querySelector('.edit-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            editParticipant(participant.participant_id, participant.participants_month.name, participant.participants_month.phone, payment);
-          });
+          const editBtn = participantCard.querySelector('.edit-btn');
+          if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              editParticipant(participant.participant_id, participant.participants_month.name, participant.participants_month.phone, payment);
+            });
+          }
 
-          participantCard.querySelector('.delete-btn').addEventListener('click', async (e) => {
+          const deleteBtn = participantCard.querySelector('.delete-btn');
+          if (deleteBtn) {
+            deleteBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             if (!confirm('Usunąć uczestnika z grupy?')) return;
             
