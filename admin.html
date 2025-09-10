@@ -2233,51 +2233,51 @@
           dayHeader.innerHTML = `<h3>${dayName}</h3>`;
           groupsList.appendChild(dayHeader);
           list.forEach(group => {
-          const groupCard = document.createElement('div');
-          groupCard.className = 'group-card';
+            const groupCard = document.createElement('div');
+            groupCard.className = 'group-card';
             groupCard.style.cursor = 'pointer';
             const sums = groupSummaryLookup[group.id] || { paidCount:0, unpaidCount:0, paidSum:0, unpaidSum:0 };
             const paidText = `<span style="color: var(--success); font-weight:600; margin-left:10px;">Zapłacili: ${sums.paidCount}</span>`;
             const unpaidColor = sums.unpaidCount > 0 ? 'var(--error)' : 'var(--success)';
             const unpaidText = `<span style="color: ${unpaidColor}; font-weight:600; margin-left:10px;">Nie zapłacili: ${sums.unpaidCount}</span>`;
-          // Format days display
-          const daysToShow = group.allDays || [group.day];
-          const daysText = daysToShow.length === 1
-            ? daysToShow[0]
-            : daysToShow.slice(0, 3).join(', ') + (daysToShow.length > 3 ? '...' : '');
+            // Format days display
+            const daysToShow = group.allDays || [group.day];
+            const daysText = daysToShow.length === 1
+              ? daysToShow[0]
+              : daysToShow.slice(0, 3).join(', ') + (daysToShow.length > 3 ? '...' : '');
 
-          console.log(`Group ${group.name}:`, {
-            trainer: group.trainer,
-            trainerType: typeof group.trainer,
-            lookupResult: trainerLookup[group.trainer],
-            allLookupKeys: Object.keys(trainerLookup),
-            trainerLookupExists: !!trainerLookup,
-            trainerLookupLength: Object.keys(trainerLookup).length
-          });
+            console.log(`Group ${group.name}:`, {
+              trainer: group.trainer,
+              trainerType: typeof group.trainer,
+              lookupResult: trainerLookup[group.trainer],
+              allLookupKeys: Object.keys(trainerLookup),
+              trainerLookupExists: !!trainerLookup,
+              trainerLookupLength: Object.keys(trainerLookup).length
+            });
 
-          groupCard.innerHTML = `
+            groupCard.innerHTML = `
               <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
-            <div class="group-detail">
-              <i class="fas fa-calendar-day"></i>
+              <div class="group-detail">
+                <i class="fas fa-calendar-day"></i>
                 <span>${daysText}, ${formatTimeToHHMM(group.start_time)}</span>
-            </div>
-            ${window.currentUser && window.currentUser.role === 'trainer' ? '' : `
-            <div class="group-detail">
-              <i class="fas fa-user-tie"></i>
-              <span id="trainer-${group.id}">${trainerLookup[group.trainer] || group.trainer || 'Nieprzypisany'}</span>
-            </div>
-            `}
-            ${window.currentUser && window.currentUser.role === 'trainer' ? '' : `
-            <div class="group-actions">
-              <button class="btn btn-outline edit-btn" data-id="${group.id}">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn btn-outline delete-btn" data-id="${group.id}">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-            `}
-          `;
+              </div>
+              ${window.currentUser && window.currentUser.role === 'trainer' ? '' : `
+              <div class="group-detail">
+                <i class="fas fa-user-tie"></i>
+                <span id="trainer-${group.id}">${trainerLookup[group.trainer] || group.trainer || 'Nieprzypisany'}</span>
+              </div>
+              `}
+              ${window.currentUser && window.currentUser.role === 'trainer' ? '' : `
+              <div class="group-actions">
+                <button class="btn btn-outline edit-btn" data-id="${group.id}">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-outline delete-btn" data-id="${group.id}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+              `}
+            `;
             // click handler
             groupCard.addEventListener('click', (e) => {
               if (e.target.closest('.group-actions')) return;
