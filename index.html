@@ -1,103 +1,391 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
-    <title>Login Test</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logowanie - STUDIO TAŃCA IMPERIA</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-bg: #121212;
+      --secondary-bg: #1e1e1e;
+      --gold: #d4af37;
+      --gold-light: #f1e5b9;
+      --text-light: #f5f5f5;
+      --text-gray: #b0b0b0;
+      --border-dark: #333;
+      --success: #28a745;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: var(--primary-bg);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .login-container {
+      background-color: var(--secondary-bg);
+      width: 100%;
+      max-width: 600px;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-dark);
+    }
+    
+    .logo {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .logo h1 {
+      color: var(--gold);
+      font-size: 2.2rem;
+      margin-bottom: 5px;
+    }
+    
+    .logo p {
+      color: var(--text-gray);
+      font-size: 1rem;
+    }
+    
+    .input-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+    
+    .input-group i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gold);
+    }
+    
+    .input-group input {
+      width: 100%;
+      padding: 12px 15px 12px 45px;
+      background-color: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--border-dark);
+      border-radius: 5px;
+      color: var(--text-light);
+      font-size: 1rem;
+    }
+    
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--gold);
+      color: var(--primary-bg);
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn:hover {
+      background-color: #c19b2e;
+    }
+    
+    .error-message {
+      background-color: rgba(220, 53, 69, 0.2);
+      color: #f5c6cb;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 20px;
+      text-align: center;
+      display: none;
+    }
+    
+    .debug-info {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: rgba(212, 175, 55, 0.1);
+      border-radius: 5px;
+      border-left: 3px solid var(--gold);
+      font-size: 0.9rem;
+    }
+    
+    .debug-info h3 {
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+    
+    .debug-toggle {
+      color: var(--gold);
+      cursor: pointer;
+      text-align: center;
+      margin-top: 15px;
+      font-size: 0.9rem;
+    }
+    
+    .user-id {
+      word-break: break-all;
+      font-family: monospace;
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 5px;
+      border-radius: 3px;
+      margin: 5px 0;
+    }
+    
+    .sql-code {
+      background-color: #1a1a1a;
+      color: var(--gold-light);
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    
+    .step {
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border-dark);
+    }
+    
+    .step:last-child {
+      border-bottom: none;
+    }
+  </style>
 </head>
 <body>
-    <h1>Test strony</h1>
-
-    <form id="loginForm">
-        <input type="email" id="email" placeholder="Email" value="admin@example.com"><br><br>
-        <input type="password" id="password" placeholder="Hasło" value="admin123"><br><br>
-        <button type="submit" id="loginBtn">Zaloguj</button>
-    </form>
-
-    <div id="errorMsg" style="color: red; display: none;">
-        <span id="errorText"></span>
+  <div class="login-container">
+    <div class="logo">
+      <h1>Studio<span>Tańca<span>Imperia</span></h1>
+      <p>Panel administracyjny</p>
     </div>
+    
+    <div class="input-group">
+      <i class="fas fa-envelope"></i>
+      <input type="email" id="email" placeholder="Email" value="admin@example.com">
+    </div>
+    
+    <div class="input-group">
+      <i class="fas fa-lock"></i>
+      <input type="password" id="password" placeholder="Hasło" value="admin123">
+    </div>
+    
+    <button class="btn" id="loginBtn">Zaloguj</button>
+    
+    <div class="error-message" id="errorMsg">
+      <i class="fas fa-exclamation-circle"></i> 
+      <span id="errorText"></span>
+    </div>
+    
+    <div class="debug-toggle" id="debugToggle">Pokaż informacje diagnostyczne ▼</div>
+    
+    <div class="debug-info" id="debugInfo" style="display: none;">
+      <h3>🔍 Diagnostyka problemu z uprawnieniami</h3>
+      
+      <div class="step">
+        <p><strong>Twój identyfikator użytkownika:</strong></p>
+        <div class="user-id" id="userIdDisplay">-</div>
+      </div>
+      
+      <div class="step">
+        <p><strong>Twoja rola w systemie:</strong> <span id="userRoleDisplay">-</span></p>
+      </div>
+      
+      <div class="step">
+        <h4>✅ Rozwiązanie problemu:</h4>
+        <p>Twoje konto nie ma rekordu w tabeli <code>profiles</code>. Wykonaj następujące kroki:</p>
+        
+        <ol>
+          <li>Otwórz <strong>SQL Editor</strong> w dashboardzie Supabase</li>
+          <li>Wklej poniższe zapytanie SQL</li>
+          <li>Kliknij <strong>RUN</strong> aby wykonać zapytanie</li>
+          <li>Spróbuj zalogować się ponownie</li>
+        </ol>
+        
+        <div class="sql-code" id="sqlCode">
+          INSERT INTO profiles (id, role) <br>
+          VALUES ('twoje_id', 'admin')<br>
+          ON CONFLICT (id) DO UPDATE <br>
+          SET role = 'admin';
+        </div>
+        
+        <button class="btn" id="copySqlBtn" style="margin-top: 10px;">
+          <i class="fas fa-copy"></i> Kopiuj zapytanie SQL
+        </button>
+      </div>
+      
+      <div class="step">
+        <h4>🔍 Sprawdź czy rekord został utworzony:</h4>
+        <p>Po wykonaniu powyższego zapytania, możesz sprawdzić czy rekord istnieje wykonując:</p>
+        
+        <div class="sql-code">
+          SELECT * FROM profiles WHERE id = 'twoje_id';
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        console.log('🚀 SKRYPT URUCHOMIONY!');
-
-        // Inicjalizuj Supabase
-        const supabase = supabase.createClient(
-            'https://xsowdwnpguftmlvsogdb.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI'
-        );
-
-        console.log('📦 Supabase:', supabase ? 'OK' : 'BŁĄD');
-
-        window.login = async function() {
-            console.log('🔄 LOGIN FUNKCJA WYWOŁANA!');
-
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-
-            console.log('📧 EMAIL:', email);
-            console.log('🔑 HASŁO:', password ? 'WPROWADZONE' : 'PUSTE');
-
-            try {
-                console.log('🔐 ŁĄCZENIE Z SUPABASE...');
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-
-                console.log('📊 WYNIK:', data ? 'SUKCES' : 'BŁĄD');
-                console.log('❌ BŁĄD:', error ? error.message : 'BRAK');
-
-                if (error) {
-                    document.getElementById('errorText').textContent = 'BŁĄD: ' + error.message;
-                    document.getElementById('errorMsg').style.display = 'block';
-                    return;
-                }
-
-                console.log('✅ ZALOGOWANY JAKO:', data.user.email);
-
-                // Sprawdź rolę
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', data.user.id)
-                    .single();
-
-                console.log('👤 ROLA:', profile ? profile.role : 'BRAK PROFILU');
-
-                if (profile && (profile.role === 'admin' || profile.role === 'trainer')) {
-                    console.log('🎯 PRZEKIEROWANIE DO admin.html');
-                    window.location.href = 'admin.html';
-                } else {
-                    console.log('❌ BRAK UPRAWNIEŃ');
-                    document.getElementById('errorText').textContent = 'BRAK UPRAWNIEŃ';
-                    document.getElementById('errorMsg').style.display = 'block';
-                }
-
-            } catch (err) {
-                console.error('💥 BŁĄD:', err.message);
-                document.getElementById('errorText').textContent = 'BŁĄD: ' + err.message;
-                document.getElementById('errorMsg').style.display = 'block';
-            }
-        };
-
-        // Podłącz event listener
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📄 DOM ZAŁADOWANY');
-
-            const form = document.getElementById('loginForm');
-            if (form) {
-                form.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    console.log('🚫 FORMULARZ ZATRZYMANY');
-                    window.login();
-                });
-                console.log('✅ EVENT LISTENER PODŁĄCZONY');
-            } else {
-                console.log('❌ FORMULARZ NIE ZNALEZIONY');
-            }
+  <script type="module">
+    import { supabase } from './supabaseClient.js';
+    
+    // Pokazuj/ukryj informacje diagnostyczne
+    document.getElementById('debugToggle').addEventListener('click', function() {
+      const debugInfo = document.getElementById('debugInfo');
+      debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+      this.innerHTML = debugInfo.style.display === 'none' ? 
+        'Pokaż informacje diagnostyczne ▼' : 'Ukryj informacje diagnostyczne ▲';
+    });
+    
+    // Kopiuj zapytanie SQL do schowka
+    document.getElementById('copySqlBtn').addEventListener('click', function() {
+      const sqlCode = document.getElementById('sqlCode').textContent;
+      const userId = document.getElementById('userIdDisplay').textContent;
+      const finalSql = sqlCode.replace(/twoje_id/g, userId);
+      
+      navigator.clipboard.writeText(finalSql).then(() => {
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-check"></i> Skopiowano!';
+        
+        setTimeout(() => {
+          this.innerHTML = originalText;
+        }, 2000);
+      });
+    });
+    
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorMsg = document.getElementById('errorMsg');
+      const errorText = document.getElementById('errorText');
+      const userIdDisplay = document.getElementById('userIdDisplay');
+      const userRoleDisplay = document.getElementById('userRoleDisplay');
+      const sqlCode = document.getElementById('sqlCode');
+      
+      // Reset error message
+      errorMsg.style.display = 'none';
+      
+      // Prosta walidacja
+      if (!email || !password) {
+        errorText.textContent = 'Proszę wypełnić wszystkie pola';
+        errorMsg.style.display = 'block';
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
         });
+        
+        if (error) {
+          errorText.textContent = 'Błąd logowania: ' + error.message;
+          errorMsg.style.display = 'block';
+          return;
+        }
+        
+        // Wyświetl ID użytkownika do debugowania
+        userIdDisplay.textContent = data.user.id;
+        
+        // Sprawdź czy użytkownik ma uprawnienia administratora
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .maybeSingle();
+          
+        // Wyświetl rolę użytkownika do debugowania
+        if (profile) {
+          userRoleDisplay.textContent = profile.role;
+        } else {
+          userRoleDisplay.textContent = 'BRAK REKORDU W TABELI PROFILES';
+          userRoleDisplay.style.color = '#ff6b6b';
+        }
+        
+        if (profileError) {
+          console.error('Błąd odczytu profilu:', profileError);
+          errorText.textContent = 'Błąd odczytu uprawnień: ' + profileError.message;
+          errorMsg.style.display = 'block';
+          await supabase.auth.signOut();
+          return;
+        }
 
-        console.log('🏁 KONIEC SKRYPTU');
-    </script>
+        if (!profile) {
+          errorText.textContent = 'BRAK REKORDU W TABELI PROFILES';
+          errorMsg.style.display = 'block';
+
+          // Pokaż panel debugowania
+          document.getElementById('debugInfo').style.display = 'block';
+          document.getElementById('debugToggle').innerHTML = 'Ukryj informacje diagnostyczne ▲';
+
+          // Aktualizuj zapytanie SQL z prawidłowym ID
+          sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
+
+          await supabase.auth.signOut();
+          return;
+        }
+
+        // Redirect based on role
+        if (profile.role === 'admin') {
+          window.location.href = 'admin.html';
+          return;
+        }
+
+        if (profile.role === 'clubadmin') {
+          window.location.href = 'club.html';
+          return;
+        }
+
+        // in all other cases deny access
+        errorText.textContent = 'Nie masz uprawnień administratora.';
+        errorMsg.style.display = 'block';
+
+        // Pokaż panel debugowania
+        document.getElementById('debugInfo').style.display = 'block';
+        document.getElementById('debugToggle').innerHTML = 'Ukryj informacje diagnostyczne ▲';
+
+        // Aktualizuj zapytanie SQL z prawidłowym ID
+        sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
+
+        await supabase.auth.signOut();
+        return;
+        
+      } catch (err) {
+        console.error('Nieoczekiwany błąd:', err);
+        errorText.textContent = 'Wystąpił nieoczekiwany błąd: ' + err.message;
+        errorMsg.style.display = 'block';
+      }
+    }
+    
+    // Dodaj nasłuchiwanie zdarzeń
+    document.getElementById('loginBtn').addEventListener('click', login);
+    
+    // Zezwól na logowanie po wciśnięciu Enter
+    document.getElementById('password').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        login();
+      }
+    });
+    
+    // Automatycznie pokazuj panel debugowania jeśli były wcześniejsze problemy
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('debug') === '1') {
+      document.getElementById('debugInfo').style.display = 'block';
+      document.getElementById('debugToggle').innerHTML = 'Ukryj informacje diagnostyczne ▲';
+    }
+  </script>
 </body>
 </html>
