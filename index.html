@@ -349,8 +349,13 @@
           return;
         }
 
+        if (profile.role === 'trainer') {
+          window.location.href = 'admin.html';
+          return;
+        }
+
         // in all other cases deny access
-        errorText.textContent = 'Nie masz uprawnień administratora.';
+        errorText.textContent = 'Nie masz uprawnień dostępu do systemu.';
         errorMsg.style.display = 'block';
 
         // Pokaż panel debugowania
