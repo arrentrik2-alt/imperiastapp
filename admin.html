@@ -1051,8 +1051,8 @@
     <div id="trainers-list">
       <!-- Trainers will be loaded here -->
     </div>
-      </div>
-      
+  </div>
+
   <!-- Create Lesson Modal -->
   <div class="modal" id="create-lesson-modal">
     <div class="modal-content">
@@ -1182,110 +1182,26 @@
     </div>
   </div>
 
-  <!-- Ładuj Supabase z CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <script>
-    console.log('Inicjalizacja Supabase w admin.html...');
-
-    // Czekaj na załadowanie Supabase z CDN
-    function initSupabase() {
-      console.log('Sprawdzam dostępność Supabase w admin.html...');
-
-      if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-        console.log('Tworzę klienta Supabase w admin.html...');
-        try {
-          const { createClient } = window.supabase;
-          window.supabaseClient = createClient(
-            'https://xsowdwnpguftmlvsogdb.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI'
-          );
-          console.log('Supabase klient utworzony pomyślnie w admin.html');
-        } catch (error) {
-          console.error('Błąd tworzenia klienta Supabase w admin.html:', error);
-        }
-      } else {
-        console.log('Supabase jeszcze nie załadowane w admin.html, czekam...');
-        setTimeout(initSupabase, 100);
-      }
-    }
-
-    initSupabase();
-  </script>
+  <script type="module">
+    import { supabase } from './supabaseClient.js';
     
-    // Check user permissions and role
-    let currentUserRole = null;
-    let currentUserId = null;
-
-    async function checkPermissions() {
-      try {
-        console.log('Sprawdzanie uprawnień...');
-        const { data: { user }, error: authError } = await window.supabaseClient.auth.getUser();
-
-        if (authError) {
-          console.error('Błąd autoryzacji:', authError);
-          alert("Błąd autoryzacji: " + authError.message);
-          window.location.href = "login.html";
-          return false;
-        }
+    // Check if user is admin
+    async function checkAdmin() {
+      const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-          console.log('Brak zalogowanego użytkownika');
         alert("Nie jesteś zalogowany");
         window.location.href = "login.html";
-          return false;
+        return;
       }
       
-        console.log('Użytkownik zalogowany:', user.id, user.email);
-        currentUserId = user.id;
-
-        const { data: profile, error } = await window.supabaseClient
+      const { data: profile, error } = await supabase
         .from('profiles')
-          .select('role, first_name, last_name, email')
+        .select('role')
         .eq('id', user.id)
         .single();
         
-        if (error) {
-          console.error('Błąd pobierania profilu:', error);
-          alert("Błąd pobierania profilu: " + error.message + "\n\nSprawdź czy masz rekord w tabeli profiles.");
-          window.location.href = "login.html";
-          return false;
-        }
-
-        if (!profile) {
-          console.log('Brak profilu dla użytkownika:', user.id);
-          alert("Brak profilu użytkownika w systemie. Skontaktuj się z administratorem.\n\nWykonaj SQL: INSERT INTO profiles (id, role) VALUES ('" + user.id + "', 'trainer')");
-          window.location.href = "login.html";
-          return false;
-        }
-
-        console.log('Profil znaleziony:', profile);
-        currentUserRole = profile.role;
-
-        // Allow both admin and trainer roles
-        if (profile.role !== "admin" && profile.role !== "trainer") {
-          console.log('Nieprawidłowa rola:', profile.role);
-          alert("Nie masz odpowiednich uprawnień dostępu do systemu. Twoja rola: " + profile.role);
-          window.location.href = "login.html";
-          return false;
-        }
-
-        console.log(`User ${profile.first_name || profile.email} logged in with role: ${profile.role}`);
-        return true;
-      } catch (err) {
-        console.error('Nieoczekiwany błąd w checkPermissions:', err);
-        alert("Nieoczekiwany błąd: " + err.message);
-        window.location.href = "login.html";
-        return false;
-      }
-    }
-
-    // Legacy function for backward compatibility
-    async function checkAdmin() {
-      const hasPermission = await checkPermissions();
-      if (!hasPermission) return;
-
-      if (currentUserRole !== "admin") {
+      if (error || !profile || profile.role !== "admin") {
         alert("Nie masz uprawnień administratora");
         window.location.href = "login.html";
         return;
@@ -1294,7 +1210,7 @@
     
     // Logout function
     document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await window.supabaseClient.auth.signOut();
+      await supabase.auth.signOut();
       window.location.href = "login.html";
     });
     
@@ -1306,28 +1222,9 @@
     const groupsSection = document.getElementById('groups-section');
     const trainersSection = document.getElementById('trainers-section');
     const groupParticipantsSection = document.getElementById('group-participants-section');
-
-    // Hide restricted navigation items for trainers
-    function setupNavigationForRole() {
-      if (currentUserRole === 'trainer') {
-        if (homeLink) homeLink.style.display = 'none';
-        if (trainersLink) trainersLink.style.display = 'none';
-
-        // Auto-navigate to groups for trainers
-        setActiveNav('groups');
-      }
-    }
     
     function setActiveNav(section) {
       console.log('setActiveNav wywołane z sekcją:', section, 'currentGroupId przed:', currentGroupId);
-
-      // Restrict access for trainers
-      if (currentUserRole === 'trainer') {
-        if (section === 'home' || section === 'trainers') {
-          console.log('Trainer tried to access restricted section:', section);
-          return; // Don't allow access to home or trainers section for trainers
-        }
-      }
       
       if (section === 'home') {
         homeLink.classList.add('active');
@@ -1633,7 +1530,7 @@
       
       try {
         // Load groups count
-        const { data: groups, error: groupsError } = await window.supabaseClient.rpc('list_groups_month', { p_month: selectedMonth });
+        const { data: groups, error: groupsError } = await supabase.rpc('list_groups_month', { p_month: selectedMonth });
         if (!groupsError) {
           document.getElementById('groups-count').textContent = (groups || []).length;
         }
@@ -1662,9 +1559,9 @@
         let lessonParticipantsError = null;
         try {
           const result = await supabase
-          .from('lesson_participants_month')
-          .select('participant_id')
-          .eq('month', selectedMonth);
+            .from('lesson_participants_month')
+            .select('participant_id')
+            .eq('month', selectedMonth);
           lessonParticipants = result.data;
           lessonParticipantsError = result.error;
         } catch (err) {
@@ -1835,7 +1732,7 @@
         if (monthError) throw monthError;
         
         // 2. Copy groups from previous month
-        const { error: copyError } = await window.supabaseClient.rpc('copy_groups_month', {
+        const { error: copyError } = await supabase.rpc('copy_groups_month', {
           p_from_month: monthInput,
           p_to_month: monthInput
         });
@@ -1843,7 +1740,7 @@
         if (copyError) throw copyError;
 
         // 3. Copy participants and their payments from previous month
-        const { error: copyParticipantsError } = await window.supabaseClient.rpc('copy_participants_month', {
+        const { error: copyParticipantsError } = await supabase.rpc('copy_participants_month', {
           p_from_month: monthInput,
           p_to_month: monthInput
         });
@@ -2048,7 +1945,7 @@
           await loadHomeData();
         } else {
           // Add new group - store all selected days as JSON string
-          const resp = await window.supabaseClient.rpc('insert_group_month', {
+          const resp = await supabase.rpc('insert_group_month', {
             p_month: selectedMonth,
             p_name: name,
             p_day: selectedDays.length === 1 ? selectedDays[0] : JSON.stringify(selectedDays),
@@ -2072,9 +1969,9 @@
     
     // Load groups for selected month
     async function loadGroups() {
-      console.log('=== loadGroups called ===');
+      console.log('loadGroups called');
       groupsList.innerHTML = '<div class="empty-state"><span class="loading"></span><p>Ładowanie grup...</p></div>';
-      
+
       try {
         const selectedMonth = document.getElementById('groups-month-select').value;
         console.log('Selected month for groups:', selectedMonth);
@@ -2085,9 +1982,8 @@
           return;
         }
 
-        const { data, error } = await window.supabaseClient.rpc('list_groups_month', { p_month: selectedMonth });
+        const { data, error } = await supabase.rpc('list_groups_month', { p_month: selectedMonth });
         console.log('Groups data received:', data);
-        console.log('First group trainer field:', data?.[0]?.trainer);
           
         if (error) {
           console.error('Błąd wczytywania grup:', error);
@@ -2126,32 +2022,19 @@
         });
 
         // Get all trainer IDs from groups data
-        const rawTrainerValues = data.map(g => g.trainer);
-        console.log('Raw trainer values from groups:', rawTrainerValues);
-
         const trainerIds = [...new Set(data.map(g => g.trainer).filter(id => id && id !== 'null' && id !== ''))];
         const trainerLookup = {};
 
-        console.log('Filtered trainer IDs found in groups:', trainerIds);
-        console.log('Number of groups with trainers:', trainerIds.length);
+        console.log('Trainer IDs found in groups:', trainerIds);
 
-        // Separate UUIDs from names
-        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        const uuidTrainers = trainerIds.filter(id => uuidPattern.test(id));
-        const nameTrainers = trainerIds.filter(id => !uuidPattern.test(id));
-
-        console.log('UUID trainers:', uuidTrainers);
-        console.log('Name trainers:', nameTrainers);
-
-        // Try to load trainers by UUID first
-        if (uuidTrainers.length > 0) {
+        if (trainerIds.length > 0) {
           try {
             const { data: trainers, error } = await supabase
               .from('profiles')
               .select('id, first_name, last_name, email')
-              .in('id', uuidTrainers);
+              .in('id', trainerIds);
 
-            console.log('Loaded UUID trainers from database:', trainers);
+            console.log('Loaded trainers from database:', trainers);
 
             if (!error && trainers) {
               trainers.forEach(trainer => {
@@ -2162,55 +2045,14 @@
                 console.log(`Mapped trainer ID "${trainer.id}" -> "${fullName}"`);
               });
             } else {
-              console.error('Error loading UUID trainers:', error);
+              console.error('Error loading trainers:', error);
             }
           } catch (error) {
-            console.error('Błąd ładowania UUID trenerów:', error);
+            console.error('Błąd ładowania danych trenerów:', error);
           }
         }
-
-        // Try to load trainers by name
-        if (nameTrainers.length > 0) {
-          try {
-            // Load all trainers and try to match by name
-            const { data: allTrainers, error } = await supabase
-              .from('profiles')
-              .select('id, first_name, last_name, email')
-              .eq('role', 'trainer');
-
-            console.log('Loaded all trainers for name matching:', allTrainers);
-
-            if (!error && allTrainers) {
-              nameTrainers.forEach(nameToFind => {
-                // Try to find trainer by full name
-                const foundTrainer = allTrainers.find(trainer => {
-                  const fullName = (trainer.first_name || trainer.last_name)
-                    ? `${trainer.first_name || ''} ${trainer.last_name || ''}`.trim()
-                    : trainer.email;
-                  return fullName === nameToFind || trainer.first_name === nameToFind || trainer.last_name === nameToFind;
-                });
-
-                if (foundTrainer) {
-                  const fullName = (foundTrainer.first_name || foundTrainer.last_name)
-                    ? `${foundTrainer.first_name || ''} ${foundTrainer.last_name || ''}`.trim()
-                    : foundTrainer.email;
-                  trainerLookup[nameToFind] = fullName;
-                  console.log(`Mapped trainer name "${nameToFind}" -> "${fullName}"`);
-                } else {
-                  // If no match found, keep the name as is
-                  trainerLookup[nameToFind] = nameToFind;
-                  console.log(`No match found for "${nameToFind}", keeping as is`);
-                }
-              });
-            }
-          } catch (error) {
-            console.error('Błąd ładowania trenerów po nazwach:', error);
-          }
-        }
-
 
         console.log('Final trainer lookup:', trainerLookup);
-        console.log('Trainer lookup size:', Object.keys(trainerLookup).length);
 
         // Clear and render groups grouped by day
         groupsList.innerHTML = '';
@@ -2267,23 +2109,18 @@
             trainer: group.trainer,
             trainerType: typeof group.trainer,
             lookupResult: trainerLookup[group.trainer],
-            allLookupKeys: Object.keys(trainerLookup),
-            trainerLookupExists: !!trainerLookup,
-            trainerLookupLength: Object.keys(trainerLookup).length
+            allLookupKeys: Object.keys(trainerLookup)
           });
 
-          // Hide financial summary for trainers
-          const financialSummary = currentUserRole === 'admin' ? `<span style="font-size:0.9rem">${paidText}${unpaidText}</span>` : '';
-
           groupCard.innerHTML = `
-              <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span>${financialSummary}</h4>
+              <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
             <div class="group-detail">
               <i class="fas fa-calendar-day"></i>
                 <span>${daysText}, ${formatTimeToHHMM(group.start_time)}</span>
             </div>
             <div class="group-detail">
               <i class="fas fa-user-tie"></i>
-              <span id="trainer-${group.id}">${trainerLookup[group.trainer] || group.trainer || 'Nieprzypisany'}</span>
+              <span id="trainer-${group.id}">${(group.trainer && trainerLookup[group.trainer]) ? trainerLookup[group.trainer] : (group.trainer || 'Nieprzypisany')}</span>
             </div>
             <div class="group-actions">
               <button class="btn btn-outline edit-btn" data-id="${group.id}">
@@ -2508,7 +2345,7 @@
               if (paymentUpdateError) throw paymentUpdateError;
             } else {
               // Create new payment
-              const { error: paymentError } = await window.supabaseClient.rpc('insert_payment_month', {
+              const { error: paymentError } = await supabase.rpc('insert_payment_month', {
                 p_month: selectedMonth,
                 p_participant_id: participantId,
                 p_group_id: currentGroupId,
@@ -2526,7 +2363,7 @@
         } else {
           // 1. Add new participant
         const rodoValue = !!document.getElementById('participant-rodo').checked;
-          const { data: newParticipantId, error: participantError } = await window.supabaseClient.rpc('insert_participant_month', {
+          const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
           p_month: selectedMonth,
           p_name: name,
           p_email: null,
@@ -2553,7 +2390,7 @@
 
         // 2. Add participant to group (only for new participants)
         if (!isEditingParticipant) {
-          const { error: groupError } = await window.supabaseClient.rpc('add_participant_to_group_month', {
+          const { error: groupError } = await supabase.rpc('add_participant_to_group_month', {
             p_month: selectedMonth,
             p_participant_id: participantId,
             p_group_id: currentGroupId
@@ -2564,7 +2401,7 @@
 
         // 3. Add payment record (only for new participants)
         if (!isEditingParticipant && amount > 0) {
-          const { error: paymentError } = await window.supabaseClient.rpc('insert_payment_month', {
+          const { error: paymentError } = await supabase.rpc('insert_payment_month', {
             p_month: selectedMonth,
             p_participant_id: participantId,
             p_group_id: currentGroupId,
@@ -2679,175 +2516,62 @@
           participantCard.className = 'group-card'; // Reusing group-card style
           participantCard.style.cursor = 'default'; // No pointer for participant cards
           
-          // Create elements programmatically to avoid interpolation issues
-          const participantRow = document.createElement('div');
-          participantRow.className = 'participant-row';
-          participantRow.style.cssText = 'display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;';
-
-          if (payment && payment.confirmed) {
-            participantRow.classList.add('payment-paid');
-          } else {
-            participantRow.classList.add('payment-unpaid');
-          }
-
-          // Participant number
-          const participantNumber = document.createElement('div');
-          participantNumber.className = 'participant-number';
-          participantNumber.style.cssText = 'min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);';
-          participantNumber.textContent = `${index + 1}.`;
-
-          // Participant info
-          const participantInfo = document.createElement('div');
-          participantInfo.className = 'participant-info';
-          participantInfo.style.cssText = 'flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;';
-
-          const nameDiv = document.createElement('div');
-          nameDiv.style.cssText = 'font-weight: bold; margin-bottom: 5px;';
-          nameDiv.textContent = participantData.name;
-
-          const phoneDiv = document.createElement('div');
-          phoneDiv.style.cssText = 'color: var(--text-gray); font-size: 0.9rem;';
-          phoneDiv.textContent = participantData.phone || 'Brak';
-
-          participantInfo.appendChild(nameDiv);
-          participantInfo.appendChild(phoneDiv);
-
-          // Amount section
-          const amountSection = document.createElement('div');
-          amountSection.className = 'amount-section';
-          amountSection.style.minWidth = '120px';
-
-          const amountContainer = document.createElement('div');
-          amountContainer.style.cssText = 'display: flex; align-items: center; gap: 5px;';
-
-          const amountInput = document.createElement('input');
-          amountInput.type = 'number';
-          amountInput.className = 'amount-input form-control';
-          amountInput.value = (payment.amount || 0).toFixed(2);
-          amountInput.step = '0.01';
-          amountInput.min = '0';
-          amountInput.dataset.participantId = participant.participant_id;
-          amountInput.dataset.groupId = groupId;
-          amountInput.style.cssText = 'width: 100px; text-align: center;';
-
-          const currencySpan = document.createElement('span');
-          currencySpan.style.cssText = 'font-size: 0.9rem; color: var(--text-gray);';
-          currencySpan.textContent = 'zł';
-
-          amountContainer.appendChild(amountInput);
-          amountContainer.appendChild(currencySpan);
-          amountSection.appendChild(amountContainer);
-
-          // Payment method section
-          const paymentMethodSection = document.createElement('div');
-          paymentMethodSection.className = 'payment-method-section';
-          paymentMethodSection.style.minWidth = '150px';
-
-          const paymentSelect = document.createElement('select');
-          paymentSelect.className = 'payment-method-select form-control';
-          paymentSelect.dataset.participantId = participant.participant_id;
-          paymentSelect.style.width = '130px';
-
-          const defaultOption = document.createElement('option');
-          defaultOption.value = '';
-          defaultOption.textContent = 'Sposób płatności';
-          paymentSelect.appendChild(defaultOption);
-
-          const cardOption = document.createElement('option');
-          cardOption.value = 'karta';
-          cardOption.textContent = 'Karta';
-          if (payment.payment_method === 'karta') cardOption.selected = true;
-          paymentSelect.appendChild(cardOption);
-
-          const transferOption = document.createElement('option');
-          transferOption.value = 'przelew';
-          transferOption.textContent = 'Przelew';
-          if (payment.payment_method === 'przelew') transferOption.selected = true;
-          paymentSelect.appendChild(transferOption);
-
-          const cashOption = document.createElement('option');
-          cashOption.value = 'gotowka';
-          cashOption.textContent = 'Gotówka';
-          if (payment.payment_method === 'gotowka') cashOption.selected = true;
-          paymentSelect.appendChild(cashOption);
-
-          paymentMethodSection.appendChild(paymentSelect);
-
-          // Comment section
-          const commentSection = document.createElement('div');
-          commentSection.className = 'comment-section';
-          commentSection.style.cssText = 'flex: 1 1 200px; overflow: hidden; text-overflow: ellipsis;';
-
-          const commentInput = document.createElement('input');
-          commentInput.type = 'text';
-          commentInput.className = 'payment-comment form-control';
-          commentInput.placeholder = 'Komentarz';
-          commentInput.value = payment.comment || '';
-          commentInput.dataset.participantId = participant.participant_id;
-          commentInput.style.width = '100%';
-
-          commentSection.appendChild(commentInput);
-
-          // RODO section
-          const rodoSection = document.createElement('div');
-          rodoSection.style.cssText = 'min-width:110px; display:flex; align-items:center; gap:8px;';
-
-          const rodoLabel = document.createElement('label');
-          rodoLabel.style.cssText = 'color:var(--text-gray); font-size:0.85rem;';
-          rodoLabel.textContent = 'RODO';
-
-          const rodoCheckbox = document.createElement('input');
-          rodoCheckbox.type = 'checkbox';
-          rodoCheckbox.className = 'rodo-checkbox';
-          rodoCheckbox.dataset.participantId = participant.participant_id;
-          if (participantData.rodo) rodoCheckbox.checked = true;
-
-          rodoSection.appendChild(rodoLabel);
-          rodoSection.appendChild(rodoCheckbox);
-
-          // Action buttons
-          const actionButtons = document.createElement('div');
-          actionButtons.className = 'action-buttons';
-          actionButtons.style.cssText = 'display: flex; gap: 10px; min-width: 120px;';
-
-          if (payment && payment.confirmed) {
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'btn btn-outline delete-payment-btn';
-            deleteBtn.dataset.participantId = participant.participant_id;
-            deleteBtn.dataset.groupId = groupId;
-            deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
-            actionButtons.appendChild(deleteBtn);
-          } else {
-            const confirmBtn = document.createElement('button');
-            confirmBtn.className = 'btn btn-primary confirm-payment-btn';
-            confirmBtn.dataset.participantId = participant.participant_id;
-            confirmBtn.dataset.groupId = groupId;
-            confirmBtn.innerHTML = '<i class="fas fa-check"></i>';
-            actionButtons.appendChild(confirmBtn);
-          }
-
-          const editBtn = document.createElement('button');
-          editBtn.className = 'btn btn-outline edit-btn';
-          editBtn.dataset.id = participant.participant_id;
-          editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-          actionButtons.appendChild(editBtn);
-
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'btn btn-outline delete-btn';
-          deleteBtn.dataset.id = participant.participant_id;
-          deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-          actionButtons.appendChild(deleteBtn);
-
-          // Add all elements to row
-          participantRow.appendChild(participantNumber);
-          participantRow.appendChild(participantInfo);
-          participantRow.appendChild(amountSection);
-          participantRow.appendChild(paymentMethodSection);
-          participantRow.appendChild(commentSection);
-          participantRow.appendChild(rodoSection);
-          participantRow.appendChild(actionButtons);
-
-          participantCard.appendChild(participantRow);
+          // Use the same subtle background as other group cards; avoid aggressive red/green inline styles
+          participantCard.innerHTML = `
+            <div class="participant-row ${payment && payment.confirmed ? 'payment-paid' : 'payment-unpaid'}" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+              <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
+              <div class="participant-info" style="flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;">
+                <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
+                <div style="color: var(--text-gray); font-size: 0.9rem;">${participantData.phone || 'Brak'}</div>
+              </div>
+              
+              <div class="amount-section" style="min-width: 120px;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                  <input type="number" class="amount-input form-control" value="${amount}" step="0.01" min="0" 
+                         data-participant-id="${participant.participant_id}" data-group-id="${groupId}" 
+                         style="width: 100px; text-align: center;">
+                  <span style="font-size: 0.9rem; color: var(--text-gray);">zł</span>
+              </div>
+              </div>
+              
+              <div class="payment-method-section" style="min-width: 150px;">
+                <select class="payment-method-select form-control" data-participant-id="${participant.participant_id}" style="width: 130px;">
+                  <option value="">Sposób płatności</option>
+                  <option value="karta" ${payment.payment_method === 'karta' ? 'selected' : ''}>Karta</option>
+                  <option value="przelew" ${payment.payment_method === 'przelew' ? 'selected' : ''}>Przelew</option>
+                  <option value="gotowka" ${payment.payment_method === 'gotowka' ? 'selected' : ''}>Gotówka</option>
+                </select>
+              </div>
+              
+              <div class="comment-section" style="flex: 1 1 200px; overflow: hidden; text-overflow: ellipsis;">
+                <input type="text" class="payment-comment form-control" placeholder="Komentarz" 
+                       value="${payment.comment || ''}" data-participant-id="${participant.participant_id}" 
+                       style="width: 100%;">
+              </div>
+              <div style="min-width:110px; display:flex; align-items:center; gap:8px;">
+                <label style="color:var(--text-gray); font-size:0.85rem;">RODO</label>
+                <input type="checkbox" class="rodo-checkbox" data-participant-id="${participant.participant_id}" ${participantData.rodo ? 'checked' : ''}>
+              </div>
+              
+              <div class="action-buttons" style="display: flex; gap: 10px; min-width: 120px;">
+                ${payment && payment.confirmed ? `
+                  <button class="btn btn-outline delete-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}">
+                    <i class="fas fa-times"></i>
+                  </button>
+                ` : `
+                  <button class="btn btn-primary confirm-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}">
+                    <i class="fas fa-check"></i>
+                  </button>
+                `}
+                <button class="btn btn-outline edit-btn" data-id="${participant.participant_id}">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-outline delete-btn" data-id="${participant.participant_id}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `;
 
           // Add event listeners for action buttons
           participantCard.querySelector('.edit-btn').addEventListener('click', (e) => {
@@ -3024,7 +2748,7 @@
               const comment = participantCard.querySelector('.payment-comment').value || null;
               if (!paymentMethod) { alert('Wybierz sposób płatności'); return; }
               try {
-                const { error } = await window.supabaseClient.rpc('update_payment_confirmation', {
+                const { error } = await supabase.rpc('update_payment_confirmation', {
                   p_month: selectedMonth,
                   p_participant_id: participantId,
                   p_group_id: groupId,
@@ -3045,7 +2769,7 @@
               const participantId = e.currentTarget.dataset.participantId;
               const groupId = e.currentTarget.dataset.groupId;
               try {
-                const { error } = await window.supabaseClient.rpc('remove_payment_confirmation', {
+                const { error } = await supabase.rpc('remove_payment_confirmation', {
                   p_month: selectedMonth,
                   p_participant_id: participantId,
                   p_group_id: groupId
@@ -3095,66 +2819,20 @@
     // Currently editing lesson id (null when creating)
     let currentEditingLessonId = null;
 
-    // Funkcja czekająca na Supabase
-    function waitForSupabase(callback, timeout = 5000) {
-      const startTime = Date.now();
-
-      function checkSupabase() {
-        if (window.supabaseClient) {
-          console.log('Supabase gotowy w admin.html, wykonuję callback');
-          callback();
-        } else if (Date.now() - startTime > timeout) {
-          console.error('Timeout oczekiwania na Supabase w admin.html');
-          alert('Błąd ładowania aplikacji - odśwież stronę');
-        } else {
-          setTimeout(checkSupabase, 100);
-        }
-      }
-
-      checkSupabase();
-    }
-
     // Initialize
-    console.log('Rozpoczynam inicjalizację admin.html...');
-
-    // Czekaj na Supabase przed sprawdzeniem uprawnień
-    waitForSupabase(() => {
-      checkPermissions().then(async (hasPermission) => {
-      console.log('checkPermissions zakończone z wynikiem:', hasPermission);
-      if (!hasPermission) {
-        console.log('Brak uprawnień, kończę inicjalizację');
-        return;
-      }
-
-      console.log('Mamy uprawnienia, kontynuuję inicjalizację...');
-
+    checkAdmin().then(async () => {
       await populateMonthSelectors();
-      console.log('Month selectors populated, now setting up navigation...');
-      setupNavigationForRole();
-
-      console.log('Loading data based on role...');
-      if (currentUserRole === 'admin') {
-        console.log('Ładuję dane dla admina...');
+      console.log('Month selectors populated, now loading data...');
       await loadHomeData();
-        console.log('Home data loaded, now loading trainers into dropdowns...');
-        await loadTrainersIntoDropdowns();
-      } else if (currentUserRole === 'trainer') {
-        console.log('Trainer role detected, skipping home data and trainer dropdowns');
-      }
-
-      console.log('Loading groups...');
+      console.log('Home data loaded, now loading trainers into dropdowns...');
+      await loadTrainersIntoDropdowns();
+      console.log('Trainers loaded into dropdowns, now loading groups...');
       await loadGroups();
       console.log('Groups loaded, now loading lessons...');
       await loadLessons();
       console.log('All data loaded successfully');
-
       // initialize lesson type buttons and set default so create modal uses correct type
       try { ensureLessonTypeButtons(); setLessonType(currentLessonType); } catch (e) { console.warn('Lesson type init skipped:', e); }
-        }).catch(err => {
-          console.error('Błąd podczas inicjalizacji:', err);
-          alert('Błąd inicjalizacji: ' + err.message);
-        });
-      });
     });
 
     // Draw donut chart helper (paid/unpaid)
@@ -3353,12 +3031,6 @@
         document.getElementById('lesson-day').value = lessonObj.day || 'Poniedziałek';
         document.getElementById('lesson-day-of-month').value = lessonObj.day_of_month || '';
         document.getElementById('lesson-start').value = lessonObj.start_time || '';
-        // For trainers, only allow editing their own lessons
-        if (currentUserRole === 'trainer' && lessonObj.trainer !== currentUserId) {
-          alert('Możesz edytować tylko swoje własne lekcje.');
-          return;
-        }
-
         document.getElementById('lesson-trainer').value = lessonObj.trainer || '';
         document.getElementById('lesson-amount').value = lessonObj.amount || '';
         // participants fields left empty for editing participants separately
@@ -3367,14 +3039,7 @@
         document.getElementById('lesson-day').value = 'Poniedziałek';
         document.getElementById('lesson-day-of-month').value = '';
         document.getElementById('lesson-start').value = '';
-
-        // For trainers, auto-select themselves as the trainer
-        if (currentUserRole === 'trainer' && currentUserId) {
-          document.getElementById('lesson-trainer').value = currentUserId;
-        } else {
         document.getElementById('lesson-trainer').value = '';
-        }
-
         document.getElementById('lesson-amount').value = '';
         document.getElementById('participant1-name').value = '';
         document.getElementById('participant1-phone').value = '';
@@ -3591,16 +3256,6 @@
       const trainer = document.getElementById('lesson-trainer').value.trim();
       const amount = parseFloat(document.getElementById('lesson-amount').value) || 0;
 
-      // For trainers, force their own ID as trainer
-      let finalTrainer = trainer;
-      if (currentUserRole === 'trainer') {
-        if (!trainer || trainer !== currentUserId) {
-          console.log('Trainer tried to create lesson for someone else, forcing their own ID');
-          finalTrainer = currentUserId;
-          document.getElementById('lesson-trainer').value = currentUserId;
-        }
-      }
-
       const p1name = document.getElementById('participant1-name').value.trim();
       const p1phone = document.getElementById('participant1-phone').value.trim();
       const p2name = document.getElementById('participant2-name').value.trim();
@@ -3617,9 +3272,9 @@
           // on edit, fetch participants to construct title
           const { data: partsExisting } = await supabase.from('participants_lessons_month').select('participants_month(name)').eq('month', month).eq('lesson_id', currentEditingLessonId);
           const names = (partsExisting || []).map(x => x.participants_month?.name).filter(Boolean);
-          const titleGen = buildTitle(finalTrainer);
+          const titleGen = buildTitle(trainerId);
 
-          const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, start_time: start, trainer: finalTrainer, amount: amount }).match({ id: currentEditingLessonId, month: month });
+          const { error: updErr } = await supabase.from('lessons_month').update({ title: titleGen, day: day, start_time: start, trainer: trainerId, amount: amount }).match({ id: currentEditingLessonId, month: month });
           if (updErr) throw updErr;
 
           // optional: try to set day_of_month if column exists
@@ -3654,23 +3309,23 @@
         const participantsForTitle = [];
         if (p1name) participantsForTitle.push(p1name);
         if (p2name) participantsForTitle.push(p2name);
-        const titleGen = buildTitle(finalTrainer);
+        const titleGen = buildTitle(trainerId);
 
         // Try RPC insertion first (may exist after SQL update). Fallback to direct insert with/without day_of_month.
         let lessonId = null;
         try {
-          const { data: rpcId, error: rpcErr } = await window.supabaseClient.rpc('insert_lesson_month', { p_month: month, p_title: titleGen, p_day: day, p_day_of_month: dayOfMonth, p_start_time: start, p_trainer: finalTrainer, p_amount: amount, p_lesson_type: currentLessonType });
+          const { data: rpcId, error: rpcErr } = await supabase.rpc('insert_lesson_month', { p_month: month, p_title: titleGen, p_day: day, p_day_of_month: dayOfMonth, p_start_time: start, p_trainer: trainerId, p_amount: amount, p_lesson_type: currentLessonType });
           if (rpcErr) throw rpcErr;
           lessonId = rpcId;
         } catch (rpcCatch) {
           // fallback: try direct insert including day_of_month
           try {
-            const { data: insertedLesson, error: insErr } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, day_of_month: dayOfMonth, start_time: start, trainer: finalTrainer, amount: amount, lesson_type: currentLessonType }).select('id').single();
+            const { data: insertedLesson, error: insErr } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, day_of_month: dayOfMonth, start_time: start, trainer: trainerId, amount: amount, lesson_type: currentLessonType }).select('id').single();
             if (insErr) throw insErr;
             lessonId = insertedLesson ? insertedLesson.id : null;
           } catch (insCatch) {
             // final fallback: insert without day_of_month (older schema)
-            const { data: insertedLesson2, error: insErr2 } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, start_time: start, trainer: finalTrainer, amount: amount, lesson_type: currentLessonType }).select('id').single();
+            const { data: insertedLesson2, error: insErr2 } = await supabase.from('lessons_month').insert({ month: month, title: titleGen, day: day, start_time: start, trainer: trainerId, amount: amount, lesson_type: currentLessonType }).select('id').single();
             if (insErr2) throw insErr2;
             lessonId = insertedLesson2 ? insertedLesson2.id : null;
           }
@@ -3717,7 +3372,7 @@
               await supabase.from('participants_lessons_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, role: 'primary' });
               await supabase.from('lesson_payments_month').insert({ month: month, participant_id: primaryParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
             } else {
-              const { data: createdPid1, error: e1 } = await window.supabaseClient.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
+              const { data: createdPid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
               if (e1) console.warn('Error creating participant1:', e1);
               else {
                 primaryParticipantId = createdPid1;
@@ -3727,7 +3382,7 @@
             }
           } catch (e) {
             console.warn('Error checking/creating participant1:', e);
-            const { data: createdPid1, error: e1 } = await window.supabaseClient.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
+            const { data: createdPid1, error: e1 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p1name, p_phone: p1phone || null, p_email: null, p_rodo: false });
             if (e1) console.warn('Error creating participant1 fallback:', e1);
             else {
               primaryParticipantId = createdPid1;
@@ -3791,7 +3446,7 @@
                 await supabase.from('lesson_payments_month').insert({ month: month, participant_id: partnerParticipantId, lesson_id: lessonId, amount: amount, confirmed: false });
               }
             } else {
-              const { data: createdPid2, error: e2 } = await window.supabaseClient.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
+              const { data: createdPid2, error: e2 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
               if (e2) console.warn('Error creating participant2:', e2);
               else {
                 partnerParticipantId = createdPid2;
@@ -3811,7 +3466,7 @@
             }
           } catch (e) {
             console.warn('Error checking/creating participant2:', e);
-            const { data: createdPid2, error: e2 } = await window.supabaseClient.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
+            const { data: createdPid2, error: e2 } = await supabase.rpc('insert_participant_month', { p_month: month, p_name: p2name, p_phone: p2phone || null, p_email: null, p_rodo: false });
             if (e2) console.warn('Error creating participant2 fallback:', e2);
             else {
               partnerParticipantId = createdPid2;
@@ -3845,25 +3500,15 @@
       const month = document.getElementById('lessons-month-select').value;
       const typeToUse = lessonType || currentLessonType || null;
       try {
-        let filteredLessons = lessons;
-
-        // Filter lessons for trainers - only show their own lessons
-        if (currentUserRole === 'trainer' && currentUserId) {
-          console.log('Filtering lessons for trainer:', currentUserId);
-          filteredLessons = lessons.filter(lesson => lesson.trainer === currentUserId);
-          console.log('Filtered lessons count:', filteredLessons.length, 'out of', lessons.length);
-        }
-
-        if (!filteredLessons || filteredLessons.length === 0) {
-          lessonsList.innerHTML = '<div class="empty-state"><p>' +
-            (currentUserRole === 'trainer' ? 'Brak Twoich lekcji w tym miesiącu' : 'Brak lekcji w tym miesiącu') +
-            '</p></div>';
-          return;
-        }
+        const { data: lessons, error: lessonErr } = await supabase.rpc('list_lessons_month', { p_month: month, p_type: typeToUse });
+        if (lessonErr) throw lessonErr;
+        // If a newer load started, abort
+        if (myToken !== lessonsLoadToken) return;
+        if (!lessons || lessons.length === 0) { lessonsList.innerHTML = '<div class="empty-state"><p>Brak lekcji w tym miesiącu</p></div>'; return; }
 
         lessonsList.innerHTML = '';
 
-        for (const lesson of filteredLessons) {
+        for (const lesson of lessons) {
           // if a newer load started, stop processing
           if (myToken !== lessonsLoadToken) return;
           // fetch participants for this lesson
@@ -3871,10 +3516,10 @@
           let partsErr = null;
           try {
             const result = await supabase
-            .from('participants_lessons_month')
-            .select('participant_id, participants_month(id, name, phone)')
-            .eq('month', month)
-            .eq('lesson_id', lesson.id);
+              .from('participants_lessons_month')
+              .select('participant_id, participants_month(id, name, phone)')
+              .eq('month', month)
+              .eq('lesson_id', lesson.id);
             parts = result.data;
             partsErr = result.error;
           } catch (err) {
@@ -3945,7 +3590,7 @@
                 const pids = (assoc || []).map(a => a.participant_id).filter(Boolean);
 
                 // call RPC to delete lesson and its payments/links
-                const { error: rpcErr } = await window.supabaseClient.rpc('delete_lesson_month', { p_month: month, p_id: lesson.id });
+                const { error: rpcErr } = await supabase.rpc('delete_lesson_month', { p_month: month, p_id: lesson.id });
                 if (rpcErr) throw rpcErr;
 
                 // remove orphan participants for this month
@@ -3987,129 +3632,33 @@
               if (pay && pay.confirmed) { row.classList.add('payment-paid'); row.classList.remove('payment-unpaid'); }
               else { row.classList.add('payment-unpaid'); row.classList.remove('payment-paid'); }
 
-              // Create elements programmatically to avoid interpolation issues
-              const participantNumber = document.createElement('div');
-              participantNumber.className = 'participant-number';
-              participantNumber.style.cssText = 'min-width:30px;text-align:center;font-weight:bold;color:var(--text-gray);';
-              participantNumber.textContent = `${idx+1}.`;
-
-              const participantInfo = document.createElement('div');
-              participantInfo.className = 'participant-info';
-              participantInfo.style.cssText = 'flex:0 0 220px; overflow:hidden; text-overflow:ellipsis;';
-
-              const nameDiv = document.createElement('div');
-              nameDiv.style.fontWeight = 'bold';
-              nameDiv.textContent = pdata.name || 'Brak';
-
-              const phoneDiv = document.createElement('div');
-              phoneDiv.style.cssText = 'color:var(--text-gray);font-size:0.9rem';
-              phoneDiv.textContent = pdata.phone || 'Brak';
-
-              participantInfo.appendChild(nameDiv);
-              participantInfo.appendChild(phoneDiv);
-
-              const amountSection = document.createElement('div');
-              amountSection.className = 'amount-section';
-              amountSection.style.minWidth = '120px';
-
-              const amountContainer = document.createElement('div');
-              amountContainer.style.cssText = 'display:flex;align-items:center;gap:6px;';
-
-              const amountInput = document.createElement('input');
-              amountInput.type = 'number';
-              amountInput.className = 'lesson-amount-input form-control';
-              amountInput.value = (pay.amount || 0).toFixed(2);
-              amountInput.step = '0.01';
-              amountInput.min = '0';
-              amountInput.dataset.participantId = p.participant_id;
-              amountInput.dataset.lessonId = lesson.id;
-              amountInput.style.cssText = 'width:100px;text-align:center;';
-
-              const currencySpan = document.createElement('span');
-              currencySpan.style.cssText = 'font-size:0.9rem;color:var(--text-gray);';
-              currencySpan.textContent = 'zł';
-
-              amountContainer.appendChild(amountInput);
-              amountContainer.appendChild(currencySpan);
-              amountSection.appendChild(amountContainer);
-
-              const paymentMethodSection = document.createElement('div');
-              paymentMethodSection.className = 'payment-method-section';
-              paymentMethodSection.style.minWidth = '150px';
-
-              const paymentSelect = document.createElement('select');
-              paymentSelect.className = 'lesson-payment-method-select form-control';
-              paymentSelect.dataset.participantId = p.participant_id;
-              paymentSelect.dataset.lessonId = lesson.id;
-              paymentSelect.style.width = '130px';
-
-              const defaultOption = document.createElement('option');
-              defaultOption.value = '';
-              defaultOption.textContent = 'Sposób płatności';
-              paymentSelect.appendChild(defaultOption);
-
-              const cardOption = document.createElement('option');
-              cardOption.value = 'karta';
-              cardOption.textContent = 'Karta';
-              if (pay.payment_method === 'karta') cardOption.selected = true;
-              paymentSelect.appendChild(cardOption);
-
-              const transferOption = document.createElement('option');
-              transferOption.value = 'przelew';
-              transferOption.textContent = 'Przelew';
-              if (pay.payment_method === 'przelew') transferOption.selected = true;
-              paymentSelect.appendChild(transferOption);
-
-              const cashOption = document.createElement('option');
-              cashOption.value = 'gotowka';
-              cashOption.textContent = 'Gotówka';
-              if (pay.payment_method === 'gotowka') cashOption.selected = true;
-              paymentSelect.appendChild(cashOption);
-
-              paymentMethodSection.appendChild(paymentSelect);
-
-              const commentSection = document.createElement('div');
-              commentSection.className = 'comment-section';
-              commentSection.style.cssText = 'flex:1;min-width:120px;';
-
-              const commentInput = document.createElement('input');
-              commentInput.type = 'text';
-              commentInput.className = 'lesson-payment-comment form-control';
-              commentInput.placeholder = 'Komentarz';
-              commentInput.value = pay.comment || '';
-              commentInput.dataset.participantId = p.participant_id;
-              commentInput.dataset.lessonId = lesson.id;
-              commentInput.style.width = '100%';
-
-              commentSection.appendChild(commentInput);
-
-              const actionButtons = document.createElement('div');
-              actionButtons.className = 'action-buttons';
-              actionButtons.style.cssText = 'min-width:120px;display:flex;align-items:center;gap:8px;';
-
-              if (pay.confirmed) {
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'btn btn-outline lesson-delete-payment-btn';
-                deleteBtn.dataset.participantId = p.participant_id;
-                deleteBtn.dataset.lessonId = lesson.id;
-                deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
-                actionButtons.appendChild(deleteBtn);
-              } else {
-                const confirmBtn = document.createElement('button');
-                confirmBtn.className = 'btn btn-primary lesson-confirm-payment-btn';
-                confirmBtn.dataset.participantId = p.participant_id;
-                confirmBtn.dataset.lessonId = lesson.id;
-                confirmBtn.innerHTML = '<i class="fas fa-check"></i>';
-                actionButtons.appendChild(confirmBtn);
-              }
-
-              // Add all elements to row
-              row.appendChild(participantNumber);
-              row.appendChild(participantInfo);
-              row.appendChild(amountSection);
-              row.appendChild(paymentMethodSection);
-              row.appendChild(commentSection);
-              row.appendChild(actionButtons);
+              row.innerHTML = `
+                <div class="participant-number" style="min-width:30px;text-align:center;font-weight:bold;color:var(--text-gray);">${idx+1}.</div>
+                <div class="participant-info" style="flex:0 0 220px; overflow:hidden; text-overflow:ellipsis;">
+                  <div style="font-weight:bold">${pdata.name || 'Brak'}</div>
+                  <div style="color:var(--text-gray);font-size:0.9rem">${pdata.phone || 'Brak'}</div>
+                  </div>
+                <div class="amount-section" style="min-width:120px;">
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <input type="number" class="lesson-amount-input form-control" value="${amountVal}" step="0.01" min="0" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:100px;text-align:center;" />
+                    <span style="font-size:0.9rem;color:var(--text-gray);">zł</span>
+                  </div>
+                </div>
+                <div class="payment-method-section" style="min-width:150px;">
+                  <select class="lesson-payment-method-select form-control" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:130px;">
+                    <option value="">Sposób płatności</option>
+                    <option value="karta" ${pay.payment_method === 'karta' ? 'selected' : ''}>Karta</option>
+                    <option value="przelew" ${pay.payment_method === 'przelew' ? 'selected' : ''}>Przelew</option>
+                    <option value="gotowka" ${pay.payment_method === 'gotowka' ? 'selected' : ''}>Gotówka</option>
+                    </select>
+                  </div>
+                <div class="comment-section" style="flex:1;min-width:120px;">
+                  <input type="text" class="lesson-payment-comment form-control" placeholder="Komentarz" value="${pay.comment || ''}" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}" style="width:100%;" />
+                  </div>
+                <div class="action-buttons" style="min-width:120px;display:flex;align-items:center;gap:8px;">
+                  ${pay.confirmed ? `<button class="btn btn-outline lesson-delete-payment-btn" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}"><i class="fas fa-times"></i></button>` : `<button class="btn btn-primary lesson-confirm-payment-btn" data-participant-id="${p.participant_id}" data-lesson-id="${lesson.id}"><i class="fas fa-check"></i></button>`}
+                </div>
+              `;
 
               // amount change -> update payment amount and recompute lesson total, update header in-place with a short fade
               const lessonAmountInput = row.querySelector('.lesson-amount-input');
