@@ -239,8 +239,22 @@
     </div>
   </div>
 
-  <script type="module">
-    import { supabase } from './supabaseClient.js';
+  <!-- Ładuj Supabase z CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    console.log('Inicjalizacja Supabase...');
+
+    // Sprawdź czy Supabase jest dostępne
+    if (typeof supabase === 'undefined' && typeof window.supabase === 'undefined') {
+      console.log('Tworzę klienta Supabase...');
+      window.supabase = supabase.createClient(
+        'https://xsowdwnpguftmlvsogdb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI'
+      );
+    }
+
+    console.log('Supabase gotowy:', typeof window.supabase);
     
     // Pokazuj/ukryj informacje diagnostyczne
     document.getElementById('debugToggle').addEventListener('click', function() {
@@ -286,7 +300,8 @@
       }
       
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        console.log('Próba logowania dla:', email);
+        const { data, error } = await window.supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -301,7 +316,8 @@
         userIdDisplay.textContent = data.user.id;
         
         // Sprawdź czy użytkownik ma uprawnienia administratora
-        const { data: profile, error: profileError } = await supabase
+        console.log('Sprawdzam profil dla użytkownika:', data.user.id);
+        const { data: profile, error: profileError } = await window.supabase
           .from('profiles')
           .select('role')
           .eq('id', data.user.id)
@@ -319,7 +335,7 @@
           console.error('Błąd odczytu profilu:', profileError);
           errorText.textContent = 'Błąd odczytu uprawnień: ' + profileError.message;
           errorMsg.style.display = 'block';
-          await supabase.auth.signOut();
+          await window.supabase.auth.signOut();
           return;
         }
 
@@ -334,7 +350,7 @@
           // Aktualizuj zapytanie SQL z prawidłowym ID
           sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
 
-          await supabase.auth.signOut();
+          await window.supabase.auth.signOut();
           return;
         }
 
@@ -365,7 +381,7 @@
         // Aktualizuj zapytanie SQL z prawidłowym ID
         sqlCode.innerHTML = sqlCode.innerHTML.replace(/twoje_id/g, data.user.id);
 
-        await supabase.auth.signOut();
+        await window.supabase.auth.signOut();
         return;
         
       } catch (err) {
