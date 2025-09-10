@@ -1979,14 +1979,10 @@
       });
     }
     
-    if (addGroupBtn) {
-      addGroupBtn.addEventListener('click', openModal);
-    }
-    if (addFirstGroupBtn) {
-      addFirstGroupBtn.addEventListener('click', openModal);
-    }
-    closeModalBtn.addEventListener('click', closeModal);
-    cancelGroupBtn.addEventListener('click', closeModal);
+    if (addGroupBtn) addGroupBtn.addEventListener('click', openModal);
+    if (addFirstGroupBtn) addFirstGroupBtn.addEventListener('click', openModal);
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+    if (cancelGroupBtn) cancelGroupBtn.addEventListener('click', closeModal);
 
     // Save group function (add new or update existing group)
     saveGroupBtn.addEventListener('click', async () => {
@@ -2233,58 +2229,58 @@
           dayHeader.innerHTML = `<h3>${dayName}</h3>`;
           groupsList.appendChild(dayHeader);
           list.forEach(group => {
-            const groupCard = document.createElement('div');
-            groupCard.className = 'group-card';
+          const groupCard = document.createElement('div');
+          groupCard.className = 'group-card';
             groupCard.style.cursor = 'pointer';
             const sums = groupSummaryLookup[group.id] || { paidCount:0, unpaidCount:0, paidSum:0, unpaidSum:0 };
             const paidText = `<span style="color: var(--success); font-weight:600; margin-left:10px;">Zapłacili: ${sums.paidCount}</span>`;
             const unpaidColor = sums.unpaidCount > 0 ? 'var(--error)' : 'var(--success)';
             const unpaidText = `<span style="color: ${unpaidColor}; font-weight:600; margin-left:10px;">Nie zapłacili: ${sums.unpaidCount}</span>`;
-            // Format days display
-            const daysToShow = group.allDays || [group.day];
-            const daysText = daysToShow.length === 1
-              ? daysToShow[0]
-              : daysToShow.slice(0, 3).join(', ') + (daysToShow.length > 3 ? '...' : '');
+          // Format days display
+          const daysToShow = group.allDays || [group.day];
+          const daysText = daysToShow.length === 1
+            ? daysToShow[0]
+            : daysToShow.slice(0, 3).join(', ') + (daysToShow.length > 3 ? '...' : '');
 
-            console.log(`Group ${group.name}:`, {
-              trainer: group.trainer,
-              trainerType: typeof group.trainer,
-              lookupResult: trainerLookup[group.trainer],
-              allLookupKeys: Object.keys(trainerLookup),
-              trainerLookupExists: !!trainerLookup,
-              trainerLookupLength: Object.keys(trainerLookup).length
-            });
+          console.log(`Group ${group.name}:`, {
+            trainer: group.trainer,
+            trainerType: typeof group.trainer,
+            lookupResult: trainerLookup[group.trainer],
+            allLookupKeys: Object.keys(trainerLookup),
+            trainerLookupExists: !!trainerLookup,
+            trainerLookupLength: Object.keys(trainerLookup).length
+          });
 
-            groupCard.innerHTML = `
+          groupCard.innerHTML = `
               <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
-              <div class="group-detail">
-                <i class="fas fa-calendar-day"></i>
+            <div class="group-detail">
+              <i class="fas fa-calendar-day"></i>
                 <span>${daysText}, ${formatTimeToHHMM(group.start_time)}</span>
-              </div>
-              ${window.currentUser && window.currentUser.role === 'trainer' ? '' : `
-              <div class="group-detail">
-                <i class="fas fa-user-tie"></i>
-                <span id="trainer-${group.id}">${trainerLookup[group.trainer] || group.trainer || 'Nieprzypisany'}</span>
-              </div>
-              `}
-              ${window.currentUser && window.currentUser.role === 'trainer' ? '' : `
-              <div class="group-actions">
-                <button class="btn btn-outline edit-btn" data-id="${group.id}">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-outline delete-btn" data-id="${group.id}">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-              `}
-            `;
+            </div>
+            ${window.currentUser && window.currentUser.role === 'trainer' ? '' : `
+            <div class="group-detail">
+              <i class="fas fa-user-tie"></i>
+              <span id="trainer-${group.id}">${trainerLookup[group.trainer] || group.trainer || 'Nieprzypisany'}</span>
+            </div>
+            `}
+            ${window.currentUser && window.currentUser.role === 'trainer' ? '' : `
+            <div class="group-actions">
+              <button class="btn btn-outline edit-btn" data-id="${group.id}">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-outline delete-btn" data-id="${group.id}">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+            `}
+          `;
             // click handler
             groupCard.addEventListener('click', (e) => {
               if (e.target.closest('.group-actions')) return;
               openGroupParticipantsPage(group);
               setActiveNav('participants');
             });
-            // action buttons - only add listeners if buttons exist (not hidden for trainers)
+            // action buttons
             const editBtn = groupCard.querySelector('.edit-btn');
             if (editBtn) {
               editBtn.addEventListener('click', (e) => {
@@ -2295,39 +2291,7 @@
 
             const deleteBtn = groupCard.querySelector('.delete-btn');
             if (deleteBtn) {
-              deleteBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                if (!confirm('Usunąć grupę?')) return;
-                /* reuse existing delete logic by triggering click on original button */
-                const btn = e.currentTarget;
-                btn.disabled = true;
-                try {
-                  /* call same handler code inline to avoid duplication */
-                  const selectedMonth = document.getElementById('groups-month-select').value;
-                  const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, group_id: group.id });
-                  if (payErr) throw payErr;
-                  const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, group_id: group.id });
-                  if (pgErr) throw pgErr;
-                  const { data: participantsAll, error: pAllErr } = await supabase.from('participants_month').select('id').eq('month', selectedMonth);
-                  if (pAllErr) throw pAllErr;
-                  const { data: assoc, error: assocErr } = await supabase.from('participant_groups_month').select('participant_id').eq('month', selectedMonth);
-                  if (assocErr) throw assocErr;
-                  const assocSet = new Set((assoc || []).map(a => a.participant_id));
-                  const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id));
-                  if (orphanIds.length > 0) {
-                    const { error: delOrphansErr } = await supabase.from('participants_month').delete().in('id', orphanIds).eq('month', selectedMonth);
-                    if (delOrphansErr) throw delOrphansErr;
-                  }
-                  const { error } = await supabase.from('groups_month').delete().match({ id: group.id, month: selectedMonth });
-                  if (error) throw error;
-                  await loadGroups();
-                  await loadHomeData();
-                } catch (err) {
-                  alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany'));
-                } finally {
-                  btn.disabled = false;
-                }
-              });
+              deleteBtn.addEventListener('click', async (e) => { e.stopPropagation(); if (!confirm('Usunąć grupę?')) return; /* reuse existing delete logic by triggering click on original button */ const btn = e.currentTarget; btn.disabled = true; try { /* call same handler code inline to avoid duplication */ const selectedMonth = document.getElementById('groups-month-select').value; const { error: payErr } = await supabase.from('payments_month').delete().match({ month: selectedMonth, group_id: group.id }); if (payErr) throw payErr; const { error: pgErr } = await supabase.from('participant_groups_month').delete().match({ month: selectedMonth, group_id: group.id }); if (pgErr) throw pgErr; const { data: participantsAll, error: pAllErr } = await supabase.from('participants_month').select('id').eq('month', selectedMonth); if (pAllErr) throw pAllErr; const { data: assoc, error: assocErr } = await supabase.from('participant_groups_month').select('participant_id').eq('month', selectedMonth); if (assocErr) throw assocErr; const assocSet = new Set((assoc || []).map(a => a.participant_id)); const orphanIds = (participantsAll || []).map(p => p.id).filter(id => !assocSet.has(id)); if (orphanIds.length > 0) { const { error: delOrphansErr } = await supabase.from('participants_month').delete().in('id', orphanIds).eq('month', selectedMonth); if (delOrphansErr) throw delOrphansErr; } const { error } = await supabase.from('groups_month').delete().match({ id: group.id, month: selectedMonth }); if (error) throw error; await loadGroups(); await loadHomeData(); } catch (err) { alert('Błąd usuwania grupy: ' + (err.message || 'Nieznany')); } finally { btn.disabled = false; } });
             }
           groupsList.appendChild(groupCard);
           });
@@ -2548,16 +2512,16 @@
           console.log('Using existing participant:', participantId);
         } else {
           // 1. Add new participant
-          const rodoValue = !!document.getElementById('participant-rodo').checked;
+        const rodoValue = !!document.getElementById('participant-rodo').checked;
           const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
-            p_month: selectedMonth,
-            p_name: name,
-            p_email: null,
-            p_phone: phone || null,
-            p_rodo: rodoValue
-          });
+          p_month: selectedMonth,
+          p_name: name,
+          p_email: null,
+          p_phone: phone || null,
+          p_rodo: rodoValue
+        });
 
-          if (participantError) throw participantError;
+        if (participantError) throw participantError;
           participantId = newParticipantId;
 
         // Ensure RODO persisted even if RPC signature mismatch: update directly
@@ -2569,7 +2533,7 @@
           if (rodoErr) console.warn('RODO direct update failed:', rodoErr.message || rodoErr);
         } catch (e) {
           console.warn('RODO update exception:', e);
-        }
+          }
         }
 
 
@@ -2613,8 +2577,8 @@
     async function loadGroupParticipants(groupId) {
       if (!groupId) {
         console.error('Brak ID grupy');
-        return;
-      }
+          return;
+        }
       
       const selectedMonth = document.getElementById('participants-month-select').value;
       console.log('Ładowanie uczestników dla grupy:', groupId, 'miesiąc:', selectedMonth, 'currentGroupName:', currentGroupName);
@@ -2760,17 +2724,17 @@
           `;
 
           // Add event listeners for action buttons
-          const editBtn = participantCard.querySelector('.edit-btn');
-          if (editBtn) {
-            editBtn.addEventListener('click', (e) => {
+          const participantEditBtn = participantCard.querySelector('.edit-btn');
+          if (participantEditBtn) {
+            participantEditBtn.addEventListener('click', (e) => {
               e.stopPropagation();
               editParticipant(participant.participant_id, participant.participants_month.name, participant.participants_month.phone, payment);
             });
           }
 
-          const deleteBtn = participantCard.querySelector('.delete-btn');
-          if (deleteBtn) {
-            deleteBtn.addEventListener('click', async (e) => {
+          const participantDeleteBtn = participantCard.querySelector('.delete-btn');
+          if (participantDeleteBtn) {
+            participantDeleteBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             if (!confirm('Usunąć uczestnika z grupy?')) return;
             
@@ -2809,6 +2773,7 @@
               alert('Błąd usuwania uczestnika: ' + (err.message || 'Nieznany'));
             }
           });
+        }
 
           // Real-time amount editing
           const amountInput = participantCard.querySelector('.amount-input');
@@ -2899,9 +2864,9 @@
                 .from('payments_month')
                 .update({ payment_method: newMethod || null })
                 .eq('month', selectedMonth)
-                .eq('participant_id', participantId)
+            .eq('participant_id', participantId)
                 .eq('group_id', groupId);
-
+              
           if (error) throw error;
         } catch (err) {
               alert('Błąd aktualizacji sposobu płatności: ' + (err.message || 'Nieznany'));
@@ -2921,7 +2886,7 @@
                 .eq('month', selectedMonth)
                 .eq('participant_id', participantId)
                 .eq('group_id', groupId);
-
+              
           if (error) throw error;
         } catch (err) {
               alert('Błąd aktualizacji komentarza: ' + (err.message || 'Nieznany'));
@@ -2946,7 +2911,7 @@
                   p_payment_method: paymentMethod,
                   p_comment: comment || null
                 });
-                if (error) throw error;
+        if (error) throw error;
                 await loadGroupParticipants(groupId);
               } catch (err) { alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
             });
@@ -2965,7 +2930,7 @@
                   p_participant_id: participantId,
                   p_group_id: groupId
                 });
-                if (error) throw error;
+        if (error) throw error;
                 await loadGroupParticipants(groupId);
               } catch (err) { alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany')); }
             });
@@ -3926,15 +3891,18 @@
               });
 
               // comment input -> update in realtime
-              row.querySelector('.lesson-payment-comment').addEventListener('input', async (e) => {
+              const commentInput = row.querySelector('.lesson-payment-comment');
+              if (commentInput) {
+                commentInput.addEventListener('input', async (e) => {
                 const newComment = e.target.value;
                 const pid = e.target.dataset.participantId;
                 const lid = e.target.dataset.lessonId;
                 try {
                   const { error } = await supabase.from('lesson_payments_month').update({ comment: newComment || null }).match({ month: month, participant_id: pid, lesson_id: lid });
-          if (error) throw error;
+                  if (error) throw error;
                 } catch (err) { console.warn('Błąd aktualizacji komentarza:', err); }
-              });
+                });
+              }
 
               // payment method: do not save on change; saved only on confirm
 
