@@ -878,44 +878,45 @@
 
       /* Mobile sidebar toggle improvements */
       .sidebar-toggle {
-        top: 15px;
-        right: 15px;
-        font-size: 20px;
-        padding: 8px;
-        background-color: var(--secondary-bg);
-        border: 1px solid var(--border-dark);
-        border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        top: 15px !important;
+        right: 15px !important;
+        font-size: 20px !important;
+        padding: 8px !important;
+        background-color: var(--secondary-bg) !important;
+        border: 1px solid var(--border-dark) !important;
+        border-radius: 6px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        display: block !important;
+        z-index: 1001 !important;
       }
 
       .sidebar-toggle:hover {
-        background-color: var(--hover-bg);
+        background-color: var(--hover-bg) !important;
       }
 
       .sidebar.collapsed .sidebar-toggle {
-        right: 15px;
-        top: 15px;
+        right: 15px !important;
+        top: 15px !important;
       }
 
-      /* Add mobile menu button for very small screens */
+      /* Mobile menu toggle positioning - controlled by JavaScript */
       .mobile-menu-toggle {
-        display: block !important;
-        position: fixed;
-        top: 15px;
-        left: 15px;
-        z-index: 1002;
-        background-color: var(--gold);
-        color: var(--primary-bg);
-        border: none;
-        border-radius: 6px;
-        padding: 10px;
-        font-size: 16px;
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        position: fixed !important;
+        top: 15px !important;
+        left: 15px !important;
+        z-index: 1002 !important;
+        background-color: var(--gold) !important;
+        color: var(--primary-bg) !important;
+        border: none !important;
+        border-radius: 6px !important;
+        padding: 10px !important;
+        font-size: 16px !important;
+        cursor: pointer !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
       }
 
       .mobile-menu-toggle:hover {
-        background-color: #c19b2e;
+        background-color: #c19b2e !important;
       }
 
       /* ULTRA COMPACT LESSONS DESIGN FOR MOBILE */
@@ -928,15 +929,36 @@
         box-shadow: none !important;
       }
 
-      #lessons-section .group-card > div {
+      /* New lesson structure with classes instead of inline styles */
+      .lesson-header {
         display: flex !important;
         flex-direction: column !important;
         gap: 4px !important;
         align-items: stretch !important;
       }
 
+      .lesson-info {
+        flex: 1 !important;
+        order: 1 !important;
+      }
+
+      .lesson-price {
+        text-align: right !important;
+        order: 3 !important;
+        margin-top: 4px !important;
+      }
+
+      .lesson-actions {
+        display: flex !important;
+        gap: 8px !important;
+        align-items: center !important;
+        order: 2 !important;
+        justify-content: flex-end !important;
+        margin-top: 2px !important;
+      }
+
       /* Lesson title - compact */
-      #lessons-section .group-card h4 {
+      .lesson-title {
         font-size: 0.9rem !important;
         margin: 0 !important;
         color: var(--gold) !important;
@@ -944,15 +966,20 @@
       }
 
       /* Date and time info - very compact */
-      #lessons-section .group-card div[style*="color:var(--text-gray)"] {
+      .lesson-date {
         font-size: 0.7rem !important;
         line-height: 1.1 !important;
         margin: 2px 0 !important;
         color: var(--text-gray) !important;
       }
 
+      .lesson-date-highlight {
+        color: var(--gold) !important;
+        font-weight: 500 !important;
+      }
+
       /* Participants info - compact */
-      #lessons-section .group-card div[style*="color:var(--text-light)"] {
+      .lesson-participants {
         font-size: 0.75rem !important;
         color: var(--text-color) !important;
         margin: 2px 0 !important;
@@ -960,48 +987,25 @@
       }
 
       /* Price section - compact */
-      #lessons-section .group-card .lesson-total {
+      .lesson-price-label {
+        font-size: 0.7rem !important;
+        margin: 0 !important;
+        color: var(--text-gray) !important;
+      }
+
+      .lesson-total {
         font-size: 0.9rem !important;
         font-weight: 700 !important;
         color: var(--gold) !important;
         margin: 0 !important;
       }
 
-      #lessons-section .group-card div[style*="font-size:0.85rem"] {
-        font-size: 0.7rem !important;
-        margin: 0 !important;
-        color: var(--text-gray) !important;
-      }
-
       /* Action buttons - very small */
-      #lessons-section .group-card .btn {
+      .lesson-actions .btn {
         padding: 4px 6px !important;
         font-size: 0.7rem !important;
         min-width: 28px !important;
         height: 24px !important;
-      }
-
-      /* Layout for lesson content */
-      #lessons-section .group-card > div > div:first-child {
-        order: 1;
-      }
-
-      #lessons-section .group-card > div > div:nth-child(2) {
-        order: 3;
-        text-align: right;
-        margin-top: 4px;
-      }
-
-      #lessons-section .group-card > div > div:last-child {
-        order: 2;
-        justify-content: flex-end;
-        margin-top: 2px;
-      }
-
-      /* Hide payment method and comment sections completely on mobile */
-      #lessons-section .group-card div[style*="min-width: 150px"],
-      #lessons-section .group-card div[style*="flex: 1 1 200px"] {
-        display: none !important;
       }
 
       /* Ultra compact lessons header */
@@ -1095,7 +1099,7 @@
       <i class="fas fa-bars"></i>
     </button>
 
-    <button class="mobile-menu-toggle" id="mobile-menu-toggle" style="display: none;">
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle">
       <i class="fas fa-bars"></i>
     </button>
 
@@ -4290,20 +4294,20 @@
 
           const el = document.createElement('div');
           el.className = 'group-card';
-          el.style.marginBottom = '12px';
 
           // header with trainer, participants and amount + actions
           el.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-              <div style="flex:1;">
-                <h4 style="margin:0;color:var(--gold);">${lesson.title}</h4>
-                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}${lesson.day_of_month ? ' <span style="color:var(--gold);font-weight:500;">(' + formatDateToDDMM(lesson.day_of_month, month) + ')</span>' : ''}<div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
+            <div class="lesson-header">
+              <div class="lesson-info">
+                <h4 class="lesson-title">${lesson.title}</h4>
+                <div class="lesson-date">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}${lesson.day_of_month ? ' <span class="lesson-date-highlight">(' + formatDateToDDMM(lesson.day_of_month, month) + ')</span>' : ''}</div>
+                <div class="lesson-participants">${namesStr}</div>
               </div>
-              <div style="text-align:right; min-width:160px;">
-                <div style="font-size:0.85rem;color:var(--text-gray);">Kwota lekcji</div>
-                <div style="font-weight:700;color:var(--gold);" class="lesson-total" data-lesson-id="${lesson.id}">${(lesson.amount || 0).toFixed(2)} zł</div>
+              <div class="lesson-price">
+                <div class="lesson-price-label">Kwota lekcji</div>
+                <div class="lesson-total" data-lesson-id="${lesson.id}">${(lesson.amount || 0).toFixed(2)} zł</div>
               </div>
-              <div style="min-width:80px; display:flex; gap:8px; align-items:center;">
+              <div class="lesson-actions">
                 <button class="btn btn-outline lesson-edit-btn" data-lesson-id="${lesson.id}"><i class="fas fa-edit"></i></button>
                 <button class="btn btn-outline lesson-delete-btn" data-lesson-id="${lesson.id}"><i class="fas fa-trash"></i></button>
               </div>
@@ -5450,10 +5454,13 @@
 
     // Handle responsive mobile menu
     function handleMobileMenu() {
+      console.log('handleMobileMenu called, window.innerWidth:', window.innerWidth);
       if (window.innerWidth <= 576) {
+        console.log('Mobile mode: showing both buttons');
         mobileMenuToggle.style.display = 'block';
         sidebarToggle.style.display = 'block'; // Keep both buttons visible on mobile
       } else {
+        console.log('Desktop mode: hiding mobile menu, showing sidebar toggle');
         mobileMenuToggle.style.display = 'none';
         sidebarToggle.style.display = 'block';
       }
