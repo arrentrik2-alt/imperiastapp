@@ -736,7 +736,8 @@
       }
     }
 
-    @media (max-width: 576px) {
+    /* Mobile devices - portrait and landscape */
+    @media (max-width: 768px) {
       .sidebar {
         width: 0;
         overflow: hidden;
@@ -782,6 +783,29 @@
       /* Ensure collapsed state works on mobile */
       .sidebar.collapsed ~ .main-content {
         margin-left: 0;
+      }
+
+      /* Mobile menu button - always visible on mobile */
+      .mobile-menu-toggle {
+        display: block !important;
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 1003;
+        background-color: var(--gold);
+        color: var(--primary-bg);
+        border: none;
+        border-radius: 6px;
+        padding: 12px;
+        font-size: 16px;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+      }
+
+      .mobile-menu-toggle:hover {
+        background-color: #c19b2e;
+        transform: scale(1.05);
       }
 
       /* Mobile responsive for participant table */
@@ -912,27 +936,6 @@
       .sidebar.collapsed .sidebar-toggle {
         display: none;
       }
-
-      /* Add mobile menu button for very small screens */
-      .mobile-menu-toggle {
-        display: block !important;
-        position: fixed;
-        top: 15px;
-        left: 15px;
-        z-index: 1002;
-        background-color: var(--gold);
-        color: var(--primary-bg);
-        border: none;
-        border-radius: 6px;
-        padding: 10px;
-        font-size: 16px;
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      }
-
-      .mobile-menu-toggle:hover {
-        background-color: #c19b2e;
-      }
     }
 
     /* RODO saved visual */
@@ -969,7 +972,7 @@
       <i class="fas fa-bars"></i>
     </button>
 
-    <button class="mobile-menu-toggle" id="mobile-menu-toggle" style="display: none;">
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle">
       <i class="fas fa-bars"></i>
     </button>
 
@@ -5326,7 +5329,7 @@
 
     // Handle responsive mobile menu
     function handleMobileMenu() {
-      if (window.innerWidth <= 576) {
+      if (window.innerWidth <= 768) {
         mobileMenuToggle.style.display = 'block';
         sidebarToggle.style.display = 'none';
       } else {
@@ -5338,8 +5341,12 @@
     // Initial check
     handleMobileMenu();
 
-    // Handle window resize
+    // Handle window resize and orientation change
     window.addEventListener('resize', handleMobileMenu);
+    window.addEventListener('orientationchange', () => {
+      // Small delay to ensure orientation change is complete
+      setTimeout(handleMobileMenu, 100);
+    });
 
   </script>
 </body>
