@@ -875,35 +875,6 @@
         font-size: 1.2rem;
       }
 
-      /* Optimize lessons header for mobile */
-      #lessons-section .content-header {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      #lessons-section .content-header > div:first-child {
-        order: 2;
-        margin-bottom: 8px;
-      }
-
-      #lessons-section .content-header > div:last-child {
-        order: 1;
-        justify-content: flex-start;
-        margin-bottom: 8px;
-      }
-
-      /* Better spacing for lesson cards */
-      #lessons-section .group-card {
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      }
-
-      /* Reduce empty space in lessons list */
-      #lessons-list {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
 
       /* Mobile sidebar toggle improvements */
       .sidebar-toggle {
@@ -947,108 +918,146 @@
         background-color: #c19b2e;
       }
 
-      /* Optimize lessons display for mobile */
-      .group-card {
-        margin-bottom: 8px;
-        padding: 8px;
+      /* ULTRA COMPACT LESSONS DESIGN FOR MOBILE */
+      #lessons-section .group-card {
+        margin-bottom: 6px !important;
+        padding: 6px !important;
+        border-radius: 4px !important;
+        background: var(--secondary-bg) !important;
+        border: 1px solid var(--border-dark) !important;
+        box-shadow: none !important;
       }
 
-      .group-card h4 {
-        font-size: 1rem;
-        margin-bottom: 2px;
+      #lessons-section .group-card > div {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px !important;
+        align-items: stretch !important;
       }
 
-      .group-card div[style*="color:var(--text-gray)"] {
-        font-size: 0.8rem;
-        line-height: 1.2;
-        margin-bottom: 4px;
+      /* Lesson title - compact */
+      #lessons-section .group-card h4 {
+        font-size: 0.9rem !important;
+        margin: 0 !important;
+        color: var(--gold) !important;
+        font-weight: 600 !important;
       }
 
-      .group-card div[style*="color:var(--text-light)"] {
-        font-size: 0.75rem;
-        color: var(--text-gray);
-        margin-top: 2px;
+      /* Date and time info - very compact */
+      #lessons-section .group-card div[style*="color:var(--text-gray)"] {
+        font-size: 0.7rem !important;
+        line-height: 1.1 !important;
+        margin: 2px 0 !important;
+        color: var(--text-gray) !important;
       }
 
-      .group-card .lesson-total {
-        font-size: 0.9rem;
-        margin-top: 2px;
+      /* Participants info - compact */
+      #lessons-section .group-card div[style*="color:var(--text-light)"] {
+        font-size: 0.75rem !important;
+        color: var(--text-color) !important;
+        margin: 2px 0 !important;
+        font-weight: 500 !important;
       }
 
-      .group-card div[style*="font-size:0.85rem"] {
-        font-size: 0.75rem;
-        margin-bottom: 2px;
+      /* Price section - compact */
+      #lessons-section .group-card .lesson-total {
+        font-size: 0.9rem !important;
+        font-weight: 700 !important;
+        color: var(--gold) !important;
+        margin: 0 !important;
       }
 
-      /* Compact lesson cards on mobile */
-      .group-card > div {
-        gap: 8px;
+      #lessons-section .group-card div[style*="font-size:0.85rem"] {
+        font-size: 0.7rem !important;
+        margin: 0 !important;
+        color: var(--text-gray) !important;
       }
 
-      .group-card > div > div:first-child {
-        flex: 1;
-        min-width: 0;
+      /* Action buttons - very small */
+      #lessons-section .group-card .btn {
+        padding: 4px 6px !important;
+        font-size: 0.7rem !important;
+        min-width: 28px !important;
+        height: 24px !important;
       }
 
-      .group-card > div > div:nth-child(2) {
-        min-width: 100px;
+      /* Layout for lesson content */
+      #lessons-section .group-card > div > div:first-child {
+        order: 1;
+      }
+
+      #lessons-section .group-card > div > div:nth-child(2) {
+        order: 3;
         text-align: right;
+        margin-top: 4px;
       }
 
-      .group-card > div > div:last-child {
-        min-width: 60px;
+      #lessons-section .group-card > div > div:last-child {
+        order: 2;
+        justify-content: flex-end;
+        margin-top: 2px;
       }
 
-      .group-card .btn {
-        padding: 6px 8px;
-        font-size: 0.8rem;
+      /* Hide payment method and comment sections completely on mobile */
+      #lessons-section .group-card div[style*="min-width: 150px"],
+      #lessons-section .group-card div[style*="flex: 1 1 200px"] {
+        display: none !important;
       }
 
-      /* Reduce spacing in lessons section */
+      /* Ultra compact lessons header */
       #lessons-section .content-header {
-        margin-bottom: 12px;
-        flex-wrap: wrap;
-        gap: 8px;
+        margin-bottom: 8px !important;
+        padding: 8px !important;
+        flex-direction: column !important;
+        gap: 6px !important;
       }
 
       #lessons-section .content-header h3 {
-        font-size: 1.2rem;
-        margin-bottom: 8px;
-        width: 100%;
+        font-size: 1.1rem !important;
+        margin: 0 0 4px 0 !important;
       }
 
       #lessons-section .content-header > div {
-        gap: 6px;
+        display: flex !important;
+        gap: 4px !important;
+        flex-wrap: wrap !important;
       }
 
+      /* Ultra compact month selector */
       #lessons-section .month-selector {
-        margin-bottom: 12px;
-        gap: 8px;
-        flex-wrap: wrap;
+        margin-bottom: 8px !important;
+        padding: 6px !important;
+        gap: 4px !important;
       }
 
       #lessons-section .month-selector label {
-        margin-bottom: 4px;
-        width: 100%;
+        font-size: 0.8rem !important;
+        margin: 0 !important;
       }
 
-      #lessons-section .month-selector > div {
-        display: flex;
-        gap: 6px;
-        align-items: center;
+      #lessons-section .month-selector select {
+        font-size: 0.8rem !important;
+        padding: 4px 6px !important;
+        height: 32px !important;
       }
 
-      /* Lesson type buttons */
+      #lessons-section .month-selector button {
+        padding: 4px 6px !important;
+        font-size: 0.7rem !important;
+      }
+
+      /* Ultra compact buttons */
       #lessons-section #lesson-type-private,
-      #lessons-section #lesson-type-pierwszy {
-        padding: 8px 12px;
-        font-size: 0.85rem;
+      #lessons-section #lesson-type-pierwszy,
+      #lessons-section #add-lesson-btn {
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+        height: 32px !important;
       }
 
-      /* Add lesson button */
-      #lessons-section #add-lesson-btn {
-        padding: 8px 12px;
-        font-size: 0.85rem;
+      /* Reduce lessons list spacing */
+      #lessons-list {
+        gap: 4px !important;
       }
     }
 
@@ -5443,7 +5452,7 @@
     function handleMobileMenu() {
       if (window.innerWidth <= 576) {
         mobileMenuToggle.style.display = 'block';
-        sidebarToggle.style.display = 'none';
+        sidebarToggle.style.display = 'block'; // Keep both buttons visible on mobile
       } else {
         mobileMenuToggle.style.display = 'none';
         sidebarToggle.style.display = 'block';
