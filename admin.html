@@ -61,6 +61,7 @@
       padding: 5px;
       border-radius: 4px;
       transition: all 0.3s ease;
+      z-index: 1001;
     }
 
     .sidebar-toggle:hover {
@@ -68,8 +69,9 @@
     }
 
     .sidebar.collapsed .sidebar-toggle {
-      right: 50%;
-      transform: translateX(50%);
+      right: 10px;
+      top: 10px;
+      transform: none;
     }
 
     .sidebar.collapsed .logo-text,
@@ -129,6 +131,12 @@
       margin-left: 250px;
       padding: 20px;
       overflow-x: hidden;
+      transition: margin-left 0.3s ease;
+    }
+
+    /* Main content when sidebar is collapsed */
+    .sidebar.collapsed ~ .main-content {
+      margin-left: 70px;
     }
     
     .header {
@@ -644,8 +652,13 @@
         width: 0;
         overflow: hidden;
       }
-      
+
       .main-content {
+        margin-left: 0;
+      }
+
+      /* Ensure collapsed state works on mobile */
+      .sidebar.collapsed ~ .main-content {
         margin-left: 0;
       }
     }
