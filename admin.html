@@ -41,10 +41,44 @@
       position: fixed;
       left: 0;
       top: 0;
-      padding: 20px 0;
-      border-right: 1px solid var(--border-dark);
-      transition: all 0.3s ease;
       z-index: 1000;
+      transition: width 0.3s ease;
+    }
+
+    .sidebar.collapsed {
+      width: 70px;
+    }
+
+    .sidebar-toggle {
+      position: absolute;
+      top: 20px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar-toggle:hover {
+      background-color: var(--hover-bg);
+    }
+
+    .sidebar.collapsed .sidebar-toggle {
+      right: 50%;
+      transform: translateX(50%);
+    }
+
+    .sidebar.collapsed .logo-text,
+    .sidebar.collapsed .link-text {
+      display: none;
+    }
+
+    .sidebar.collapsed .logo {
+      padding: 10px;
     }
     
     .logo {
@@ -645,7 +679,11 @@
     <div class="logo">
       <h1><span class="logo-text">Studio Tańca Imperia</span></h1>
     </div>
-    
+
+    <button class="sidebar-toggle" id="sidebar-toggle">
+      <i class="fas fa-bars"></i>
+    </button>
+
     <ul class="nav-links">
       <li>
         <a href="#" id="nav-home" class="active">
@@ -3968,6 +4006,13 @@
     const navLinks = document.querySelector('.nav-links');
     const logoutBtn = document.getElementById('logoutBtn').closest('li');
     navLinks.insertBefore(navLessons, logoutBtn);
+
+    // Move trainers nav after lessons but before logout
+    const trainersNav = document.getElementById('nav-trainers').closest('li');
+    if (trainersNav) {
+      navLinks.insertBefore(trainersNav, logoutBtn);
+    }
+
     document.getElementById('nav-lessons').addEventListener('click', (e) => { e.preventDefault(); setActiveNav('lessons'); });
 
     // Re-configure interface for trainers after lessons navigation is created
@@ -3984,6 +4029,9 @@
         document.getElementById('lessons-section').style.display = 'block';
         document.getElementById('groups-section').style.display = 'none';
         document.getElementById('home-section').style.display = 'none';
+        if (document.getElementById('trainers-section')) {
+          document.getElementById('trainers-section').style.display = 'none';
+        }
         populateMonthSelectors();
         document.getElementById('lessons-month-select').value = getCurrentMonth();
         // initialize lesson type buttons and apply current selection
@@ -4850,6 +4898,28 @@
         alert('Wystąpił błąd podczas usuwania trenera.');
       }
     }
+
+    // Sidebar toggle functionality
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const mainContent = document.querySelector('.main-content');
+
+    // Toggle sidebar
+    sidebarToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+    });
+
+    // Auto-collapse sidebar on navigation
+    function autoCollapseSidebar() {
+      sidebar.classList.add('collapsed');
+    }
+
+    // Override setActiveNav to include auto-collapse
+    const originalSetActiveNav = setActiveNav;
+    setActiveNav = function(section) {
+      originalSetActiveNav(section);
+      autoCollapseSidebar();
+    };
 
   </script>
 </body>
