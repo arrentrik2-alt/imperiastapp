@@ -82,33 +82,6 @@
     .sidebar.collapsed .logo {
       padding: 10px;
     }
-
-    /* Mobile open state */
-    .sidebar.mobile-open {
-      display: block;
-      width: 280px;
-      position: fixed;
-      left: 0;
-      top: 0;
-      z-index: 1001;
-      height: 100vh;
-    }
-
-    .sidebar.mobile-open ~ .main-content {
-      margin-left: 0;
-    }
-
-    /* Overlay for mobile menu */
-    .sidebar.mobile-open::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: -1;
-    }
     
     .logo {
       text-align: center;
@@ -641,427 +614,90 @@
       min-width: 200px;
     }
     
-    /* Responsive */
-    @media (max-width: 992px) {
+    
+    /* Dla tabletów - sidebar zwinięty */
+    @media (max-width: 992px) and (min-width: 577px) {
       .sidebar {
         width: 70px;
       }
-      
+
       .sidebar .logo-text, .sidebar .link-text {
         display: none;
       }
-      
+
       .sidebar .logo {
         padding: 10px;
       }
-      
+
       .nav-links {
         padding: 0 10px;
       }
-      
+
       .nav-links a {
         justify-content: center;
         padding: 15px 10px;
       }
-      
+
       .nav-links a i {
         margin-right: 0;
         font-size: 1.3rem;
       }
-      
+
       .main-content {
         margin-left: 70px;
       }
     }
 
-    /* Small tablets and large phones */
-    @media (max-width: 768px) {
-      /* Adjust participant table for small screens */
-      .participant-row {
-        gap: 8px;
-        padding: 12px;
-      }
-
-      .participant-number {
-        min-width: 25px;
-        font-size: 0.85rem;
-      }
-
-      .participant-info {
-        flex: 0 0 180px;
-        font-size: 0.9rem;
-      }
-
-      .amount-section {
-        min-width: 80px;
-      }
-
-      .amount-section input {
-        width: 70px;
-      }
-
-      .payment-method-section {
-        min-width: 110px;
-      }
-
-      .comment-section {
-        flex: 1;
-        min-width: 120px;
-      }
-
-      .action-buttons {
-        min-width: 80px;
-        gap: 4px;
-      }
-
-      .action-buttons .btn {
-        padding: 6px 8px;
-        font-size: 0.8rem;
-      }
-
-      /* Adjust modal sizes for tablets */
-      .modal {
-        margin: 20px;
-        max-width: calc(100vw - 40px);
-      }
-
-      /* Adjust button sizes */
-      .btn {
-        padding: 8px 14px;
-        font-size: 0.9rem;
-      }
-
-      /* Adjust form controls */
-      .form-control {
-        padding: 10px;
-        font-size: 0.95rem;
-      }
-    }
-
+    /* Dla telefonów - sidebar całkowicie ukryty */
     @media (max-width: 576px) {
       .sidebar {
         width: 0;
         overflow: hidden;
-        display: none;
+        display: none; /* Całkowicie ukrywa sidebar */
+      }
+
+      .sidebar-toggle {
+        display: none; /* Ukrywa również przycisk toggle na telefonach */
       }
 
       .main-content {
         margin-left: 0;
-        padding: 15px;
+        padding: 15px; /* Mniejsze padding na telefonach */
+      }
+
+      /* Poprawki dla header na telefonach */
+      .header {
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+      }
+
+      .header h2 {
+        font-size: 1.5rem; /* Mniejszy tytuł */
+      }
+
+      .user-info span {
+        font-size: 0.9rem; /* Mniejszy tekst */
+      }
+
+      /* Poprawki dla kart grup na telefonach */
+      .group-card {
+        margin-bottom: 15px;
+      }
+
+      .group-detail {
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+      }
+
+      /* Poprawki dla tabeli uczestników */
+      .participant-row {
+        padding: 12px;
+        font-size: 0.9rem;
       }
 
       /* Ensure collapsed state works on mobile */
       .sidebar.collapsed ~ .main-content {
         margin-left: 0;
-      }
-
-      /* Mobile responsive for participant table */
-      .participant-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-        padding: 12px;
-        border-radius: 6px;
-        background: var(--secondary-bg);
-        border: 1px solid var(--border-dark);
-      }
-
-      .participant-row > div {
-        width: 100%;
-        min-width: 100%;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .participant-number {
-        font-size: 0.9rem;
-        font-weight: bold;
-        color: var(--text-gray);
-        min-width: 30px;
-      }
-
-      .participant-info {
-        flex: 1;
-        justify-content: flex-start;
-        gap: 8px;
-      }
-
-      .participant-info div:first-child {
-        font-weight: 600;
-        color: var(--text-color);
-      }
-
-      .participant-info div:last-child {
-        color: var(--text-gray);
-        font-size: 0.85rem;
-      }
-
-      .amount-section, .payment-method-section, .comment-section {
-        padding: 8px 0;
-        border-bottom: 1px solid var(--border-dark);
-      }
-
-      .amount-section:last-child,
-      .payment-method-section:last-child,
-      .comment-section:last-child {
-        border-bottom: none;
-      }
-
-      .action-buttons {
-        justify-content: center;
-        gap: 8px;
-        min-width: 100%;
-        padding-top: 8px;
-      }
-
-      .action-buttons .btn {
-        flex: 1;
-        padding: 8px;
-        font-size: 0.8rem;
-        min-width: 0;
-      }
-
-      /* Mobile responsive for buttons */
-      .btn {
-        padding: 10px 12px;
-        font-size: 0.9rem;
-      }
-
-      .btn i {
-        margin-right: 6px;
-      }
-
-      /* Mobile responsive for forms */
-      .form-group {
-        margin-bottom: 15px;
-      }
-
-      .form-control {
-        padding: 12px;
-        font-size: 1rem;
-      }
-
-      .form-actions {
-        gap: 10px;
-      }
-
-      /* Mobile responsive for modals */
-      .modal {
-        margin: 10px;
-        max-height: calc(100vh - 20px);
-        overflow-y: auto;
-      }
-
-      .modal-content {
-        padding: 20px;
-      }
-
-      /* Mobile responsive for headers */
-      .header h2 {
-        font-size: 1.5rem;
-      }
-
-      .content-box {
-        padding: 15px;
-      }
-
-      /* Mobile responsive for navigation buttons */
-      .nav-links a {
-        padding: 12px;
-      }
-
-      .nav-links a i {
-        font-size: 1.2rem;
-      }
-
-
-      /* Mobile sidebar toggle improvements */
-      .sidebar-toggle {
-        top: 15px !important;
-        right: 15px !important;
-        font-size: 20px !important;
-        padding: 8px !important;
-        background-color: var(--secondary-bg) !important;
-        border: 1px solid var(--border-dark) !important;
-        border-radius: 6px !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-        display: block !important;
-        z-index: 1001 !important;
-      }
-
-      .sidebar-toggle:hover {
-        background-color: var(--hover-bg) !important;
-      }
-
-      .sidebar.collapsed .sidebar-toggle {
-        right: 15px !important;
-        top: 15px !important;
-      }
-
-      /* Mobile menu toggle positioning - controlled by JavaScript */
-      .mobile-menu-toggle {
-        position: fixed !important;
-        top: 15px !important;
-        left: 15px !important;
-        z-index: 1002 !important;
-        background-color: var(--gold) !important;
-        color: var(--primary-bg) !important;
-        border: none !important;
-        border-radius: 6px !important;
-        padding: 10px !important;
-        font-size: 16px !important;
-        cursor: pointer !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-      }
-
-      .mobile-menu-toggle:hover {
-        background-color: #c19b2e !important;
-      }
-
-      /* ULTRA COMPACT LESSONS DESIGN FOR MOBILE */
-      #lessons-section .group-card {
-        margin-bottom: 6px !important;
-        padding: 6px !important;
-        border-radius: 4px !important;
-        background: var(--secondary-bg) !important;
-        border: 1px solid var(--border-dark) !important;
-        box-shadow: none !important;
-      }
-
-      /* New lesson structure with classes instead of inline styles */
-      .lesson-header {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 4px !important;
-        align-items: stretch !important;
-      }
-
-      .lesson-info {
-        flex: 1 !important;
-        order: 1 !important;
-      }
-
-      .lesson-price {
-        text-align: right !important;
-        order: 3 !important;
-        margin-top: 4px !important;
-      }
-
-      .lesson-actions {
-        display: flex !important;
-        gap: 8px !important;
-        align-items: center !important;
-        order: 2 !important;
-        justify-content: flex-end !important;
-        margin-top: 2px !important;
-      }
-
-      /* Lesson title - compact */
-      .lesson-title {
-        font-size: 0.9rem !important;
-        margin: 0 !important;
-        color: var(--gold) !important;
-        font-weight: 600 !important;
-      }
-
-      /* Date and time info - very compact */
-      .lesson-date {
-        font-size: 0.7rem !important;
-        line-height: 1.1 !important;
-        margin: 2px 0 !important;
-        color: var(--text-gray) !important;
-      }
-
-      .lesson-date-highlight {
-        color: var(--gold) !important;
-        font-weight: 500 !important;
-      }
-
-      /* Participants info - compact */
-      .lesson-participants {
-        font-size: 0.75rem !important;
-        color: var(--text-color) !important;
-        margin: 2px 0 !important;
-        font-weight: 500 !important;
-      }
-
-      /* Price section - compact */
-      .lesson-price-label {
-        font-size: 0.7rem !important;
-        margin: 0 !important;
-        color: var(--text-gray) !important;
-      }
-
-      .lesson-total {
-        font-size: 0.9rem !important;
-        font-weight: 700 !important;
-        color: var(--gold) !important;
-        margin: 0 !important;
-      }
-
-      /* Action buttons - very small */
-      .lesson-actions .btn {
-        padding: 4px 6px !important;
-        font-size: 0.7rem !important;
-        min-width: 28px !important;
-        height: 24px !important;
-      }
-
-      /* Ultra compact lessons header */
-      #lessons-section .content-header {
-        margin-bottom: 8px !important;
-        padding: 8px !important;
-        flex-direction: column !important;
-        gap: 6px !important;
-      }
-
-      #lessons-section .content-header h3 {
-        font-size: 1.1rem !important;
-        margin: 0 0 4px 0 !important;
-      }
-
-      #lessons-section .content-header > div {
-        display: flex !important;
-        gap: 4px !important;
-        flex-wrap: wrap !important;
-      }
-
-      /* Ultra compact month selector */
-      #lessons-section .month-selector {
-        margin-bottom: 8px !important;
-        padding: 6px !important;
-        gap: 4px !important;
-      }
-
-      #lessons-section .month-selector label {
-        font-size: 0.8rem !important;
-        margin: 0 !important;
-      }
-
-      #lessons-section .month-selector select {
-        font-size: 0.8rem !important;
-        padding: 4px 6px !important;
-        height: 32px !important;
-      }
-
-      #lessons-section .month-selector button {
-        padding: 4px 6px !important;
-        font-size: 0.7rem !important;
-      }
-
-      /* Ultra compact buttons */
-      #lessons-section #lesson-type-private,
-      #lessons-section #lesson-type-pierwszy,
-      #lessons-section #add-lesson-btn {
-        padding: 6px 8px !important;
-        font-size: 0.75rem !important;
-        height: 32px !important;
-      }
-
-      /* Reduce lessons list spacing */
-      #lessons-list {
-        gap: 4px !important;
       }
     }
 
@@ -1096,10 +732,6 @@
     </div>
 
     <button class="sidebar-toggle" id="sidebar-toggle">
-      <i class="fas fa-bars"></i>
-    </button>
-
-    <button class="mobile-menu-toggle" id="mobile-menu-toggle">
       <i class="fas fa-bars"></i>
     </button>
 
@@ -3479,14 +3111,6 @@
     // Currently editing lesson id (null when creating)
     let currentEditingLessonId = null;
 
-    // Force reload lessons to apply new mobile design
-    async function forceReloadLessons() {
-      console.log('FORCE RELOADING LESSONS...');
-      lessonsLoadToken++; // Increment to invalidate any current loads
-      await loadLessons();
-      console.log('LESSONS FORCE RELOADED');
-    }
-
     // Initialize
     checkAdmin().then(async () => {
       await populateMonthSelectors();
@@ -3499,13 +3123,6 @@
       console.log('Groups loaded, now loading lessons...');
       await loadLessons();
       console.log('All data loaded successfully');
-
-      // FORCE RELOAD LESSONS AFTER INITIAL LOAD TO APPLY NEW DESIGN
-      setTimeout(() => {
-        console.log('Applying mobile lesson design...');
-        forceReloadLessons();
-      }, 1000);
-
       // initialize lesson type buttons and set default so create modal uses correct type
       try { ensureLessonTypeButtons(); setLessonType(currentLessonType); } catch (e) { console.warn('Lesson type init skipped:', e); }
     });
@@ -4309,20 +3926,20 @@
 
           const el = document.createElement('div');
           el.className = 'group-card';
+          el.style.marginBottom = '12px';
 
           // header with trainer, participants and amount + actions
           el.innerHTML = `
-            <div class="lesson-header">
-              <div class="lesson-info">
-                <h4 class="lesson-title">${lesson.title}</h4>
-                <div class="lesson-date">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}${lesson.day_of_month ? ' <span class="lesson-date-highlight">(' + formatDateToDDMM(lesson.day_of_month, month) + ')</span>' : ''}</div>
-                <div class="lesson-participants">${namesStr}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+              <div style="flex:1;">
+                <h4 style="margin:0;color:var(--gold);">${lesson.title}</h4>
+                <div style="color:var(--text-gray);font-size:0.9rem">${lesson.day_of_month ? lesson.day_of_month + ' ' : ''}${lesson.day} ${lesson.start_time}${lesson.day_of_month ? ' <span style="color:var(--gold);font-weight:500;">(' + formatDateToDDMM(lesson.day_of_month, month) + ')</span>' : ''}<div style="color:var(--text-light);font-weight:600">${namesStr}</div></div>
               </div>
-              <div class="lesson-price">
-                <div class="lesson-price-label">Kwota lekcji</div>
-                <div class="lesson-total" data-lesson-id="${lesson.id}">${(lesson.amount || 0).toFixed(2)} zł</div>
+              <div style="text-align:right; min-width:160px;">
+                <div style="font-size:0.85rem;color:var(--text-gray);">Kwota lekcji</div>
+                <div style="font-weight:700;color:var(--gold);" class="lesson-total" data-lesson-id="${lesson.id}">${(lesson.amount || 0).toFixed(2)} zł</div>
               </div>
-              <div class="lesson-actions">
+              <div style="min-width:80px; display:flex; gap:8px; align-items:center;">
                 <button class="btn btn-outline lesson-edit-btn" data-lesson-id="${lesson.id}"><i class="fas fa-edit"></i></button>
                 <button class="btn btn-outline lesson-delete-btn" data-lesson-id="${lesson.id}"><i class="fas fa-trash"></i></button>
               </div>
@@ -4522,110 +4139,6 @@
           // before appending ensure this load is still current
           if (myToken !== lessonsLoadToken) return;
           lessonsList.appendChild(el);
-
-          // FORCE APPLY MOBILE STYLES TO NEW LESSON ELEMENT
-          if (window.innerWidth <= 576 || true) { // Force mobile styles
-            console.log('APPLYING FORCE STYLES TO NEW LESSON:', lesson.title);
-
-            // Apply styles directly to the new element
-            el.style.setProperty('margin-bottom', '6px', 'important');
-            el.style.setProperty('padding', '6px', 'important');
-            el.style.setProperty('border-radius', '4px', 'important');
-            el.style.setProperty('background', 'var(--secondary-bg)', 'important');
-            el.style.setProperty('border', '1px solid var(--border-dark)', 'important');
-            el.style.setProperty('box-shadow', 'none', 'important');
-
-            // Style lesson structure
-            const lessonHeader = el.querySelector('.lesson-header');
-            if (lessonHeader) {
-              lessonHeader.style.setProperty('display', 'flex', 'important');
-              lessonHeader.style.setProperty('flex-direction', 'column', 'important');
-              lessonHeader.style.setProperty('gap', '4px', 'important');
-              lessonHeader.style.setProperty('align-items', 'stretch', 'important');
-            }
-
-            const lessonInfo = el.querySelector('.lesson-info');
-            if (lessonInfo) {
-              lessonInfo.style.setProperty('flex', '1', 'important');
-              lessonInfo.style.setProperty('order', '1', 'important');
-            }
-
-            const lessonPrice = el.querySelector('.lesson-price');
-            if (lessonPrice) {
-              lessonPrice.style.setProperty('text-align', 'right', 'important');
-              lessonPrice.style.setProperty('order', '3', 'important');
-              lessonPrice.style.setProperty('margin-top', '4px', 'important');
-            }
-
-            const lessonActions = el.querySelector('.lesson-actions');
-            if (lessonActions) {
-              lessonActions.style.setProperty('display', 'flex', 'important');
-              lessonActions.style.setProperty('gap', '8px', 'important');
-              lessonActions.style.setProperty('align-items', 'center', 'important');
-              lessonActions.style.setProperty('order', '2', 'important');
-              lessonActions.style.setProperty('justify-content', 'flex-end', 'important');
-              lessonActions.style.setProperty('margin-top', '2px', 'important');
-            }
-
-            // Style title
-            const title = el.querySelector('.lesson-title, h4');
-            if (title) {
-              title.style.setProperty('font-size', '0.9rem', 'important');
-              title.style.setProperty('margin', '0', 'important');
-              title.style.setProperty('color', 'var(--gold)', 'important');
-              title.style.setProperty('font-weight', '600', 'important');
-            }
-
-            // Style specific elements
-            const lessonDate = el.querySelector('.lesson-date');
-            if (lessonDate) {
-              lessonDate.style.setProperty('font-size', '0.7rem', 'important');
-              lessonDate.style.setProperty('line-height', '1.1', 'important');
-              lessonDate.style.setProperty('margin', '2px 0', 'important');
-              lessonDate.style.setProperty('color', 'var(--text-gray)', 'important');
-            }
-
-            const lessonParticipants = el.querySelector('.lesson-participants');
-            if (lessonParticipants) {
-              lessonParticipants.style.setProperty('font-size', '0.75rem', 'important');
-              lessonParticipants.style.setProperty('color', 'var(--text-color)', 'important');
-              lessonParticipants.style.setProperty('margin', '2px 0', 'important');
-              lessonParticipants.style.setProperty('font-weight', '500', 'important');
-            }
-
-            const lessonPriceLabel = el.querySelector('.lesson-price-label');
-            if (lessonPriceLabel) {
-              lessonPriceLabel.style.setProperty('font-size', '0.7rem', 'important');
-              lessonPriceLabel.style.setProperty('margin', '0', 'important');
-              lessonPriceLabel.style.setProperty('color', 'var(--text-gray)', 'important');
-            }
-
-            const lessonTotal = el.querySelector('.lesson-total');
-            if (lessonTotal) {
-              lessonTotal.style.setProperty('font-size', '0.9rem', 'important');
-              lessonTotal.style.setProperty('font-weight', '700', 'important');
-              lessonTotal.style.setProperty('color', 'var(--gold)', 'important');
-              lessonTotal.style.setProperty('margin', '0', 'important');
-            }
-
-            // Style date highlight
-            const dateHighlight = el.querySelector('.lesson-date-highlight');
-            if (dateHighlight) {
-              dateHighlight.style.setProperty('color', 'var(--gold)', 'important');
-              dateHighlight.style.setProperty('font-weight', '500', 'important');
-            }
-
-            // Style buttons
-            const buttons = el.querySelectorAll('.btn');
-            buttons.forEach(btn => {
-              btn.style.setProperty('padding', '4px 6px', 'important');
-              btn.style.setProperty('font-size', '0.7rem', 'important');
-              btn.style.setProperty('min-width', '28px', 'important');
-              btn.style.setProperty('height', '24px', 'important');
-            });
-
-            console.log('FORCE STYLES APPLIED TO LESSON:', lesson.title);
-          }
         }
 
       } catch (err) {
@@ -5536,7 +5049,6 @@
     // Sidebar toggle functionality
     const sidebar = document.querySelector('.sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
-    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
     const mainContent = document.querySelector('.main-content');
 
     // Toggle sidebar
@@ -5544,24 +5056,9 @@
       sidebar.classList.toggle('collapsed');
     });
 
-    // Mobile menu toggle
-    mobileMenuToggle.addEventListener('click', () => {
-      sidebar.classList.toggle('mobile-open');
-    });
-
-    // Close mobile menu when clicking overlay
-    document.addEventListener('click', (e) => {
-      if (sidebar.classList.contains('mobile-open') &&
-          !sidebar.contains(e.target) &&
-          e.target !== mobileMenuToggle) {
-        sidebar.classList.remove('mobile-open');
-      }
-    });
-
     // Auto-collapse sidebar on navigation
     function autoCollapseSidebar() {
       sidebar.classList.add('collapsed');
-      sidebar.classList.remove('mobile-open');
     }
 
     // Override setActiveNav to include auto-collapse
@@ -5570,64 +5067,6 @@
       originalSetActiveNav(section);
       autoCollapseSidebar();
     };
-
-    // Handle responsive mobile menu
-    function handleMobileMenu() {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      console.log('=== MOBILE MENU DEBUG ===');
-      console.log('Window dimensions:', width + 'x' + height);
-      console.log('Is mobile (<=576px):', width <= 576);
-
-      // FORCE MOBILE MODE FOR TESTING
-      if (width <= 576 || true) { // Force mobile mode temporarily
-        console.log('FORCED MOBILE MODE: showing both buttons');
-        mobileMenuToggle.style.display = 'block';
-        sidebarToggle.style.display = 'block';
-        // Add visual indicator
-        document.body.style.border = '5px solid red';
-        document.body.style.borderTop = '20px solid red';
-        document.body.style.margin = '0';
-
-        // Add visible mobile indicator
-        let mobileIndicator = document.getElementById('mobile-indicator');
-        if (!mobileIndicator) {
-          mobileIndicator = document.createElement('div');
-          mobileIndicator.id = 'mobile-indicator';
-          mobileIndicator.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: red;
-            color: white;
-            text-align: center;
-            padding: 5px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 9999;
-          `;
-          mobileIndicator.textContent = '📱 MOBILE MODE ACTIVE - LESSONS SHOULD BE COMPACT';
-          document.body.appendChild(mobileIndicator);
-        }
-
-        console.log('RED BORDER AND MOBILE INDICATOR ADDED');
-      } else {
-        console.log('Desktop mode: hiding mobile menu, showing sidebar toggle');
-        mobileMenuToggle.style.display = 'none';
-        sidebarToggle.style.display = 'block';
-        document.body.style.border = 'none';
-      }
-
-        // Mobile lesson styles are now applied directly when lessons are created
-        console.log('Mobile mode active - lessons will be styled when loaded');
-    }
-
-    // Initial check
-    handleMobileMenu();
-
-    // Handle window resize
-    window.addEventListener('resize', handleMobileMenu);
 
   </script>
 </body>
