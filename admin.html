@@ -3479,6 +3479,14 @@
     // Currently editing lesson id (null when creating)
     let currentEditingLessonId = null;
 
+    // Force reload lessons to apply new mobile design
+    async function forceReloadLessons() {
+      console.log('FORCE RELOADING LESSONS...');
+      lessonsLoadToken++; // Increment to invalidate any current loads
+      await loadLessons();
+      console.log('LESSONS FORCE RELOADED');
+    }
+
     // Initialize
     checkAdmin().then(async () => {
       await populateMonthSelectors();
@@ -3491,6 +3499,13 @@
       console.log('Groups loaded, now loading lessons...');
       await loadLessons();
       console.log('All data loaded successfully');
+
+      // FORCE RELOAD LESSONS AFTER INITIAL LOAD TO APPLY NEW DESIGN
+      setTimeout(() => {
+        console.log('Applying mobile lesson design...');
+        forceReloadLessons();
+      }, 1000);
+
       // initialize lesson type buttons and set default so create modal uses correct type
       try { ensureLessonTypeButtons(); setLessonType(currentLessonType); } catch (e) { console.warn('Lesson type init skipped:', e); }
     });
@@ -5454,15 +5469,115 @@
 
     // Handle responsive mobile menu
     function handleMobileMenu() {
-      console.log('handleMobileMenu called, window.innerWidth:', window.innerWidth);
-      if (window.innerWidth <= 576) {
-        console.log('Mobile mode: showing both buttons');
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      console.log('=== MOBILE MENU DEBUG ===');
+      console.log('Window dimensions:', width + 'x' + height);
+      console.log('Is mobile (<=576px):', width <= 576);
+
+      // FORCE MOBILE MODE FOR TESTING
+      if (width <= 576 || true) { // Force mobile mode temporarily
+        console.log('FORCED MOBILE MODE: showing both buttons');
         mobileMenuToggle.style.display = 'block';
-        sidebarToggle.style.display = 'block'; // Keep both buttons visible on mobile
+        sidebarToggle.style.display = 'block';
+        // Add visual indicator
+        document.body.style.border = '5px solid red';
+        document.body.style.borderTop = '20px solid red';
+        document.body.style.margin = '0';
+
+        // Add visible mobile indicator
+        let mobileIndicator = document.getElementById('mobile-indicator');
+        if (!mobileIndicator) {
+          mobileIndicator = document.createElement('div');
+          mobileIndicator.id = 'mobile-indicator';
+          mobileIndicator.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: red;
+            color: white;
+            text-align: center;
+            padding: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 9999;
+          `;
+          mobileIndicator.textContent = '📱 MOBILE MODE ACTIVE - LESSONS SHOULD BE COMPACT';
+          document.body.appendChild(mobileIndicator);
+        }
+
+        console.log('RED BORDER AND MOBILE INDICATOR ADDED');
       } else {
         console.log('Desktop mode: hiding mobile menu, showing sidebar toggle');
         mobileMenuToggle.style.display = 'none';
         sidebarToggle.style.display = 'block';
+        document.body.style.border = 'none';
+      }
+
+      // Force apply mobile lesson styles
+      if (width <= 576 || true) {
+        console.log('APPLYING ULTRA FORCE MOBILE LESSON STYLES...');
+
+        // Apply to existing lessons
+        const lessons = document.querySelectorAll('#lessons-section .group-card');
+        console.log('Found lessons:', lessons.length);
+
+        lessons.forEach((lesson, index) => {
+          lesson.style.setProperty('margin-bottom', '6px', 'important');
+          lesson.style.setProperty('padding', '6px', 'important');
+          lesson.style.setProperty('border-radius', '4px', 'important');
+          lesson.style.setProperty('background', 'var(--secondary-bg)', 'important');
+          lesson.style.setProperty('border', '1px solid var(--border-dark)', 'important');
+
+          // Make text smaller
+          const title = lesson.querySelector('h4');
+          if (title) {
+            title.style.setProperty('font-size', '0.9rem', 'important');
+            title.style.setProperty('margin', '0', 'important');
+          }
+
+          // Make all text smaller
+          const allText = lesson.querySelectorAll('*');
+          allText.forEach(el => {
+            el.style.setProperty('font-size', '0.75rem', 'important');
+          });
+
+          console.log(`Applied FORCE styles to lesson ${index + 1}`);
+        });
+
+        // Add global mobile lesson CSS
+        const mobileCSS = `
+          <style id="force-mobile-lessons">
+            #lessons-section .group-card {
+              margin-bottom: 6px !important;
+              padding: 6px !important;
+              border-radius: 4px !important;
+              background: var(--secondary-bg) !important;
+              border: 1px solid var(--border-dark) !important;
+              box-shadow: none !important;
+            }
+            #lessons-section .group-card h4 {
+              font-size: 0.9rem !important;
+              margin: 0 !important;
+            }
+            #lessons-section .group-card * {
+              font-size: 0.75rem !important;
+            }
+            #lessons-section .group-card .btn {
+              padding: 4px 6px !important;
+              font-size: 0.7rem !important;
+            }
+          </style>
+        `;
+
+        // Remove existing force CSS if exists
+        const existingCSS = document.getElementById('force-mobile-lessons');
+        if (existingCSS) existingCSS.remove();
+
+        // Add new force CSS
+        document.head.insertAdjacentHTML('beforeend', mobileCSS);
+        console.log('FORCE MOBILE CSS INJECTED');
       }
     }
 
