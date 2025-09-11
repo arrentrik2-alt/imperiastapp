@@ -1052,6 +1052,14 @@
           <label for="participant-rodo" style="color:var(--text-gray);">Wyrażam zgodę na przetwarzanie danych</label>
         </div>
       </div>
+
+      <div class="form-group">
+        <label for="participant-publication">Publikacja</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="participant-publication">
+          <label for="participant-publication" style="color:var(--text-gray);">Wyrażam zgodę na publikację danych</label>
+        </div>
+      </div>
       
         <div class="form-actions">
         <button class="btn btn-outline" id="cancel-participant-btn">Anuluj</button>
@@ -2303,7 +2311,7 @@
           });
 
           groupCard.innerHTML = `
-              <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
+              <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span>${window.currentUser && window.currentUser.role === 'trainer' ? '' : `<span style="font-size:0.9rem">${paidText}${unpaidText}</span>`}</h4>
             <div class="group-detail">
               <i class="fas fa-calendar-day"></i>
                 <span>${daysText}, ${formatTimeToHHMM(group.start_time)}</span>
@@ -2427,6 +2435,7 @@
       participantPhoneInput.value = '';
       participantAmountInput.value = '';
       document.getElementById('participant-rodo').checked = false;
+      document.getElementById('participant-publication').checked = false;
 
       // Reset modal title and button
       document.querySelector('#add-participant-modal .modal-header h3').textContent = 'Dodaj uczestnika do grupy';
@@ -2447,7 +2456,7 @@
       document.getElementById('group-participant-badge').style.display = 'none';
     }
 
-    function editParticipant(participantId, name, phone, payment) {
+    function editParticipant(participantId, name, phone, payment, publication) {
       isEditingParticipant = true;
       editingParticipantId = participantId;
       addParticipantModal.classList.add('active');
@@ -2457,6 +2466,7 @@
       participantPhoneInput.value = phone || '';
       participantAmountInput.value = payment ? payment.amount || '' : '';
       document.getElementById('participant-rodo').checked = true; // Assume RODO is already accepted for existing participants
+      document.getElementById('participant-publication').checked = !!publication;
 
       // Update modal title and button
       document.querySelector('#add-participant-modal .modal-header h3').textContent = 'Edytuj uczestnika';
@@ -2564,12 +2574,14 @@
         } else {
           // 1. Add new participant
         const rodoValue = !!document.getElementById('participant-rodo').checked;
+        const publicationValue = !!document.getElementById('participant-publication').checked;
           const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
           p_month: selectedMonth,
           p_name: name,
           p_email: null,
           p_phone: phone || null,
-          p_rodo: rodoValue
+          p_rodo: rodoValue,
+          p_publication: publicationValue
         });
 
         if (participantError) throw participantError;
@@ -2643,7 +2655,7 @@
           .select(`
             participant_id,
             participants_month (
-              id, name, phone, rodo
+              id, name, phone, rodo, publication
             )
           `)
           .eq('month', selectedMonth)
@@ -2767,6 +2779,11 @@
                 <label style="color:var(--text-gray); font-size:0.85rem;">RODO</label>
                 <input type="checkbox" class="rodo-checkbox" data-participant-id="${participant.participant_id}" ${participantData.rodo ? 'checked' : ''}>
               </div>
+
+              <div style="min-width:110px; display:flex; align-items:center; gap:8px;">
+                <label style="color:var(--text-gray); font-size:0.85rem;">Publikacja</label>
+                <input type="checkbox" class="publication-checkbox" data-participant-id="${participant.participant_id}" ${participantData.publication ? 'checked' : ''}>
+              </div>
               
               <div class="action-buttons" style="display: flex; gap: 10px; min-width: 120px;">
                 ${isTrainer ? '' : (payment && payment.confirmed ? `
@@ -2793,7 +2810,7 @@
           if (participantEditBtn) {
             participantEditBtn.addEventListener('click', (e) => {
               e.stopPropagation();
-              editParticipant(participant.participant_id, participant.participants_month.name, participant.participants_month.phone, payment);
+              editParticipant(participant.participant_id, participant.participants_month.name, participant.participants_month.phone, payment, participant.participants_month.publication);
             });
           }
 
@@ -3210,6 +3227,34 @@
       }
     }
 
+    async function savePublication(participantId, checked, el) {
+      try {
+        console.log('Saving Publication for', participantId, checked);
+        if (el) el.disabled = true;
+        const selectedMonth = document.getElementById('participants-month-select').value;
+        const { error } = await supabase
+          .from('participants_month')
+          .update({ publication: checked })
+          .match({ month: selectedMonth, id: participantId });
+        if (error) {
+          console.error('Error saving Publication:', error);
+          if (el) el.checked = !checked;
+          alert('Błąd zapisu Publikacji: ' + (error.message || 'Nieznany'));
+        } else {
+          console.log('Publication saved successfully for', participantId);
+          if (el) {
+            el.classList.add('rodo-saved');
+            setTimeout(() => el.classList.remove('rodo-saved'), 700);
+          }
+        }
+      } catch (err) {
+        console.error('Exception saving Publication:', err);
+        if (el) el.checked = !checked;
+      } finally {
+        if (el) el.disabled = false;
+      }
+    }
+
     // Delegated handler for RODO checkboxes to ensure they always trigger
     (function attachDelegatedRodoHandler(){
       const list = document.getElementById('participants-list');
@@ -3225,6 +3270,21 @@
       });
     })();
 
+    // Delegated handler for Publication checkboxes to ensure they always trigger
+    (function attachDelegatedPublicationHandler(){
+      const list = document.getElementById('participants-list');
+      if (!list) return;
+      list.addEventListener('change', async (e) => {
+        if (!e.target || !e.target.classList) return;
+        if (!e.target.classList.contains('publication-checkbox')) return;
+        const pid = e.target.dataset.participantId;
+        const checked = e.target.checked;
+        console.log('Publication checkbox clicked (delegated):', pid, checked);
+        e.target.disabled = true;
+        await savePublication(pid, checked, e.target);
+      });
+    })();
+
     // Fallback: document-level click listener to catch cases where change doesn't fire
     document.addEventListener('click', async (e) => {
       const target = e.target;
@@ -3234,6 +3294,12 @@
       if (cb && cb.dataset && cb.dataset.participantId) {
         // small timeout to allow checkbox state to update
         setTimeout(() => saveRodo(cb.dataset.participantId, cb.checked, cb), 10);
+      }
+      // if clicked on input.publication-checkbox or its label
+      const pubCb = target.closest && (target.closest('.publication-checkbox') || (target.classList && target.classList.contains('publication-checkbox') ? target : null));
+      if (pubCb && pubCb.dataset && pubCb.dataset.participantId) {
+        // small timeout to allow checkbox state to update
+        setTimeout(() => savePublication(pubCb.dataset.participantId, pubCb.checked, pubCb), 10);
       }
     });
 
