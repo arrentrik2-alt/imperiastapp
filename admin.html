@@ -82,6 +82,31 @@
     .sidebar.collapsed .logo {
       padding: 10px;
     }
+
+    /* Mobile open state */
+    .sidebar.mobile-open {
+      width: 250px;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 1001;
+    }
+
+    .sidebar.mobile-open ~ .main-content {
+      margin-left: 0;
+    }
+
+    /* Overlay for mobile menu */
+    .sidebar.mobile-open::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: -1;
+    }
     
     .logo {
       text-align: center;
@@ -646,7 +671,71 @@
         margin-left: 70px;
       }
     }
-    
+
+    /* Small tablets and large phones */
+    @media (max-width: 768px) {
+      /* Adjust participant table for small screens */
+      .participant-row {
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .participant-number {
+        min-width: 25px;
+        font-size: 0.85rem;
+      }
+
+      .participant-info {
+        flex: 0 0 180px;
+        font-size: 0.9rem;
+      }
+
+      .amount-section {
+        min-width: 80px;
+      }
+
+      .amount-section input {
+        width: 70px;
+      }
+
+      .payment-method-section {
+        min-width: 110px;
+      }
+
+      .comment-section {
+        flex: 1;
+        min-width: 120px;
+      }
+
+      .action-buttons {
+        min-width: 80px;
+        gap: 4px;
+      }
+
+      .action-buttons .btn {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+      }
+
+      /* Adjust modal sizes for tablets */
+      .modal {
+        margin: 20px;
+        max-width: calc(100vw - 40px);
+      }
+
+      /* Adjust button sizes */
+      .btn {
+        padding: 8px 14px;
+        font-size: 0.9rem;
+      }
+
+      /* Adjust form controls */
+      .form-control {
+        padding: 10px;
+        font-size: 0.95rem;
+      }
+    }
+
     @media (max-width: 576px) {
       .sidebar {
         width: 0;
@@ -655,11 +744,174 @@
 
       .main-content {
         margin-left: 0;
+        padding: 15px;
       }
 
       /* Ensure collapsed state works on mobile */
       .sidebar.collapsed ~ .main-content {
         margin-left: 0;
+      }
+
+      /* Mobile responsive for participant table */
+      .participant-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 12px;
+        border-radius: 6px;
+        background: var(--secondary-bg);
+        border: 1px solid var(--border-dark);
+      }
+
+      .participant-row > div {
+        width: 100%;
+        min-width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .participant-number {
+        font-size: 0.9rem;
+        font-weight: bold;
+        color: var(--text-gray);
+        min-width: 30px;
+      }
+
+      .participant-info {
+        flex: 1;
+        justify-content: flex-start;
+        gap: 8px;
+      }
+
+      .participant-info div:first-child {
+        font-weight: 600;
+        color: var(--text-color);
+      }
+
+      .participant-info div:last-child {
+        color: var(--text-gray);
+        font-size: 0.85rem;
+      }
+
+      .amount-section, .payment-method-section, .comment-section {
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border-dark);
+      }
+
+      .amount-section:last-child,
+      .payment-method-section:last-child,
+      .comment-section:last-child {
+        border-bottom: none;
+      }
+
+      .action-buttons {
+        justify-content: center;
+        gap: 8px;
+        min-width: 100%;
+        padding-top: 8px;
+      }
+
+      .action-buttons .btn {
+        flex: 1;
+        padding: 8px;
+        font-size: 0.8rem;
+        min-width: 0;
+      }
+
+      /* Mobile responsive for buttons */
+      .btn {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+      }
+
+      .btn i {
+        margin-right: 6px;
+      }
+
+      /* Mobile responsive for forms */
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      .form-control {
+        padding: 12px;
+        font-size: 1rem;
+      }
+
+      .form-actions {
+        gap: 10px;
+      }
+
+      /* Mobile responsive for modals */
+      .modal {
+        margin: 10px;
+        max-height: calc(100vh - 20px);
+        overflow-y: auto;
+      }
+
+      .modal-content {
+        padding: 20px;
+      }
+
+      /* Mobile responsive for headers */
+      .header h2 {
+        font-size: 1.5rem;
+      }
+
+      .content-box {
+        padding: 15px;
+      }
+
+      /* Mobile responsive for navigation buttons */
+      .nav-links a {
+        padding: 12px;
+      }
+
+      .nav-links a i {
+        font-size: 1.2rem;
+      }
+
+      /* Mobile sidebar toggle improvements */
+      .sidebar-toggle {
+        top: 15px;
+        right: 15px;
+        font-size: 20px;
+        padding: 8px;
+        background-color: var(--secondary-bg);
+        border: 1px solid var(--border-dark);
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+
+      .sidebar-toggle:hover {
+        background-color: var(--hover-bg);
+      }
+
+      .sidebar.collapsed .sidebar-toggle {
+        right: 15px;
+        top: 15px;
+      }
+
+      /* Add mobile menu button for very small screens */
+      .mobile-menu-toggle {
+        display: block !important;
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 1002;
+        background-color: var(--gold);
+        color: var(--primary-bg);
+        border: none;
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 16px;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      }
+
+      .mobile-menu-toggle:hover {
+        background-color: #c19b2e;
       }
     }
 
@@ -694,6 +946,10 @@
     </div>
 
     <button class="sidebar-toggle" id="sidebar-toggle">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle" style="display: none;">
       <i class="fas fa-bars"></i>
     </button>
 
@@ -5011,6 +5267,7 @@
     // Sidebar toggle functionality
     const sidebar = document.querySelector('.sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
     const mainContent = document.querySelector('.main-content');
 
     // Toggle sidebar
@@ -5018,9 +5275,24 @@
       sidebar.classList.toggle('collapsed');
     });
 
+    // Mobile menu toggle
+    mobileMenuToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('mobile-open');
+    });
+
+    // Close mobile menu when clicking overlay
+    document.addEventListener('click', (e) => {
+      if (sidebar.classList.contains('mobile-open') &&
+          !sidebar.contains(e.target) &&
+          e.target !== mobileMenuToggle) {
+        sidebar.classList.remove('mobile-open');
+      }
+    });
+
     // Auto-collapse sidebar on navigation
     function autoCollapseSidebar() {
       sidebar.classList.add('collapsed');
+      sidebar.classList.remove('mobile-open');
     }
 
     // Override setActiveNav to include auto-collapse
@@ -5029,6 +5301,23 @@
       originalSetActiveNav(section);
       autoCollapseSidebar();
     };
+
+    // Handle responsive mobile menu
+    function handleMobileMenu() {
+      if (window.innerWidth <= 576) {
+        mobileMenuToggle.style.display = 'block';
+        sidebarToggle.style.display = 'none';
+      } else {
+        mobileMenuToggle.style.display = 'none';
+        sidebarToggle.style.display = 'block';
+      }
+    }
+
+    // Initial check
+    handleMobileMenu();
+
+    // Handle window resize
+    window.addEventListener('resize', handleMobileMenu);
 
   </script>
 </body>
