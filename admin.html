@@ -4522,6 +4522,110 @@
           // before appending ensure this load is still current
           if (myToken !== lessonsLoadToken) return;
           lessonsList.appendChild(el);
+
+          // FORCE APPLY MOBILE STYLES TO NEW LESSON ELEMENT
+          if (window.innerWidth <= 576 || true) { // Force mobile styles
+            console.log('APPLYING FORCE STYLES TO NEW LESSON:', lesson.title);
+
+            // Apply styles directly to the new element
+            el.style.setProperty('margin-bottom', '6px', 'important');
+            el.style.setProperty('padding', '6px', 'important');
+            el.style.setProperty('border-radius', '4px', 'important');
+            el.style.setProperty('background', 'var(--secondary-bg)', 'important');
+            el.style.setProperty('border', '1px solid var(--border-dark)', 'important');
+            el.style.setProperty('box-shadow', 'none', 'important');
+
+            // Style lesson structure
+            const lessonHeader = el.querySelector('.lesson-header');
+            if (lessonHeader) {
+              lessonHeader.style.setProperty('display', 'flex', 'important');
+              lessonHeader.style.setProperty('flex-direction', 'column', 'important');
+              lessonHeader.style.setProperty('gap', '4px', 'important');
+              lessonHeader.style.setProperty('align-items', 'stretch', 'important');
+            }
+
+            const lessonInfo = el.querySelector('.lesson-info');
+            if (lessonInfo) {
+              lessonInfo.style.setProperty('flex', '1', 'important');
+              lessonInfo.style.setProperty('order', '1', 'important');
+            }
+
+            const lessonPrice = el.querySelector('.lesson-price');
+            if (lessonPrice) {
+              lessonPrice.style.setProperty('text-align', 'right', 'important');
+              lessonPrice.style.setProperty('order', '3', 'important');
+              lessonPrice.style.setProperty('margin-top', '4px', 'important');
+            }
+
+            const lessonActions = el.querySelector('.lesson-actions');
+            if (lessonActions) {
+              lessonActions.style.setProperty('display', 'flex', 'important');
+              lessonActions.style.setProperty('gap', '8px', 'important');
+              lessonActions.style.setProperty('align-items', 'center', 'important');
+              lessonActions.style.setProperty('order', '2', 'important');
+              lessonActions.style.setProperty('justify-content', 'flex-end', 'important');
+              lessonActions.style.setProperty('margin-top', '2px', 'important');
+            }
+
+            // Style title
+            const title = el.querySelector('.lesson-title, h4');
+            if (title) {
+              title.style.setProperty('font-size', '0.9rem', 'important');
+              title.style.setProperty('margin', '0', 'important');
+              title.style.setProperty('color', 'var(--gold)', 'important');
+              title.style.setProperty('font-weight', '600', 'important');
+            }
+
+            // Style specific elements
+            const lessonDate = el.querySelector('.lesson-date');
+            if (lessonDate) {
+              lessonDate.style.setProperty('font-size', '0.7rem', 'important');
+              lessonDate.style.setProperty('line-height', '1.1', 'important');
+              lessonDate.style.setProperty('margin', '2px 0', 'important');
+              lessonDate.style.setProperty('color', 'var(--text-gray)', 'important');
+            }
+
+            const lessonParticipants = el.querySelector('.lesson-participants');
+            if (lessonParticipants) {
+              lessonParticipants.style.setProperty('font-size', '0.75rem', 'important');
+              lessonParticipants.style.setProperty('color', 'var(--text-color)', 'important');
+              lessonParticipants.style.setProperty('margin', '2px 0', 'important');
+              lessonParticipants.style.setProperty('font-weight', '500', 'important');
+            }
+
+            const lessonPriceLabel = el.querySelector('.lesson-price-label');
+            if (lessonPriceLabel) {
+              lessonPriceLabel.style.setProperty('font-size', '0.7rem', 'important');
+              lessonPriceLabel.style.setProperty('margin', '0', 'important');
+              lessonPriceLabel.style.setProperty('color', 'var(--text-gray)', 'important');
+            }
+
+            const lessonTotal = el.querySelector('.lesson-total');
+            if (lessonTotal) {
+              lessonTotal.style.setProperty('font-size', '0.9rem', 'important');
+              lessonTotal.style.setProperty('font-weight', '700', 'important');
+              lessonTotal.style.setProperty('color', 'var(--gold)', 'important');
+              lessonTotal.style.setProperty('margin', '0', 'important');
+            }
+
+            // Style date highlight
+            const dateHighlight = el.querySelector('.lesson-date-highlight');
+            if (dateHighlight) {
+              dateHighlight.style.setProperty('color', 'var(--gold)', 'important');
+              dateHighlight.style.setProperty('font-weight', '500', 'important');
+            }
+
+            // Style buttons
+            const buttons = el.querySelectorAll('.btn');
+            buttons.forEach(btn => {
+              btn.style.setProperty('padding', '4px 6px', 'important');
+              btn.style.setProperty('font-size', '0.7rem', 'important');
+              btn.style.setProperty('min-width', '28px', 'important');
+              btn.style.setProperty('height', '24px', 'important');
+            });
+
+            console.log('FORCE STYLES APPLIED TO LESSON:', lesson.title);
+          }
         }
 
       } catch (err) {
@@ -5515,70 +5619,8 @@
         document.body.style.border = 'none';
       }
 
-      // Force apply mobile lesson styles
-      if (width <= 576 || true) {
-        console.log('APPLYING ULTRA FORCE MOBILE LESSON STYLES...');
-
-        // Apply to existing lessons
-        const lessons = document.querySelectorAll('#lessons-section .group-card');
-        console.log('Found lessons:', lessons.length);
-
-        lessons.forEach((lesson, index) => {
-          lesson.style.setProperty('margin-bottom', '6px', 'important');
-          lesson.style.setProperty('padding', '6px', 'important');
-          lesson.style.setProperty('border-radius', '4px', 'important');
-          lesson.style.setProperty('background', 'var(--secondary-bg)', 'important');
-          lesson.style.setProperty('border', '1px solid var(--border-dark)', 'important');
-
-          // Make text smaller
-          const title = lesson.querySelector('h4');
-          if (title) {
-            title.style.setProperty('font-size', '0.9rem', 'important');
-            title.style.setProperty('margin', '0', 'important');
-          }
-
-          // Make all text smaller
-          const allText = lesson.querySelectorAll('*');
-          allText.forEach(el => {
-            el.style.setProperty('font-size', '0.75rem', 'important');
-          });
-
-          console.log(`Applied FORCE styles to lesson ${index + 1}`);
-        });
-
-        // Add global mobile lesson CSS
-        const mobileCSS = `
-          <style id="force-mobile-lessons">
-            #lessons-section .group-card {
-              margin-bottom: 6px !important;
-              padding: 6px !important;
-              border-radius: 4px !important;
-              background: var(--secondary-bg) !important;
-              border: 1px solid var(--border-dark) !important;
-              box-shadow: none !important;
-            }
-            #lessons-section .group-card h4 {
-              font-size: 0.9rem !important;
-              margin: 0 !important;
-            }
-            #lessons-section .group-card * {
-              font-size: 0.75rem !important;
-            }
-            #lessons-section .group-card .btn {
-              padding: 4px 6px !important;
-              font-size: 0.7rem !important;
-            }
-          </style>
-        `;
-
-        // Remove existing force CSS if exists
-        const existingCSS = document.getElementById('force-mobile-lessons');
-        if (existingCSS) existingCSS.remove();
-
-        // Add new force CSS
-        document.head.insertAdjacentHTML('beforeend', mobileCSS);
-        console.log('FORCE MOBILE CSS INJECTED');
-      }
+        // Mobile lesson styles are now applied directly when lessons are created
+        console.log('Mobile mode active - lessons will be styled when loaded');
     }
 
     // Initial check
