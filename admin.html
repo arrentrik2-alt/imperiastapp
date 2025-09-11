@@ -736,8 +736,33 @@
       }
     }
 
+    /* Mobile devices - ensure button is always visible */
+    .mobile-menu-toggle {
+      display: block !important;
+      position: fixed !important;
+      top: 15px !important;
+      left: 15px !important;
+      z-index: 9999 !important;
+      background-color: var(--gold) !important;
+      color: var(--primary-bg) !important;
+      border: none !important;
+      border-radius: 6px !important;
+      padding: 12px !important;
+      font-size: 16px !important;
+      cursor: pointer !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+      transition: all 0.3s ease !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    .mobile-menu-toggle:hover {
+      background-color: #c19b2e;
+      transform: scale(1.05);
+    }
+
     /* Mobile devices - portrait and landscape */
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
       .sidebar {
         width: 0;
         overflow: hidden;
@@ -783,29 +808,6 @@
       /* Ensure collapsed state works on mobile */
       .sidebar.collapsed ~ .main-content {
         margin-left: 0;
-      }
-
-      /* Mobile menu button - always visible on mobile */
-      .mobile-menu-toggle {
-        display: block !important;
-        position: fixed;
-        top: 15px;
-        left: 15px;
-        z-index: 1003;
-        background-color: var(--gold);
-        color: var(--primary-bg);
-        border: none;
-        border-radius: 6px;
-        padding: 12px;
-        font-size: 16px;
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        transition: all 0.3s ease;
-      }
-
-      .mobile-menu-toggle:hover {
-        background-color: #c19b2e;
-        transform: scale(1.05);
       }
 
       /* Mobile responsive for participant table */
@@ -5329,17 +5331,30 @@
 
     // Handle responsive mobile menu
     function handleMobileMenu() {
-      if (window.innerWidth <= 768) {
-        mobileMenuToggle.style.display = 'block';
-        sidebarToggle.style.display = 'none';
-      } else {
+      console.log('handleMobileMenu called, window.innerWidth:', window.innerWidth);
+      if (window.innerWidth > 1024) {
+        console.log('Large screen - hiding mobile menu toggle');
         mobileMenuToggle.style.display = 'none';
         sidebarToggle.style.display = 'block';
+      } else {
+        console.log('Small screen - showing mobile menu toggle');
+        mobileMenuToggle.style.display = 'block !important';
+        sidebarToggle.style.display = 'none';
       }
     }
 
     // Initial check
     handleMobileMenu();
+
+    // Debug button visibility
+    console.log('Mobile menu toggle element:', mobileMenuToggle);
+    console.log('Mobile menu toggle computed style:', getComputedStyle(mobileMenuToggle).display);
+
+    // Test button click functionality
+    mobileMenuToggle.addEventListener('click', () => {
+      console.log('Mobile menu toggle clicked!');
+      sidebar.classList.toggle('mobile-open');
+    });
 
     // Handle window resize and orientation change
     window.addEventListener('resize', handleMobileMenu);
