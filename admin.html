@@ -740,11 +740,43 @@
       .sidebar {
         width: 0;
         overflow: hidden;
+        transform: translateX(-100%);
+      }
+
+      /* Mobile open state - small icon-only sidebar */
+      .sidebar.mobile-open {
+        width: 70px;
+        transform: translateX(0);
+        overflow: visible;
+      }
+
+      .sidebar.mobile-open .logo-text,
+      .sidebar.mobile-open .link-text {
+        display: none;
+      }
+
+      .sidebar.mobile-open .logo {
+        padding: 10px;
+      }
+
+      .sidebar.mobile-open .nav-links {
+        padding: 0 10px;
+      }
+
+      .sidebar.mobile-open .nav-links a {
+        justify-content: center;
+        padding: 15px 10px;
+      }
+
+      .sidebar.mobile-open .nav-links a i {
+        margin-right: 0;
+        font-size: 1.3rem;
       }
 
       .main-content {
         margin-left: 0;
         padding: 15px;
+        transition: margin-left 0.3s ease;
       }
 
       /* Ensure collapsed state works on mobile */
@@ -874,23 +906,11 @@
 
       /* Mobile sidebar toggle improvements */
       .sidebar-toggle {
-        top: 15px;
-        right: 15px;
-        font-size: 20px;
-        padding: 8px;
-        background-color: var(--secondary-bg);
-        border: 1px solid var(--border-dark);
-        border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      }
-
-      .sidebar-toggle:hover {
-        background-color: var(--hover-bg);
+        display: none;
       }
 
       .sidebar.collapsed .sidebar-toggle {
-        right: 15px;
-        top: 15px;
+        display: none;
       }
 
       /* Add mobile menu button for very small screens */
@@ -5298,7 +5318,9 @@
     // Override setActiveNav to include auto-collapse
     const originalSetActiveNav = setActiveNav;
     setActiveNav = function(section) {
+      // Call the original function first
       originalSetActiveNav(section);
+      // Then auto-collapse the sidebar
       autoCollapseSidebar();
     };
 
