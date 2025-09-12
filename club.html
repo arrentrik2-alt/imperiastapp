@@ -464,72 +464,6 @@
       flex: 1;
     }
 
-    /* Training LA styles - identical to camp styles */
-    .trainings-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-      gap: 20px;
-      margin-top: 20px;
-    }
-
-    .training-card {
-      background: var(--secondary-bg);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
-      border-left: 4px solid var(--gold);
-      cursor: pointer;
-    }
-
-    .training-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    }
-
-    .training-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 15px;
-    }
-
-    .training-name {
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: var(--gold);
-      margin: 0;
-    }
-
-    .training-detail {
-      display: flex;
-      align-items: center;
-      margin-bottom: 10px;
-      font-size: 0.9rem;
-      color: var(--text-gray);
-    }
-
-    .training-detail i {
-      margin-right: 8px;
-      width: 16px;
-      color: var(--gold);
-    }
-
-    /* Training status backgrounds - identical to camp styles */
-    .training-card.status-complete {
-      border-left: 4px solid #28a745;
-      background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 100%);
-    }
-
-    .training-card.status-incomplete {
-      border-left: 4px solid #dc3545;
-      background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(220, 53, 69, 0.05) 100%);
-    }
-
-    .training-card.status-attention {
-      border-left: 4px solid #ffc107;
-      background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0.05) 100%);
-    }
 
     .camp-date {
       color: var(--text-gray);
@@ -1649,7 +1583,7 @@
       </div>
     </div>
 
-    <!-- Trainings LA Section -->
+    <!-- Trainings LA Section - Copy of Camps ST -->
     <div class="content-box" id="trainings-section" style="display: none;">
       <div class="content-header">
         <h3>Szkolenia LA</h3>
@@ -1668,7 +1602,7 @@
       </div>
 
       <!-- Trainings List -->
-      <div class="trainings-list" id="trainings-list">
+      <div class="camps-list" id="trainings-list">
         <!-- Trainings will be loaded here -->
       </div>
     </div>
@@ -1677,7 +1611,7 @@
     <div class="content-box" id="training-details-section" style="display: none;">
       <div class="content-header">
         <h3 id="training-details-title">Szczegóły szkolenia</h3>
-        <div class="training-actions">
+        <div class="camp-actions">
           <button class="btn btn-primary" id="add-participant-training-btn">
             <i class="fas fa-user-plus"></i> Dodaj uczestnika
           </button>
@@ -1692,28 +1626,13 @@
         <input type="text" id="participant-training-search" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;">
       </div>
 
-      <!-- Training Details Table -->
-      <div class="training-details-table-container">
-        <table class="camp-details-table">
-          <thead>
-            <tr>
-              <th style="width: 50px;">#</th>
-              <th style="width: 250px;">Uczestnik</th>
-              <th style="width: 150px;">Szkolenie</th>
-              <th style="width: 150px;">Trenerzy</th>
-              <th style="width: 100px;">Razem</th>
-              <th style="width: 100px;">Akcje</th>
-            </tr>
-          </thead>
-          <tbody id="training-participants-list">
-            <!-- Training participants will be loaded here -->
-          </tbody>
-        </table>
+      <div class="camp-details-content" id="training-details-content">
+        <!-- Training details table will be loaded here -->
       </div>
 
-      <!-- Financial Summary -->
-      <div id="training-financial-summary" class="financial-summary" style="display: none; margin-top: 20px;">
-        <h4>Podsumowanie finansowe</h4>
+      <!-- Financial Summary Section -->
+      <div class="financial-summary" id="training-financial-summary">
+        <h3>Podsumowanie Finansowe</h3>
         <div id="training-summary-currencies"></div>
         <div id="training-summary-totals"></div>
         <div id="training-donut-container" style="margin-top: 20px;">
@@ -1732,17 +1651,22 @@
 
         <form id="create-training-form">
           <div class="form-group">
-            <label for="training-name">Nazwa szkolenia</label>
+            <label for="training-name">Nazwa szkolenia *</label>
             <input type="text" id="training-name" name="training-name" class="form-control" required>
           </div>
 
           <div class="form-group">
-            <label for="training-date">Data szkolenia</label>
+            <label for="training-date">Data szkolenia *</label>
             <input type="date" id="training-date" name="training-date" class="form-control" required>
           </div>
 
           <div class="form-group">
-            <label for="training-currency">Waluta</label>
+            <label for="training-amount">Kwota szkolenia *</label>
+            <input type="number" id="training-amount" name="training-amount" class="form-control" step="0.01" min="0" required>
+          </div>
+
+          <div class="form-group">
+            <label for="training-currency">Waluta *</label>
             <select id="training-currency" name="training-currency" class="form-control" required>
               <option value="EUR">EUR</option>
               <option value="PLN">PLN</option>
@@ -5346,7 +5270,7 @@
     }
 
     // ===========================================
-    // TRAININGS LA FUNCTIONALITY
+    // TRAININGS LA FUNCTIONALITY - COPY OF CAMPS ST
     // ===========================================
 
     // DOM Elements for trainings
@@ -5370,7 +5294,7 @@
     let currentTraining = null;
     let trainingTrainerCount = 1;
 
-    // Initialize trainings functionality
+    // Navigation
     document.getElementById('nav-trainings').addEventListener('click', (e) => {
       e.preventDefault();
       setActiveNav('trainings');
@@ -5431,9 +5355,9 @@
           </div>
         `;
 
-        // Load trainings with trainer data
+        // Load trainings with trainer data in a single batch query
         const { data: trainings, error } = await supabase
-          .from('trainings')
+          .from('camps')  // Using same table as camps for now
           .select(`
             *,
             trainers (
@@ -5448,11 +5372,11 @@
 
         if (error) throw error;
 
-        // Load all training participants at once
+        // Load all training participants at once (batch query)
         const { data: allTrainingParticipants, error: participantsError } = await supabase
-          .from('training_participants')
+          .from('camp_participants')  // Using same table as camps for now
           .select('*')
-          .in('training_id', trainings.map(training => training.id));
+          .in('camp_id', trainings.map(training => training.id));
 
         if (participantsError) {
           console.error('Error loading training participants:', participantsError);
@@ -5462,10 +5386,10 @@
         const participantsByTraining = {};
         if (allTrainingParticipants) {
           allTrainingParticipants.forEach(p => {
-            if (!participantsByTraining[p.training_id]) {
-              participantsByTraining[p.training_id] = [];
+            if (!participantsByTraining[p.camp_id]) {
+              participantsByTraining[p.camp_id] = [];
             }
-            participantsByTraining[p.training_id].push({
+            participantsByTraining[p.camp_id].push({
               id: p.participant_id,
               name: p.name,
               isTrainingParticipant: true
@@ -5473,77 +5397,192 @@
           });
         }
 
-        // Store trainings data globally
+        // Process trainer data for each training
+        for (const training of trainings) {
+          if (training.trainers && training.trainers.length > 0) {
+            // Sort trainers by trainer_index and create sequential array
+            training.trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
+            training.trainers = training.trainers.map(trainer => ({
+              name: trainer.name,
+              amount: parseFloat(trainer.amount),
+              currency: trainer.currency
+            }));
+          } else {
+            training.trainers = [];
+          }
+        }
+
+        // Store trainings for status calculation
         window.allTrainings = trainings;
 
-        if (!trainings || trainings.length === 0) {
-          trainingsList.innerHTML = '<div class="empty-state"><p>Brak szkoleń w wybranym miesiącu</p></div>';
+        if (trainings.length === 0) {
+          trainingsList.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-graduation-cap"></i>
+              <p>Brak szkoleń w wybranym miesiącu</p>
+              <p>Kliknij "Utwórz szkolenie" aby dodać pierwsze szkolenie</p>
+            </div>
+          `;
           return;
         }
 
         trainingsList.innerHTML = '';
-
-        trainings.forEach(training => {
-          const participants = participantsByTraining[training.id] || [];
-          const totalParticipants = participants.length;
-
-          // Calculate status based on eligible members (10T or LA style)
-          const eligibleMembers = window.allMembers ? window.allMembers.filter(m => m.style === '10t' || m.style === 'la') : [];
-          const eligibleCount = eligibleMembers.length;
-
-          let statusClass = '';
-          if (totalParticipants >= eligibleCount) {
-            statusClass = 'status-complete';
-          } else if (totalParticipants > 0) {
-            statusClass = 'status-attention';
-          } else {
-            statusClass = 'status-incomplete';
-          }
-
-          const trainingCard = document.createElement('div');
-          trainingCard.className = `training-card ${statusClass}`;
-          trainingCard.setAttribute('data-training-id', training.id);
-
-          // Format date
-          const trainingDate = new Date(training.date);
-          const formattedDate = trainingDate.toLocaleDateString('pl-PL', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-
-          trainingCard.innerHTML = `
-            <div class="training-header">
-              <h4 class="training-name">${training.name}</h4>
-              <div style="font-size: 0.9rem; color: var(--text-gray);">
-                ${totalParticipants}/${eligibleCount} uczestników
-              </div>
-            </div>
-            <div class="training-detail">
-              <i class="fas fa-calendar"></i>
-              <span>${formattedDate}</span>
-            </div>
-            ${training.location ? `
-            <div class="training-detail">
-              <i class="fas fa-map-marker-alt"></i>
-              <span>${training.location}</span>
-            </div>
-            ` : ''}
-            ${training.trainers && training.trainers.length > 0 ? `
-            <div class="training-detail">
-              <i class="fas fa-user-tie"></i>
-              <span>${training.trainers.map(t => t.name).join(', ')}</span>
-            </div>
-            ` : ''}
-          `;
-
-          trainingCard.addEventListener('click', () => openTrainingDetails(training.id));
+        for (const training of trainings) {
+          const trainingCard = createTrainingCard(training, participantsByTraining[training.id] || []);
           trainingsList.appendChild(trainingCard);
-        });
+        }
+
+        // Calculate and apply training statuses immediately to show colors on first load
+        await updateTrainingStatuses(trainings, participantsByTraining);
 
       } catch (err) {
         console.error('Błąd ładowania szkoleń:', err);
         trainingsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania szkoleń</p></div>';
+      }
+    }
+
+    function createTrainingCard(training, participants) {
+      const totalParticipants = participants.length;
+
+      // Calculate status based on eligible members (10T or LA style)
+      const eligibleMembers = window.allMembers ? window.allMembers.filter(m => m.style === '10t' || m.style === 'la') : [];
+      const eligibleCount = eligibleMembers.length;
+
+      let statusClass = '';
+      if (totalParticipants >= eligibleCount) {
+        statusClass = 'status-complete';
+      } else if (totalParticipants > 0) {
+        statusClass = 'status-attention';
+      } else {
+        statusClass = 'status-incomplete';
+      }
+
+      const trainingCard = document.createElement('div');
+      trainingCard.className = `camp-card ${statusClass}`;
+      trainingCard.setAttribute('data-camp-id', training.id);
+
+      // Format date
+      const trainingDate = new Date(training.date);
+      const formattedDate = trainingDate.toLocaleDateString('pl-PL', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      trainingCard.innerHTML = `
+        <div class="camp-header">
+          <h4 class="camp-name">${training.name}</h4>
+          <div style="font-size: 0.9rem; color: var(--text-gray);">
+            ${totalParticipants}/${eligibleCount} uczestników
+          </div>
+        </div>
+        <div class="camp-detail">
+          <i class="fas fa-calendar"></i>
+          <span>${formattedDate}</span>
+        </div>
+        ${training.location ? `
+        <div class="camp-detail">
+          <i class="fas fa-map-marker-alt"></i>
+          <span>${training.location}</span>
+        </div>
+        ` : ''}
+        ${training.trainers && training.trainers.length > 0 ? `
+        <div class="camp-detail">
+          <i class="fas fa-user-tie"></i>
+          <span>${training.trainers.map(t => t.name).join(', ')}</span>
+        </div>
+        ` : ''}
+      `;
+
+      trainingCard.addEventListener('click', () => openTrainingDetails(training.id));
+      return trainingCard;
+    }
+
+    async function updateTrainingStatuses(trainings, participantsByTraining) {
+      for (const training of trainings) {
+        await updateTrainingStatus(training.id);
+      }
+    }
+
+    async function updateTrainingStatus(trainingId) {
+      console.log(`[UPDATE-TRAINING-STATUS] Starting update for training ID: ${trainingId}`);
+      const trainingCard = document.querySelector(`.camp-card[data-camp-id="${trainingId}"]`);
+      if (!trainingCard) {
+        console.log(`[UPDATE-TRAINING-STATUS] Training card not found for ID: ${trainingId}`);
+        return;
+      }
+
+      // Get training data
+      const training = Array.isArray(window.allTrainings) ? window.allTrainings.find(t => t.id === trainingId) : null;
+      if (!training) {
+        console.log(`[UPDATE-TRAINING-STATUS] Training data not found for ID: ${trainingId}`);
+        return;
+      }
+
+      // Get participants for this training - both external and club members
+      const externalParticipants = await getTrainingParticipants(trainingId);
+      console.log(`[UPDATE-TRAINING-STATUS] Found ${externalParticipants.length} external participants for training ${training.name}`);
+
+      // Always include club members eligible for this training
+      const members = window.allMembers || [];
+      console.log(`[UPDATE-TRAINING-STATUS] window.allMembers exists: ${!!window.allMembers}, total members: ${members.length}`);
+
+      const eligibleMembers = members.filter(m => m.style === '10t' || m.style === 'la');
+      console.log(`[UPDATE-TRAINING-STATUS] Found ${eligibleMembers.length} eligible club members (10T or LA)`);
+
+      // Combine external participants and club members, but avoid duplicates
+      const allParticipants = [...externalParticipants];
+      eligibleMembers.forEach(member => {
+        // Check if this member is not already in external participants
+        const isAlreadyExternal = externalParticipants.some(ext => ext.id === member.id);
+        if (!isAlreadyExternal) {
+          allParticipants.push(member);
+        }
+      });
+
+      console.log(`[UPDATE-TRAINING-STATUS] Training ${training.name}: ${externalParticipants.length} external + ${eligibleMembers.length} club members = ${allParticipants.length} total participants`);
+
+      // Calculate status
+      const statusClass = await calculateTrainingStatus(training, allParticipants);
+
+      // Remove existing status classes
+      trainingCard.classList.remove('status-complete', 'status-incomplete', 'status-attention');
+
+      // Add new status class only if not empty
+      if (statusClass) {
+        trainingCard.classList.add(statusClass);
+        console.log(`[UPDATE-TRAINING-STATUS] Applied status class: ${statusClass}`);
+      } else {
+        console.log(`[UPDATE-TRAINING-STATUS] No status class applied (normal state)`);
+      }
+    }
+
+    async function calculateTrainingStatus(training, participants) {
+      // Simple status calculation - can be made more complex later
+      const totalParticipants = participants.length;
+      const eligibleMembers = window.allMembers ? window.allMembers.filter(m => m.style === '10t' || m.style === 'la') : [];
+
+      if (totalParticipants >= eligibleMembers.length) {
+        return 'status-complete';
+      } else if (totalParticipants > 0) {
+        return 'status-attention';
+      } else {
+        return 'status-incomplete';
+      }
+    }
+
+    async function getTrainingParticipants(trainingId) {
+      try {
+        const { data: participants, error } = await supabase
+          .from('camp_participants')  // Using same table as camps
+          .select('*')
+          .eq('camp_id', trainingId);
+
+        if (error) throw error;
+        return participants || [];
+      } catch (err) {
+        console.error('Error getting training participants:', err);
+        return [];
       }
     }
 
@@ -5583,9 +5622,9 @@
       try {
         // Get participants for this training
         const { data: participants, error } = await supabase
-          .from('training_participants')
+          .from('camp_participants')  // Using same table as camps
           .select('*')
-          .eq('training_id', trainingId)
+          .eq('camp_id', trainingId)
           .order('name', { ascending: true });
 
         if (error) throw error;
@@ -5593,9 +5632,9 @@
         // Get payments for these participants
         const participantIds = participants.map(p => p.participant_id);
         const { data: payments, error: paymentsError } = await supabase
-          .from('training_payments')
+          .from('camp_payments')  // Using same table as camps
           .select('*')
-          .eq('training_id', trainingId)
+          .eq('camp_id', trainingId)
           .in('participant_id', participantIds);
 
         if (paymentsError) throw paymentsError;
@@ -5616,7 +5655,7 @@
 
         participants.forEach((participant, index) => {
           const payment = paymentLookup[participant.participant_id];
-          const trainingAmount = payment ? parseFloat(payment.amount) || 0 : 0;
+          const campAmount = payment ? parseFloat(payment.amount) || 0 : 0;
           const trainerAmounts = payment ? payment.trainer_amounts || [] : [];
           const confirmed = payment ? payment.confirmed : false;
 
@@ -5629,25 +5668,25 @@
               <div style="font-weight: bold;">${participant.name}</div>
             </td>
             <td>
-              <input type="number" class="payment-input form-control" data-column-type="training" data-participant-id="${participant.participant_id}" data-training-id="${trainingId}" value="${trainingAmount}" step="0.01" min="0" style="width: 100px; text-align: center;">
+              <input type="number" class="payment-input form-control" data-column-type="camp" data-participant-id="${participant.participant_id}" data-camp-id="${trainingId}" value="${campAmount}" step="0.01" min="0" style="width: 100px; text-align: center;">
             </td>
             <td>
               ${currentTraining.trainers ? currentTraining.trainers.map((trainer, trainerIndex) => `
                 <div style="margin-bottom: 5px;">
                   <small style="color: var(--text-gray);">${trainer.name}:</small><br>
-                  <input type="number" class="payment-input form-control" data-column-type="trainer" data-participant-id="${participant.participant_id}" data-training-id="${trainingId}" data-trainer-index="${trainerIndex}" value="${trainerAmounts[trainerIndex] || 0}" step="0.01" min="0" style="width: 80px; text-align: center; font-size: 0.8rem;">
+                  <input type="number" class="payment-input form-control" data-column-type="trainer" data-participant-id="${participant.participant_id}" data-camp-id="${trainingId}" data-trainer-index="${trainerIndex}" value="${trainerAmounts[trainerIndex] || 0}" step="0.01" min="0" style="width: 80px; text-align: center; font-size: 0.8rem;">
                 </div>
               `).join('') : ''}
             </td>
             <td style="font-weight: bold; text-align: center;">
-              <span class="total-amount">${calculateTrainingParticipantTotal(trainingAmount, trainerAmounts)}</span>
+              <span class="total-amount">${calculateParticipantTotal(campAmount, trainerAmounts)}</span>
               ${currentTraining.currency || 'PLN'}
             </td>
             <td style="text-align: center;">
-              <button class="btn btn-sm ${confirmed ? 'btn-success' : 'btn-outline'}" onclick="toggleTrainingPayment(${participant.participant_id}, ${trainingId})">
+              <button class="btn btn-sm ${confirmed ? 'btn-success' : 'btn-outline'}" onclick="togglePayment(${participant.participant_id}, ${trainingId})">
                 <i class="fas ${confirmed ? 'fa-check' : 'fa-plus'}"></i>
               </button>
-              <button class="btn btn-sm btn-outline" onclick="removeTrainingParticipant(${participant.participant_id}, ${trainingId})" style="margin-left: 5px;">
+              <button class="btn btn-sm btn-outline" onclick="removeParticipant(${participant.participant_id}, ${trainingId})" style="margin-left: 5px;">
                 <i class="fas fa-trash"></i>
               </button>
             </td>
@@ -5657,7 +5696,7 @@
         });
 
         // Setup payment event listeners
-        setupTrainingPaymentEventListeners();
+        setupPaymentEventListeners();
 
       } catch (err) {
         console.error('Błąd ładowania uczestników szkolenia:', err);
@@ -5665,8 +5704,8 @@
       }
     }
 
-    function calculateTrainingParticipantTotal(trainingAmount, trainerAmounts) {
-      const total = parseFloat(trainingAmount) || 0;
+    function calculateParticipantTotal(campAmount, trainerAmounts) {
+      const total = parseFloat(campAmount) || 0;
       const trainerTotal = trainerAmounts ? trainerAmounts.reduce((sum, amount) => sum + (parseFloat(amount) || 0), 0) : 0;
       return (total + trainerTotal).toFixed(2);
     }
@@ -5677,7 +5716,10 @@
 
       searchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase().trim();
-        const rows = trainingParticipantsList.querySelectorAll('tr');
+        const table = document.querySelector('#training-details-content .camp-details-table');
+        if (!table) return;
+
+        const rows = table.querySelectorAll('tbody tr');
 
         rows.forEach(row => {
           const nameCell = row.querySelector('td:nth-child(2)');
@@ -5725,6 +5767,7 @@
       const trainingData = {
         name: formData.get('training-name').trim(),
         date: formData.get('training-date'),
+        amount: parseFloat(formData.get('training-amount')) || 0,
         currency: formData.get('training-currency'),
         location: formData.get('training-location') || null,
         description: formData.get('training-description') || null,
@@ -5743,8 +5786,8 @@
       submitBtn.disabled = true;
 
       try {
-        // Create training
-        const { data: trainingId, error } = await supabase.rpc('create_training', trainingData);
+        // Create training using same RPC as camps
+        const { data: trainingId, error } = await supabase.rpc('create_camp', trainingData);
         if (error) throw error;
 
         // Add trainers
@@ -5755,9 +5798,9 @@
 
           if (trainerName && trainerAmount > 0) {
             await supabase
-              .from('training_trainers')
+              .from('camp_trainers')  // Using same table as camps
               .insert({
-                training_id: trainingId,
+                camp_id: trainingId,
                 name: trainerName,
                 amount: trainerAmount,
                 currency: trainerCurrency,
@@ -5806,21 +5849,13 @@
               <option value="PLN">PLN</option>
             </select>
           </div>
-          <button type="button" class="remove-trainer-btn" onclick="removeTrainingTrainer(this)">
+          <button type="button" class="remove-trainer-btn" onclick="removeTrainer(this)">
             <i class="fas fa-trash"></i>
           </button>
         </div>
       `;
       trainerContainer.appendChild(trainerItem);
     });
-
-    function removeTrainingTrainer(button) {
-      button.closest('.trainer-item').remove();
-      trainingTrainerCount--;
-    }
-
-    // Make removeTrainingTrainer global
-    window.removeTrainingTrainer = removeTrainingTrainer;
 
     // Add participant to training functionality
     addParticipantTrainingBtn.addEventListener('click', () => {
@@ -5870,9 +5905,9 @@
       try {
         // Add participant to training
         const { error } = await supabase
-          .from('training_participants')
+          .from('camp_participants')  // Using same table as camps
           .insert({
-            training_id: currentTraining.id,
+            camp_id: currentTraining.id,
             participant_id: Date.now(), // Simple ID generation - in production use proper UUID
             name: participantData.name
           });
@@ -5893,9 +5928,9 @@
       try {
         // Check if payment exists
         const { data: existingPayment, error: checkError } = await supabase
-          .from('training_payments')
+          .from('camp_payments')  // Using same table as camps
           .select('*')
-          .eq('training_id', trainingId)
+          .eq('camp_id', trainingId)
           .eq('participant_id', participantId)
           .single();
 
@@ -5906,18 +5941,18 @@
         if (existingPayment) {
           // Toggle confirmation
           const { error } = await supabase
-            .from('training_payments')
+            .from('camp_payments')  // Using same table as camps
             .update({ confirmed: !existingPayment.confirmed })
-            .eq('training_id', trainingId)
+            .eq('camp_id', trainingId)
             .eq('participant_id', participantId);
 
           if (error) throw error;
         } else {
           // Create new payment record
           const { error } = await supabase
-            .from('training_payments')
+            .from('camp_payments')  // Using same table as camps
             .insert({
-              training_id: trainingId,
+              camp_id: trainingId,
               participant_id: participantId,
               amount: 0,
               trainer_amounts: [],
@@ -5942,16 +5977,16 @@
       try {
         // Remove payment first
         await supabase
-          .from('training_payments')
+          .from('camp_payments')  // Using same table as camps
           .delete()
-          .eq('training_id', trainingId)
+          .eq('camp_id', trainingId)
           .eq('participant_id', participantId);
 
         // Remove participant
         const { error } = await supabase
-          .from('training_participants')
+          .from('camp_participants')  // Using same table as camps
           .delete()
-          .eq('training_id', trainingId)
+          .eq('camp_id', trainingId)
           .eq('participant_id', participantId);
 
         if (error) throw error;
@@ -5967,10 +6002,10 @@
 
     function setupTrainingPaymentEventListeners() {
       // Similar to camp payment listeners but for trainings
-      document.querySelectorAll('.payment-input').forEach(input => {
+      document.querySelectorAll('#training-details-content .payment-input').forEach(input => {
         input.addEventListener('change', async (e) => {
           const participantId = e.target.dataset.participantId;
-          const trainingId = e.target.dataset.trainingId;
+          const trainingId = e.target.dataset.campId;
           const columnType = e.target.dataset.columnType;
           const trainerIndex = e.target.dataset.trainerIndex;
           const newAmount = parseFloat(e.target.value) || 0;
@@ -5978,15 +6013,15 @@
           try {
             // Get existing payment
             const { data: existingPayment, error: checkError } = await supabase
-              .from('training_payments')
+              .from('camp_payments')  // Using same table as camps
               .select('*')
-              .eq('training_id', trainingId)
+              .eq('camp_id', trainingId)
               .eq('participant_id', participantId)
               .single();
 
             let updateData = {};
 
-            if (columnType === 'training') {
+            if (columnType === 'camp') {
               updateData.amount = newAmount;
             } else if (columnType === 'trainer') {
               const trainerAmounts = existingPayment ? existingPayment.trainer_amounts || [] : [];
@@ -5997,20 +6032,20 @@
             if (existingPayment) {
               // Update existing payment
               const { error } = await supabase
-                .from('training_payments')
+                .from('camp_payments')  // Using same table as camps
                 .update(updateData)
-                .eq('training_id', trainingId)
+                .eq('camp_id', trainingId)
                 .eq('participant_id', participantId);
 
               if (error) throw error;
             } else {
               // Create new payment
-              updateData.training_id = trainingId;
+              updateData.camp_id = trainingId;
               updateData.participant_id = participantId;
               updateData.confirmed = false;
 
               const { error } = await supabase
-                .from('training_payments')
+                .from('camp_payments')  // Using same table as camps
                 .insert(updateData);
 
               if (error) throw error;
@@ -6020,10 +6055,10 @@
             const row = e.target.closest('tr');
             const totalCell = row.querySelector('.total-amount');
             if (totalCell) {
-              const trainingAmount = parseFloat(row.querySelector('input[data-column-type="training"]').value) || 0;
+              const campAmount = parseFloat(row.querySelector('input[data-column-type="camp"]').value) || 0;
               const trainerInputs = row.querySelectorAll('input[data-column-type="trainer"]');
               const trainerAmounts = Array.from(trainerInputs).map(input => parseFloat(input.value) || 0);
-              totalCell.textContent = calculateTrainingParticipantTotal(trainingAmount, trainerAmounts);
+              totalCell.textContent = calculateParticipantTotal(campAmount, trainerAmounts);
             }
 
           } catch (err) {
@@ -6037,6 +6072,7 @@
     // Make training functions global
     window.toggleTrainingPayment = toggleTrainingPayment;
     window.removeTrainingParticipant = removeTrainingParticipant;
+
   </script>
 </body>
 </html>
