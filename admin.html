@@ -85,11 +85,13 @@
 
     /* Mobile open state */
     .sidebar.mobile-open {
-      width: 250px;
+      display: block;
+      width: 280px;
       position: fixed;
       left: 0;
       top: 0;
       z-index: 1001;
+      height: 100vh;
     }
 
     .sidebar.mobile-open ~ .main-content {
@@ -740,6 +742,7 @@
       .sidebar {
         width: 0;
         overflow: hidden;
+        display: none;
       }
 
       .main-content {
@@ -872,6 +875,36 @@
         font-size: 1.2rem;
       }
 
+      /* Optimize lessons header for mobile */
+      #lessons-section .content-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      #lessons-section .content-header > div:first-child {
+        order: 2;
+        margin-bottom: 8px;
+      }
+
+      #lessons-section .content-header > div:last-child {
+        order: 1;
+        justify-content: flex-start;
+        margin-bottom: 8px;
+      }
+
+      /* Better spacing for lesson cards */
+      #lessons-section .group-card {
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+
+      /* Reduce empty space in lessons list */
+      #lessons-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
       /* Mobile sidebar toggle improvements */
       .sidebar-toggle {
         top: 15px;
@@ -913,6 +946,110 @@
       .mobile-menu-toggle:hover {
         background-color: #c19b2e;
       }
+
+      /* Optimize lessons display for mobile */
+      .group-card {
+        margin-bottom: 8px;
+        padding: 8px;
+      }
+
+      .group-card h4 {
+        font-size: 1rem;
+        margin-bottom: 2px;
+      }
+
+      .group-card div[style*="color:var(--text-gray)"] {
+        font-size: 0.8rem;
+        line-height: 1.2;
+        margin-bottom: 4px;
+      }
+
+      .group-card div[style*="color:var(--text-light)"] {
+        font-size: 0.75rem;
+        color: var(--text-gray);
+        margin-top: 2px;
+      }
+
+      .group-card .lesson-total {
+        font-size: 0.9rem;
+        margin-top: 2px;
+      }
+
+      .group-card div[style*="font-size:0.85rem"] {
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+      }
+
+      /* Compact lesson cards on mobile */
+      .group-card > div {
+        gap: 8px;
+      }
+
+      .group-card > div > div:first-child {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .group-card > div > div:nth-child(2) {
+        min-width: 100px;
+        text-align: right;
+      }
+
+      .group-card > div > div:last-child {
+        min-width: 60px;
+      }
+
+      .group-card .btn {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+      }
+
+      /* Reduce spacing in lessons section */
+      #lessons-section .content-header {
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      #lessons-section .content-header h3 {
+        font-size: 1.2rem;
+        margin-bottom: 8px;
+        width: 100%;
+      }
+
+      #lessons-section .content-header > div {
+        gap: 6px;
+      }
+
+      #lessons-section .month-selector {
+        margin-bottom: 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      #lessons-section .month-selector label {
+        margin-bottom: 4px;
+        width: 100%;
+      }
+
+      #lessons-section .month-selector > div {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+
+      /* Lesson type buttons */
+      #lessons-section #lesson-type-private,
+      #lessons-section #lesson-type-pierwszy {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+      }
+
+      /* Add lesson button */
+      #lessons-section #add-lesson-btn {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+      }
     }
 
     /* RODO saved visual */
@@ -937,114 +1074,8 @@
     .payment-paid { background: var(--paid-bg) !important; border: 1px solid var(--paid-border) !important; }
     .payment-unpaid { background: var(--unpaid-bg) !important; border: 1px solid var(--unpaid-border) !important; }
   </style>
-  <!-- Mobile redesign: full replacement of prior mobile styles; desktop unchanged -->
-  <style>
-  @media (max-width: 900px) {
-    /* Off-canvas sidebar instead of hiding it */
-    .sidebar {
-      position: fixed;
-      left: 0;
-      top: 0;
-      height: 100vh;
-      width: 85%;
-      max-width: 320px;
-      background: var(--secondary-bg);
-      transform: translateX(-110%);
-      transition: transform 0.28s ease, box-shadow 0.28s ease;
-      z-index: 2100;
-      display: block !important;
-      visibility: visible !important;
-      overflow-y: auto;
-    }
-
-    .sidebar.mobile-open {
-      transform: translateX(0) !important;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-    }
-
-    /* Backdrop when sidebar is open */
-    .mobile-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.45);
-      z-index: 2050;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.2s ease;
-    }
-
-    .mobile-backdrop.active { opacity: 1; visibility: visible; }
-
-    /* Mobile topbar shown on small screens */
-    .mobile-topbar { position: fixed; top: 0; left: 0; right: 0; height: 56px; background: var(--secondary-bg); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; z-index: 2200; border-bottom: 1px solid var(--border-dark); }
-    .mobile-topbar .logo h1 { font-size: 1.05rem; margin: 0; color: var(--gold); }
-    .mobile-topbar .actions { display: flex; gap: 8px; align-items: center; }
-
-    /* Ensure body content sits below topbar */
-    body { padding-top: 56px !important; display: block !important; }
-    .main-content { margin: 0 !important; padding: 12px !important; overflow: visible !important; }
-    .content-box { padding: 12px !important; border-radius: 8px; }
-    .group-card { padding: 12px !important; display: flex; flex-direction: column; gap: 8px; }
-    .group-detail { flex-wrap: wrap; }
-    .group-actions { justify-content: flex-start; gap: 8px; flex-wrap: wrap; }
-
-    /* Buttons full width and touch-friendly */
-    .btn { width: 100% !important; font-size: 1rem !important; padding: 12px !important; border-radius: 8px; }
-    .btn i { margin-right: 8px; }
-    .form-actions { display: flex !important; flex-direction: column !important; gap: 10px; align-items: stretch; }
-    .form-control { padding: 12px !important; font-size: 1rem !important; }
-
-    /* Modals become full screen panels */
-    .modal { align-items: flex-start !important; padding-top: 56px !important; }
-    .modal-content { width: 100% !important; max-width: 100% !important; height: calc(100vh - 56px) !important; margin: 0 !important; border-radius: 0 !important; padding: 16px !important; box-sizing: border-box; }
-
-    /* Make wide tables scrollable */
-    .table-responsive, .content-box table, table { width: 100% !important; display: block; overflow: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-
-    /* Nav links compact horizontal scroller */
-    .nav-links { display: flex !important; gap: 6px; padding: 6px; overflow-x: auto; white-space: nowrap; }
-    .nav-links a { display: inline-flex !important; padding: 8px 10px !important; border-radius: 6px !important; }
-
-    /* Mobile bottom navigation */
-    .mobile-bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 56px; background: var(--secondary-bg); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid var(--border-dark); z-index: 2200; }
-    .mobile-bottom-nav button { background: transparent; border: none; color: var(--text-gray); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.85rem; padding: 6px; }
-
-    /* Make headers compact */
-    .header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: none; }
-    .header h2 { font-size: 1.2rem; margin: 0; color: var(--gold); }
-    .user-info { justify-content: flex-end; width: 100%; }
-
-    /* Accessibility: larger focus ring for touch */
-    a:focus, button:focus, input:focus { outline: 3px solid rgba(212,175,55,0.14); outline-offset: 2px; }
-
-    /* Hide any legacy mobile-specific elements that conflict */
-    .mobile-legacy, .old-mobile-header, .old-mobile-footer { display: none !important; }
-  }
-
-  /* Very small phones adjustments */
-  @media (max-width: 420px) {
-    .mobile-topbar .logo h1 { font-size: 1rem; }
-    .btn { padding: 10px !important; font-size: 0.98rem !important; }
-    .group-card h4 { font-size: 1rem; }
-    .header h2 { font-size: 1.05rem; }
-    body { padding-left: 8px !important; padding-right: 8px !important; }
-  }
-  </style>
 </head>
 <body>
-  <!-- Mobile topbar and backdrop -->
-  <div class="mobile-topbar" style="display:none;">
-    <div style="display:flex; align-items:center; gap:10px;">
-      <button id="mobile-open-btn" class="btn" style="width:auto; padding:8px 10px; border-radius:6px;"><i class="fas fa-bars"></i></button>
-      <div class="logo"><h1><span class="logo-text">Imperia</span></h1></div>
-    </div>
-    <div class="actions">
-      <button id="mobile-search-btn" class="btn btn-outline" style="width:auto; padding:6px 10px; border-radius:6px;"><i class="fas fa-search"></i></button>
-      <button id="mobile-user-btn" class="btn btn-outline" style="width:auto; padding:6px 10px; border-radius:6px;"><i class="fas fa-user"></i></button>
-    </div>
-  </div>
-
-  <div class="mobile-backdrop" id="mobile-backdrop"></div>
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="logo">
@@ -5425,75 +5456,6 @@
     // Handle window resize
     window.addEventListener('resize', handleMobileMenu);
 
-  </script>
-  <script>
-    // Mobile UI controls for admin.html
-    (function(){
-      const mobileTopbar = document.querySelector('.mobile-topbar');
-      const mobileOpenBtn = document.getElementById('mobile-open-btn');
-      const sidebar = document.querySelector('.sidebar');
-      const mobileBackdrop = document.getElementById('mobile-backdrop');
-      const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
-
-      function showMobileUI() {
-        if (window.innerWidth <= 900) {
-          mobileTopbar && (mobileTopbar.style.display = 'flex');
-          mobileMenuToggle && (mobileMenuToggle.style.display = 'block');
-          // ensure main content spacing
-          document.body.style.paddingTop = '56px';
-        } else {
-          mobileTopbar && (mobileTopbar.style.display = 'none');
-          mobileMenuToggle && (mobileMenuToggle.style.display = 'none');
-          document.body.style.paddingTop = '';
-          sidebar.classList.remove('mobile-open');
-          mobileBackdrop && mobileBackdrop.classList.remove('active');
-        }
-      }
-
-      mobileOpenBtn && mobileOpenBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        sidebar.classList.add('mobile-open');
-        mobileBackdrop && mobileBackdrop.classList.add('active');
-      });
-
-      // also support the small hamburger inside sidebar area
-      mobileMenuToggle && mobileMenuToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (sidebar.classList.contains('mobile-open')) {
-          sidebar.classList.remove('mobile-open');
-          mobileBackdrop && mobileBackdrop.classList.remove('active');
-        } else {
-          sidebar.classList.add('mobile-open');
-          mobileBackdrop && mobileBackdrop.classList.add('active');
-        }
-      });
-
-      mobileBackdrop && mobileBackdrop.addEventListener('click', () => {
-        sidebar.classList.remove('mobile-open');
-        mobileBackdrop.classList.remove('active');
-      });
-
-      // Close sidebar on Escape
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && sidebar.classList.contains('mobile-open')) {
-          sidebar.classList.remove('mobile-open');
-          mobileBackdrop && mobileBackdrop.classList.remove('active');
-        }
-      });
-
-      // Close when clicking outside (but not when clicking inside sidebar)
-      document.addEventListener('click', (e) => {
-        if (sidebar.classList.contains('mobile-open') && !sidebar.contains(e.target) && e.target !== mobileOpenBtn && e.target !== mobileMenuToggle) {
-          sidebar.classList.remove('mobile-open');
-          mobileBackdrop && mobileBackdrop.classList.remove('active');
-        }
-      }, true);
-
-      // Respond to resize
-      window.addEventListener('resize', showMobileUI);
-      // Initial
-      showMobileUI();
-    })();
   </script>
 </body>
 </html>
