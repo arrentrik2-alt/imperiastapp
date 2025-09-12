@@ -3760,7 +3760,7 @@
       card.innerHTML = `
         <div class="camp-header">
           <h4>${laTraining.name}</h4>
-          <div class="camp-date">${formatDate(laTraining.date)}</div>
+          <div class="camp-date">${new Date(laTraining.date).toLocaleDateString('pl-PL')}</div>
         </div>
         <div class="camp-info">
           <div class="camp-detail">
