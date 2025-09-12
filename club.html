@@ -3891,7 +3891,7 @@
 
         // Create financial summary
         uiPromises.push(
-          createFinancialSummary(laTraining, allParticipants).then(summaryHtml => {
+          createFinancialSummaryHTML(laTraining, allParticipants).then(summaryHtml => {
             const summaryContainer = document.getElementById('la-financial-summary');
             if (summaryContainer) {
               summaryContainer.style.display = 'block';
