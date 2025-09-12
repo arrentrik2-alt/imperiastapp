@@ -1241,7 +1241,7 @@
         </a>
       </li>
       <li>
-        <a href="camps.html" id="nav-camps">
+        <a href="#" id="nav-camps">
           <i class="fas fa-campground"></i>
           <span class="link-text">Campy ST</span>
         </a>
@@ -3569,14 +3569,10 @@
       setActiveNav('members');
     });
 
-    // nav-camps now points to a separate page (camps.html). Keep click handler only if user stays in same page.
-    const navCampsLink = document.getElementById('nav-camps');
-    if (navCampsLink && navCampsLink.getAttribute('href') === '#') {
-      navCampsLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        setActiveNav('camps');
-      });
-    }
+    document.getElementById('nav-camps').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('camps');
+    });
 
     // Update the original navigation function
     navMembers.addEventListener('click', (e) => {
