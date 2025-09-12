@@ -61,7 +61,6 @@
       padding: 5px;
       border-radius: 4px;
       transition: all 0.3s ease;
-      z-index: 1001;
     }
 
     .sidebar-toggle:hover {
@@ -69,9 +68,8 @@
     }
 
     .sidebar.collapsed .sidebar-toggle {
-      right: 10px;
-      top: 10px;
-      transform: none;
+      right: 50%;
+      transform: translateX(50%);
     }
 
     .sidebar.collapsed .logo-text,
@@ -81,33 +79,6 @@
 
     .sidebar.collapsed .logo {
       padding: 10px;
-    }
-
-    /* Mobile open state */
-    .sidebar.mobile-open {
-      display: block;
-      width: 280px;
-      position: fixed;
-      left: 0;
-      top: 0;
-      z-index: 1001;
-      height: 100vh;
-    }
-
-    .sidebar.mobile-open ~ .main-content {
-      margin-left: 0;
-    }
-
-    /* Overlay for mobile menu */
-    .sidebar.mobile-open::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: -1;
     }
     
     .logo {
@@ -158,12 +129,6 @@
       margin-left: 250px;
       padding: 20px;
       overflow-x: hidden;
-      transition: margin-left 0.3s ease;
-    }
-
-    /* Main content when sidebar is collapsed */
-    .sidebar.collapsed ~ .main-content {
-      margin-left: 70px;
     }
     
     .header {
@@ -673,382 +638,15 @@
         margin-left: 70px;
       }
     }
-
-    /* Small tablets and large phones */
-    @media (max-width: 768px) {
-      /* Adjust participant table for small screens */
-      .participant-row {
-        gap: 8px;
-        padding: 12px;
-      }
-
-      .participant-number {
-        min-width: 25px;
-        font-size: 0.85rem;
-      }
-
-      .participant-info {
-        flex: 0 0 180px;
-        font-size: 0.9rem;
-      }
-
-      .amount-section {
-        min-width: 80px;
-      }
-
-      .amount-section input {
-        width: 70px;
-      }
-
-      .payment-method-section {
-        min-width: 110px;
-      }
-
-      .comment-section {
-        flex: 1;
-        min-width: 120px;
-      }
-
-      .action-buttons {
-        min-width: 80px;
-        gap: 4px;
-      }
-
-      .action-buttons .btn {
-        padding: 6px 8px;
-        font-size: 0.8rem;
-      }
-
-      /* Adjust modal sizes for tablets */
-      .modal {
-        margin: 20px;
-        max-width: calc(100vw - 40px);
-      }
-
-      /* Adjust button sizes */
-      .btn {
-        padding: 8px 14px;
-        font-size: 0.9rem;
-      }
-
-      /* Adjust form controls */
-      .form-control {
-        padding: 10px;
-        font-size: 0.95rem;
-      }
-    }
-
+    
     @media (max-width: 576px) {
       .sidebar {
         width: 0;
         overflow: hidden;
-        display: none;
       }
-
+      
       .main-content {
         margin-left: 0;
-        padding: 15px;
-      }
-
-      /* Ensure collapsed state works on mobile */
-      .sidebar.collapsed ~ .main-content {
-        margin-left: 0;
-      }
-
-      /* Mobile responsive for participant table */
-      .participant-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-        padding: 12px;
-        border-radius: 6px;
-        background: var(--secondary-bg);
-        border: 1px solid var(--border-dark);
-      }
-
-      .participant-row > div {
-        width: 100%;
-        min-width: 100%;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .participant-number {
-        font-size: 0.9rem;
-        font-weight: bold;
-        color: var(--text-gray);
-        min-width: 30px;
-      }
-
-      .participant-info {
-        flex: 1;
-        justify-content: flex-start;
-        gap: 8px;
-      }
-
-      .participant-info div:first-child {
-        font-weight: 600;
-        color: var(--text-color);
-      }
-
-      .participant-info div:last-child {
-        color: var(--text-gray);
-        font-size: 0.85rem;
-      }
-
-      .amount-section, .payment-method-section, .comment-section {
-        padding: 8px 0;
-        border-bottom: 1px solid var(--border-dark);
-      }
-
-      .amount-section:last-child,
-      .payment-method-section:last-child,
-      .comment-section:last-child {
-        border-bottom: none;
-      }
-
-      .action-buttons {
-        justify-content: center;
-        gap: 8px;
-        min-width: 100%;
-        padding-top: 8px;
-      }
-
-      .action-buttons .btn {
-        flex: 1;
-        padding: 8px;
-        font-size: 0.8rem;
-        min-width: 0;
-      }
-
-      /* Mobile responsive for buttons */
-      .btn {
-        padding: 10px 12px;
-        font-size: 0.9rem;
-      }
-
-      .btn i {
-        margin-right: 6px;
-      }
-
-      /* Mobile responsive for forms */
-      .form-group {
-        margin-bottom: 15px;
-      }
-
-      .form-control {
-        padding: 12px;
-        font-size: 1rem;
-      }
-
-      .form-actions {
-        gap: 10px;
-      }
-
-      /* Mobile responsive for modals */
-      .modal {
-        margin: 10px;
-        max-height: calc(100vh - 20px);
-        overflow-y: auto;
-      }
-
-      .modal-content {
-        padding: 20px;
-      }
-
-      /* Mobile responsive for headers */
-      .header h2 {
-        font-size: 1.5rem;
-      }
-
-      .content-box {
-        padding: 15px;
-      }
-
-      /* Mobile responsive for navigation buttons */
-      .nav-links a {
-        padding: 12px;
-      }
-
-      .nav-links a i {
-        font-size: 1.2rem;
-      }
-
-      /* Optimize lessons header for mobile */
-      #lessons-section .content-header {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      #lessons-section .content-header > div:first-child {
-        order: 2;
-        margin-bottom: 8px;
-      }
-
-      #lessons-section .content-header > div:last-child {
-        order: 1;
-        justify-content: flex-start;
-        margin-bottom: 8px;
-      }
-
-      /* Better spacing for lesson cards */
-      #lessons-section .group-card {
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      }
-
-      /* Reduce empty space in lessons list */
-      #lessons-list {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      /* Mobile sidebar toggle improvements */
-      .sidebar-toggle {
-        top: 15px;
-        right: 15px;
-        font-size: 20px;
-        padding: 8px;
-        background-color: var(--secondary-bg);
-        border: 1px solid var(--border-dark);
-        border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      }
-
-      .sidebar-toggle:hover {
-        background-color: var(--hover-bg);
-      }
-
-      .sidebar.collapsed .sidebar-toggle {
-        right: 15px;
-        top: 15px;
-      }
-
-      /* Add mobile menu button for very small screens */
-      .mobile-menu-toggle {
-        display: block !important;
-        position: fixed;
-        top: 15px;
-        left: 15px;
-        z-index: 1002;
-        background-color: var(--gold);
-        color: var(--primary-bg);
-        border: none;
-        border-radius: 6px;
-        padding: 10px;
-        font-size: 16px;
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      }
-
-      .mobile-menu-toggle:hover {
-        background-color: #c19b2e;
-      }
-
-      /* Optimize lessons display for mobile */
-      .group-card {
-        margin-bottom: 8px;
-        padding: 8px;
-      }
-
-      .group-card h4 {
-        font-size: 1rem;
-        margin-bottom: 2px;
-      }
-
-      .group-card div[style*="color:var(--text-gray)"] {
-        font-size: 0.8rem;
-        line-height: 1.2;
-        margin-bottom: 4px;
-      }
-
-      .group-card div[style*="color:var(--text-light)"] {
-        font-size: 0.75rem;
-        color: var(--text-gray);
-        margin-top: 2px;
-      }
-
-      .group-card .lesson-total {
-        font-size: 0.9rem;
-        margin-top: 2px;
-      }
-
-      .group-card div[style*="font-size:0.85rem"] {
-        font-size: 0.75rem;
-        margin-bottom: 2px;
-      }
-
-      /* Compact lesson cards on mobile */
-      .group-card > div {
-        gap: 8px;
-      }
-
-      .group-card > div > div:first-child {
-        flex: 1;
-        min-width: 0;
-      }
-
-      .group-card > div > div:nth-child(2) {
-        min-width: 100px;
-        text-align: right;
-      }
-
-      .group-card > div > div:last-child {
-        min-width: 60px;
-      }
-
-      .group-card .btn {
-        padding: 6px 8px;
-        font-size: 0.8rem;
-      }
-
-      /* Reduce spacing in lessons section */
-      #lessons-section .content-header {
-        margin-bottom: 12px;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      #lessons-section .content-header h3 {
-        font-size: 1.2rem;
-        margin-bottom: 8px;
-        width: 100%;
-      }
-
-      #lessons-section .content-header > div {
-        gap: 6px;
-      }
-
-      #lessons-section .month-selector {
-        margin-bottom: 12px;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      #lessons-section .month-selector label {
-        margin-bottom: 4px;
-        width: 100%;
-      }
-
-      #lessons-section .month-selector > div {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-      }
-
-      /* Lesson type buttons */
-      #lessons-section #lesson-type-private,
-      #lessons-section #lesson-type-pierwszy {
-        padding: 8px 12px;
-        font-size: 0.85rem;
-      }
-
-      /* Add lesson button */
-      #lessons-section #add-lesson-btn {
-        padding: 8px 12px;
-        font-size: 0.85rem;
       }
     }
 
@@ -1083,10 +681,6 @@
     </div>
 
     <button class="sidebar-toggle" id="sidebar-toggle">
-      <i class="fas fa-bars"></i>
-    </button>
-
-    <button class="mobile-menu-toggle" id="mobile-menu-toggle" style="display: none;">
       <i class="fas fa-bars"></i>
     </button>
 
@@ -1443,14 +1037,6 @@
         <div style="display:flex; align-items:center; gap:8px;">
           <input type="checkbox" id="participant-rodo">
           <label for="participant-rodo" style="color:var(--text-gray);">Wyrażam zgodę na przetwarzanie danych</label>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="participant-publication">Publikacja</label>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <input type="checkbox" id="participant-publication">
-          <label for="participant-publication" style="color:var(--text-gray);">Wyrażam zgodę na publikację danych</label>
         </div>
       </div>
       
@@ -2704,7 +2290,7 @@
           });
 
           groupCard.innerHTML = `
-              <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span>${window.currentUser && window.currentUser.role === 'trainer' ? '' : `<span style="font-size:0.9rem">${paidText}${unpaidText}</span>`}</h4>
+              <h4 style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span>${group.name}</span><span style="font-size:0.9rem">${paidText}${unpaidText}</span></h4>
             <div class="group-detail">
               <i class="fas fa-calendar-day"></i>
                 <span>${daysText}, ${formatTimeToHHMM(group.start_time)}</span>
@@ -2828,7 +2414,6 @@
       participantPhoneInput.value = '';
       participantAmountInput.value = '';
       document.getElementById('participant-rodo').checked = false;
-      document.getElementById('participant-publication').checked = false;
 
       // Reset modal title and button
       document.querySelector('#add-participant-modal .modal-header h3').textContent = 'Dodaj uczestnika do grupy';
@@ -2849,7 +2434,7 @@
       document.getElementById('group-participant-badge').style.display = 'none';
     }
 
-    function editParticipant(participantId, name, phone, payment, publication) {
+    function editParticipant(participantId, name, phone, payment) {
       isEditingParticipant = true;
       editingParticipantId = participantId;
       addParticipantModal.classList.add('active');
@@ -2859,7 +2444,6 @@
       participantPhoneInput.value = phone || '';
       participantAmountInput.value = payment ? payment.amount || '' : '';
       document.getElementById('participant-rodo').checked = true; // Assume RODO is already accepted for existing participants
-      document.getElementById('participant-publication').checked = !!publication;
 
       // Update modal title and button
       document.querySelector('#add-participant-modal .modal-header h3').textContent = 'Edytuj uczestnika';
@@ -2967,14 +2551,12 @@
         } else {
           // 1. Add new participant
         const rodoValue = !!document.getElementById('participant-rodo').checked;
-        const publicationValue = !!document.getElementById('participant-publication').checked;
           const { data: newParticipantId, error: participantError } = await supabase.rpc('insert_participant_month', {
           p_month: selectedMonth,
           p_name: name,
           p_email: null,
           p_phone: phone || null,
-          p_rodo: rodoValue,
-          p_publication: publicationValue
+          p_rodo: rodoValue
         });
 
         if (participantError) throw participantError;
@@ -3048,7 +2630,7 @@
           .select(`
             participant_id,
             participants_month (
-              id, name, phone, rodo, publication
+              id, name, phone, rodo
             )
           `)
           .eq('month', selectedMonth)
@@ -3085,31 +2667,25 @@
 
         const summaryEl = document.getElementById('group-participants-summary');
         if (summaryEl) {
-          // Hide financial summary for trainers
-          if (window.currentUser && window.currentUser.role === 'trainer') {
-            summaryEl.style.display = 'none';
-          } else {
-            summaryEl.style.display = 'block';
-            let methodsHtmlG = '';
-            Object.keys(byMethod).forEach(k => { methodsHtmlG += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
-            const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
-            summaryEl.innerHTML = `
-              <div style="text-align:right; min-width:180px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <div style="font-size:0.95rem;color:var(--text-gray)">Zapłacono</div>
-                  <div style="font-weight:700;color:var(--success)">${paidSum.toFixed(2)} zł</div>
-          </div>
-                <div style="margin-top:6px;">${methodsHtmlG}</div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-                  <div style="font-size:0.95rem;color:var(--text-gray)">Niezapłacono</div>
-                  <div style="font-weight:700;color:${unpaidColor}">${unpaidSum.toFixed(2)} zł</div>
-          </div>
-                <div style="color:var(--text-gray);margin-top:6px">Razem: ${totalSum.toFixed(2)} zł</div>
-          </div>
-            `;
-            // draw donut for group: paid vs unpaid (only for admin)
-            drawDonut('group-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
-          }
+          let methodsHtmlG = '';
+          Object.keys(byMethod).forEach(k => { methodsHtmlG += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
+          const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
+          summaryEl.innerHTML = `
+            <div style="text-align:right; min-width:180px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:0.95rem;color:var(--text-gray)">Zapłacono</div>
+                <div style="font-weight:700;color:var(--success)">${paidSum.toFixed(2)} zł</div>
+        </div>
+              <div style="margin-top:6px;">${methodsHtmlG}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                <div style="font-size:0.95rem;color:var(--text-gray)">Niezapłacono</div>
+                <div style="font-weight:700;color:${unpaidColor}">${unpaidSum.toFixed(2)} zł</div>
+        </div>
+              <div style="color:var(--text-gray);margin-top:6px">Razem: ${totalSum.toFixed(2)} zł</div>
+        </div>
+          `;
+          // draw donut for group: paid vs unpaid
+          drawDonut('group-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
         }
 
         if (!participants || participants.length === 0) {
@@ -3128,29 +2704,24 @@
           participantCard.className = 'group-card'; // Reusing group-card style
           participantCard.style.cursor = 'default'; // No pointer for participant cards
           
-          // Use the same subtle background as other group cards; avoid aggressive red/green inline styles for trainers
-          const isTrainer = window.currentUser && window.currentUser.role === 'trainer';
-          const paymentClass = isTrainer ? '' : (payment && payment.confirmed ? 'payment-paid' : 'payment-unpaid');
+          // Use the same subtle background as other group cards; avoid aggressive red/green inline styles
           participantCard.innerHTML = `
-            <div class="participant-row ${paymentClass}" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+            <div class="participant-row ${payment && payment.confirmed ? 'payment-paid' : 'payment-unpaid'}" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
               <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
               <div class="participant-info" style="flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;">
                 <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
                 <div style="color: var(--text-gray); font-size: 0.9rem;">${participantData.phone || 'Brak'}</div>
               </div>
               
-              ${isTrainer ? '' : `
               <div class="amount-section" style="min-width: 120px;">
                 <div style="display: flex; align-items: center; gap: 5px;">
-                  <input type="number" class="amount-input form-control" value="${amount}" step="0.01" min="0"
-                         data-participant-id="${participant.participant_id}" data-group-id="${groupId}"
+                  <input type="number" class="amount-input form-control" value="${amount}" step="0.01" min="0" 
+                         data-participant-id="${participant.participant_id}" data-group-id="${groupId}" 
                          style="width: 100px; text-align: center;">
                   <span style="font-size: 0.9rem; color: var(--text-gray);">zł</span>
               </div>
               </div>
-              `}
               
-              ${isTrainer ? '' : `
               <div class="payment-method-section" style="min-width: 150px;">
                 <select class="payment-method-select form-control" data-participant-id="${participant.participant_id}" style="width: 130px;">
                   <option value="">Sposób płatności</option>
@@ -3159,27 +2730,19 @@
                   <option value="gotowka" ${payment.payment_method === 'gotowka' ? 'selected' : ''}>Gotówka</option>
                 </select>
               </div>
-              `}
               
-              ${isTrainer ? '' : `
               <div class="comment-section" style="flex: 1 1 200px; overflow: hidden; text-overflow: ellipsis;">
-                <input type="text" class="payment-comment form-control" placeholder="Komentarz"
-                       value="${payment.comment || ''}" data-participant-id="${participant.participant_id}"
+                <input type="text" class="payment-comment form-control" placeholder="Komentarz" 
+                       value="${payment.comment || ''}" data-participant-id="${participant.participant_id}" 
                        style="width: 100%;">
               </div>
-              `}
               <div style="min-width:110px; display:flex; align-items:center; gap:8px;">
                 <label style="color:var(--text-gray); font-size:0.85rem;">RODO</label>
                 <input type="checkbox" class="rodo-checkbox" data-participant-id="${participant.participant_id}" ${participantData.rodo ? 'checked' : ''}>
               </div>
-
-              <div style="min-width:110px; display:flex; align-items:center; gap:8px;">
-                <label style="color:var(--text-gray); font-size:0.85rem;">Publikacja</label>
-                <input type="checkbox" class="publication-checkbox" data-participant-id="${participant.participant_id}" ${participantData.publication ? 'checked' : ''}>
-              </div>
               
               <div class="action-buttons" style="display: flex; gap: 10px; min-width: 120px;">
-                ${isTrainer ? '' : (payment && payment.confirmed ? `
+                ${payment && payment.confirmed ? `
                   <button class="btn btn-outline delete-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}">
                     <i class="fas fa-times"></i>
                   </button>
@@ -3187,7 +2750,7 @@
                   <button class="btn btn-primary confirm-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}">
                     <i class="fas fa-check"></i>
                   </button>
-                `)}
+                `}
                 <button class="btn btn-outline edit-btn" data-id="${participant.participant_id}">
                   <i class="fas fa-edit"></i>
                 </button>
@@ -3203,7 +2766,7 @@
           if (participantEditBtn) {
             participantEditBtn.addEventListener('click', (e) => {
               e.stopPropagation();
-              editParticipant(participant.participant_id, participant.participants_month.name, participant.participants_month.phone, payment, participant.participants_month.publication);
+              editParticipant(participant.participant_id, participant.participants_month.name, participant.participants_month.phone, payment);
             });
           }
 
@@ -3250,16 +2813,14 @@
           });
         }
 
-          // Real-time amount editing (only for admin)
-          if (!isTrainer) {
-            const amountInput = participantCard.querySelector('.amount-input');
-            if (amountInput) {
-              // disable amount editing if payment was already confirmed
-              if (payment && payment.confirmed) {
-                amountInput.disabled = true;
-                amountInput.classList.add('readonly-locked');
-              }
-              amountInput.addEventListener('change', async (e) => {
+          // Real-time amount editing
+          const amountInput = participantCard.querySelector('.amount-input');
+          // disable amount editing if payment was already confirmed
+          if (payment && payment.confirmed) {
+            amountInput.disabled = true;
+            amountInput.classList.add('readonly-locked');
+          }
+          amountInput.addEventListener('change', async (e) => {
             const newAmount = parseFloat(e.target.value) || 0;
             const participantId = e.target.dataset.participantId;
             const groupId = e.target.dataset.groupId;
@@ -3323,20 +2884,16 @@
               alert('Błąd aktualizacji kwoty: ' + (err.message || 'Nieznany'));
             }
           });
-            }
-          }
 
-          // Real-time payment method editing (only for admin)
-          if (!isTrainer) {
-            const paymentMethodSelect = participantCard.querySelector('.payment-method-select');
-            if (paymentMethodSelect) {
-              // Do not save on change; lock the select if payment is confirmed
-              if (payment && payment.confirmed) {
-                paymentMethodSelect.disabled = true;
-              } else {
-                paymentMethodSelect.disabled = false;
-              }
-              paymentMethodSelect.addEventListener('change', async (e) => {
+          // Real-time payment method editing
+          const paymentMethodSelect = participantCard.querySelector('.payment-method-select');
+          // Do not save on change; lock the select if payment is confirmed
+          if (payment && payment.confirmed) {
+            paymentMethodSelect.disabled = true;
+          } else {
+            paymentMethodSelect.disabled = false;
+          }
+          paymentMethodSelect.addEventListener('change', async (e) => {
             const newMethod = e.target.value;
             const participantId = e.target.dataset.participantId;
             
@@ -3353,14 +2910,10 @@
               alert('Błąd aktualizacji sposobu płatności: ' + (err.message || 'Nieznany'));
             }
           });
-            }
-          }
 
-          // Real-time comment editing (only for admin)
-          if (!isTrainer) {
-            const commentInput = participantCard.querySelector('.payment-comment');
-            if (commentInput) {
-              commentInput.addEventListener('input', async (e) => {
+          // Real-time comment editing
+          const commentInput = participantCard.querySelector('.payment-comment');
+          commentInput.addEventListener('input', async (e) => {
             const newComment = e.target.value;
             const participantId = e.target.dataset.participantId;
             
@@ -3377,14 +2930,11 @@
               alert('Błąd aktualizacji komentarza: ' + (err.message || 'Nieznany'));
             }
           });
-            }
-          }
 
-          // Add payment confirmation event listener (only for admin)
-          if (!isTrainer) {
-            const confirmPaymentBtn = participantCard.querySelector('.confirm-payment-btn');
-            if (confirmPaymentBtn) {
-              confirmPaymentBtn.addEventListener('click', async (e) => {
+          // Add payment confirmation event listener
+          const confirmPaymentBtn = participantCard.querySelector('.confirm-payment-btn');
+          if (confirmPaymentBtn) {
+            confirmPaymentBtn.addEventListener('click', async (e) => {
               e.stopPropagation();
               const participantId = e.currentTarget.dataset.participantId;
               const groupId = e.currentTarget.dataset.groupId;
@@ -3403,14 +2953,12 @@
                 await loadGroupParticipants(groupId);
               } catch (err) { alert('Błąd potwierdzania płatności: ' + (err.message || 'Nieznany')); }
             });
-            }
           }
 
-          // Add payment deletion event listener (only for admin)
-          if (!isTrainer) {
-            const deletePaymentBtn = participantCard.querySelector('.delete-payment-btn');
-            if (deletePaymentBtn) {
-              deletePaymentBtn.addEventListener('click', async (e) => {
+          // Add payment deletion event listener
+          const deletePaymentBtn = participantCard.querySelector('.delete-payment-btn');
+          if (deletePaymentBtn) {
+            deletePaymentBtn.addEventListener('click', async (e) => {
               e.stopPropagation();
               const participantId = e.currentTarget.dataset.participantId;
               const groupId = e.currentTarget.dataset.groupId;
@@ -3424,7 +2972,6 @@
                 await loadGroupParticipants(groupId);
               } catch (err) { alert('Błąd usuwania potwierdzenia płatności: ' + (err.message || 'Nieznany')); }
             });
-            }
           }
 
           groupParticipantsList.appendChild(participantCard);
@@ -3620,34 +3167,6 @@
       }
     }
 
-    async function savePublication(participantId, checked, el) {
-      try {
-        console.log('Saving Publication for', participantId, checked);
-        if (el) el.disabled = true;
-        const selectedMonth = document.getElementById('participants-month-select').value;
-        const { error } = await supabase
-          .from('participants_month')
-          .update({ publication: checked })
-          .match({ month: selectedMonth, id: participantId });
-        if (error) {
-          console.error('Error saving Publication:', error);
-          if (el) el.checked = !checked;
-          alert('Błąd zapisu Publikacji: ' + (error.message || 'Nieznany'));
-        } else {
-          console.log('Publication saved successfully for', participantId);
-          if (el) {
-            el.classList.add('rodo-saved');
-            setTimeout(() => el.classList.remove('rodo-saved'), 700);
-          }
-        }
-      } catch (err) {
-        console.error('Exception saving Publication:', err);
-        if (el) el.checked = !checked;
-      } finally {
-        if (el) el.disabled = false;
-      }
-    }
-
     // Delegated handler for RODO checkboxes to ensure they always trigger
     (function attachDelegatedRodoHandler(){
       const list = document.getElementById('participants-list');
@@ -3663,21 +3182,6 @@
       });
     })();
 
-    // Delegated handler for Publication checkboxes to ensure they always trigger
-    (function attachDelegatedPublicationHandler(){
-      const list = document.getElementById('participants-list');
-      if (!list) return;
-      list.addEventListener('change', async (e) => {
-        if (!e.target || !e.target.classList) return;
-        if (!e.target.classList.contains('publication-checkbox')) return;
-        const pid = e.target.dataset.participantId;
-        const checked = e.target.checked;
-        console.log('Publication checkbox clicked (delegated):', pid, checked);
-        e.target.disabled = true;
-        await savePublication(pid, checked, e.target);
-      });
-    })();
-
     // Fallback: document-level click listener to catch cases where change doesn't fire
     document.addEventListener('click', async (e) => {
       const target = e.target;
@@ -3687,12 +3191,6 @@
       if (cb && cb.dataset && cb.dataset.participantId) {
         // small timeout to allow checkbox state to update
         setTimeout(() => saveRodo(cb.dataset.participantId, cb.checked, cb), 10);
-      }
-      // if clicked on input.publication-checkbox or its label
-      const pubCb = target.closest && (target.closest('.publication-checkbox') || (target.classList && target.classList.contains('publication-checkbox') ? target : null));
-      if (pubCb && pubCb.dataset && pubCb.dataset.participantId) {
-        // small timeout to allow checkbox state to update
-        setTimeout(() => savePublication(pubCb.dataset.participantId, pubCb.checked, pubCb), 10);
       }
     });
 
@@ -5404,7 +4902,6 @@
     // Sidebar toggle functionality
     const sidebar = document.querySelector('.sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
-    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
     const mainContent = document.querySelector('.main-content');
 
     // Toggle sidebar
@@ -5412,24 +4909,9 @@
       sidebar.classList.toggle('collapsed');
     });
 
-    // Mobile menu toggle
-    mobileMenuToggle.addEventListener('click', () => {
-      sidebar.classList.toggle('mobile-open');
-    });
-
-    // Close mobile menu when clicking overlay
-    document.addEventListener('click', (e) => {
-      if (sidebar.classList.contains('mobile-open') &&
-          !sidebar.contains(e.target) &&
-          e.target !== mobileMenuToggle) {
-        sidebar.classList.remove('mobile-open');
-      }
-    });
-
     // Auto-collapse sidebar on navigation
     function autoCollapseSidebar() {
       sidebar.classList.add('collapsed');
-      sidebar.classList.remove('mobile-open');
     }
 
     // Override setActiveNav to include auto-collapse
@@ -5438,23 +4920,6 @@
       originalSetActiveNav(section);
       autoCollapseSidebar();
     };
-
-    // Handle responsive mobile menu
-    function handleMobileMenu() {
-      if (window.innerWidth <= 576) {
-        mobileMenuToggle.style.display = 'block';
-        sidebarToggle.style.display = 'none';
-      } else {
-        mobileMenuToggle.style.display = 'none';
-        sidebarToggle.style.display = 'block';
-      }
-    }
-
-    // Initial check
-    handleMobileMenu();
-
-    // Handle window resize
-    window.addEventListener('resize', handleMobileMenu);
 
   </script>
 </body>
