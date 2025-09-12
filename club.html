@@ -462,7 +462,73 @@
       color: var(--text-light);
       font-weight: bold;
       flex: 1;
-      padding-left: 35px; /* Make space for the delete button */
+    }
+
+    /* Training LA styles - identical to camp styles */
+    .trainings-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .training-card {
+      background: var(--secondary-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      border-left: 4px solid var(--gold);
+      cursor: pointer;
+    }
+
+    .training-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .training-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 15px;
+    }
+
+    .training-name {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: var(--gold);
+      margin: 0;
+    }
+
+    .training-detail {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      color: var(--text-gray);
+    }
+
+    .training-detail i {
+      margin-right: 8px;
+      width: 16px;
+      color: var(--gold);
+    }
+
+    /* Training status backgrounds - identical to camp styles */
+    .training-card.status-complete {
+      border-left: 4px solid #28a745;
+      background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 100%);
+    }
+
+    .training-card.status-incomplete {
+      border-left: 4px solid #dc3545;
+      background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(220, 53, 69, 0.05) 100%);
+    }
+
+    .training-card.status-attention {
+      border-left: 4px solid #ffc107;
+      background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0.05) 100%);
     }
 
     .camp-date {
@@ -1247,6 +1313,12 @@
         </a>
       </li>
       <li>
+        <a href="#" id="nav-trainings">
+          <i class="fas fa-graduation-cap"></i>
+          <span class="link-text">Szkolenia LA</span>
+        </a>
+      </li>
+      <li>
         <a href="#" id="nav-schedule">
           <i class="fas fa-calendar"></i>
           <span class="link-text">Harmonogram</span>
@@ -1571,6 +1643,173 @@
             <button type="button" class="btn btn-outline" id="cancel-add-participant">Anuluj</button>
             <button type="submit" class="btn btn-primary" id="submit-add-participant">
               <i class="fas fa-user-plus"></i> Dodaj uczestnika
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Trainings LA Section -->
+    <div class="content-box" id="trainings-section" style="display: none;">
+      <div class="content-header">
+        <h3>Szkolenia LA</h3>
+        <button class="btn btn-primary" id="create-training-btn">
+          <i class="fas fa-plus"></i> Utwórz szkolenie
+        </button>
+      </div>
+
+      <!-- Month Selector -->
+      <div class="month-selector" style="margin-bottom: 20px;">
+        <label for="training-month-select">Wybierz miesiąc:</label>
+        <select id="training-month-select" class="form-control" style="margin-left: 10px;">
+          <option value="2025-09">Wrzesień 2025</option>
+          <option value="2025-08">Sierpień 2025</option>
+        </select>
+      </div>
+
+      <!-- Trainings List -->
+      <div class="trainings-list" id="trainings-list">
+        <!-- Trainings will be loaded here -->
+      </div>
+    </div>
+
+    <!-- Training Details Section -->
+    <div class="content-box" id="training-details-section" style="display: none;">
+      <div class="content-header">
+        <h3 id="training-details-title">Szczegóły szkolenia</h3>
+        <div class="training-actions">
+          <button class="btn btn-primary" id="add-participant-training-btn">
+            <i class="fas fa-user-plus"></i> Dodaj uczestnika
+          </button>
+          <button class="btn btn-outline" id="back-to-trainings-btn">
+            <i class="fas fa-arrow-left"></i> Powrót do szkoleń
+          </button>
+        </div>
+      </div>
+
+      <!-- Participant Search -->
+      <div class="participant-search" style="margin-bottom: 20px;">
+        <input type="text" id="participant-training-search" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;">
+      </div>
+
+      <!-- Training Details Table -->
+      <div class="training-details-table-container">
+        <table class="camp-details-table">
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th style="width: 250px;">Uczestnik</th>
+              <th style="width: 150px;">Szkolenie</th>
+              <th style="width: 150px;">Trenerzy</th>
+              <th style="width: 100px;">Razem</th>
+              <th style="width: 100px;">Akcje</th>
+            </tr>
+          </thead>
+          <tbody id="training-participants-list">
+            <!-- Training participants will be loaded here -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Financial Summary -->
+      <div id="training-financial-summary" class="financial-summary" style="display: none; margin-top: 20px;">
+        <h4>Podsumowanie finansowe</h4>
+        <div id="training-summary-currencies"></div>
+        <div id="training-summary-totals"></div>
+        <div id="training-donut-container" style="margin-top: 20px;">
+          <canvas id="training-donut" width="200" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Training Modal -->
+    <div class="modal" id="create-training-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Utwórz szkolenie LA</h3>
+          <button class="modal-close" id="close-create-training-modal">&times;</button>
+        </div>
+
+        <form id="create-training-form">
+          <div class="form-group">
+            <label for="training-name">Nazwa szkolenia</label>
+            <input type="text" id="training-name" name="training-name" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="training-date">Data szkolenia</label>
+            <input type="date" id="training-date" name="training-date" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="training-currency">Waluta</label>
+            <select id="training-currency" name="training-currency" class="form-control" required>
+              <option value="EUR">EUR</option>
+              <option value="PLN">PLN</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="training-location">Lokalizacja</label>
+            <input type="text" id="training-location" name="training-location" class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label for="training-description">Opis</label>
+            <textarea id="training-description" name="training-description" class="form-control" rows="3"></textarea>
+          </div>
+
+          <div id="training-trainers-container">
+            <div class="trainer-item">
+              <div class="trainer-fields">
+                <div class="form-group">
+                  <label for="trainer-name-1">Imię szkoleniowca</label>
+                  <input type="text" id="trainer-name-1" name="trainer-name-1" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="trainer-amount-1">Kwota</label>
+                  <input type="number" id="trainer-amount-1" name="trainer-amount-1" class="form-control" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                  <label for="trainer-currency-1">Waluta</label>
+                  <select id="trainer-currency-1" name="trainer-currency-1" class="form-control" required>
+                    <option value="EUR">EUR</option>
+                    <option value="PLN">PLN</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="add-training-trainer-btn">Dodaj trenera</button>
+            <button type="button" class="btn btn-outline" id="cancel-create-training">Anuluj</button>
+            <button type="submit" class="btn btn-primary" id="submit-create-training">
+              <i class="fas fa-save"></i> Utwórz szkolenie
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add Participant to Training Modal -->
+    <div class="modal" id="add-participant-training-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Dodaj uczestnika do szkolenia</h3>
+          <button class="modal-close" id="close-add-participant-training-modal">&times;</button>
+        </div>
+
+        <form id="add-participant-training-form">
+          <div class="form-group">
+            <label for="participant-training-name">Imię i nazwisko uczestnika</label>
+            <input type="text" id="participant-training-name" name="participant-name" class="form-control" required>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="cancel-add-participant-training">Anuluj</button>
+            <button type="submit" class="btn btn-primary" id="submit-add-participant-training">
+              <i class="fas fa-save"></i> Dodaj uczestnika
             </button>
           </div>
         </form>
@@ -5125,6 +5364,692 @@
         console.error('Błąd ładowania danych członków dla statusu campów:', err);
       }
     }
+
+    // ===========================================
+    // TRAININGS LA FUNCTIONALITY
+    // ===========================================
+
+    // DOM Elements for trainings
+    const trainingsSection = document.getElementById('trainings-section');
+    const trainingDetailsSection = document.getElementById('training-details-section');
+    const trainingsList = document.getElementById('trainings-list');
+    const trainingParticipantsList = document.getElementById('training-participants-list');
+    const backToTrainingsBtn = document.getElementById('back-to-trainings-btn');
+    const createTrainingBtn = document.getElementById('create-training-btn');
+    const createTrainingModal = document.getElementById('create-training-modal');
+    const closeCreateTrainingModal = document.getElementById('close-create-training-modal');
+    const cancelCreateTraining = document.getElementById('cancel-create-training');
+    const createTrainingForm = document.getElementById('create-training-form');
+    const addParticipantTrainingBtn = document.getElementById('add-participant-training-btn');
+    const addParticipantTrainingModal = document.getElementById('add-participant-training-modal');
+    const closeAddParticipantTrainingModal = document.getElementById('close-add-participant-training-modal');
+    const cancelAddParticipantTraining = document.getElementById('cancel-add-participant-training');
+    const addParticipantTrainingForm = document.getElementById('add-participant-training-form');
+
+    let currentTrainingMonth = '2025-09';
+    let currentTraining = null;
+    let trainingTrainerCount = 1;
+
+    // Initialize trainings functionality
+    document.getElementById('nav-trainings').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('trainings');
+    });
+
+    function setActiveNav(section) {
+      // Remove active class from all nav links
+      document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
+
+      // Hide all sections
+      document.getElementById('members-section').style.display = 'none';
+      document.getElementById('camps-section').style.display = 'none';
+      document.getElementById('trainings-section').style.display = 'none';
+      document.getElementById('training-details-section').style.display = 'none';
+      document.getElementById('schedule-section').style.display = 'none';
+      document.getElementById('profile-section').style.display = 'none';
+
+      // Show selected section and set active nav
+      if (section === 'trainings') {
+        trainingsSection.style.display = 'block';
+        document.getElementById('nav-trainings').classList.add('active');
+        loadTrainings();
+      } else if (section === 'members') {
+        document.getElementById('members-section').style.display = 'block';
+        document.getElementById('nav-members').classList.add('active');
+      } else if (section === 'camps') {
+        document.getElementById('camps-section').style.display = 'block';
+        document.getElementById('nav-camps').classList.add('active');
+      } else if (section === 'schedule') {
+        document.getElementById('schedule-section').style.display = 'block';
+        document.getElementById('nav-schedule').classList.add('active');
+      } else if (section === 'profile') {
+        document.getElementById('profile-section').style.display = 'block';
+        document.getElementById('nav-profile').classList.add('active');
+      }
+    }
+
+    // Month selector for trainings
+    document.getElementById('training-month-select').addEventListener('change', (e) => {
+      currentTrainingMonth = e.target.value;
+      loadTrainings();
+    });
+
+    async function loadTrainings() {
+      try {
+        // Show loading state
+        trainingsList.innerHTML = `
+          <div class="loading-state">
+            <div class="loading"></div>
+            <p>Ładowanie szkoleń...</p>
+          </div>
+        `;
+
+        // Load trainings with trainer data
+        const { data: trainings, error } = await supabase
+          .from('trainings')
+          .select(`
+            *,
+            trainers (
+              name,
+              amount,
+              currency,
+              trainer_index
+            )
+          `)
+          .eq('month', currentTrainingMonth)
+          .order('date', { ascending: false });
+
+        if (error) throw error;
+
+        // Load all training participants at once
+        const { data: allTrainingParticipants, error: participantsError } = await supabase
+          .from('training_participants')
+          .select('*')
+          .in('training_id', trainings.map(training => training.id));
+
+        if (participantsError) {
+          console.error('Error loading training participants:', participantsError);
+        }
+
+        // Group participants by training_id
+        const participantsByTraining = {};
+        if (allTrainingParticipants) {
+          allTrainingParticipants.forEach(p => {
+            if (!participantsByTraining[p.training_id]) {
+              participantsByTraining[p.training_id] = [];
+            }
+            participantsByTraining[p.training_id].push({
+              id: p.participant_id,
+              name: p.name,
+              isTrainingParticipant: true
+            });
+          });
+        }
+
+        // Store trainings data globally
+        window.allTrainings = trainings;
+
+        if (!trainings || trainings.length === 0) {
+          trainingsList.innerHTML = '<div class="empty-state"><p>Brak szkoleń w wybranym miesiącu</p></div>';
+          return;
+        }
+
+        trainingsList.innerHTML = '';
+
+        trainings.forEach(training => {
+          const participants = participantsByTraining[training.id] || [];
+          const totalParticipants = participants.length;
+
+          // Calculate status based on eligible members (10T or LA style)
+          const eligibleMembers = window.allMembers ? window.allMembers.filter(m => m.style === '10t' || m.style === 'la') : [];
+          const eligibleCount = eligibleMembers.length;
+
+          let statusClass = '';
+          if (totalParticipants >= eligibleCount) {
+            statusClass = 'status-complete';
+          } else if (totalParticipants > 0) {
+            statusClass = 'status-attention';
+          } else {
+            statusClass = 'status-incomplete';
+          }
+
+          const trainingCard = document.createElement('div');
+          trainingCard.className = `training-card ${statusClass}`;
+          trainingCard.setAttribute('data-training-id', training.id);
+
+          // Format date
+          const trainingDate = new Date(training.date);
+          const formattedDate = trainingDate.toLocaleDateString('pl-PL', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+
+          trainingCard.innerHTML = `
+            <div class="training-header">
+              <h4 class="training-name">${training.name}</h4>
+              <div style="font-size: 0.9rem; color: var(--text-gray);">
+                ${totalParticipants}/${eligibleCount} uczestników
+              </div>
+            </div>
+            <div class="training-detail">
+              <i class="fas fa-calendar"></i>
+              <span>${formattedDate}</span>
+            </div>
+            ${training.location ? `
+            <div class="training-detail">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>${training.location}</span>
+            </div>
+            ` : ''}
+            ${training.trainers && training.trainers.length > 0 ? `
+            <div class="training-detail">
+              <i class="fas fa-user-tie"></i>
+              <span>${training.trainers.map(t => t.name).join(', ')}</span>
+            </div>
+            ` : ''}
+          `;
+
+          trainingCard.addEventListener('click', () => openTrainingDetails(training.id));
+          trainingsList.appendChild(trainingCard);
+        });
+
+      } catch (err) {
+        console.error('Błąd ładowania szkoleń:', err);
+        trainingsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania szkoleń</p></div>';
+      }
+    }
+
+    async function openTrainingDetails(trainingId) {
+      try {
+        showGlobalLoader('Ładowanie szczegółów szkolenia...');
+
+        // Get training data
+        const training = window.allTrainings.find(t => t.id === trainingId);
+        if (!training) {
+          throw new Error('Szkolenie nie znalezione');
+        }
+
+        currentTraining = training;
+
+        // Update UI
+        document.getElementById('training-details-title').textContent = training.name;
+        trainingsSection.style.display = 'none';
+        trainingDetailsSection.style.display = 'block';
+
+        // Load participants and setup UI
+        await loadTrainingParticipants(trainingId);
+        setupTrainingParticipantSearch();
+
+        // Set up financial summary
+        await updateTrainingFinancialSummary(trainingId);
+
+      } catch (err) {
+        console.error('Błąd otwierania szczegółów szkolenia:', err);
+        alert('Błąd ładowania szczegółów szkolenia');
+      } finally {
+        hideGlobalLoader();
+      }
+    }
+
+    async function loadTrainingParticipants(trainingId) {
+      try {
+        // Get participants for this training
+        const { data: participants, error } = await supabase
+          .from('training_participants')
+          .select('*')
+          .eq('training_id', trainingId)
+          .order('name', { ascending: true });
+
+        if (error) throw error;
+
+        // Get payments for these participants
+        const participantIds = participants.map(p => p.participant_id);
+        const { data: payments, error: paymentsError } = await supabase
+          .from('training_payments')
+          .select('*')
+          .eq('training_id', trainingId)
+          .in('participant_id', participantIds);
+
+        if (paymentsError) throw paymentsError;
+
+        // Create payment lookup
+        const paymentLookup = {};
+        payments.forEach(p => {
+          paymentLookup[p.participant_id] = p;
+        });
+
+        // Clear and populate table
+        trainingParticipantsList.innerHTML = '';
+
+        if (!participants || participants.length === 0) {
+          trainingParticipantsList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-gray);">Brak uczestników</td></tr>';
+          return;
+        }
+
+        participants.forEach((participant, index) => {
+          const payment = paymentLookup[participant.participant_id];
+          const trainingAmount = payment ? parseFloat(payment.amount) || 0 : 0;
+          const trainerAmounts = payment ? payment.trainer_amounts || [] : [];
+          const confirmed = payment ? payment.confirmed : false;
+
+          const row = document.createElement('tr');
+          row.setAttribute('data-participant-id', participant.participant_id);
+
+          row.innerHTML = `
+            <td style="text-align: center; font-weight: bold;">${index + 1}</td>
+            <td>
+              <div style="font-weight: bold;">${participant.name}</div>
+            </td>
+            <td>
+              <input type="number" class="payment-input form-control" data-column-type="training" data-participant-id="${participant.participant_id}" data-training-id="${trainingId}" value="${trainingAmount}" step="0.01" min="0" style="width: 100px; text-align: center;">
+            </td>
+            <td>
+              ${currentTraining.trainers ? currentTraining.trainers.map((trainer, trainerIndex) => `
+                <div style="margin-bottom: 5px;">
+                  <small style="color: var(--text-gray);">${trainer.name}:</small><br>
+                  <input type="number" class="payment-input form-control" data-column-type="trainer" data-participant-id="${participant.participant_id}" data-training-id="${trainingId}" data-trainer-index="${trainerIndex}" value="${trainerAmounts[trainerIndex] || 0}" step="0.01" min="0" style="width: 80px; text-align: center; font-size: 0.8rem;">
+                </div>
+              `).join('') : ''}
+            </td>
+            <td style="font-weight: bold; text-align: center;">
+              <span class="total-amount">${calculateTrainingParticipantTotal(trainingAmount, trainerAmounts)}</span>
+              ${currentTraining.currency || 'PLN'}
+            </td>
+            <td style="text-align: center;">
+              <button class="btn btn-sm ${confirmed ? 'btn-success' : 'btn-outline'}" onclick="toggleTrainingPayment(${participant.participant_id}, ${trainingId})">
+                <i class="fas ${confirmed ? 'fa-check' : 'fa-plus'}"></i>
+              </button>
+              <button class="btn btn-sm btn-outline" onclick="removeTrainingParticipant(${participant.participant_id}, ${trainingId})" style="margin-left: 5px;">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          `;
+
+          trainingParticipantsList.appendChild(row);
+        });
+
+        // Setup payment event listeners
+        setupTrainingPaymentEventListeners();
+
+      } catch (err) {
+        console.error('Błąd ładowania uczestników szkolenia:', err);
+        trainingParticipantsList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--error);">Błąd ładowania danych</td></tr>';
+      }
+    }
+
+    function calculateTrainingParticipantTotal(trainingAmount, trainerAmounts) {
+      const total = parseFloat(trainingAmount) || 0;
+      const trainerTotal = trainerAmounts ? trainerAmounts.reduce((sum, amount) => sum + (parseFloat(amount) || 0), 0) : 0;
+      return (total + trainerTotal).toFixed(2);
+    }
+
+    function setupTrainingParticipantSearch() {
+      const searchInput = document.getElementById('participant-training-search');
+      if (!searchInput) return;
+
+      searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const rows = trainingParticipantsList.querySelectorAll('tr');
+
+        rows.forEach(row => {
+          const nameCell = row.querySelector('td:nth-child(2)');
+          if (nameCell) {
+            const participantName = nameCell.textContent.toLowerCase();
+            row.style.display = participantName.includes(searchTerm) ? '' : 'none';
+          }
+        });
+      });
+    }
+
+    async function updateTrainingFinancialSummary(trainingId) {
+      try {
+        // This would be similar to camp financial summary but for trainings
+        // For now, just hide it as trainings might not need complex financial tracking
+        document.getElementById('training-financial-summary').style.display = 'none';
+      } catch (err) {
+        console.error('Błąd aktualizacji podsumowania finansowego szkolenia:', err);
+      }
+    }
+
+    // Event listeners for trainings
+    backToTrainingsBtn.addEventListener('click', () => {
+      trainingDetailsSection.style.display = 'none';
+      trainingsSection.style.display = 'block';
+      currentTraining = null;
+    });
+
+    createTrainingBtn.addEventListener('click', () => {
+      createTrainingModal.classList.add('active');
+    });
+
+    closeCreateTrainingModal.addEventListener('click', () => {
+      createTrainingModal.classList.remove('active');
+    });
+
+    cancelCreateTraining.addEventListener('click', () => {
+      createTrainingModal.classList.remove('active');
+    });
+
+    createTrainingForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(createTrainingForm);
+      const trainingData = {
+        name: formData.get('training-name').trim(),
+        date: formData.get('training-date'),
+        currency: formData.get('training-currency'),
+        location: formData.get('training-location') || null,
+        description: formData.get('training-description') || null,
+        month: currentTrainingMonth
+      };
+
+      if (!trainingData.name || !trainingData.date) {
+        alert('Proszę wypełnić nazwę i datę szkolenia');
+        return;
+      }
+
+      // Show loading
+      const submitBtn = document.getElementById('submit-create-training');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<div class="loading"></div> Tworzenie...';
+      submitBtn.disabled = true;
+
+      try {
+        // Create training
+        const { data: trainingId, error } = await supabase.rpc('create_training', trainingData);
+        if (error) throw error;
+
+        // Add trainers
+        for (let i = 1; i <= trainingTrainerCount; i++) {
+          const trainerName = formData.get(`trainer-name-${i}`);
+          const trainerAmount = parseFloat(formData.get(`trainer-amount-${i}`)) || 0;
+          const trainerCurrency = formData.get(`trainer-currency-${i}`);
+
+          if (trainerName && trainerAmount > 0) {
+            await supabase
+              .from('training_trainers')
+              .insert({
+                training_id: trainingId,
+                name: trainerName,
+                amount: trainerAmount,
+                currency: trainerCurrency,
+                trainer_index: i - 1
+              });
+          }
+        }
+
+        // Reload trainings
+        await loadTrainings();
+        createTrainingModal.classList.remove('active');
+
+        // Reset form
+        createTrainingForm.reset();
+        trainingTrainerCount = 1;
+
+      } catch (err) {
+        console.error('Błąd tworzenia szkolenia:', err);
+        alert('Błąd tworzenia szkolenia: ' + (err.message || 'Nieznany błąd'));
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+
+    // Add trainer functionality for trainings
+    document.getElementById('add-training-trainer-btn').addEventListener('click', () => {
+      trainingTrainerCount++;
+      const trainerContainer = document.getElementById('training-trainers-container');
+      const trainerItem = document.createElement('div');
+      trainerItem.className = 'trainer-item';
+      trainerItem.innerHTML = `
+        <div class="trainer-fields">
+          <div class="form-group">
+            <label for="trainer-name-${trainingTrainerCount}">Imię szkoleniowca</label>
+            <input type="text" id="trainer-name-${trainingTrainerCount}" name="trainer-name-${trainingTrainerCount}" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="trainer-amount-${trainingTrainerCount}">Kwota</label>
+            <input type="number" id="trainer-amount-${trainingTrainerCount}" name="trainer-amount-${trainingTrainerCount}" class="form-control" step="0.01" min="0" required>
+          </div>
+          <div class="form-group">
+            <label for="trainer-currency-${trainingTrainerCount}">Waluta</label>
+            <select id="trainer-currency-${trainingTrainerCount}" name="trainer-currency-${trainingTrainerCount}" class="form-control" required>
+              <option value="EUR">EUR</option>
+              <option value="PLN">PLN</option>
+            </select>
+          </div>
+          <button type="button" class="remove-trainer-btn" onclick="removeTrainingTrainer(this)">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+      trainerContainer.appendChild(trainerItem);
+    });
+
+    function removeTrainingTrainer(button) {
+      button.closest('.trainer-item').remove();
+      trainingTrainerCount--;
+    }
+
+    // Make removeTrainingTrainer global
+    window.removeTrainingTrainer = removeTrainingTrainer;
+
+    // Add participant to training functionality
+    addParticipantTrainingBtn.addEventListener('click', () => {
+      addParticipantTrainingModal.classList.add('active');
+    });
+
+    closeAddParticipantTrainingModal.addEventListener('click', () => {
+      addParticipantTrainingModal.classList.remove('active');
+    });
+
+    cancelAddParticipantTraining.addEventListener('click', () => {
+      addParticipantTrainingModal.classList.remove('active');
+    });
+
+    addParticipantTrainingForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(addParticipantTrainingForm);
+      const participantData = {
+        name: formData.get('participant-name').trim()
+      };
+
+      if (!participantData.name) {
+        alert('Proszę wpisać imię i nazwisko uczestnika');
+        return;
+      }
+
+      // Show loading
+      const submitBtn = document.getElementById('submit-add-participant-training');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<div class="loading"></div> Dodawanie...';
+      submitBtn.disabled = true;
+
+      try {
+        await addParticipantToTraining(participantData);
+        addParticipantTrainingModal.classList.remove('active');
+        addParticipantTrainingForm.reset();
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+
+    async function addParticipantToTraining(participantData) {
+      if (!currentTraining) return;
+
+      try {
+        // Add participant to training
+        const { error } = await supabase
+          .from('training_participants')
+          .insert({
+            training_id: currentTraining.id,
+            participant_id: Date.now(), // Simple ID generation - in production use proper UUID
+            name: participantData.name
+          });
+
+        if (error) throw error;
+
+        // Reload participants
+        await loadTrainingParticipants(currentTraining.id);
+
+      } catch (err) {
+        console.error('Błąd dodawania uczestnika do szkolenia:', err);
+        alert('Błąd dodawania uczestnika: ' + (err.message || 'Nieznany błąd'));
+      }
+    }
+
+    // Training payment functions
+    async function toggleTrainingPayment(participantId, trainingId) {
+      try {
+        // Check if payment exists
+        const { data: existingPayment, error: checkError } = await supabase
+          .from('training_payments')
+          .select('*')
+          .eq('training_id', trainingId)
+          .eq('participant_id', participantId)
+          .single();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          throw checkError;
+        }
+
+        if (existingPayment) {
+          // Toggle confirmation
+          const { error } = await supabase
+            .from('training_payments')
+            .update({ confirmed: !existingPayment.confirmed })
+            .eq('training_id', trainingId)
+            .eq('participant_id', participantId);
+
+          if (error) throw error;
+        } else {
+          // Create new payment record
+          const { error } = await supabase
+            .from('training_payments')
+            .insert({
+              training_id: trainingId,
+              participant_id: participantId,
+              amount: 0,
+              trainer_amounts: [],
+              confirmed: true
+            });
+
+          if (error) throw error;
+        }
+
+        // Reload participants to update UI
+        await loadTrainingParticipants(trainingId);
+
+      } catch (err) {
+        console.error('Błąd zmiany statusu płatności:', err);
+        alert('Błąd zmiany statusu płatności');
+      }
+    }
+
+    async function removeTrainingParticipant(participantId, trainingId) {
+      if (!confirm('Czy na pewno chcesz usunąć tego uczestnika ze szkolenia?')) return;
+
+      try {
+        // Remove payment first
+        await supabase
+          .from('training_payments')
+          .delete()
+          .eq('training_id', trainingId)
+          .eq('participant_id', participantId);
+
+        // Remove participant
+        const { error } = await supabase
+          .from('training_participants')
+          .delete()
+          .eq('training_id', trainingId)
+          .eq('participant_id', participantId);
+
+        if (error) throw error;
+
+        // Reload participants
+        await loadTrainingParticipants(trainingId);
+
+      } catch (err) {
+        console.error('Błąd usuwania uczestnika:', err);
+        alert('Błąd usuwania uczestnika');
+      }
+    }
+
+    function setupTrainingPaymentEventListeners() {
+      // Similar to camp payment listeners but for trainings
+      document.querySelectorAll('.payment-input').forEach(input => {
+        input.addEventListener('change', async (e) => {
+          const participantId = e.target.dataset.participantId;
+          const trainingId = e.target.dataset.trainingId;
+          const columnType = e.target.dataset.columnType;
+          const trainerIndex = e.target.dataset.trainerIndex;
+          const newAmount = parseFloat(e.target.value) || 0;
+
+          try {
+            // Get existing payment
+            const { data: existingPayment, error: checkError } = await supabase
+              .from('training_payments')
+              .select('*')
+              .eq('training_id', trainingId)
+              .eq('participant_id', participantId)
+              .single();
+
+            let updateData = {};
+
+            if (columnType === 'training') {
+              updateData.amount = newAmount;
+            } else if (columnType === 'trainer') {
+              const trainerAmounts = existingPayment ? existingPayment.trainer_amounts || [] : [];
+              trainerAmounts[parseInt(trainerIndex)] = newAmount;
+              updateData.trainer_amounts = trainerAmounts;
+            }
+
+            if (existingPayment) {
+              // Update existing payment
+              const { error } = await supabase
+                .from('training_payments')
+                .update(updateData)
+                .eq('training_id', trainingId)
+                .eq('participant_id', participantId);
+
+              if (error) throw error;
+            } else {
+              // Create new payment
+              updateData.training_id = trainingId;
+              updateData.participant_id = participantId;
+              updateData.confirmed = false;
+
+              const { error } = await supabase
+                .from('training_payments')
+                .insert(updateData);
+
+              if (error) throw error;
+            }
+
+            // Update total display
+            const row = e.target.closest('tr');
+            const totalCell = row.querySelector('.total-amount');
+            if (totalCell) {
+              const trainingAmount = parseFloat(row.querySelector('input[data-column-type="training"]').value) || 0;
+              const trainerInputs = row.querySelectorAll('input[data-column-type="trainer"]');
+              const trainerAmounts = Array.from(trainerInputs).map(input => parseFloat(input.value) || 0);
+              totalCell.textContent = calculateTrainingParticipantTotal(trainingAmount, trainerAmounts);
+            }
+
+          } catch (err) {
+            console.error('Błąd aktualizacji płatności:', err);
+            alert('Błąd aktualizacji płatności');
+          }
+        });
+      });
+    }
+
+    // Make training functions global
+    window.toggleTrainingPayment = toggleTrainingPayment;
+    window.removeTrainingParticipant = removeTrainingParticipant;
   </script>
 </body>
 </html>
