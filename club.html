@@ -2211,26 +2211,6 @@
       }
     });
 
-    // Navigation functions
-    function setActiveNav(section) {
-      // Hide all sections
-      document.getElementById('members-section').style.display = 'none';
-      document.getElementById('camps-section').style.display = 'none';
-      document.getElementById('camp-details-section').style.display = 'none';
-
-      // Remove active class from all nav links
-      document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
-
-      // Show selected section and activate nav link
-      if (section === 'members') {
-        document.getElementById('members-section').style.display = 'block';
-        document.getElementById('nav-members').classList.add('active');
-      } else if (section === 'camps') {
-        document.getElementById('camps-section').style.display = 'block';
-        document.getElementById('nav-camps').classList.add('active');
-        loadCamps();
-      }
-    }
 
     // Camps functionality
     let currentMonth = '2025-09';
