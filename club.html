@@ -462,8 +462,8 @@
       color: var(--text-light);
       font-weight: bold;
       flex: 1;
+      padding-left: 35px; /* Make space for the delete button */
     }
-
 
     .camp-date {
       color: var(--text-gray);
@@ -1247,8 +1247,8 @@
         </a>
       </li>
       <li>
-        <a href="#" id="nav-trainings">
-          <i class="fas fa-graduation-cap"></i>
+        <a href="#" id="nav-la-trainings">
+          <i class="fas fa-drum"></i>
           <span class="link-text">Szkolenia LA</span>
         </a>
       </li>
@@ -1364,6 +1364,62 @@
       <div class="financial-summary" id="financial-summary">
         <h3>Podsumowanie Finansowe</h3>
         <div class="summary-currencies" id="summary-currencies">
+          <!-- Currency summaries will be loaded here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- LA Trainings Section -->
+    <div class="content-box" id="la-trainings-section" style="display: none;">
+      <div class="content-header">
+        <h3>Szkolenia LA</h3>
+        <button class="btn btn-primary" id="create-la-training-btn">
+          <i class="fas fa-plus"></i> Utwórz szkolenie
+        </button>
+      </div>
+
+      <!-- Month Selector -->
+      <div class="month-selector" style="margin-bottom: 20px;">
+        <label for="la-training-month-select">Wybierz miesiąc:</label>
+        <select id="la-training-month-select" class="form-control" style="margin-left: 10px;">
+          <option value="2025-09">Wrzesień 2025</option>
+          <option value="2025-08">Sierpień 2025</option>
+        </select>
+      </div>
+
+      <!-- LA Trainings List -->
+      <div class="camps-list" id="la-trainings-list">
+        <!-- LA Trainings will be loaded here -->
+      </div>
+    </div>
+
+    <!-- LA Training Details Section -->
+    <div class="content-box" id="la-training-details-section" style="display: none;">
+      <div class="content-header">
+        <h3 id="la-training-details-title">Szczegóły szkolenia</h3>
+        <div class="camp-actions">
+          <button class="btn btn-primary" id="add-la-participant-btn">
+            <i class="fas fa-user-plus"></i> Dodaj uczestnika
+          </button>
+          <button class="btn btn-outline" id="back-to-la-trainings-btn">
+            <i class="fas fa-arrow-left"></i> Powrót do szkoleń
+          </button>
+        </div>
+      </div>
+
+      <!-- Participant Search -->
+      <div class="participant-search" style="margin-bottom: 20px;">
+        <input type="text" id="la-participant-search" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;">
+      </div>
+
+      <div class="camp-details-content" id="la-training-details-content">
+        <!-- LA Training details table will be loaded here -->
+      </div>
+
+      <!-- Financial Summary Section -->
+      <div class="financial-summary" id="la-financial-summary">
+        <h3>Podsumowanie Finansowe</h3>
+        <div class="summary-currencies" id="la-summary-currencies">
           <!-- Currency summaries will be loaded here -->
         </div>
       </div>
@@ -1577,163 +1633,6 @@
             <button type="button" class="btn btn-outline" id="cancel-add-participant">Anuluj</button>
             <button type="submit" class="btn btn-primary" id="submit-add-participant">
               <i class="fas fa-user-plus"></i> Dodaj uczestnika
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Trainings LA Section - Copy of Camps ST -->
-    <div class="content-box" id="trainings-section" style="display: none;">
-      <div class="content-header">
-        <h3>Szkolenia LA</h3>
-        <button class="btn btn-primary" id="create-training-btn">
-          <i class="fas fa-plus"></i> Utwórz szkolenie
-        </button>
-      </div>
-
-      <!-- Month Selector -->
-      <div class="month-selector" style="margin-bottom: 20px;">
-        <label for="training-month-select">Wybierz miesiąc:</label>
-        <select id="training-month-select" class="form-control" style="margin-left: 10px;">
-          <option value="2025-09">Wrzesień 2025</option>
-          <option value="2025-08">Sierpień 2025</option>
-        </select>
-      </div>
-
-      <!-- Trainings List -->
-      <div class="camps-list" id="trainings-list">
-        <!-- Trainings will be loaded here -->
-      </div>
-    </div>
-
-    <!-- Training Details Section -->
-    <div class="content-box" id="training-details-section" style="display: none;">
-      <div class="content-header">
-        <h3 id="training-details-title">Szczegóły szkolenia</h3>
-        <div class="camp-actions">
-          <button class="btn btn-primary" id="add-participant-training-btn">
-            <i class="fas fa-user-plus"></i> Dodaj uczestnika
-          </button>
-          <button class="btn btn-outline" id="back-to-trainings-btn">
-            <i class="fas fa-arrow-left"></i> Powrót do szkoleń
-          </button>
-        </div>
-      </div>
-
-      <!-- Participant Search -->
-      <div class="participant-search" style="margin-bottom: 20px;">
-        <input type="text" id="participant-training-search" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;">
-      </div>
-
-      <div class="camp-details-content" id="training-details-content">
-        <!-- Training details table will be loaded here -->
-      </div>
-
-      <!-- Financial Summary Section -->
-      <div class="financial-summary" id="training-financial-summary">
-        <h3>Podsumowanie Finansowe</h3>
-        <div id="training-summary-currencies"></div>
-        <div id="training-summary-totals"></div>
-        <div id="training-donut-container" style="margin-top: 20px;">
-          <canvas id="training-donut" width="200" height="200"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Create Training Modal -->
-    <div class="modal" id="create-training-modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Utwórz szkolenie LA</h3>
-          <button class="modal-close" id="close-create-training-modal">&times;</button>
-        </div>
-
-        <form id="create-training-form">
-          <div class="form-group">
-            <label for="training-name">Nazwa szkolenia *</label>
-            <input type="text" id="training-name" name="training-name" class="form-control" required>
-          </div>
-
-          <div class="form-group">
-            <label for="training-date">Data szkolenia *</label>
-            <input type="date" id="training-date" name="training-date" class="form-control" required>
-          </div>
-
-          <div class="form-group">
-            <label for="training-amount">Kwota szkolenia *</label>
-            <input type="number" id="training-amount" name="training-amount" class="form-control" step="0.01" min="0" required>
-          </div>
-
-          <div class="form-group">
-            <label for="training-currency">Waluta *</label>
-            <select id="training-currency" name="training-currency" class="form-control" required>
-              <option value="EUR">EUR</option>
-              <option value="PLN">PLN</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="training-location">Lokalizacja</label>
-            <input type="text" id="training-location" name="training-location" class="form-control">
-          </div>
-
-          <div class="form-group">
-            <label for="training-description">Opis</label>
-            <textarea id="training-description" name="training-description" class="form-control" rows="3"></textarea>
-          </div>
-
-          <div id="training-trainers-container">
-            <div class="trainer-item">
-              <div class="trainer-fields">
-                <div class="form-group">
-                  <label for="trainer-name-1">Imię szkoleniowca</label>
-                  <input type="text" id="trainer-name-1" name="trainer-name-1" class="form-control" required>
-                </div>
-                <div class="form-group">
-                  <label for="trainer-amount-1">Kwota</label>
-                  <input type="number" id="trainer-amount-1" name="trainer-amount-1" class="form-control" step="0.01" min="0" required>
-                </div>
-                <div class="form-group">
-                  <label for="trainer-currency-1">Waluta</label>
-                  <select id="trainer-currency-1" name="trainer-currency-1" class="form-control" required>
-                    <option value="EUR">EUR</option>
-                    <option value="PLN">PLN</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn btn-outline" id="add-training-trainer-btn">Dodaj trenera</button>
-            <button type="button" class="btn btn-outline" id="cancel-create-training">Anuluj</button>
-            <button type="submit" class="btn btn-primary" id="submit-create-training">
-              <i class="fas fa-save"></i> Utwórz szkolenie
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Add Participant to Training Modal -->
-    <div class="modal" id="add-participant-training-modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Dodaj uczestnika do szkolenia</h3>
-          <button class="modal-close" id="close-add-participant-training-modal">&times;</button>
-        </div>
-
-        <form id="add-participant-training-form">
-          <div class="form-group">
-            <label for="participant-training-name">Imię i nazwisko uczestnika</label>
-            <input type="text" id="participant-training-name" name="participant-name" class="form-control" required>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn btn-outline" id="cancel-add-participant-training">Anuluj</button>
-            <button type="submit" class="btn btn-primary" id="submit-add-participant-training">
-              <i class="fas fa-save"></i> Dodaj uczestnika
             </button>
           </div>
         </form>
@@ -2135,6 +2034,32 @@
       }
     });
 
+    // Navigation functions
+    function setActiveNav(section) {
+      // Hide all sections
+      document.getElementById('members-section').style.display = 'none';
+      document.getElementById('camps-section').style.display = 'none';
+      document.getElementById('camp-details-section').style.display = 'none';
+      document.getElementById('la-trainings-section').style.display = 'none';
+      document.getElementById('la-training-details-section').style.display = 'none';
+
+      // Remove active class from all nav links
+      document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
+
+      // Show selected section and activate nav link
+      if (section === 'members') {
+        document.getElementById('members-section').style.display = 'block';
+        document.getElementById('nav-members').classList.add('active');
+      } else if (section === 'camps') {
+        document.getElementById('camps-section').style.display = 'block';
+        document.getElementById('nav-camps').classList.add('active');
+        loadCamps();
+      } else if (section === 'la-trainings') {
+        document.getElementById('la-trainings-section').style.display = 'block';
+        document.getElementById('nav-la-trainings').classList.add('active');
+        loadLaTrainings();
+      }
+    }
 
     // Camps functionality
     let currentMonth = '2025-09';
@@ -3706,6 +3631,432 @@
       currentCamp = null;
     });
 
+    // LA Trainings functionality
+    let currentLaTrainingMonth = '2025-09';
+    let currentLaTraining = null;
+    let laTrainingParticipants = []; // Additional participants added to LA training
+
+    // DOM Elements for LA trainings
+    const createLaTrainingBtn = document.getElementById('create-la-training-btn');
+    const laTrainingsList = document.getElementById('la-trainings-list');
+    const laTrainingMonthSelect = document.getElementById('la-training-month-select');
+    const laTrainingDetailsContent = document.getElementById('la-training-details-content');
+    const laParticipantSearch = document.getElementById('la-participant-search');
+    const addLaParticipantBtn = document.getElementById('add-la-participant-btn');
+    const backToLaTrainingsBtn = document.getElementById('back-to-la-trainings-btn');
+
+    // LA Trainings functions (copied from camps with modifications)
+    async function loadLaTrainings() {
+      try {
+        // Show loading state
+        laTrainingsList.innerHTML = `
+          <div class="loading-state">
+            <div class="loading"></div>
+            <p>Ładowanie szkoleń LA...</p>
+          </div>
+        `;
+
+        // Load LA trainings with trainer data in a single batch query
+        const { data: laTrainings, error } = await supabase
+          .from('camps')
+          .select(`
+            *,
+            trainers (
+              name,
+              amount,
+              currency,
+              trainer_index
+            )
+          `)
+          .eq('month', currentLaTrainingMonth)
+          .order('date', { ascending: false });
+
+        if (error) throw error;
+
+        // Load all LA training participants at once (batch query)
+        const { data: allLaTrainingParticipants, error: participantsError } = await supabase
+          .from('camp_participants')
+          .select('*')
+          .in('camp_id', laTrainings.map(laTraining => laTraining.id));
+
+        if (participantsError) {
+          console.error('Error loading LA training participants:', participantsError);
+        }
+
+        // Group participants by camp_id
+        const participantsByLaTraining = {};
+        if (allLaTrainingParticipants) {
+          allLaTrainingParticipants.forEach(p => {
+            if (!participantsByLaTraining[p.camp_id]) {
+              participantsByLaTraining[p.camp_id] = [];
+            }
+            participantsByLaTraining[p.camp_id].push({
+              id: p.participant_id,
+              name: p.name,
+              isCampParticipant: true
+            });
+          });
+        }
+
+        // Process trainer data for each LA training
+        for (const laTraining of laTrainings) {
+          if (laTraining.trainers && laTraining.trainers.length > 0) {
+            // Sort trainers by trainer_index and create sequential array
+            laTraining.trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
+            laTraining.trainers = laTraining.trainers.map(trainer => ({
+              name: trainer.name,
+              amount: parseFloat(trainer.amount),
+              currency: trainer.currency
+            }));
+          } else {
+            laTraining.trainers = [];
+          }
+        }
+
+        // Store LA trainings for status calculation
+        window.allLaTrainings = laTrainings;
+
+        if (laTrainings.length === 0) {
+          laTrainingsList.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-drum"></i>
+              <p>Brak szkoleń LA w wybranym miesiącu</p>
+              <p>Kliknij "Utwórz szkolenie" aby dodać pierwsze szkolenie LA</p>
+            </div>
+          `;
+          return;
+        }
+
+        laTrainingsList.innerHTML = '';
+        for (const laTraining of laTrainings) {
+          const laTrainingCard = createLaTrainingCard(laTraining, participantsByLaTraining[laTraining.id] || []);
+          laTrainingsList.appendChild(laTrainingCard);
+        }
+
+        // Calculate and apply LA training statuses immediately to show colors on first load
+        await updateLaTrainingStatuses(laTrainings, participantsByLaTraining);
+
+      } catch (err) {
+        console.error('Błąd ładowania szkoleń LA:', err);
+        laTrainingsList.innerHTML = `
+          <div class="error-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Błąd ładowania szkoleń LA</p>
+            <button onclick="loadLaTrainings()" class="btn btn-primary">Spróbuj ponownie</button>
+          </div>
+        `;
+      }
+    }
+
+    // Create LA training card (copied from createCampCard)
+    function createLaTrainingCard(laTraining, participants) {
+      const card = document.createElement('div');
+      card.className = 'camp-card status-incomplete'; // Default status
+      card.onclick = () => showLaTrainingDetails(laTraining);
+
+      const participantCount = participants.length;
+      const participantText = participantCount === 1 ? 'uczestnik' : participantCount < 5 ? 'uczestników' : 'uczestników';
+
+      card.innerHTML = `
+        <div class="camp-header">
+          <h4>${laTraining.name}</h4>
+          <div class="camp-date">${formatDate(laTraining.date)}</div>
+        </div>
+        <div class="camp-info">
+          <div class="camp-detail">
+            <i class="fas fa-users"></i>
+            <span>${participantCount} ${participantText}</span>
+          </div>
+          <div class="camp-detail">
+            <i class="fas fa-euro-sign"></i>
+            <span>${laTraining.amount} ${laTraining.currency}</span>
+          </div>
+        </div>
+        <div class="camp-actions">
+          <button class="btn btn-outline edit-btn" onclick="event.stopPropagation(); editLaTraining('${laTraining.id}')">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn btn-outline delete-btn" onclick="event.stopPropagation(); deleteLaTraining('${laTraining.id}', '${laTraining.name}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Show LA training details (copied from showCampDetails with modifications)
+    async function showLaTrainingDetails(laTraining) {
+      // Load trainer data for this LA training if not already loaded
+      if (!laTraining.trainers) {
+        console.log(`[SHOW-LA-TRAINING-DETAILS] Loading trainer data for LA training ${laTraining.id}`);
+        const { data: trainers, error: trainerError } = await supabase
+          .from('trainers')
+          .select('*')
+          .eq('camp_id', laTraining.id)
+          .order('trainer_index', { ascending: true });
+
+        if (!trainerError && trainers) {
+          // Sort trainers by trainer_index and create sequential array
+          trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
+          laTraining.trainers = trainers.map(trainer => ({
+            name: trainer.name,
+            amount: parseFloat(trainer.amount),
+            currency: trainer.currency
+          }));
+        } else {
+          laTraining.trainers = [];
+        }
+      }
+
+      window.currentLaTraining = laTraining;
+      document.getElementById('la-training-details-title').textContent = `Szkolenie LA: ${laTraining.name}`;
+
+      // Hide LA trainings list and show details
+      document.getElementById('la-trainings-section').style.display = 'none';
+      document.getElementById('la-training-details-section').style.display = 'block';
+
+      // Show loading state in LA training details
+      const detailsContent = document.getElementById('la-training-details-content');
+      detailsContent.innerHTML = `
+        <div class="loading-state">
+          <div class="loading"></div>
+          <p>Ładowanie szczegółów szkolenia LA...</p>
+        </div>
+      `;
+
+      // ULTRA FAST LOADING - Load all data in parallel
+      try {
+        console.log('[LA-TRAINING-DETAILS] Starting ultra-fast parallel loading...');
+
+        // PARALLEL DATA LOADING
+        const dataPromises = [];
+
+        // Load members if not already loaded
+        let allMembers = window.allMembers;
+        if (!allMembers) {
+          dataPromises.push(
+            supabase
+              .from('members')
+              .select('*')
+              .order('name', { ascending: true })
+              .then(({ data, error }) => {
+                if (error) throw error;
+                window.allMembers = data;
+                return data;
+              })
+          );
+        } else {
+          dataPromises.push(Promise.resolve(allMembers));
+        }
+
+        // Load LA training participants in parallel
+        dataPromises.push(getCampParticipants(laTraining.id));
+
+        // Wait for all data to load in parallel
+        const [membersData, additionalParticipants] = await Promise.all(dataPromises);
+
+        if (!allMembers) {
+          allMembers = membersData;
+        }
+
+        // Get members eligible for this LA training (LA or 10T style) - MODIFIED FILTER
+        const members = allMembers.filter(m => m.style === 'la' || m.style === '10t');
+        console.log(`[SHOW-LA-TRAINING-DETAILS] Found ${members.length} eligible club members (LA/10T)`);
+        console.log(`[SHOW-LA-TRAINING-DETAILS] Found ${additionalParticipants.length} external participants`);
+
+        // Combine members and additional participants
+        const allParticipants = [...members, ...additionalParticipants];
+        console.log(`[SHOW-LA-TRAINING-DETAILS] Total participants: ${allParticipants.length}`);
+
+        // Cache participants for later use
+        window.currentLaParticipants = allParticipants;
+
+        // Initialize payment cache - this already loads data in parallel
+        console.log('[LA-TRAINING-DETAILS] Initializing payment cache...');
+        await initializePaymentCache(laTraining.id, allParticipants);
+        console.log('[LA-TRAINING-DETAILS] Payment cache initialized, all data loaded in parallel');
+
+        // ULTRA FAST UI SETUP - Create table and summary in parallel
+        console.log('[LA-TRAINING-DETAILS] Setting up UI components in parallel...');
+
+        const uiPromises = [];
+
+        // Create participant table
+        uiPromises.push(
+          createCampDetailsTable(laTraining, allParticipants).then(tableHtml => {
+            detailsContent.innerHTML = tableHtml;
+          })
+        );
+
+        // Create financial summary
+        uiPromises.push(
+          createFinancialSummary(laTraining, allParticipants).then(summaryHtml => {
+            const summaryContainer = document.getElementById('la-financial-summary');
+            if (summaryContainer) {
+              summaryContainer.style.display = 'block';
+              document.getElementById('la-summary-currencies').innerHTML = summaryHtml;
+            }
+          })
+        );
+
+        // Wait for UI to be ready
+        await Promise.all(uiPromises);
+        console.log('[LA-TRAINING-DETAILS] All UI components loaded in parallel');
+
+        // Initialize participant search for LA trainings
+        initializeLaParticipantSearch(allParticipants);
+
+        // Update LA training status based on loaded data
+        await updateLaTrainingStatus(laTraining.id);
+
+      } catch (err) {
+        console.error('Błąd ładowania szczegółów szkolenia LA:', err);
+        detailsContent.innerHTML = `
+          <div class="error-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Błąd ładowania szczegółów szkolenia LA</p>
+            <button onclick="showLaTrainingDetails(window.currentLaTraining)" class="btn btn-primary">Spróbuj ponownie</button>
+          </div>
+        `;
+      }
+    }
+
+    // Initialize LA participant search
+    function initializeLaParticipantSearch(participants) {
+      const searchInput = document.getElementById('la-participant-search');
+      if (!searchInput) return;
+
+      searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const participantRows = document.querySelectorAll('#la-training-details-content .participant-row');
+
+        participantRows.forEach(row => {
+          const participantName = row.querySelector('.participant-name')?.textContent.toLowerCase() || '';
+          const participantId = row.querySelector('.participant-id')?.textContent.toLowerCase() || '';
+
+          if (participantName.includes(searchTerm) || participantId.includes(searchTerm)) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // Update LA training statuses
+    async function updateLaTrainingStatuses(laTrainings, participantsByLaTraining) {
+      for (const laTraining of laTrainings) {
+        try {
+          const externalParticipants = participantsByLaTraining[laTraining.id] || [];
+          const members = window.allMembers || [];
+          const eligibleMembers = members.filter(m => m.style === 'la' || m.style === '10t'); // MODIFIED FILTER
+
+          // Combine external participants and club members, but avoid duplicates
+          const uniqueParticipants = [];
+          const participantIds = new Set();
+
+          // Add external participants first
+          externalParticipants.forEach(p => {
+            if (!participantIds.has(p.id)) {
+              uniqueParticipants.push(p);
+              participantIds.add(p.id);
+            }
+          });
+
+          // Add eligible club members
+          eligibleMembers.forEach(member => {
+            if (!participantIds.has(member.id)) {
+              uniqueParticipants.push({
+                id: member.id,
+                name: member.name,
+                isClubMember: true
+              });
+              participantIds.add(member.id);
+            }
+          });
+
+          const status = await calculateCampStatus(laTraining, uniqueParticipants);
+          const card = document.querySelector(`.camp-card[onclick*="${laTraining.id}"]`);
+          if (card) {
+            card.className = `camp-card status-${status}`;
+          }
+        } catch (err) {
+          console.error(`Error updating status for LA training ${laTraining.id}:`, err);
+        }
+      }
+    }
+
+    // Update single LA training status
+    async function updateLaTrainingStatus(laTrainingId) {
+      try {
+        const laTraining = window.allLaTrainings?.find(t => t.id === laTrainingId);
+        if (!laTraining) return;
+
+        const participants = window.currentLaParticipants || [];
+        const status = await calculateCampStatus(laTraining, participants);
+
+        // Update card in list if visible
+        const card = document.querySelector(`.camp-card[onclick*="${laTrainingId}"]`);
+        if (card) {
+          card.className = `camp-card status-${status}`;
+        }
+
+        // Update stored status
+        if (window.allLaTrainings) {
+          const storedLaTraining = window.allLaTrainings.find(t => t.id === laTrainingId);
+          if (storedLaTraining) {
+            storedLaTraining.status = status;
+          }
+        }
+      } catch (err) {
+        console.error(`Error updating status for LA training ${laTrainingId}:`, err);
+      }
+    }
+
+    // Edit LA training (placeholder - same as camp editing)
+    window.editLaTraining = function(laTrainingId) {
+      // For now, use the same edit function as camps
+      // This could be customized later if needed
+      window.editCamp(laTrainingId);
+    };
+
+    // Delete LA training (placeholder - same as camp deletion)
+    window.deleteLaTraining = function(laTrainingId, laTrainingName) {
+      // For now, use the same delete function as camps
+      // This could be customized later if needed
+      window.deleteCamp({id: laTrainingId, name: laTrainingName});
+    };
+
+    // Add LA participant (placeholder)
+    window.addLaParticipant = function() {
+      // For now, use the same add participant function as camps
+      // This could be customized later if needed
+      window.addParticipant();
+    };
+
+    // LA Training event listeners
+    createLaTrainingBtn.addEventListener('click', () => {
+      // For now, use the same create camp modal
+      // This could be customized later if needed
+      createCampBtn.click();
+    });
+
+    laTrainingMonthSelect.addEventListener('change', (e) => {
+      currentLaTrainingMonth = e.target.value;
+      loadLaTrainings();
+    });
+
+    addLaParticipantBtn.addEventListener('click', () => {
+      addLaParticipant();
+    });
+
+    backToLaTrainingsBtn.addEventListener('click', () => {
+      document.getElementById('la-training-details-section').style.display = 'none';
+      document.getElementById('la-trainings-section').style.display = 'block';
+      currentLaTraining = null;
+    });
+
     // Navigation event listeners
     document.getElementById('nav-members').addEventListener('click', (e) => {
       e.preventDefault();
@@ -3715,6 +4066,11 @@
     document.getElementById('nav-camps').addEventListener('click', (e) => {
       e.preventDefault();
       setActiveNav('camps');
+    });
+
+    document.getElementById('nav-la-trainings').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('la-trainings');
     });
 
     // Update the original navigation function
@@ -5268,811 +5624,6 @@
         console.error('Błąd ładowania danych członków dla statusu campów:', err);
       }
     }
-
-    // ===========================================
-    // TRAININGS LA FUNCTIONALITY - COPY OF CAMPS ST
-    // ===========================================
-
-    // DOM Elements for trainings
-    const trainingsSection = document.getElementById('trainings-section');
-    const trainingDetailsSection = document.getElementById('training-details-section');
-    const trainingsList = document.getElementById('trainings-list');
-    const trainingParticipantsList = document.getElementById('training-participants-list');
-    const backToTrainingsBtn = document.getElementById('back-to-trainings-btn');
-    const createTrainingBtn = document.getElementById('create-training-btn');
-    const createTrainingModal = document.getElementById('create-training-modal');
-    const closeCreateTrainingModal = document.getElementById('close-create-training-modal');
-    const cancelCreateTraining = document.getElementById('cancel-create-training');
-    const createTrainingForm = document.getElementById('create-training-form');
-    const addParticipantTrainingBtn = document.getElementById('add-participant-training-btn');
-    const addParticipantTrainingModal = document.getElementById('add-participant-training-modal');
-    const closeAddParticipantTrainingModal = document.getElementById('close-add-participant-training-modal');
-    const cancelAddParticipantTraining = document.getElementById('cancel-add-participant-training');
-    const addParticipantTrainingForm = document.getElementById('add-participant-training-form');
-
-    let currentTrainingMonth = '2025-09';
-    let currentTraining = null;
-    let trainingTrainerCount = 1;
-
-    // Navigation
-    document.getElementById('nav-trainings').addEventListener('click', (e) => {
-      e.preventDefault();
-      setActiveNav('trainings');
-    });
-
-    function setActiveNav(section) {
-      // Remove active class from all nav links
-      document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
-
-      // Hide all sections
-      const membersSection = document.getElementById('members-section');
-      const campsSection = document.getElementById('camps-section');
-      const trainingsSection = document.getElementById('trainings-section');
-      const trainingDetailsSection = document.getElementById('training-details-section');
-      const scheduleSection = document.getElementById('schedule-section');
-      const profileSection = document.getElementById('profile-section');
-
-      if (membersSection) membersSection.style.display = 'none';
-      if (campsSection) campsSection.style.display = 'none';
-      if (trainingsSection) trainingsSection.style.display = 'none';
-      if (trainingDetailsSection) trainingDetailsSection.style.display = 'none';
-      if (scheduleSection) scheduleSection.style.display = 'none';
-      if (profileSection) profileSection.style.display = 'none';
-
-      // Show selected section and set active nav
-      if (section === 'trainings') {
-        if (trainingsSection) trainingsSection.style.display = 'block';
-        document.getElementById('nav-trainings').classList.add('active');
-        loadTrainings();
-      } else if (section === 'members') {
-        if (membersSection) membersSection.style.display = 'block';
-        document.getElementById('nav-members').classList.add('active');
-      } else if (section === 'camps') {
-        if (campsSection) campsSection.style.display = 'block';
-        document.getElementById('nav-camps').classList.add('active');
-      } else if (section === 'schedule') {
-        if (scheduleSection) scheduleSection.style.display = 'block';
-        document.getElementById('nav-schedule').classList.add('active');
-      } else if (section === 'profile') {
-        if (profileSection) profileSection.style.display = 'block';
-        document.getElementById('nav-profile').classList.add('active');
-      }
-    }
-
-    // Month selector for trainings
-    document.getElementById('training-month-select').addEventListener('change', (e) => {
-      currentTrainingMonth = e.target.value;
-      loadTrainings();
-    });
-
-    async function loadTrainings() {
-      try {
-        // Show loading state
-        trainingsList.innerHTML = `
-          <div class="loading-state">
-            <div class="loading"></div>
-            <p>Ładowanie szkoleń...</p>
-          </div>
-        `;
-
-        // Load trainings with trainer data in a single batch query
-        const { data: trainings, error } = await supabase
-          .from('camps')  // Using same table as camps for now
-          .select(`
-            *,
-            trainers (
-              name,
-              amount,
-              currency,
-              trainer_index
-            )
-          `)
-          .eq('month', currentTrainingMonth)
-          .order('date', { ascending: false });
-
-        if (error) throw error;
-
-        // Load all training participants at once (batch query)
-        const { data: allTrainingParticipants, error: participantsError } = await supabase
-          .from('camp_participants')  // Using same table as camps for now
-          .select('*')
-          .in('camp_id', trainings.map(training => training.id));
-
-        if (participantsError) {
-          console.error('Error loading training participants:', participantsError);
-        }
-
-        // Group participants by training_id
-        const participantsByTraining = {};
-        if (allTrainingParticipants) {
-          allTrainingParticipants.forEach(p => {
-            if (!participantsByTraining[p.camp_id]) {
-              participantsByTraining[p.camp_id] = [];
-            }
-            participantsByTraining[p.camp_id].push({
-              id: p.participant_id,
-              name: p.name,
-              isTrainingParticipant: true
-            });
-          });
-        }
-
-        // Process trainer data for each training
-        for (const training of trainings) {
-          if (training.trainers && training.trainers.length > 0) {
-            // Sort trainers by trainer_index and create sequential array
-            training.trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
-            training.trainers = training.trainers.map(trainer => ({
-              name: trainer.name,
-              amount: parseFloat(trainer.amount),
-              currency: trainer.currency
-            }));
-          } else {
-            training.trainers = [];
-          }
-        }
-
-        // Store trainings for status calculation
-        window.allTrainings = trainings;
-
-        if (trainings.length === 0) {
-          trainingsList.innerHTML = `
-            <div class="empty-state">
-              <i class="fas fa-graduation-cap"></i>
-              <p>Brak szkoleń w wybranym miesiącu</p>
-              <p>Kliknij "Utwórz szkolenie" aby dodać pierwsze szkolenie</p>
-            </div>
-          `;
-          return;
-        }
-
-        trainingsList.innerHTML = '';
-        for (const training of trainings) {
-          const trainingCard = createTrainingCard(training, participantsByTraining[training.id] || []);
-          trainingsList.appendChild(trainingCard);
-        }
-
-        // Calculate and apply training statuses immediately to show colors on first load
-        await updateTrainingStatuses(trainings, participantsByTraining);
-
-      } catch (err) {
-        console.error('Błąd ładowania szkoleń:', err);
-        trainingsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania szkoleń</p></div>';
-      }
-    }
-
-    function createTrainingCard(training, participants) {
-      const totalParticipants = participants.length;
-
-      // Calculate status based on eligible members (10T or LA style)
-      const eligibleMembers = window.allMembers ? window.allMembers.filter(m => m.style === '10t' || m.style === 'la') : [];
-      const eligibleCount = eligibleMembers.length;
-
-      let statusClass = '';
-      if (totalParticipants >= eligibleCount) {
-        statusClass = 'status-complete';
-      } else if (totalParticipants > 0) {
-        statusClass = 'status-attention';
-      } else {
-        statusClass = 'status-incomplete';
-      }
-
-      const trainingCard = document.createElement('div');
-      trainingCard.className = `camp-card ${statusClass}`;
-      trainingCard.setAttribute('data-camp-id', training.id);
-
-      // Format date
-      const trainingDate = new Date(training.date);
-      const formattedDate = trainingDate.toLocaleDateString('pl-PL', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-
-      trainingCard.innerHTML = `
-        <div class="camp-header">
-          <h4 class="camp-name">${training.name}</h4>
-          <div style="font-size: 0.9rem; color: var(--text-gray);">
-            ${totalParticipants}/${eligibleCount} uczestników
-          </div>
-        </div>
-        <div class="camp-detail">
-          <i class="fas fa-calendar"></i>
-          <span>${formattedDate}</span>
-        </div>
-        ${training.location ? `
-        <div class="camp-detail">
-          <i class="fas fa-map-marker-alt"></i>
-          <span>${training.location}</span>
-        </div>
-        ` : ''}
-        ${training.trainers && training.trainers.length > 0 ? `
-        <div class="camp-detail">
-          <i class="fas fa-user-tie"></i>
-          <span>${training.trainers.map(t => t.name).join(', ')}</span>
-        </div>
-        ` : ''}
-      `;
-
-      trainingCard.addEventListener('click', () => openTrainingDetails(training.id));
-      return trainingCard;
-    }
-
-    async function updateTrainingStatuses(trainings, participantsByTraining) {
-      for (const training of trainings) {
-        await updateTrainingStatus(training.id);
-      }
-    }
-
-    async function updateTrainingStatus(trainingId) {
-      console.log(`[UPDATE-TRAINING-STATUS] Starting update for training ID: ${trainingId}`);
-      const trainingCard = document.querySelector(`.camp-card[data-camp-id="${trainingId}"]`);
-      if (!trainingCard) {
-        console.log(`[UPDATE-TRAINING-STATUS] Training card not found for ID: ${trainingId}`);
-        return;
-      }
-
-      // Get training data
-      const training = Array.isArray(window.allTrainings) ? window.allTrainings.find(t => t.id === trainingId) : null;
-      if (!training) {
-        console.log(`[UPDATE-TRAINING-STATUS] Training data not found for ID: ${trainingId}`);
-        return;
-      }
-
-      // Get participants for this training - both external and club members
-      const externalParticipants = await getTrainingParticipants(trainingId);
-      console.log(`[UPDATE-TRAINING-STATUS] Found ${externalParticipants.length} external participants for training ${training.name}`);
-
-      // Always include club members eligible for this training
-      const members = window.allMembers || [];
-      console.log(`[UPDATE-TRAINING-STATUS] window.allMembers exists: ${!!window.allMembers}, total members: ${members.length}`);
-
-      const eligibleMembers = members.filter(m => m.style === '10t' || m.style === 'la');
-      console.log(`[UPDATE-TRAINING-STATUS] Found ${eligibleMembers.length} eligible club members (10T or LA)`);
-
-      // Combine external participants and club members, but avoid duplicates
-      const allParticipants = [...externalParticipants];
-      eligibleMembers.forEach(member => {
-        // Check if this member is not already in external participants
-        const isAlreadyExternal = externalParticipants.some(ext => ext.id === member.id);
-        if (!isAlreadyExternal) {
-          allParticipants.push(member);
-        }
-      });
-
-      console.log(`[UPDATE-TRAINING-STATUS] Training ${training.name}: ${externalParticipants.length} external + ${eligibleMembers.length} club members = ${allParticipants.length} total participants`);
-
-      // Calculate status
-      const statusClass = await calculateTrainingStatus(training, allParticipants);
-
-      // Remove existing status classes
-      trainingCard.classList.remove('status-complete', 'status-incomplete', 'status-attention');
-
-      // Add new status class only if not empty
-      if (statusClass) {
-        trainingCard.classList.add(statusClass);
-        console.log(`[UPDATE-TRAINING-STATUS] Applied status class: ${statusClass}`);
-      } else {
-        console.log(`[UPDATE-TRAINING-STATUS] No status class applied (normal state)`);
-      }
-    }
-
-    async function calculateTrainingStatus(training, participants) {
-      // Simple status calculation - can be made more complex later
-      const totalParticipants = participants.length;
-      const eligibleMembers = window.allMembers ? window.allMembers.filter(m => m.style === '10t' || m.style === 'la') : [];
-
-      if (totalParticipants >= eligibleMembers.length) {
-        return 'status-complete';
-      } else if (totalParticipants > 0) {
-        return 'status-attention';
-      } else {
-        return 'status-incomplete';
-      }
-    }
-
-    async function getTrainingParticipants(trainingId) {
-      try {
-        const { data: participants, error } = await supabase
-          .from('camp_participants')  // Using same table as camps
-          .select('*')
-          .eq('camp_id', trainingId);
-
-        if (error) throw error;
-        return participants || [];
-      } catch (err) {
-        console.error('Error getting training participants:', err);
-        return [];
-      }
-    }
-
-    async function openTrainingDetails(trainingId) {
-      try {
-        showGlobalLoader('Ładowanie szczegółów szkolenia...');
-
-        // Get training data
-        const training = window.allTrainings.find(t => t.id === trainingId);
-        if (!training) {
-          throw new Error('Szkolenie nie znalezione');
-        }
-
-        currentTraining = training;
-
-        // Update UI
-        document.getElementById('training-details-title').textContent = training.name;
-        trainingsSection.style.display = 'none';
-        trainingDetailsSection.style.display = 'block';
-
-        // Load participants and setup UI
-        await loadTrainingParticipants(trainingId);
-        setupTrainingParticipantSearch();
-
-        // Set up financial summary
-        await updateTrainingFinancialSummary(trainingId);
-
-      } catch (err) {
-        console.error('Błąd otwierania szczegółów szkolenia:', err);
-        alert('Błąd ładowania szczegółów szkolenia');
-      } finally {
-        hideGlobalLoader();
-      }
-    }
-
-    async function loadTrainingParticipants(trainingId) {
-      try {
-        // Get participants for this training
-        const { data: participants, error } = await supabase
-          .from('camp_participants')  // Using same table as camps
-          .select('*')
-          .eq('camp_id', trainingId)
-          .order('name', { ascending: true });
-
-        if (error) throw error;
-
-        // Get payments for these participants
-        const participantIds = participants.map(p => p.participant_id);
-        const { data: payments, error: paymentsError } = await supabase
-          .from('camp_payments')  // Using same table as camps
-          .select('*')
-          .eq('camp_id', trainingId)
-          .in('participant_id', participantIds);
-
-        if (paymentsError) throw paymentsError;
-
-        // Create payment lookup
-        const paymentLookup = {};
-        payments.forEach(p => {
-          paymentLookup[p.participant_id] = p;
-        });
-
-        // Clear and populate table
-        trainingParticipantsList.innerHTML = '';
-
-        if (!participants || participants.length === 0) {
-          trainingParticipantsList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-gray);">Brak uczestników</td></tr>';
-          return;
-        }
-
-        participants.forEach((participant, index) => {
-          const payment = paymentLookup[participant.participant_id];
-          const campAmount = payment ? parseFloat(payment.amount) || 0 : 0;
-          const trainerAmounts = payment ? payment.trainer_amounts || [] : [];
-          const confirmed = payment ? payment.confirmed : false;
-
-          const row = document.createElement('tr');
-          row.setAttribute('data-participant-id', participant.participant_id);
-
-          row.innerHTML = `
-            <td style="text-align: center; font-weight: bold;">${index + 1}</td>
-            <td>
-              <div style="font-weight: bold;">${participant.name}</div>
-            </td>
-            <td>
-              <input type="number" class="payment-input form-control" data-column-type="camp" data-participant-id="${participant.participant_id}" data-camp-id="${trainingId}" value="${campAmount}" step="0.01" min="0" style="width: 100px; text-align: center;">
-            </td>
-            <td>
-              ${currentTraining.trainers ? currentTraining.trainers.map((trainer, trainerIndex) => `
-                <div style="margin-bottom: 5px;">
-                  <small style="color: var(--text-gray);">${trainer.name}:</small><br>
-                  <input type="number" class="payment-input form-control" data-column-type="trainer" data-participant-id="${participant.participant_id}" data-camp-id="${trainingId}" data-trainer-index="${trainerIndex}" value="${trainerAmounts[trainerIndex] || 0}" step="0.01" min="0" style="width: 80px; text-align: center; font-size: 0.8rem;">
-                </div>
-              `).join('') : ''}
-            </td>
-            <td style="font-weight: bold; text-align: center;">
-              <span class="total-amount">${calculateParticipantTotal(campAmount, trainerAmounts)}</span>
-              ${currentTraining.currency || 'PLN'}
-            </td>
-            <td style="text-align: center;">
-              <button class="btn btn-sm ${confirmed ? 'btn-success' : 'btn-outline'}" onclick="togglePayment(${participant.participant_id}, ${trainingId})">
-                <i class="fas ${confirmed ? 'fa-check' : 'fa-plus'}"></i>
-              </button>
-              <button class="btn btn-sm btn-outline" onclick="removeParticipant(${participant.participant_id}, ${trainingId})" style="margin-left: 5px;">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          `;
-
-          trainingParticipantsList.appendChild(row);
-        });
-
-        // Setup payment event listeners
-        setupPaymentEventListeners();
-
-      } catch (err) {
-        console.error('Błąd ładowania uczestników szkolenia:', err);
-        trainingParticipantsList.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--error);">Błąd ładowania danych</td></tr>';
-      }
-    }
-
-    function calculateParticipantTotal(campAmount, trainerAmounts) {
-      const total = parseFloat(campAmount) || 0;
-      const trainerTotal = trainerAmounts ? trainerAmounts.reduce((sum, amount) => sum + (parseFloat(amount) || 0), 0) : 0;
-      return (total + trainerTotal).toFixed(2);
-    }
-
-    function setupTrainingParticipantSearch() {
-      const searchInput = document.getElementById('participant-training-search');
-      if (!searchInput) return;
-
-      searchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase().trim();
-        const table = document.querySelector('#training-details-content .camp-details-table');
-        if (!table) return;
-
-        const rows = table.querySelectorAll('tbody tr');
-
-        rows.forEach(row => {
-          const nameCell = row.querySelector('td:nth-child(2)');
-          if (nameCell) {
-            const participantName = nameCell.textContent.toLowerCase();
-            row.style.display = participantName.includes(searchTerm) ? '' : 'none';
-          }
-        });
-      });
-    }
-
-    async function updateTrainingFinancialSummary(trainingId) {
-      try {
-        // This would be similar to camp financial summary but for trainings
-        // For now, just hide it as trainings might not need complex financial tracking
-        document.getElementById('training-financial-summary').style.display = 'none';
-      } catch (err) {
-        console.error('Błąd aktualizacji podsumowania finansowego szkolenia:', err);
-      }
-    }
-
-    // Event listeners for trainings
-    backToTrainingsBtn.addEventListener('click', () => {
-      trainingDetailsSection.style.display = 'none';
-      trainingsSection.style.display = 'block';
-      currentTraining = null;
-    });
-
-    createTrainingBtn.addEventListener('click', () => {
-      createTrainingModal.classList.add('active');
-    });
-
-    closeCreateTrainingModal.addEventListener('click', () => {
-      createTrainingModal.classList.remove('active');
-    });
-
-    cancelCreateTraining.addEventListener('click', () => {
-      createTrainingModal.classList.remove('active');
-    });
-
-    createTrainingForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const formData = new FormData(createTrainingForm);
-      const trainingData = {
-        name: formData.get('training-name').trim(),
-        date: formData.get('training-date'),
-        amount: parseFloat(formData.get('training-amount')) || 0,
-        currency: formData.get('training-currency'),
-        location: formData.get('training-location') || null,
-        description: formData.get('training-description') || null,
-        month: currentTrainingMonth
-      };
-
-      if (!trainingData.name || !trainingData.date) {
-        alert('Proszę wypełnić nazwę i datę szkolenia');
-        return;
-      }
-
-      // Show loading
-      const submitBtn = document.getElementById('submit-create-training');
-      const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<div class="loading"></div> Tworzenie...';
-      submitBtn.disabled = true;
-
-      try {
-        // Create training using same RPC as camps
-        const { data: trainingId, error } = await supabase.rpc('create_camp', trainingData);
-        if (error) throw error;
-
-        // Add trainers
-        for (let i = 1; i <= trainingTrainerCount; i++) {
-          const trainerName = formData.get(`trainer-name-${i}`);
-          const trainerAmount = parseFloat(formData.get(`trainer-amount-${i}`)) || 0;
-          const trainerCurrency = formData.get(`trainer-currency-${i}`);
-
-          if (trainerName && trainerAmount > 0) {
-            await supabase
-              .from('camp_trainers')  // Using same table as camps
-              .insert({
-                camp_id: trainingId,
-                name: trainerName,
-                amount: trainerAmount,
-                currency: trainerCurrency,
-                trainer_index: i - 1
-              });
-          }
-        }
-
-        // Reload trainings
-        await loadTrainings();
-        createTrainingModal.classList.remove('active');
-
-        // Reset form
-        createTrainingForm.reset();
-        trainingTrainerCount = 1;
-
-      } catch (err) {
-        console.error('Błąd tworzenia szkolenia:', err);
-        alert('Błąd tworzenia szkolenia: ' + (err.message || 'Nieznany błąd'));
-      } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-      }
-    });
-
-    // Add trainer functionality for trainings
-    document.getElementById('add-training-trainer-btn').addEventListener('click', () => {
-      trainingTrainerCount++;
-      const trainerContainer = document.getElementById('training-trainers-container');
-      const trainerItem = document.createElement('div');
-      trainerItem.className = 'trainer-item';
-      trainerItem.innerHTML = `
-        <div class="trainer-fields">
-          <div class="form-group">
-            <label for="trainer-name-${trainingTrainerCount}">Imię szkoleniowca</label>
-            <input type="text" id="trainer-name-${trainingTrainerCount}" name="trainer-name-${trainingTrainerCount}" class="form-control" required>
-          </div>
-          <div class="form-group">
-            <label for="trainer-amount-${trainingTrainerCount}">Kwota</label>
-            <input type="number" id="trainer-amount-${trainingTrainerCount}" name="trainer-amount-${trainingTrainerCount}" class="form-control" step="0.01" min="0" required>
-          </div>
-          <div class="form-group">
-            <label for="trainer-currency-${trainingTrainerCount}">Waluta</label>
-            <select id="trainer-currency-${trainingTrainerCount}" name="trainer-currency-${trainingTrainerCount}" class="form-control" required>
-              <option value="EUR">EUR</option>
-              <option value="PLN">PLN</option>
-            </select>
-          </div>
-          <button type="button" class="remove-trainer-btn" onclick="removeTrainer(this)">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-      `;
-      trainerContainer.appendChild(trainerItem);
-    });
-
-    // Add participant to training functionality
-    addParticipantTrainingBtn.addEventListener('click', () => {
-      addParticipantTrainingModal.classList.add('active');
-    });
-
-    closeAddParticipantTrainingModal.addEventListener('click', () => {
-      addParticipantTrainingModal.classList.remove('active');
-    });
-
-    cancelAddParticipantTraining.addEventListener('click', () => {
-      addParticipantTrainingModal.classList.remove('active');
-    });
-
-    addParticipantTrainingForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const formData = new FormData(addParticipantTrainingForm);
-      const participantData = {
-        name: formData.get('participant-name').trim()
-      };
-
-      if (!participantData.name) {
-        alert('Proszę wpisać imię i nazwisko uczestnika');
-        return;
-      }
-
-      // Show loading
-      const submitBtn = document.getElementById('submit-add-participant-training');
-      const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<div class="loading"></div> Dodawanie...';
-      submitBtn.disabled = true;
-
-      try {
-        await addParticipantToTraining(participantData);
-        addParticipantTrainingModal.classList.remove('active');
-        addParticipantTrainingForm.reset();
-      } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-      }
-    });
-
-    async function addParticipantToTraining(participantData) {
-      if (!currentTraining) return;
-
-      try {
-        // Add participant to training
-        const { error } = await supabase
-          .from('camp_participants')  // Using same table as camps
-          .insert({
-            camp_id: currentTraining.id,
-            participant_id: Date.now(), // Simple ID generation - in production use proper UUID
-            name: participantData.name
-          });
-
-        if (error) throw error;
-
-        // Reload participants
-        await loadTrainingParticipants(currentTraining.id);
-
-      } catch (err) {
-        console.error('Błąd dodawania uczestnika do szkolenia:', err);
-        alert('Błąd dodawania uczestnika: ' + (err.message || 'Nieznany błąd'));
-      }
-    }
-
-    // Training payment functions
-    async function toggleTrainingPayment(participantId, trainingId) {
-      try {
-        // Check if payment exists
-        const { data: existingPayment, error: checkError } = await supabase
-          .from('camp_payments')  // Using same table as camps
-          .select('*')
-          .eq('camp_id', trainingId)
-          .eq('participant_id', participantId)
-          .single();
-
-        if (checkError && checkError.code !== 'PGRST116') {
-          throw checkError;
-        }
-
-        if (existingPayment) {
-          // Toggle confirmation
-          const { error } = await supabase
-            .from('camp_payments')  // Using same table as camps
-            .update({ confirmed: !existingPayment.confirmed })
-            .eq('camp_id', trainingId)
-            .eq('participant_id', participantId);
-
-          if (error) throw error;
-        } else {
-          // Create new payment record
-          const { error } = await supabase
-            .from('camp_payments')  // Using same table as camps
-            .insert({
-              camp_id: trainingId,
-              participant_id: participantId,
-              amount: 0,
-              trainer_amounts: [],
-              confirmed: true
-            });
-
-          if (error) throw error;
-        }
-
-        // Reload participants to update UI
-        await loadTrainingParticipants(trainingId);
-
-      } catch (err) {
-        console.error('Błąd zmiany statusu płatności:', err);
-        alert('Błąd zmiany statusu płatności');
-      }
-    }
-
-    async function removeTrainingParticipant(participantId, trainingId) {
-      if (!confirm('Czy na pewno chcesz usunąć tego uczestnika ze szkolenia?')) return;
-
-      try {
-        // Remove payment first
-        await supabase
-          .from('camp_payments')  // Using same table as camps
-          .delete()
-          .eq('camp_id', trainingId)
-          .eq('participant_id', participantId);
-
-        // Remove participant
-        const { error } = await supabase
-          .from('camp_participants')  // Using same table as camps
-          .delete()
-          .eq('camp_id', trainingId)
-          .eq('participant_id', participantId);
-
-        if (error) throw error;
-
-        // Reload participants
-        await loadTrainingParticipants(trainingId);
-
-      } catch (err) {
-        console.error('Błąd usuwania uczestnika:', err);
-        alert('Błąd usuwania uczestnika');
-      }
-    }
-
-    function setupTrainingPaymentEventListeners() {
-      // Similar to camp payment listeners but for trainings
-      document.querySelectorAll('#training-details-content .payment-input').forEach(input => {
-        input.addEventListener('change', async (e) => {
-          const participantId = e.target.dataset.participantId;
-          const trainingId = e.target.dataset.campId;
-          const columnType = e.target.dataset.columnType;
-          const trainerIndex = e.target.dataset.trainerIndex;
-          const newAmount = parseFloat(e.target.value) || 0;
-
-          try {
-            // Get existing payment
-            const { data: existingPayment, error: checkError } = await supabase
-              .from('camp_payments')  // Using same table as camps
-              .select('*')
-              .eq('camp_id', trainingId)
-              .eq('participant_id', participantId)
-              .single();
-
-            let updateData = {};
-
-            if (columnType === 'camp') {
-              updateData.amount = newAmount;
-            } else if (columnType === 'trainer') {
-              const trainerAmounts = existingPayment ? existingPayment.trainer_amounts || [] : [];
-              trainerAmounts[parseInt(trainerIndex)] = newAmount;
-              updateData.trainer_amounts = trainerAmounts;
-            }
-
-            if (existingPayment) {
-              // Update existing payment
-              const { error } = await supabase
-                .from('camp_payments')  // Using same table as camps
-                .update(updateData)
-                .eq('camp_id', trainingId)
-                .eq('participant_id', participantId);
-
-              if (error) throw error;
-            } else {
-              // Create new payment
-              updateData.camp_id = trainingId;
-              updateData.participant_id = participantId;
-              updateData.confirmed = false;
-
-              const { error } = await supabase
-                .from('camp_payments')  // Using same table as camps
-                .insert(updateData);
-
-              if (error) throw error;
-            }
-
-            // Update total display
-            const row = e.target.closest('tr');
-            const totalCell = row.querySelector('.total-amount');
-            if (totalCell) {
-              const campAmount = parseFloat(row.querySelector('input[data-column-type="camp"]').value) || 0;
-              const trainerInputs = row.querySelectorAll('input[data-column-type="trainer"]');
-              const trainerAmounts = Array.from(trainerInputs).map(input => parseFloat(input.value) || 0);
-              totalCell.textContent = calculateParticipantTotal(campAmount, trainerAmounts);
-            }
-
-          } catch (err) {
-            console.error('Błąd aktualizacji płatności:', err);
-            alert('Błąd aktualizacji płatności');
-          }
-        });
-      });
-    }
-
-    // Make training functions global
-    window.toggleTrainingPayment = toggleTrainingPayment;
-    window.removeTrainingParticipant = removeTrainingParticipant;
-
   </script>
 </body>
 </html>
