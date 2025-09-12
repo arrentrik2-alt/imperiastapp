@@ -5381,29 +5381,36 @@
       document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
 
       // Hide all sections
-      document.getElementById('members-section').style.display = 'none';
-      document.getElementById('camps-section').style.display = 'none';
-      document.getElementById('trainings-section').style.display = 'none';
-      document.getElementById('training-details-section').style.display = 'none';
-      document.getElementById('schedule-section').style.display = 'none';
-      document.getElementById('profile-section').style.display = 'none';
+      const membersSection = document.getElementById('members-section');
+      const campsSection = document.getElementById('camps-section');
+      const trainingsSection = document.getElementById('trainings-section');
+      const trainingDetailsSection = document.getElementById('training-details-section');
+      const scheduleSection = document.getElementById('schedule-section');
+      const profileSection = document.getElementById('profile-section');
+
+      if (membersSection) membersSection.style.display = 'none';
+      if (campsSection) campsSection.style.display = 'none';
+      if (trainingsSection) trainingsSection.style.display = 'none';
+      if (trainingDetailsSection) trainingDetailsSection.style.display = 'none';
+      if (scheduleSection) scheduleSection.style.display = 'none';
+      if (profileSection) profileSection.style.display = 'none';
 
       // Show selected section and set active nav
       if (section === 'trainings') {
-        trainingsSection.style.display = 'block';
+        if (trainingsSection) trainingsSection.style.display = 'block';
         document.getElementById('nav-trainings').classList.add('active');
         loadTrainings();
       } else if (section === 'members') {
-        document.getElementById('members-section').style.display = 'block';
+        if (membersSection) membersSection.style.display = 'block';
         document.getElementById('nav-members').classList.add('active');
       } else if (section === 'camps') {
-        document.getElementById('camps-section').style.display = 'block';
+        if (campsSection) campsSection.style.display = 'block';
         document.getElementById('nav-camps').classList.add('active');
       } else if (section === 'schedule') {
-        document.getElementById('schedule-section').style.display = 'block';
+        if (scheduleSection) scheduleSection.style.display = 'block';
         document.getElementById('nav-schedule').classList.add('active');
       } else if (section === 'profile') {
-        document.getElementById('profile-section').style.display = 'block';
+        if (profileSection) profileSection.style.display = 'block';
         document.getElementById('nav-profile').classList.add('active');
       }
     }
