@@ -4160,6 +4160,32 @@
           multiKidsPriceInput.value = '';
         }
 
+        // Load check-ins for current month for all multi members
+        const memberIds = multiMembers.map(m => m.id);
+        const year = currentMultiMonth.split('-')[0];
+        const month = parseInt(currentMultiMonth.split('-')[1]);
+
+        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+        const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+
+        const { data: checkins, error: checkinsError } = await supabase
+          .from('multi_checkins')
+          .select('member_id, checkin_date')
+          .in('member_id', memberIds)
+          .gte('checkin_date', startDate)
+          .lte('checkin_date', endDate);
+
+        // Group check-ins by member
+        const checkinsByMember = {};
+        if (checkins) {
+          checkins.forEach(checkin => {
+            if (!checkinsByMember[checkin.member_id]) {
+              checkinsByMember[checkin.member_id] = [];
+            }
+            checkinsByMember[checkin.member_id].push(checkin);
+          });
+        }
+
         if (multiMembers.length === 0) {
           multiMembersList.innerHTML = `
             <div class="empty-state">
@@ -4173,9 +4199,59 @@
 
         // Create member cards
         multiMembersList.innerHTML = '';
+        let totalDeduction = 0;
+        let totalCheckins = 0;
+
         for (const member of multiMembers) {
-          const memberCard = createMultiMemberCard(member);
+          const memberCheckins = checkinsByMember[member.id] || [];
+          const memberCard = createMultiMemberCard(member, memberCheckins.length, multiPrices);
           multiMembersList.appendChild(memberCard);
+
+          // Calculate totals
+          const isKids = member.multi === 'multi_dzieci';
+          const price = isKids ? (multiPrices?.multi_kids_price || 0) : (multiPrices?.multi_price || 0);
+          const deductionAmount = memberCheckins.length * price;
+          totalDeduction += deductionAmount;
+          totalCheckins += memberCheckins.length;
+        }
+
+        // Add summary card
+        if (multiMembers.length > 0) {
+          const summaryCard = document.createElement('div');
+          summaryCard.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            border-radius: 8px;
+            border: 2px solid var(--border-dark);
+            color: var(--primary-bg);
+            font-weight: bold;
+          `;
+
+          summaryCard.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <i class="fas fa-chart-line" style="font-size: 1.5rem;"></i>
+              <div>
+                <div style="font-size: 1.2rem;">PODSUMOWANIE MULTI</div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">${multiMembers.length} członków • ${currentMultiMonth}</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 30px;">
+              <div style="text-align: center;">
+                <div style="font-size: 1.5rem;">${totalCheckins}</div>
+                <div style="font-size: 0.8rem; opacity: 0.9;">Razem odbić</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 1.5rem;">-${totalDeduction.toFixed(2)} zł</div>
+                <div style="font-size: 0.8rem; opacity: 0.9;">Do odliczenia</div>
+              </div>
+            </div>
+          `;
+
+          multiMembersList.appendChild(summaryCard);
         }
 
       } catch (err) {
@@ -4191,7 +4267,7 @@
     }
 
     // Create Multi member card
-    function createMultiMemberCard(member) {
+    function createMultiMemberCard(member, checkinsCount, multiPrices) {
       const card = document.createElement('div');
       card.className = 'member-card';
       card.style.cssText = `
@@ -4208,6 +4284,10 @@
       const isKids = member.multi === 'multi_dzieci';
       const multiType = isKids ? 'Multi Dzieci' : 'Multi';
 
+      // Calculate deduction amount
+      const price = isKids ? (multiPrices?.multi_kids_price || 0) : (multiPrices?.multi_price || 0);
+      const deductionAmount = checkinsCount * price;
+
       card.innerHTML = `
         <div style="display: flex; align-items: center; gap: 15px;">
           <div style="font-weight: bold; font-size: 1.1rem;">${member.name}</div>
@@ -4221,7 +4301,23 @@
             <i class="fas fa-phone"></i> ${member.phone || 'Brak'}
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <div style="text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--gold); font-weight: bold;">
+              ${checkinsCount} odbić
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-gray);">
+              w miesiącu
+            </div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 1rem; color: var(--success); font-weight: bold;">
+              -${deductionAmount.toFixed(2)} zł
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-gray);">
+              do odliczenia
+            </div>
+          </div>
           <div style="font-size: 0.9rem; color: var(--gold);">
             Styl: ${member.style?.toUpperCase() || 'Brak'}
           </div>
