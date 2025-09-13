@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -292,6 +291,12 @@
       .checkins-section {
         padding: 18px;
       }
+
+      /* Tablet layout for checkins and deduction */
+      .checkins-count, .deduction-amount {
+        max-width: 45% !important;
+        flex: 1 !important;
+      }
     }
 
     @media (max-width: 768px) {
@@ -335,6 +340,8 @@
 
       .checkins-count {
         padding: 20px 12px !important;
+        max-width: none !important;
+        flex: none !important;
       }
 
       .checkins-count div:first-child {
@@ -344,6 +351,17 @@
 
       .checkins-count div:last-child {
         font-size: 1rem !important;
+      }
+
+      /* Mobile layout for checkins and deduction */
+      .checkins-count, .deduction-amount {
+        max-width: none !important;
+        flex: 1 !important;
+        margin-bottom: 10px !important;
+      }
+
+      .deduction-amount {
+        margin-bottom: 0 !important;
       }
     }
 
@@ -442,7 +460,7 @@
 
     <!-- Checkins section -->
     <section class="checkins-section" id="checkins-section" style="display: none;">
-      <h3><i class="fas fa-chart-bar"></i> Liczba odbić w wybranym miesiącu</h3>
+      <h3><i class="fas fa-chart-bar"></i> Statystyki odbić w wybranym miesiącu</h3>
       <div id="checkins-content">
         <div class="loading">
           <div class="loading-spinner"></div>
@@ -676,6 +694,7 @@
         }
 
         const [month, year] = selectedValue.split('_');
+        const monthKey = `${year}-${month.padStart(2, '0')}`;
 
         // Create proper date objects and format them
         const startDate = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString().split('T')[0];
@@ -686,20 +705,34 @@
           startDate,
           endDate,
           month,
-          year
+          year,
+          monthKey
         });
 
-        const { data: checkins, error } = await supabase
-          .from('multi_checkins')
-          .select('*')
-          .eq('member_id', selectedMember.id)
-          .gte('checkin_date', startDate)
-          .lt('checkin_date', new Date(parseInt(year), parseInt(month), 1).toISOString().split('T')[0]);
+        // Load checkins and multi prices in parallel
+        const [checkinsResult, pricesResult] = await Promise.all([
+          supabase
+            .from('multi_checkins')
+            .select('*')
+            .eq('member_id', selectedMember.id)
+            .gte('checkin_date', startDate)
+            .lt('checkin_date', new Date(parseInt(year), parseInt(month), 1).toISOString().split('T')[0]),
+          supabase
+            .from('multi_prices')
+            .select('*')
+            .eq('month', monthKey)
+            .single()
+        ]);
 
-        if (error) throw error;
+        if (checkinsResult.error) throw checkinsResult.error;
 
-        console.log('Found checkins:', checkins?.length || 0);
-        displayCheckins(checkins || []);
+        const checkins = checkinsResult.data || [];
+        const multiPrices = pricesResult.data;
+
+        console.log('Found checkins:', checkins.length);
+        console.log('Found multi prices:', multiPrices);
+
+        displayCheckins(checkins, multiPrices, selectedMember);
 
       } catch (err) {
         console.error('Error loading checkins:', err);
@@ -712,8 +745,8 @@
       }
     }
 
-    // Display checkins count in the UI
-    function displayCheckins(checkins) {
+    // Display checkins count and deduction amount in the UI
+    function displayCheckins(checkins, multiPrices, member) {
       const checkinsContent = document.getElementById('checkins-content');
 
       const checkinsCount = checkins.length;
@@ -728,28 +761,109 @@
         return;
       }
 
+      // Calculate deduction amount
+      const isKids = member.multi === 'multi_dzieci';
+      const price = isKids ? (multiPrices?.multi_kids_price || 0) : (multiPrices?.multi_price || 0);
+      const deductionAmount = checkinsCount * price;
+
       const checkinsHtml = `
-        <div class="checkins-count" style="
-          text-align: center;
-          padding: 25px 15px;
+        <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 20px;">
+          <!-- Checkins count -->
+          <div class="checkins-count" style="
+            text-align: center;
+            padding: 25px 15px;
+            background: var(--secondary-bg);
+            border-radius: 12px;
+            border: 2px solid var(--gold);
+            flex: 1;
+            max-width: 300px;
+          ">
+            <div style="
+              font-size: 2.5rem;
+              font-weight: bold;
+              color: var(--gold);
+              margin-bottom: 8px;
+            ">
+              ${checkinsCount}
+            </div>
+            <div style="
+              font-size: 1.1rem;
+              color: var(--text-light);
+            ">
+              odbić w miesiącu
+            </div>
+          </div>
+
+          <!-- Deduction amount -->
+          <div class="deduction-amount" style="
+            text-align: center;
+            padding: 25px 15px;
+            background: linear-gradient(135deg, var(--success) 0%, #28a745 100%);
+            border-radius: 12px;
+            border: 2px solid var(--success);
+            flex: 1;
+            max-width: 300px;
+            color: white;
+          ">
+            <div style="
+              font-size: 2.5rem;
+              font-weight: bold;
+              margin-bottom: 8px;
+            ">
+              -${deductionAmount.toFixed(2)} zł
+            </div>
+            <div style="
+              font-size: 1.1rem;
+              opacity: 0.9;
+            ">
+              do odliczenia
+            </div>
+            <div style="
+              font-size: 0.9rem;
+              opacity: 0.8;
+              margin-top: 8px;
+            ">
+              ${price.toFixed(2)} zł × ${checkinsCount} odbić
+            </div>
+          </div>
+        </div>
+
+        <!-- Member info summary -->
+        <div style="
           background: var(--secondary-bg);
-          border-radius: 12px;
-          border: 2px solid var(--gold);
+          padding: 15px 20px;
+          border-radius: 8px;
+          border: 1px solid var(--border-dark);
+          margin-bottom: 20px;
         ">
-          <div style="
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--gold);
-            margin-bottom: 8px;
-          ">
-            ${checkinsCount}
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <div style="font-weight: bold; font-size: 1.1rem; color: var(--gold);">
+                ${member.name}
+              </div>
+              <div style="color: var(--text-gray);">
+                <i class="fas fa-ticket-alt"></i> ${member.multi === 'multi' ? 'Multi' : 'Multi dzieci'}
+              </div>
+              <div style="color: var(--text-gray);">
+                <i class="fas fa-dumbbell"></i> ${member.style.toUpperCase()}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.9rem; color: var(--text-gray);">
+                Karnet: ${member.karnet || 'Brak'}
+              </div>
+            </div>
           </div>
-          <div style="
-            font-size: 1.1rem;
-            color: var(--text-light);
-          ">
-            odbić w wybranym miesiącu
-          </div>
+        </div>
+
+        <!-- Individual checkins list -->
+        <div class="checkins-list" style="max-height: 400px; overflow-y: auto;">
+          ${checkins.map(checkin => `
+            <div class="checkin-item">
+              <div class="checkin-date">${new Date(checkin.checkin_date).toLocaleDateString('pl-PL')}</div>
+              <div class="checkin-time">${checkin.checkin_time}</div>
+            </div>
+          `).join('')}
         </div>
       `;
 
