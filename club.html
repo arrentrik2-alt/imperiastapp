@@ -2236,19 +2236,28 @@
       let hasUnconfirmedPayments = false;
       let hasAttentions = false;
 
-      // ULTRA FAST - Use attention data already loaded in main query
+      // Use attention cache (loaded on demand)
       const cacheKey = `${camp.id}`;
       let attentionMap = attentionCache[cacheKey] || {};
 
-      // If no cached data, try to get from preloaded camp data
+      // Load attention data if not cached
       if (!attentionCache[cacheKey]) {
-        const preloadedCamp = window.allCamps?.find(c => c.id === camp.id);
-        if (preloadedCamp?.participant_attention) {
-          attentionMap = preloadedCamp.participant_attention.reduce((map, item) => {
-            map[item.participant_id] = item.has_attention;
-            return map;
-          }, {});
-          attentionCache[cacheKey] = attentionMap;
+        try {
+          const { data, error } = await supabase
+            .from('participant_attention')
+            .select('participant_id, has_attention')
+            .eq('camp_id', camp.id)
+            .in('participant_id', participantIds);
+
+          if (!error && data) {
+            attentionMap = data.reduce((map, item) => {
+              map[item.participant_id] = item.has_attention;
+              return map;
+            }, {});
+            attentionCache[cacheKey] = attentionMap;
+          }
+        } catch (err) {
+          console.error('Error batch loading attentions:', err);
         }
       }
 
@@ -2471,107 +2480,59 @@
       attentionCache = {};
     }
 
-    // Initialize payment cache for current camp - ULTRA FAST VERSION (using preloaded data)
+    // Initialize payment cache for current camp - OPTIMIZED VERSION
     async function initializePaymentCache(campId, participants) {
       // Clear cache first to ensure clean state
       clearPaymentCache();
       clearAttentionCache();
       paymentCache = { camp: {}, trainer: {} };
 
-      // ULTRA FAST - Use data already loaded in main query instead of additional DB calls
-      const camp = window.allCamps?.find(c => c.id === campId);
-      if (camp) {
-        // Load camp payments from preloaded data
-        if (camp.camp_payments) {
-          camp.camp_payments.forEach(payment => {
-            paymentCache.camp[payment.participant_id] = {
-              amount: parseFloat(payment.amount) || 0,
-              confirmed: payment.confirmed || false
-            };
-          });
-        }
+      const participantIds = participants.map(p => p.id);
 
-        // Load trainer payments from preloaded data
-        if (camp.trainer_payments) {
-          camp.trainer_payments.forEach(payment => {
-            if (!paymentCache.trainer[payment.participant_id]) {
-              paymentCache.trainer[payment.participant_id] = {};
-            }
-            paymentCache.trainer[payment.participant_id][payment.trainer_index] = {
-              amount: parseFloat(payment.amount) || 0,
-              confirmed: payment.confirmed || false
-            };
-          });
-        }
+      // Load camp payments
+      const { data: campPayments, error: campError } = await supabase
+        .from('camp_payments')
+        .select('participant_id, amount, confirmed')
+        .eq('camp_id', campId)
+        .in('participant_id', participantIds);
 
-        // Load attention data from preloaded data
-        if (camp.participant_attention) {
-          const cacheKey = `${campId}`;
-          attentionCache[cacheKey] = {};
-          camp.participant_attention.forEach(attention => {
-            attentionCache[cacheKey][attention.participant_id] = attention.has_attention;
-          });
-        }
-
-        return; // No need for additional DB queries
+      if (!campError && campPayments) {
+        campPayments.forEach(payment => {
+          paymentCache.camp[payment.participant_id] = {
+            amount: parseFloat(payment.amount) || 0,
+            confirmed: payment.confirmed || false
+          };
+        });
       }
 
-      // Fallback to original method if camp data not found (rare case)
-      const participantIds = participants.map(p => p.id);
-      const promises = [];
+      // Load trainer payments for each trainer in parallel
+      const currentCamp = window.currentCamp;
+      if (currentCamp && currentCamp.trainers && currentCamp.trainers.length > 0) {
+        const trainerPromises = currentCamp.trainers.map(async (trainer, index) => {
+          if (trainer) {
+            const { data: trainerPayments, error: trainerError } = await supabase
+              .from('trainer_payments')
+              .select('participant_id, amount, confirmed')
+              .eq('camp_id', campId)
+              .eq('trainer_index', index)
+              .in('participant_id', participantIds);
 
-      promises.push(
-        supabase
-          .from('camp_payments')
-          .select('participant_id, amount, confirmed')
-          .eq('camp_id', campId)
-          .in('participant_id', participantIds)
-          .then(({ data, error }) => {
-            if (!error && data) {
-              data.forEach(payment => {
-                paymentCache.camp[payment.participant_id] = {
+            if (!trainerError && trainerPayments) {
+              trainerPayments.forEach(payment => {
+                if (!paymentCache.trainer[payment.participant_id]) {
+                  paymentCache.trainer[payment.participant_id] = {};
+                }
+                paymentCache.trainer[payment.participant_id][index] = {
                   amount: parseFloat(payment.amount) || 0,
                   confirmed: payment.confirmed || false
                 };
               });
             }
-            return { type: 'camp', error };
-          })
-          .catch(err => ({ type: 'camp', error: err }))
-      );
-
-      const currentCamp = window.currentCamp;
-      if (currentCamp && currentCamp.trainers && currentCamp.trainers.length > 0) {
-        currentCamp.trainers.forEach((trainer, index) => {
-          if (trainer) {
-            promises.push(
-              supabase
-                .from('trainer_payments')
-                .select('participant_id, amount, confirmed')
-                .eq('camp_id', campId)
-                .eq('trainer_index', index)
-                .in('participant_id', participantIds)
-                .then(({ data, error }) => {
-                  if (!error && data) {
-                    data.forEach(payment => {
-                      if (!paymentCache.trainer[payment.participant_id]) {
-                        paymentCache.trainer[payment.participant_id] = {};
-                      }
-                      paymentCache.trainer[payment.participant_id][index] = {
-                        amount: parseFloat(payment.amount) || 0,
-                        confirmed: payment.confirmed || false
-                      };
-                    });
-                  }
-                  return { type: `trainer_${index}`, error };
-                })
-                .catch(err => ({ type: `trainer_${index}`, error: err }))
-            );
           }
         });
-      }
 
-      await Promise.all(promises);
+        await Promise.all(trainerPromises);
+      }
     }
 
     // Update payment cache after saving
@@ -2621,15 +2582,7 @@
           </div>
         `;
 
-          // ULTRA FAST SINGLE QUERY - Load ALL camp data in one massive query
-        // 🚀 DATABASE OPTIMIZATION TIP: Add these indexes for maximum speed:
-        // CREATE INDEX idx_camps_month ON camps(month);
-        // CREATE INDEX idx_camps_dance_type ON camps(dance_type);
-        // CREATE INDEX idx_camp_participants_camp_id ON camp_participants(camp_id);
-        // CREATE INDEX idx_camp_payments_camp_id ON camp_payments(camp_id);
-        // CREATE INDEX idx_trainer_payments_camp_id ON trainer_payments(camp_id);
-        // CREATE INDEX idx_participant_attention_camp_id ON participant_attention(camp_id);
-        // CREATE INDEX idx_participant_comments_camp_id ON participant_comments(camp_id);
+          // RELIABLE OPTIMIZED QUERY - Load camps with trainers, then participants separately
         const { data: camps, error } = await supabase
           .from('camps')
           .select(`
@@ -2639,57 +2592,48 @@
               amount,
               currency,
               trainer_index
-            ),
-            camp_participants (
-              participant_id,
-              name
-            ),
-            camp_payments (
-              participant_id,
-              amount,
-              confirmed
-            ),
-            trainer_payments (
-              participant_id,
-              trainer_index,
-              amount,
-              confirmed
-            ),
-            participant_attention (
-              participant_id,
-              has_attention
-            ),
-            participant_comments (
-              participant_id,
-              comment,
-              created_at
             )
           `)
           .eq('month', currentMonth)
           .order('date', { ascending: false });
 
         // Filter camps by selected view (dance_type)
-        const filteredCamps = camps.filter(c => {
+        const filteredCamps = (camps || []).filter(c => {
           if (!c.dance_type) return true; // keep if missing
           return currentView === 'st' ? c.dance_type === 'st' : c.dance_type === 'la';
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error loading camps:', error);
+          throw error;
+        }
 
-        // EXTRACT PARTICIPANTS FROM MAIN QUERY (already loaded)
+        if (!camps) {
+          console.warn('No camps data returned from database');
+          camps = [];
+        }
+
+        // Load camp participants separately (reliable approach)
         const participantsByCamp = {};
-        if (camps) {
-          camps.forEach(camp => {
-            if (camp.camp_participants && camp.camp_participants.length > 0) {
-              participantsByCamp[camp.id] = camp.camp_participants.map(p => ({
+        if (camps && camps.length > 0) {
+          console.log(`Loading participants for ${camps.length} camps...`);
+          const { data: allCampParticipants, error: participantsError } = await supabase
+            .from('camp_participants')
+            .select('camp_id, participant_id, name')
+            .in('camp_id', camps.map(camp => camp.id));
+
+          if (!participantsError && allCampParticipants) {
+            allCampParticipants.forEach(p => {
+              if (!participantsByCamp[p.camp_id]) {
+                participantsByCamp[p.camp_id] = [];
+              }
+              participantsByCamp[p.camp_id].push({
                 id: p.participant_id,
                 name: p.name,
                 isCampParticipant: true
-              }));
-            } else {
-              participantsByCamp[camp.id] = [];
-            }
-          });
+              });
+            });
+          }
         }
 
         // Process trainer data for each camp
@@ -2710,9 +2654,11 @@
         // Store camps for status calculation and cache them for ultra-fast access
         window.allCamps = camps;
 
-        // 🚀 CACHE ALL CAMP DATA for lightning-fast future access
+        // 🚀 CACHE CAMP DATA for lightning-fast future access
         camps.forEach(camp => {
-          superCache.set(camp.id, camp, 'camps');
+          // Create a clean copy without potentially problematic nested data
+          const campCopy = { ...camp };
+          superCache.set(camp.id, campCopy, 'camps');
         });
 
 
@@ -4229,19 +4175,6 @@
 
     // Camp participants functions using Supabase
     async function getCampParticipants(campId) {
-      // ULTRA FAST - Use data already loaded in main query
-      if (window.allCamps) {
-        const camp = window.allCamps.find(c => c.id === campId);
-        if (camp && camp.camp_participants) {
-          return camp.camp_participants.map(p => ({
-            id: p.participant_id,
-            name: p.name,
-            isCampParticipant: true
-          }));
-        }
-      }
-
-      // Fallback to database if not found (rare case)
       try {
         const { data, error } = await supabase
           .from('camp_participants')
