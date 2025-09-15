@@ -2226,8 +2226,8 @@
       }
     }
 
-    // Calculate camp status for coloring - ULTRA FAST (no DB calls)
-    function calculateCampStatus(camp, participants) {
+    // Calculate camp status for coloring - OPTIMIZED VERSION
+    async function calculateCampStatus(camp, participants) {
       if (!participants || participants.length === 0) {
         return ''; // No participants = no status (normal background)
       }
@@ -2240,7 +2240,27 @@
       const cacheKey = `${camp.id}`;
       let attentionMap = attentionCache[cacheKey] || {};
 
-      // Attention data should be preloaded in updateCampStatuses
+      // Load attention data if not cached
+      if (!attentionCache[cacheKey]) {
+        try {
+          const participantIds = participants.map(p => p.id);
+          const { data, error } = await supabase
+            .from('participant_attention')
+            .select('participant_id, has_attention')
+            .eq('camp_id', camp.id)
+            .in('participant_id', participantIds);
+
+          if (!error && data) {
+            attentionMap = data.reduce((map, item) => {
+              map[item.participant_id] = item.has_attention;
+              return map;
+            }, {});
+            attentionCache[cacheKey] = attentionMap;
+          }
+        } catch (err) {
+          console.error('Error loading attentions:', err);
+        }
+      }
 
       for (const participant of participants) {
         const participantId = participant.id;
@@ -2692,11 +2712,15 @@
         // Load camp participants separately (reliable approach)
         const participantsByCamp = {};
         if (camps && camps.length > 0) {
+          const participantsStartTime = performance.now();
           console.log(`Loading participants for ${camps.length} camps...`);
-        const { data: allCampParticipants, error: participantsError } = await supabase
-          .from('camp_participants')
+          const { data: allCampParticipants, error: participantsError } = await supabase
+            .from('camp_participants')
             .select('camp_id, participant_id, name')
-          .in('camp_id', camps.map(camp => camp.id));
+            .in('camp_id', camps.map(camp => camp.id));
+
+          const participantsEndTime = performance.now();
+          console.log(`🚀 PARTICIPANTS LOADING TIME: ${(participantsEndTime - participantsStartTime).toFixed(2)}ms`);
 
           if (!participantsError && allCampParticipants) {
           allCampParticipants.forEach(p => {
@@ -2739,16 +2763,19 @@
 
         // 🚀 ENSURE MEMBERS ARE LOADED BEFORE STATUS CALCULATION
         if (!window.allMembers) {
+          const membersStartTime = performance.now();
           console.log('[LOAD-CAMPS] Loading members for status calculation...');
           const { data: members, error: membersError } = await supabase
             .from('members')
             .select('id, name, style')
             .order('name', { ascending: true });
 
+          const membersEndTime = performance.now();
+
           if (!membersError && members) {
             window.allMembers = members;
             superCache.set('allMembers', members, 'members');
-            console.log(`[LOAD-CAMPS] Loaded ${members.length} members`);
+            console.log(`[LOAD-CAMPS] Loaded ${members.length} members in ${(membersEndTime - membersStartTime).toFixed(2)}ms`);
           }
         }
 
@@ -2771,11 +2798,8 @@
           campsList.appendChild(campCard);
         }
 
-        // 🚀 PRELOAD PAYMENTS CACHE FOR ALL CAMPS BEFORE STATUS CALCULATION
-        console.log('[LOAD-CAMPS] Preloading payments for all camps...');
-        if (camps.length > 0) {
-          await preloadAllPaymentsForCamps(camps, participantsByCamp);
-        }
+        // 🚀 SKIP PRELOADING PAYMENTS - Load only when needed for better performance
+        console.log('[LOAD-CAMPS] Skipping payment preload for faster loading');
 
         // Calculate and apply camp statuses immediately to show colors on first load
         const statusStartTime = performance.now();
@@ -2915,63 +2939,12 @@
       }
     }
 
-    // Update camp statuses asynchronously after rendering - ULTRA FAST VERSION
+    // Update camp statuses asynchronously after rendering - OPTIMIZED VERSION
     async function updateCampStatuses(camps, participantsByCamp) {
-      // 🚀 PRELOAD ALL ATTENTION DATA IN ONE BATCH QUERY FOR MAXIMUM SPEED
-      console.log('[STATUS] Preloading attention data for all camps...');
-      const allCampIds = camps.map(camp => camp.id);
-      const allParticipantIds = [];
+      // Process camps sequentially to avoid database overload
+      console.log(`[STATUS] Updating ${camps.length} camp statuses...`);
 
-      // 🚀 SAFETY CHECK: Ensure we don't have duplicate camp IDs
-      const uniqueCampIds = [...new Set(allCampIds)];
-      if (uniqueCampIds.length !== allCampIds.length) {
-        console.warn('[STATUS] Found duplicate camp IDs, using unique values');
-      }
-
-      // Collect all participant IDs from all camps
-      camps.forEach(camp => {
-        const externalParticipants = participantsByCamp[camp.id] || [];
-        const members = window.allMembers || [];
-        const danceTypeForStatus = camp.dance_type || currentView || 'st';
-        const eligibleMembers = members.filter(m => danceTypeForStatus === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
-
-        externalParticipants.forEach(p => {
-          if (!allParticipantIds.includes(p.id)) allParticipantIds.push(p.id);
-        });
-        eligibleMembers.forEach(m => {
-          if (!allParticipantIds.includes(m.id)) allParticipantIds.push(m.id);
-        });
-      });
-
-      // Load ALL attention data in one massive batch query
-      if (allCampIds.length > 0 && allParticipantIds.length > 0) {
-        console.log(`[STATUS] Loading attention data for ${allCampIds.length} camps and ${allParticipantIds.length} participants`);
-
-        try {
-          const { data: allAttentionData, error } = await supabase
-            .from('participant_attention')
-            .select('camp_id, participant_id, has_attention')
-            .in('camp_id', allCampIds)
-            .in('participant_id', allParticipantIds);
-
-          if (!error && allAttentionData) {
-            // Cache all attention data
-            allAttentionData.forEach(item => {
-              const cacheKey = `${item.camp_id}`;
-              if (!attentionCache[cacheKey]) {
-                attentionCache[cacheKey] = {};
-              }
-              attentionCache[cacheKey][item.participant_id] = item.has_attention;
-            });
-            console.log(`[STATUS] Preloaded ${allAttentionData.length} attention records`);
-          }
-        } catch (err) {
-          console.error('Error preloading attention data:', err);
-        }
-      }
-
-      // Now process all camps with preloaded data (NO MORE DB QUERIES!)
-      const statusPromises = camps.map(async (camp) => {
+      for (const camp of camps) {
         try {
           const externalParticipants = participantsByCamp[camp.id] || [];
           const members = window.allMembers || [];
@@ -2987,9 +2960,9 @@
             }
           });
 
-          // Calculate status using CACHED data only (NO DB QUERIES!)
+          // Calculate status (will load attention data on demand if needed)
           if (allParticipants.length > 0) {
-            const statusClass = calculateCampStatus(camp, allParticipants);
+            const statusClass = await calculateCampStatus(camp, allParticipants);
             if (statusClass) {
               const campCard = document.querySelector(`[data-camp-id="${camp.id}"]`);
               if (campCard) {
@@ -3000,11 +2973,9 @@
         } catch (err) {
           console.error(`Error updating status for camp ${camp.name}:`, err);
         }
-      });
+      }
 
-      // Wait for all status calculations to complete (all in memory, no DB calls)
-      await Promise.all(statusPromises);
-      console.log(`[STATUS] Updated ${camps.length} camp statuses in memory only`);
+      console.log(`[STATUS] Updated ${camps.length} camp statuses`);
     }
 
     // Create camp card element
@@ -3341,7 +3312,7 @@
               <div id="expenses-list-${currency}" class="expenses-list">
                 ${expenses.map(expense => `
                   <div class="expense-item" data-expense-id="${expense.id}">
-                    <span class="expense-name">${expense.name}</span>
+                    <span class="expense-name">${expense.description || 'Brak opisu'}</span>
                     <span class="expense-amount">${expense.amount.toFixed(2)} ${currency}</span>
                     <span class="expense-remove" onclick="removeExpense('${camp.id}', '${currency}', '${expense.id}')">×</span>
                   </div>
@@ -4241,7 +4212,7 @@
           .insert({
             camp_id: campId,
             currency: currency,
-            name: name,
+            description: name,
             amount: parseFloat(amount)
           });
 
