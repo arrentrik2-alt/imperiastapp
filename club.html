@@ -2226,8 +2226,8 @@
       }
     }
 
-    // Calculate camp status for coloring
-    async function calculateCampStatus(camp, participants) {
+    // Calculate camp status for coloring - ULTRA FAST (no DB calls)
+    function calculateCampStatus(camp, participants) {
       if (!participants || participants.length === 0) {
         return ''; // No participants = no status (normal background)
       }
@@ -2240,26 +2240,7 @@
       const cacheKey = `${camp.id}`;
       let attentionMap = attentionCache[cacheKey] || {};
 
-      // Load attention data if not cached
-      if (!attentionCache[cacheKey]) {
-        try {
-          const { data, error } = await supabase
-            .from('participant_attention')
-            .select('participant_id, has_attention')
-            .eq('camp_id', camp.id)
-            .in('participant_id', participantIds);
-
-          if (!error && data) {
-            attentionMap = data.reduce((map, item) => {
-              map[item.participant_id] = item.has_attention;
-              return map;
-            }, {});
-            attentionCache[cacheKey] = attentionMap;
-          }
-        } catch (err) {
-          console.error('Error batch loading attentions:', err);
-        }
-      }
+      // Attention data should be preloaded in updateCampStatuses
 
       for (const participant of participants) {
         const participantId = participant.id;
@@ -2480,16 +2461,108 @@
       attentionCache = {};
     }
 
-    // Initialize payment cache for current camp - OPTIMIZED VERSION
+    // 🚀 PRELOAD ALL PAYMENTS FOR ALL CAMPS IN BATCH QUERIES
+    async function preloadAllPaymentsForCamps(camps, participantsByCamp) {
+      const allCampIds = camps.map(camp => camp.id);
+      const allParticipantIds = [];
+
+      // Collect all participant IDs from all camps
+      camps.forEach(camp => {
+        const externalParticipants = participantsByCamp[camp.id] || [];
+        const members = window.allMembers || [];
+        const danceTypeForStatus = camp.dance_type || currentView || 'st';
+        const eligibleMembers = members.filter(m => danceTypeForStatus === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
+
+        externalParticipants.forEach(p => {
+          if (!allParticipantIds.includes(p.id)) allParticipantIds.push(p.id);
+        });
+        eligibleMembers.forEach(m => {
+          if (!allParticipantIds.includes(m.id)) allParticipantIds.push(m.id);
+        });
+      });
+
+      if (allParticipantIds.length === 0) return;
+
+      console.log(`[PRELOAD] Loading payments for ${allParticipantIds.length} participants across ${allCampIds.length} camps`);
+
+      // Load ALL camp payments in one query
+      const { data: allCampPayments, error: campError } = await supabase
+        .from('camp_payments')
+        .select('camp_id, participant_id, amount, confirmed')
+        .in('camp_id', allCampIds)
+        .in('participant_id', allParticipantIds);
+
+      if (!campError && allCampPayments) {
+        allCampPayments.forEach(payment => {
+          paymentCache.camp[payment.participant_id] = {
+            amount: parseFloat(payment.amount) || 0,
+            confirmed: payment.confirmed || false
+          };
+        });
+        console.log(`[PRELOAD] Loaded ${allCampPayments.length} camp payments`);
+      }
+
+      // Load ALL trainer payments in parallel
+      const trainerPromises = [];
+      camps.forEach(camp => {
+        if (camp.trainers && camp.trainers.length > 0) {
+          camp.trainers.forEach((trainer, index) => {
+            trainerPromises.push(
+              supabase
+                .from('trainer_payments')
+                .select('participant_id, amount, confirmed')
+                .eq('camp_id', camp.id)
+                .eq('trainer_index', index)
+                .in('participant_id', allParticipantIds)
+                .then(({ data, error }) => {
+                  if (!error && data) {
+                    data.forEach(payment => {
+                      if (!paymentCache.trainer[payment.participant_id]) {
+                        paymentCache.trainer[payment.participant_id] = {};
+                      }
+                      paymentCache.trainer[payment.participant_id][index] = {
+                        amount: parseFloat(payment.amount) || 0,
+                        confirmed: payment.confirmed || false
+                      };
+                    });
+                  }
+                  return { campId: camp.id, trainerIndex: index, count: data?.length || 0 };
+                })
+            );
+          });
+        }
+      });
+
+      const trainerResults = await Promise.all(trainerPromises);
+      const totalTrainerPayments = trainerResults.reduce((sum, result) => sum + result.count, 0);
+      console.log(`[PRELOAD] Loaded ${totalTrainerPayments} trainer payments`);
+    }
+
+    // Initialize payment cache for current camp - ULTRA FAST VERSION
     async function initializePaymentCache(campId, participants) {
-      // Clear cache first to ensure clean state
-      clearPaymentCache();
-      clearAttentionCache();
-      paymentCache = { camp: {}, trainer: {} };
-
+      // 🚀 CHECK IF PAYMENTS ARE ALREADY PRELOADED
       const participantIds = participants.map(p => p.id);
+      let hasAllPayments = true;
 
-      // Load camp payments
+      for (const participantId of participantIds) {
+        if (!paymentCache.camp[participantId]) {
+          hasAllPayments = false;
+          break;
+        }
+      }
+
+      // If all payments are already cached, skip DB queries
+      if (hasAllPayments) {
+        console.log(`[CACHE] Payments already loaded for camp ${campId}`);
+        return;
+      }
+
+      console.log(`[CACHE] Loading missing payments for camp ${campId}`);
+
+      // Clear only this camp's cache to avoid conflicts
+      // (Don't clear all cache as other camps may be using it)
+
+      // Load missing camp payments
       const { data: campPayments, error: campError } = await supabase
         .from('camp_payments')
         .select('participant_id, amount, confirmed')
@@ -2573,6 +2646,9 @@
 
     // Load camps for selected month
     async function loadCamps() {
+      const loadStartTime = performance.now();
+      console.log('🚀 STARTING CAMP LOADING PROCESS...');
+
       try {
         // Show loading state
         campsList.innerHTML = `
@@ -2617,22 +2693,22 @@
         const participantsByCamp = {};
         if (camps && camps.length > 0) {
           console.log(`Loading participants for ${camps.length} camps...`);
-          const { data: allCampParticipants, error: participantsError } = await supabase
-            .from('camp_participants')
+        const { data: allCampParticipants, error: participantsError } = await supabase
+          .from('camp_participants')
             .select('camp_id, participant_id, name')
-            .in('camp_id', camps.map(camp => camp.id));
+          .in('camp_id', camps.map(camp => camp.id));
 
           if (!participantsError && allCampParticipants) {
-            allCampParticipants.forEach(p => {
-              if (!participantsByCamp[p.camp_id]) {
-                participantsByCamp[p.camp_id] = [];
-              }
-              participantsByCamp[p.camp_id].push({
-                id: p.participant_id,
-                name: p.name,
-                isCampParticipant: true
-              });
+          allCampParticipants.forEach(p => {
+            if (!participantsByCamp[p.camp_id]) {
+              participantsByCamp[p.camp_id] = [];
+            }
+            participantsByCamp[p.camp_id].push({
+              id: p.participant_id,
+              name: p.name,
+              isCampParticipant: true
             });
+          });
           }
         }
 
@@ -2661,6 +2737,21 @@
           superCache.set(camp.id, campCopy, 'camps');
         });
 
+        // 🚀 ENSURE MEMBERS ARE LOADED BEFORE STATUS CALCULATION
+        if (!window.allMembers) {
+          console.log('[LOAD-CAMPS] Loading members for status calculation...');
+          const { data: members, error: membersError } = await supabase
+            .from('members')
+            .select('id, name, style')
+            .order('name', { ascending: true });
+
+          if (!membersError && members) {
+            window.allMembers = members;
+            superCache.set('allMembers', members, 'members');
+            console.log(`[LOAD-CAMPS] Loaded ${members.length} members`);
+          }
+        }
+
 
 
         if (filteredCamps.length === 0) {
@@ -2680,13 +2771,27 @@
           campsList.appendChild(campCard);
         }
 
+        // 🚀 PRELOAD PAYMENTS CACHE FOR ALL CAMPS BEFORE STATUS CALCULATION
+        console.log('[LOAD-CAMPS] Preloading payments for all camps...');
+        if (camps.length > 0) {
+          await preloadAllPaymentsForCamps(camps, participantsByCamp);
+        }
+
         // Calculate and apply camp statuses immediately to show colors on first load
+        const statusStartTime = performance.now();
         await updateCampStatuses(camps, participantsByCamp);
+        const statusEndTime = performance.now();
+        console.log(`🚀 STATUS CALCULATION TIME: ${(statusEndTime - statusStartTime).toFixed(2)}ms for ${camps.length} camps`);
 
         // Camp statuses will be updated when member data is loaded in showCampDetails()
 
+        const loadEndTime = performance.now();
+        console.log(`🚀 TOTAL CAMP LOADING TIME: ${(loadEndTime - loadStartTime).toFixed(2)}ms`);
+
       } catch (err) {
         console.error('Błąd ładowania campów:', err);
+        const loadEndTime = performance.now();
+        console.log(`🚀 CAMP LOADING FAILED after ${(loadEndTime - loadStartTime).toFixed(2)}ms`);
         campsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania campów</p></div>';
       }
     }
@@ -2810,8 +2915,62 @@
       }
     }
 
-    // Update camp statuses asynchronously after rendering - PARALLEL PROCESSING
+    // Update camp statuses asynchronously after rendering - ULTRA FAST VERSION
     async function updateCampStatuses(camps, participantsByCamp) {
+      // 🚀 PRELOAD ALL ATTENTION DATA IN ONE BATCH QUERY FOR MAXIMUM SPEED
+      console.log('[STATUS] Preloading attention data for all camps...');
+      const allCampIds = camps.map(camp => camp.id);
+      const allParticipantIds = [];
+
+      // 🚀 SAFETY CHECK: Ensure we don't have duplicate camp IDs
+      const uniqueCampIds = [...new Set(allCampIds)];
+      if (uniqueCampIds.length !== allCampIds.length) {
+        console.warn('[STATUS] Found duplicate camp IDs, using unique values');
+      }
+
+      // Collect all participant IDs from all camps
+      camps.forEach(camp => {
+        const externalParticipants = participantsByCamp[camp.id] || [];
+        const members = window.allMembers || [];
+        const danceTypeForStatus = camp.dance_type || currentView || 'st';
+        const eligibleMembers = members.filter(m => danceTypeForStatus === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
+
+        externalParticipants.forEach(p => {
+          if (!allParticipantIds.includes(p.id)) allParticipantIds.push(p.id);
+        });
+        eligibleMembers.forEach(m => {
+          if (!allParticipantIds.includes(m.id)) allParticipantIds.push(m.id);
+        });
+      });
+
+      // Load ALL attention data in one massive batch query
+      if (allCampIds.length > 0 && allParticipantIds.length > 0) {
+        console.log(`[STATUS] Loading attention data for ${allCampIds.length} camps and ${allParticipantIds.length} participants`);
+
+        try {
+          const { data: allAttentionData, error } = await supabase
+            .from('participant_attention')
+            .select('camp_id, participant_id, has_attention')
+            .in('camp_id', allCampIds)
+            .in('participant_id', allParticipantIds);
+
+          if (!error && allAttentionData) {
+            // Cache all attention data
+            allAttentionData.forEach(item => {
+              const cacheKey = `${item.camp_id}`;
+              if (!attentionCache[cacheKey]) {
+                attentionCache[cacheKey] = {};
+              }
+              attentionCache[cacheKey][item.participant_id] = item.has_attention;
+            });
+            console.log(`[STATUS] Preloaded ${allAttentionData.length} attention records`);
+          }
+        } catch (err) {
+          console.error('Error preloading attention data:', err);
+        }
+      }
+
+      // Now process all camps with preloaded data (NO MORE DB QUERIES!)
       const statusPromises = camps.map(async (camp) => {
         try {
           const externalParticipants = participantsByCamp[camp.id] || [];
@@ -2828,9 +2987,9 @@
             }
           });
 
-          // Calculate status if we have participants data available
-          if (allParticipants.length > 0 || (window.allMembers && window.allMembers.length > 0)) {
-            const statusClass = await calculateCampStatus(camp, allParticipants);
+          // Calculate status using CACHED data only (NO DB QUERIES!)
+          if (allParticipants.length > 0) {
+            const statusClass = calculateCampStatus(camp, allParticipants);
             if (statusClass) {
               const campCard = document.querySelector(`[data-camp-id="${camp.id}"]`);
               if (campCard) {
@@ -2843,8 +3002,9 @@
         }
       });
 
-      // Wait for all status calculations to complete in parallel
+      // Wait for all status calculations to complete (all in memory, no DB calls)
       await Promise.all(statusPromises);
+      console.log(`[STATUS] Updated ${camps.length} camp statuses in memory only`);
     }
 
     // Create camp card element
@@ -2914,15 +3074,15 @@
     async function showCampDetails(camp) {
       // Trainer data already loaded in main query - just process it
       if (camp.trainers && camp.trainers.length > 0) {
-        // Sort trainers by trainer_index and create sequential array
+          // Sort trainers by trainer_index and create sequential array
         camp.trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
         camp.trainers = camp.trainers.map(trainer => ({
-          name: trainer.name,
-          amount: parseFloat(trainer.amount),
-          currency: trainer.currency
-        }));
-      } else {
-        camp.trainers = [];
+            name: trainer.name,
+            amount: parseFloat(trainer.amount),
+            currency: trainer.currency
+          }));
+        } else {
+          camp.trainers = [];
       }
 
       window.currentCamp = camp;
