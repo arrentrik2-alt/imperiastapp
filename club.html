@@ -1243,7 +1243,7 @@
       <li>
         <a href="#" id="nav-camps">
           <i class="fas fa-campground"></i>
-          <span class="link-text">Campy ST</span>
+          <span class="link-text">Campy</span>
         </a>
       </li>
       <li>
@@ -2944,46 +2944,52 @@
         // Cache participants for later use
         window.currentParticipants = allParticipants;
 
-        // Initialize payment cache - this already loads data in parallel
-        console.log('[CAMP-DETAILS] Initializing payment cache...');
-        await initializePaymentCache(camp.id, allParticipants);
-        console.log('[CAMP-DETAILS] Payment cache initialized, all data loaded in parallel');
+        // Initialize payment cache in background (do not block UI)
+        console.log('[CAMP-DETAILS] Starting background payment cache initialization...');
+        (async () => {
+          try {
+            await initializePaymentCache(camp.id, allParticipants);
+            console.log('[CAMP-DETAILS] Payment cache initialized (background)');
+            // After cache ready, update UI rows status quickly
+            if (typeof updateAllCampStatuses === 'function') updateAllCampStatuses();
+          } catch (err) {
+            console.error('[CAMP-DETAILS] Background payment cache init failed:', err);
+          }
+        })();
 
         // ULTRA FAST UI SETUP - Create table and summary in parallel
         console.log('[CAMP-DETAILS] Setting up UI components in parallel...');
 
-        const uiPromises = [];
-
-        // Create table
+        // Render table first (fast) then start expensive financial summary async (don't block)
         const detailsContent = document.getElementById('camp-details-content');
-        uiPromises.push(
-          createCampDetailsTable(camp, allParticipants).then(tableHtml => {
-            detailsContent.innerHTML = tableHtml; // The returned HTML
-            console.log('[CAMP-DETAILS] Camp details table created');
-          })
-        );
+        try {
+          const tableHtml = await createCampDetailsTable(camp, allParticipants);
+          detailsContent.innerHTML = tableHtml;
+          console.log('[CAMP-DETAILS] Camp details table created');
 
-        // Create financial summary in parallel
-        const financialSummary = document.getElementById('financial-summary');
-        const summaryCurrencies = document.getElementById('summary-currencies');
-        if (financialSummary && summaryCurrencies) {
-          uiPromises.push(
-            createFinancialSummaryHTML(camp, allParticipants).then(html => {
-              summaryCurrencies.innerHTML = html;
-              financialSummary.style.display = 'block';
-              console.log('[CAMP-DETAILS] Financial summary displayed');
-            })
-          );
-        }
+          // Setup UI elements immediately after table render
+          setupParticipantSearch();
+          const searchInput = document.getElementById('participant-search');
+          if (searchInput) searchInput.value = '';
 
-        // Wait for both to complete
-        await Promise.all(uiPromises);
-
-        // Setup UI elements instantly
-        setupParticipantSearch();
-        const searchInput = document.getElementById('participant-search');
-        if (searchInput) {
-          searchInput.value = '';
+          // Kick off financial summary in background (non-blocking)
+          (async () => {
+            try {
+              const financialSummary = document.getElementById('financial-summary');
+              const summaryCurrencies = document.getElementById('summary-currencies');
+              if (financialSummary && summaryCurrencies) {
+                const html = await createFinancialSummaryHTML(camp, allParticipants);
+                summaryCurrencies.innerHTML = html;
+                financialSummary.style.display = 'block';
+                console.log('[CAMP-DETAILS] Financial summary displayed (background)');
+              }
+            } catch (err) {
+              console.error('[CAMP-DETAILS] Error creating financial summary (background):', err);
+            }
+          })();
+        } catch (err) {
+          console.error('[CAMP-DETAILS] Error creating camp details table:', err);
+          detailsContent.innerHTML = '<div class="empty-state"><p>Błąd tworzenia widoku</p></div>';
         }
 
         // Financial summary already updated above, no need to call again
@@ -3257,54 +3263,83 @@
         console.error('Error loading comment data:', err);
       }
 
-      // Batch load all camp payment data
+      // Batch load all camp payment data - prefer in-memory cache to avoid extra DB calls
       let campPaymentData = {};
       let campConfirmedData = {};
       try {
-        const { data, error } = await supabase
-          .from('camp_payments')
-          .select('participant_id, amount, confirmed')
-          .eq('camp_id', camp.id)
-          .in('participant_id', participantIds);
-
-        if (!error && data) {
-          data.forEach(item => {
-            campPaymentData[item.participant_id] = item.amount?.toString() || '';
-            campConfirmedData[item.participant_id] = item.confirmed || false;
+        // Use paymentCache if already initialized
+        if (paymentCache && Object.keys(paymentCache.camp).length > 0) {
+          participantIds.forEach(pid => {
+            const cached = paymentCache.camp[pid];
+            campPaymentData[pid] = (cached && cached.amount) ? String(cached.amount) : '';
+            campConfirmedData[pid] = (cached && cached.confirmed) ? true : false;
           });
+          console.log('[CREATE-CAMP-DETAILS-TABLE] Used paymentCache for camp payments');
+        } else {
+          const { data, error } = await supabase
+            .from('camp_payments')
+            .select('participant_id, amount, confirmed')
+            .eq('camp_id', camp.id)
+            .in('participant_id', participantIds);
+
+          if (!error && data) {
+            data.forEach(item => {
+              campPaymentData[item.participant_id] = item.amount?.toString() || '';
+              campConfirmedData[item.participant_id] = item.confirmed || false;
+            });
+          }
         }
-        } catch (err) {
+      } catch (err) {
         console.error('Error loading camp payment data:', err);
       }
 
-      // Batch load all trainer payment data
+      // Batch load all trainer payment data - prefer cache
       let trainerPaymentData = {};
       let trainerConfirmedData = {};
-        if (camp.trainers && camp.trainers.length > 0) {
-          for (const [index, trainer] of camp.trainers.entries()) {
-          if (trainer) {
-            try {
-              const { data, error } = await supabase
-                .from('trainer_payments')
-                .select('participant_id, amount, confirmed')
-                .eq('camp_id', camp.id)
-                .eq('trainer_index', index)
-                .in('participant_id', participantIds);
+      if (camp.trainers && camp.trainers.length > 0) {
+        if (paymentCache && Object.keys(paymentCache.trainer).length > 0) {
+          // populate from cache
+          participantIds.forEach(pid => {
+            const tMap = paymentCache.trainer[pid] || {};
+            trainerPaymentData[pid] = {};
+            trainerConfirmedData[pid] = {};
+            camp.trainers.forEach((t, idx) => {
+              const cached = tMap[idx];
+              trainerPaymentData[pid][idx] = (cached && cached.amount) ? String(cached.amount) : '';
+              trainerConfirmedData[pid][idx] = (cached && cached.confirmed) ? true : false;
+            });
+          });
+          console.log('[CREATE-CAMP-DETAILS-TABLE] Used paymentCache for trainer payments');
+        } else {
+          // Parallel DB queries per trainer (batched)
+          const trainerPromises = camp.trainers.map((trainer, index) => {
+            if (!trainer) return Promise.resolve({ index, data: [] });
+            return supabase
+              .from('trainer_payments')
+              .select('participant_id, amount, confirmed')
+              .eq('camp_id', camp.id)
+              .eq('trainer_index', index)
+              .in('participant_id', participantIds)
+              .then(({ data, error }) => ({ index, data: data || [], error }))
+              .catch(err => ({ index, data: [], error: err }));
+          });
 
-              if (!error && data) {
-                data.forEach(item => {
-                  if (!trainerPaymentData[item.participant_id]) {
-                    trainerPaymentData[item.participant_id] = {};
-                    trainerConfirmedData[item.participant_id] = {};
-                  }
-                  trainerPaymentData[item.participant_id][index] = item.amount?.toString() || '';
-                  trainerConfirmedData[item.participant_id][index] = item.confirmed || false;
-                });
-              }
-              } catch (err) {
-              console.error(`Error loading trainer ${index} payment data:`, err);
+          const trainerResults = await Promise.all(trainerPromises);
+          trainerResults.forEach(res => {
+            const index = res.index;
+            if (!res.error && res.data) {
+              res.data.forEach(item => {
+                if (!trainerPaymentData[item.participant_id]) {
+                  trainerPaymentData[item.participant_id] = {};
+                  trainerConfirmedData[item.participant_id] = {};
+                }
+                trainerPaymentData[item.participant_id][index] = item.amount?.toString() || '';
+                trainerConfirmedData[item.participant_id][index] = item.confirmed || false;
+              });
+            } else if (res.error) {
+              console.error(`Error loading trainer ${index} payment data:`, res.error);
             }
-          }
+          });
         }
       }
 
