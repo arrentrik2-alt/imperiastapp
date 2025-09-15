@@ -2225,10 +2225,7 @@
 
     // Calculate camp status for coloring
     async function calculateCampStatus(camp, participants) {
-      console.log(`[CALCULATE-STATUS] Starting calculation for camp ${camp.name} with ${participants.length} participants`);
-
       if (!participants || participants.length === 0) {
-        console.log(`[CALCULATE-STATUS] No participants found, returning normal status`);
         return ''; // No participants = no status (normal background)
       }
 
@@ -2236,24 +2233,49 @@
       let hasUnconfirmedPayments = false;
       let hasAttentions = false;
 
+      // BATCH ATTENTION QUERY - Get all attention flags in one query (with caching)
+      const participantIds = participants.map(p => p.id);
+      let attentionMap = {};
+
+      // Check cache first
+      const cacheKey = `${camp.id}`;
+      if (attentionCache[cacheKey]) {
+        attentionMap = attentionCache[cacheKey];
+      } else {
+        // Load from database and cache
+        try {
+          const { data, error } = await supabase
+            .from('participant_attention')
+            .select('participant_id, has_attention')
+            .eq('camp_id', camp.id)
+            .in('participant_id', participantIds);
+
+          if (!error && data) {
+            attentionMap = data.reduce((map, item) => {
+              map[item.participant_id] = item.has_attention;
+              return map;
+            }, {});
+            // Cache the results
+            attentionCache[cacheKey] = attentionMap;
+          }
+        } catch (err) {
+          console.error('Error batch loading attentions:', err);
+        }
+      }
+
       for (const participant of participants) {
         const participantId = participant.id;
-        console.log(`[STATUS-CHECK] Checking ${participant.name} (${participantId})`);
 
         // Check camp payment status using cache
         const campPayment = getCachedPayment(participantId, 'camp');
 
-        console.log(`[STATUS-CHECK] ${participant.name}: campPayment=${campPayment.amount}, campConfirmed=${campPayment.confirmed}`);
-
         // Consider payment as existing if amount > 0
         const hasValidPayment = campPayment.amount > 0;
-        console.log(`[STATUS-CHECK] ${participant.name}: hasValidPayment=${hasValidPayment}`);
 
         if (hasValidPayment) {
           hasAnyPayments = true;
           if (!campPayment.confirmed) {
             hasUnconfirmedPayments = true;
-            console.log(`[STATUS-CHECK] ${participant.name}: Found unconfirmed payment - setting RED status`);
           }
         }
 
@@ -2268,40 +2290,21 @@
                 hasAnyPayments = true;
                 if (!trainerPayment.confirmed) {
                   hasUnconfirmedPayments = true;
-                  console.log(`[STATUS-CHECK] ${participant.name}: Found unconfirmed trainer payment - setting RED status`);
                 }
               }
             }
           }
         }
 
-        // Check if participant has attention flag
-        let hasAttention = false;
-        try {
-          const { data, error } = await supabase
-            .from('participant_attention')
-            .select('has_attention')
-            .eq('camp_id', camp.id)
-            .eq('participant_id', participantId)
-            .maybeSingle();
-
-          if (!error && data) {
-            hasAttention = data.has_attention;
-          }
-        } catch (err) {
-          console.error('Error checking attention:', err);
-        }
-
-        console.log(`[STATUS-CHECK] ${participant.name}: attention=${hasAttention}`);
+        // Check if participant has attention flag (from batch query)
+        const hasAttention = attentionMap[participantId] || false;
         if (hasAttention) {
           hasAttentions = true;
-          console.log(`[STATUS-CHECK] ${participant.name}: Found attention - setting ORANGE status`);
         }
       }
 
       // If no payments and no attentions, return empty string (normal background)
       if (!hasAnyPayments && !hasAttentions) {
-        console.log(`[CALCULATE-STATUS] No payments and no attentions, returning normal status`);
         return '';
       }
 
@@ -2314,7 +2317,6 @@
         statusResult = 'status-complete'; // Green - all confirmed, no attentions
       }
 
-      console.log(`[CALCULATE-STATUS] Final status for camp ${camp.name}: ${statusResult} (payments: ${hasAnyPayments}, unconfirmed: ${hasUnconfirmedPayments}, attentions: ${hasAttentions})`);
       return statusResult;
     }
 
@@ -2419,11 +2421,19 @@
       trainer: {}    // {participantId: {trainerIndex: {amount: number, confirmed: boolean}}}
     };
 
+    // Global attention cache to avoid repeated database queries
+    let attentionCache = {};
+
+    // Clear attention cache
+    function clearAttentionCache() {
+      attentionCache = {};
+    }
+
     // Initialize payment cache for current camp - SUPER FAST VERSION
     async function initializePaymentCache(campId, participants) {
-      console.log('[CACHE] Initializing payment cache for camp:', campId);
       // Clear cache first to ensure clean state
       clearPaymentCache();
+      clearAttentionCache();
       paymentCache = { camp: {}, trainer: {} };
 
       const participantIds = participants.map(p => p.id);
@@ -2759,9 +2769,9 @@
       }
     }
 
-    // Update camp statuses asynchronously after rendering
+    // Update camp statuses asynchronously after rendering - PARALLEL PROCESSING
     async function updateCampStatuses(camps, participantsByCamp) {
-      for (const camp of camps) {
+      const statusPromises = camps.map(async (camp) => {
         try {
           const externalParticipants = participantsByCamp[camp.id] || [];
           const members = window.allMembers || [];
@@ -2790,7 +2800,10 @@
         } catch (err) {
           console.error(`Error updating status for camp ${camp.name}:`, err);
         }
-      }
+      });
+
+      // Wait for all status calculations to complete in parallel
+      await Promise.all(statusPromises);
     }
 
     // Create camp card element
@@ -2860,7 +2873,6 @@
     async function showCampDetails(camp) {
       // Load trainer data for this camp if not already loaded
       if (!camp.trainers) {
-        console.log(`[SHOW-CAMP-DETAILS] Loading trainer data for camp ${camp.id}`);
         const { data: trainers, error: trainerError } = await supabase
           .from('trainers')
           .select('*')
@@ -2898,12 +2910,10 @@
 
       // ULTRA FAST LOADING - Load all data in parallel
       try {
-        console.log('[CAMP-DETAILS] Starting ultra-fast parallel loading...');
-
         // PARALLEL DATA LOADING
         const dataPromises = [];
 
-        // Load members if not already loaded
+        // Load members if not already loaded (optimized - only load once per session)
         let allMembers = window.allMembers;
         if (!allMembers) {
           dataPromises.push(
@@ -2934,38 +2944,30 @@
         // Get members eligible for this camp based on dance type
         const danceTypeForDetails = camp.dance_type || currentView || 'st';
         const members = allMembers.filter(m => danceTypeForDetails === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
-        console.log(`[SHOW-CAMP-DETAILS] Found ${members.length} eligible club members for dance type ${danceTypeForDetails}`);
-        console.log(`[SHOW-CAMP-DETAILS] Found ${additionalParticipants.length} external participants`);
 
         // Combine members and additional participants
         const allParticipants = [...members, ...additionalParticipants];
-        console.log(`[SHOW-CAMP-DETAILS] Total participants: ${allParticipants.length}`);
 
         // Cache participants for later use
         window.currentParticipants = allParticipants;
 
         // Initialize payment cache in background (do not block UI)
-        console.log('[CAMP-DETAILS] Starting background payment cache initialization...');
         (async () => {
           try {
             await initializePaymentCache(camp.id, allParticipants);
-            console.log('[CAMP-DETAILS] Payment cache initialized (background)');
             // After cache ready, update UI rows status quickly
             if (typeof updateAllCampStatuses === 'function') updateAllCampStatuses();
           } catch (err) {
-            console.error('[CAMP-DETAILS] Background payment cache init failed:', err);
+            console.error('Background payment cache init failed:', err);
           }
         })();
 
         // ULTRA FAST UI SETUP - Create table and summary in parallel
-        console.log('[CAMP-DETAILS] Setting up UI components in parallel...');
-
         // Render table first (fast) then start expensive financial summary async (don't block)
         const detailsContent = document.getElementById('camp-details-content');
         try {
           const tableHtml = await createCampDetailsTable(camp, allParticipants);
           detailsContent.innerHTML = tableHtml;
-          console.log('[CAMP-DETAILS] Camp details table created');
 
           // Setup UI elements immediately after table render
           setupParticipantSearch();
@@ -2981,7 +2983,6 @@
                 const html = await createFinancialSummaryHTML(camp, allParticipants);
                 summaryCurrencies.innerHTML = html;
                 financialSummary.style.display = 'block';
-                console.log('[CAMP-DETAILS] Financial summary displayed (background)');
               }
             } catch (err) {
               console.error('[CAMP-DETAILS] Error creating financial summary (background):', err);
@@ -3015,7 +3016,6 @@
           });
 
         // INSTANT UI CALCULATIONS - All in parallel for maximum speed
-        console.log('[CAMP-DETAILS] Performing instant UI calculations...');
 
         const calculationPromises = [];
 
@@ -3031,7 +3031,6 @@
         }
 
         await Promise.all(calculationPromises);
-        console.log('[CAMP-DETAILS] All UI calculations completed instantly');
 
         // Camp statuses are updated globally when members data is loaded
 
@@ -5284,4 +5283,5 @@
     }
   </script>
 </body>
+</html>
 </html>
