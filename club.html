@@ -1307,22 +1307,29 @@
       </div>
     </div>
 
-    <!-- Camps ST Section -->
+    <!-- Camps Section -->
     <div class="content-box" id="camps-section" style="display: none;">
       <div class="content-header">
-        <h3>Campy ST</h3>
+        <h3 id="camps-title">Campy</h3>
         <button class="btn btn-primary" id="create-camp-btn">
           <i class="fas fa-plus"></i> Utwórz camp
         </button>
       </div>
 
-      <!-- Month Selector -->
-      <div class="month-selector" style="margin-bottom: 20px;">
-        <label for="camp-month-select">Wybierz miesiąc:</label>
-        <select id="camp-month-select" class="form-control" style="margin-left: 10px;">
-          <option value="2025-09">Wrzesień 2025</option>
-          <option value="2025-08">Sierpień 2025</option>
-        </select>
+      <!-- Month Selector + View Toggle -->
+      <div class="month-selector" style="margin-bottom: 20px; display:flex; align-items:center; gap:12px;">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <label style="color:var(--text-gray); font-size:0.95rem;">Widok:</label>
+          <button id="view-st-btn" class="btn btn-outline" style="padding:6px 10px;">ST</button>
+          <button id="view-la-btn" class="btn btn-outline" style="padding:6px 10px;">LA</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <label for="camp-month-select">Wybierz miesiąc:</label>
+          <select id="camp-month-select" class="form-control" style="margin-left: 10px;">
+            <option value="2025-09">Wrzesień 2025</option>
+            <option value="2025-08">Sierpień 2025</option>
+          </select>
+        </div>
       </div>
 
       <!-- Camps List -->
@@ -1532,6 +1539,15 @@
             </select>
           </div>
 
+          <div class="form-group">
+            <label for="camp-dance-type">Typ tańca *</label>
+            <select id="camp-dance-type" name="camp-dance-type" class="form-control" required>
+              <option value="st">ST (standard)</option>
+              <option value="la">LA (latino)</option>
+            </select>
+            <div style="font-size:0.85rem; color:var(--text-gray); margin-top:6px;">Wybierz widok, w którym tworzysz camp — automatycznie dobiorą się uczestnicy.</div>
+          </div>
+
           <!-- Trainers Section -->
           <div class="form-group">
             <label>Szkoleniowcy</label>
@@ -1546,7 +1562,7 @@
           <div class="form-actions">
             <button type="button" class="btn btn-outline" id="cancel-create-camp">Anuluj</button>
             <button type="submit" class="btn btn-primary" id="submit-create-camp">
-              <i class="fas fa-save"></i> Utwórz camp
+              <i class="fas fa-save"></i> <span id="submit-create-camp-text">Utwórz camp</span>
             </button>
           </div>
         </form>
@@ -2009,6 +2025,12 @@
     const campMonthSelect = document.getElementById('camp-month-select');
     const campsList = document.getElementById('camps-list');
     const backToCampsBtn = document.getElementById('back-to-camps-btn');
+    const viewStBtn = document.getElementById('view-st-btn');
+    const viewLaBtn = document.getElementById('view-la-btn');
+    const campsTitle = document.getElementById('camps-title');
+
+    // Current view: 'st' or 'la'
+    let currentView = 'st';
 
     // DOM Elements for participants
     const addParticipantBtn = document.getElementById('add-participant-btn');
@@ -2020,6 +2042,9 @@
 
     // Trainer management
     let trainerCount = 0;
+
+    const campDanceTypeSelect = document.getElementById('camp-dance-type');
+    const submitCreateCampText = document.getElementById('submit-create-camp-text');
 
     function addTrainer() {
       trainerCount++;
@@ -2048,6 +2073,94 @@
         </div>
       `;
       trainersContainer.appendChild(trainerItem);
+    }
+
+    // Handle create camp submit - save dance_type and auto-assign eligible members
+    createCampForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('camp-name').value.trim();
+      const date = document.getElementById('camp-date').value;
+      const amount = parseFloat(document.getElementById('camp-amount').value) || 0;
+      const currency = document.getElementById('camp-currency').value;
+      const danceType = (campDanceTypeSelect && campDanceTypeSelect.value) ? campDanceTypeSelect.value : currentView || 'st';
+
+      if (!name || !date || !currency) {
+        alert('Uzupełnij wszystkie wymagane pola');
+        return;
+      }
+
+      // Collect trainers
+      const trainers = [];
+      document.querySelectorAll('.trainer-item').forEach((item, idx) => {
+        const tName = item.querySelector(`[name=\`trainer-name-${idx+1}\`]`)?.value || '';
+        const tAmount = parseFloat(item.querySelector(`[name=\`trainer-amount-${idx+1}\`]`)?.value || 0);
+        const tCurrency = item.querySelector(`[name=\`trainer-currency-${idx+1}\`]`)?.value || 'EUR';
+        if (tName) trainers.push({ name: tName, amount: tAmount, currency: tCurrency, trainer_index: idx });
+      });
+
+      // Create camp ID
+      const campId = `camp_${Date.now()}`;
+
+      try {
+        // Insert camp with dance_type
+        const { error: insertError } = await supabase
+          .from('camps')
+          .insert([{ id: campId, month: currentMonth, name, date, amount, currency, trainers: JSON.stringify(trainers), dance_type: danceType }]);
+
+        if (insertError) throw insertError;
+
+        // Auto-add eligible members as camp_participants based on dance type
+        const { data: members } = await supabase.from('members').select('*');
+        const eligible = (danceType === 'st') ? members.filter(m => m.style === 'st' || m.style === '10t') : members.filter(m => m.style === 'la' || m.style === '10t');
+
+        if (eligible && eligible.length > 0) {
+          const inserts = eligible.map(m => ({ camp_id: campId, participant_id: m.id, name: m.name }));
+          // batch insert
+          const { error: partError } = await supabase.from('camp_participants').insert(inserts);
+          if (partError) console.error('Error adding participants:', partError);
+        }
+
+        // Close modal and reload camps
+        cancelCreateCamp && cancelCreateCamp.click();
+        await loadCamps();
+        alert('Camp utworzony');
+      } catch (err) {
+        console.error('Błąd tworzenia campu:', err);
+        alert('Błąd tworzenia campu');
+      }
+    });
+
+    // Setup view toggle
+    if (viewStBtn && viewLaBtn) {
+      function applyViewButtons() {
+        if (currentView === 'st') {
+          viewStBtn.classList.add('active');
+          viewLaBtn.classList.remove('active');
+          campsTitle.textContent = 'Campy ST';
+          submitCreateCampText && (submitCreateCampText.textContent = 'Utwórz camp (ST)');
+        } else {
+          viewLaBtn.classList.add('active');
+          viewStBtn.classList.remove('active');
+          campsTitle.textContent = 'Campy LA';
+          submitCreateCampText && (submitCreateCampText.textContent = 'Utwórz camp (LA)');
+        }
+      }
+
+      viewStBtn.addEventListener('click', () => {
+        currentView = 'st';
+        applyViewButtons();
+        loadCamps();
+      });
+
+      viewLaBtn.addEventListener('click', () => {
+        currentView = 'la';
+        applyViewButtons();
+        loadCamps();
+      });
+
+      // initialize
+      applyViewButtons();
     }
 
     function removeTrainer(button) {
@@ -2446,6 +2559,12 @@
           .eq('month', currentMonth)
           .order('date', { ascending: false });
 
+        // Filter camps by selected view (dance_type)
+        const filteredCamps = camps.filter(c => {
+          if (!c.dance_type) return true; // keep if missing
+          return currentView === 'st' ? c.dance_type === 'st' : c.dance_type === 'la';
+        });
+
         if (error) throw error;
 
         // Load all camp participants at once (batch query)
@@ -2493,11 +2612,11 @@
 
 
 
-        if (camps.length === 0) {
+        if (filteredCamps.length === 0) {
           campsList.innerHTML = `
             <div class="empty-state">
               <i class="fas fa-campground"></i>
-              <p>Brak campów w wybranym miesiącu</p>
+              <p>Brak campów w wybranym miesiącu / widoku</p>
               <p>Kliknij "Utwórz camp" aby dodać pierwszy camp</p>
             </div>
           `;
@@ -2505,7 +2624,7 @@
         }
 
         campsList.innerHTML = '';
-        for (const camp of camps) {
+        for (const camp of filteredCamps) {
           const campCard = createCampCard(camp, participantsByCamp[camp.id] || []);
           campsList.appendChild(campCard);
         }
@@ -2646,7 +2765,8 @@
         try {
           const externalParticipants = participantsByCamp[camp.id] || [];
           const members = window.allMembers || [];
-          const eligibleMembers = members.filter(m => m.style === 'st' || m.style === '10t');
+          const danceTypeForStatus = camp.dance_type || currentView || 'st';
+          const eligibleMembers = members.filter(m => danceTypeForStatus === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
 
           // Combine external participants and club members, but avoid duplicates
           let allParticipants = [...externalParticipants];
@@ -2690,7 +2810,8 @@
 
       // Always include club members eligible for this camp
       const members = window.allMembers || [];
-      const eligibleMembers = members.filter(m => m.style === 'st' || m.style === '10t');
+      const danceTypeForCard = camp.dance_type || currentView || 'st';
+      const eligibleMembers = members.filter(m => danceTypeForCard === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
 
       // Combine external participants and club members, but avoid duplicates
       let allParticipants = [...externalParticipants];
@@ -2810,9 +2931,10 @@
           allMembers = membersData;
         }
 
-        // Get members eligible for this camp (ST or 10T style)
-        const members = allMembers.filter(m => m.style === 'st' || m.style === '10t');
-        console.log(`[SHOW-CAMP-DETAILS] Found ${members.length} eligible club members (ST/10T)`);
+        // Get members eligible for this camp based on dance type
+        const danceTypeForDetails = camp.dance_type || currentView || 'st';
+        const members = allMembers.filter(m => danceTypeForDetails === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
+        console.log(`[SHOW-CAMP-DETAILS] Found ${members.length} eligible club members for dance type ${danceTypeForDetails}`);
         console.log(`[SHOW-CAMP-DETAILS] Found ${additionalParticipants.length} external participants`);
 
         // Combine members and additional participants
