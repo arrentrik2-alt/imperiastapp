@@ -4799,63 +4799,78 @@
       }
     });
 
-    // Trainings modal event listeners
-    createTrainingBtn.addEventListener('click', openCreateTrainingModal);
-    closeCreateTrainingModal.addEventListener('click', closeCreateTrainingModalFunc);
-    cancelCreateTraining.addEventListener('click', closeCreateTrainingModalFunc);
-    addTrainingTrainerBtn.addEventListener('click', addTrainingTrainerInput);
+    // Trainings modal event listeners (guarded - trainings merged into camps view)
+    (function setupTrainingModalListeners() {
+      const elCreateTrainingBtn = document.getElementById('create-training-btn');
+      const elCloseCreateTrainingModal = document.getElementById('close-create-training-modal');
+      const elCancelCreateTraining = document.getElementById('cancel-create-training');
+      const elAddTrainingTrainerBtn = document.getElementById('add-training-trainer-btn');
+      const elCreateTrainingModal = document.getElementById('create-training-modal');
+      const elCreateTrainingForm = document.getElementById('create-training-form');
+      const elTrainingTrainersContainer = document.getElementById('training-trainers-container');
 
-    // Close modal when clicking outside
-    createTrainingModal.addEventListener('click', (e) => {
-      if (e.target === createTrainingModal) {
-        closeCreateTrainingModalFunc();
-      }
-    });
+      if (elCreateTrainingBtn) elCreateTrainingBtn.addEventListener('click', openCreateTrainingModal);
+      if (elCloseCreateTrainingModal) elCloseCreateTrainingModal.addEventListener('click', closeCreateTrainingModalFunc);
+      if (elCancelCreateTraining) elCancelCreateTraining.addEventListener('click', closeCreateTrainingModalFunc);
+      if (elAddTrainingTrainerBtn) elAddTrainingTrainerBtn.addEventListener('click', addTrainingTrainerInput);
 
-    // Create training form submission
-    createTrainingForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const submitBtn = document.getElementById('submit-create-training');
-      const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Tworzenie...';
-      submitBtn.disabled = true;
-
-      try {
-        const formData = new FormData(createTrainingForm);
-        const trainingData = {
-          name: formData.get('training-name'),
-          date: formData.get('training-date'),
-          amount: formData.get('training-amount'),
-          currency: formData.get('training-currency'),
-          dance_type: formData.get('training-dance-type'),
-          trainers: []
-        };
-
-        // Collect trainer data
-        const trainerInputs = trainingTrainersContainer.querySelectorAll('.trainer-input-group');
-        trainerInputs.forEach((trainerDiv, index) => {
-          const nameInput = trainerDiv.querySelector('.trainer-name');
-          const amountInput = trainerDiv.querySelector('.trainer-amount');
-
-          if (nameInput && nameInput.value.trim() && amountInput && amountInput.value) {
-            trainingData.trainers.push({
-              name: nameInput.value.trim(),
-              amount: amountInput.value,
-              currency: trainingData.currency
-            });
+      // Close modal when clicking outside
+      if (elCreateTrainingModal) {
+        elCreateTrainingModal.addEventListener('click', (e) => {
+          if (e.target === elCreateTrainingModal) {
+            closeCreateTrainingModalFunc();
           }
         });
-
-        await createTraining(trainingData);
-      } catch (err) {
-        console.error('Error creating training:', err);
-        alert('Błąd tworzenia szkolenia: ' + (err.message || 'Nieznany błąd'));
-      } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
       }
-    });
+
+      // Create training form submission (guarded)
+      if (elCreateTrainingForm) {
+        elCreateTrainingForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+
+          const submitBtn = document.getElementById('submit-create-training');
+          const originalText = submitBtn ? submitBtn.innerHTML : '';
+          if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Tworzenie...';
+            submitBtn.disabled = true;
+          }
+
+          try {
+            const formData = new FormData(elCreateTrainingForm);
+            const trainingData = {
+              name: formData.get('training-name'),
+              date: formData.get('training-date'),
+              amount: formData.get('training-amount'),
+              currency: formData.get('training-currency'),
+              dance_type: formData.get('training-dance-type'),
+              trainers: []
+            };
+
+            // Collect trainer data if container exists
+            if (elTrainingTrainersContainer) {
+              const trainerInputs = elTrainingTrainersContainer.querySelectorAll('.trainer-input-group');
+              trainerInputs.forEach((trainerDiv) => {
+                const nameInput = trainerDiv.querySelector('.trainer-name');
+                const amountInput = trainerDiv.querySelector('.trainer-amount');
+                if (nameInput && nameInput.value.trim() && amountInput && amountInput.value) {
+                  trainingData.trainers.push({ name: nameInput.value.trim(), amount: amountInput.value, currency: trainingData.currency });
+                }
+              });
+            }
+
+            await createTraining(trainingData);
+          } catch (err) {
+            console.error('Error creating training:', err);
+            alert('Błąd tworzenia szkolenia: ' + (err.message || 'Nieznany błąd'));
+          } finally {
+            if (submitBtn) {
+              submitBtn.innerHTML = originalText;
+              submitBtn.disabled = false;
+            }
+          }
+        });
+      }
+    })();
 
     // Create camp form submission
     createCampForm.addEventListener('submit', async (e) => {
