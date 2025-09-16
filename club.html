@@ -2421,9 +2421,9 @@
       // Collect trainers
       const trainers = [];
       document.querySelectorAll('.trainer-item').forEach((item, idx) => {
-        const tName = item.querySelector(`[name=\`trainer-name-${idx+1}\`]`)?.value || '';
-        const tAmount = parseFloat(item.querySelector(`[name=\`trainer-amount-${idx+1}\`]`)?.value || 0);
-        const tCurrency = item.querySelector(`[name=\`trainer-currency-${idx+1}\`]`)?.value || 'EUR';
+        const tName = item.querySelector(`[name="trainer-name-${idx+1}"]`)?.value || '';
+        const tAmount = parseFloat(item.querySelector(`[name="trainer-amount-${idx+1}"]`)?.value || 0);
+        const tCurrency = item.querySelector(`[name="trainer-currency-${idx+1}"]`)?.value || 'EUR';
         if (tName) trainers.push({ name: tName, amount: tAmount, currency: tCurrency, trainer_index: idx });
       });
 
