@@ -3226,79 +3226,64 @@
           <tbody>
       `;
 
-      // Batch load all attention data for all participants
+      // PARALLEL DATA LOADING - Load all data simultaneously for maximum speed
       const participantIds = participants.map(p => p.id);
-      let attentionData = {};
-        try {
-          const { data, error } = await supabase
-            .from('participant_attention')
+
+      // Prepare all data loading promises
+      const dataPromises = [];
+
+      // Load attention data
+      dataPromises.push(
+        supabase
+          .from('participant_attention')
           .select('participant_id, has_attention')
-            .eq('camp_id', camp.id)
-          .in('participant_id', participantIds);
+          .eq('camp_id', camp.id)
+          .in('participant_id', participantIds)
+          .then(({ data, error }) => ({ type: 'attention', data: data || [], error }))
+          .catch(err => ({ type: 'attention', data: [], error: err }))
+      );
 
-        if (!error && data) {
-          data.forEach(item => {
-            attentionData[item.participant_id] = item.has_attention;
-          });
-        }
-        } catch (err) {
-        console.error('Error loading attention data:', err);
-        }
-
-      // Batch load all comment data for all participants
-      let commentData = {};
-        try {
-          const { data, error } = await supabase
-            .from('participant_comments')
+      // Load comment data
+      dataPromises.push(
+        supabase
+          .from('participant_comments')
           .select('participant_id, comment')
-            .eq('camp_id', camp.id)
-          .in('participant_id', participantIds);
+          .eq('camp_id', camp.id)
+          .in('participant_id', participantIds)
+          .then(({ data, error }) => ({ type: 'comments', data: data || [], error }))
+          .catch(err => ({ type: 'comments', data: [], error: err }))
+      );
 
-        if (!error && data) {
-          data.forEach(item => {
-            commentData[item.participant_id] = item.comment;
-          });
-        }
-        } catch (err) {
-        console.error('Error loading comment data:', err);
-      }
-
-      // Batch load all camp payment data - prefer in-memory cache to avoid extra DB calls
+      // Load camp payment data - prefer cache to avoid extra DB calls
       let campPaymentData = {};
       let campConfirmedData = {};
-      try {
-        // Use paymentCache if already initialized
-        if (paymentCache && Object.keys(paymentCache.camp).length > 0) {
-          participantIds.forEach(pid => {
-            const cached = paymentCache.camp[pid];
-            campPaymentData[pid] = (cached && cached.amount) ? String(cached.amount) : '';
-            campConfirmedData[pid] = (cached && cached.confirmed) ? true : false;
-          });
-          console.log('[CREATE-CAMP-DETAILS-TABLE] Used paymentCache for camp payments');
-        } else {
-          const { data, error } = await supabase
+      if (paymentCache && Object.keys(paymentCache.camp).length > 0) {
+        // Use cache - instant loading
+        participantIds.forEach(pid => {
+          const cached = paymentCache.camp[pid];
+          campPaymentData[pid] = (cached && cached.amount) ? String(cached.amount) : '';
+          campConfirmedData[pid] = (cached && cached.confirmed) ? true : false;
+        });
+        console.log('[CREATE-CAMP-DETAILS-TABLE] Used paymentCache for camp payments - instant!');
+      } else {
+        // Load from database
+        dataPromises.push(
+          supabase
             .from('camp_payments')
             .select('participant_id, amount, confirmed')
             .eq('camp_id', camp.id)
-            .in('participant_id', participantIds);
-
-          if (!error && data) {
-            data.forEach(item => {
-              campPaymentData[item.participant_id] = item.amount?.toString() || '';
-              campConfirmedData[item.participant_id] = item.confirmed || false;
-            });
-          }
-        }
-      } catch (err) {
-        console.error('Error loading camp payment data:', err);
+            .in('participant_id', participantIds)
+            .then(({ data, error }) => ({ type: 'camp_payments', data: data || [], error }))
+            .catch(err => ({ type: 'camp_payments', data: [], error: err }))
+        );
       }
 
-      // Batch load all trainer payment data - prefer cache
+      // Load trainer payment data - prefer cache
       let trainerPaymentData = {};
       let trainerConfirmedData = {};
       if (camp.trainers && camp.trainers.length > 0) {
         if (paymentCache && Object.keys(paymentCache.trainer).length > 0) {
-          // populate from cache
+          // Use cache - instant loading
           participantIds.forEach(pid => {
             const tMap = paymentCache.trainer[pid] || {};
             trainerPaymentData[pid] = {};
@@ -3309,42 +3294,82 @@
               trainerConfirmedData[pid][idx] = (cached && cached.confirmed) ? true : false;
             });
           });
-          console.log('[CREATE-CAMP-DETAILS-TABLE] Used paymentCache for trainer payments');
+          console.log('[CREATE-CAMP-DETAILS-TABLE] Used paymentCache for trainer payments - instant!');
         } else {
-          // Parallel DB queries per trainer (batched)
-          const trainerPromises = camp.trainers.map((trainer, index) => {
-            if (!trainer) return Promise.resolve({ index, data: [] });
-            return supabase
-              .from('trainer_payments')
-              .select('participant_id, amount, confirmed')
-              .eq('camp_id', camp.id)
-              .eq('trainer_index', index)
-              .in('participant_id', participantIds)
-              .then(({ data, error }) => ({ index, data: data || [], error }))
-              .catch(err => ({ index, data: [], error: err }));
-          });
-
-          const trainerResults = await Promise.all(trainerPromises);
-          trainerResults.forEach(res => {
-            const index = res.index;
-            if (!res.error && res.data) {
-              res.data.forEach(item => {
-                if (!trainerPaymentData[item.participant_id]) {
-                  trainerPaymentData[item.participant_id] = {};
-                  trainerConfirmedData[item.participant_id] = {};
-                }
-                trainerPaymentData[item.participant_id][index] = item.amount?.toString() || '';
-                trainerConfirmedData[item.participant_id][index] = item.confirmed || false;
-              });
-            } else if (res.error) {
-              console.error(`Error loading trainer ${index} payment data:`, res.error);
+          // Parallel DB queries per trainer
+          camp.trainers.forEach((trainer, index) => {
+            if (trainer) {
+              dataPromises.push(
+                supabase
+                  .from('trainer_payments')
+                  .select('participant_id, amount, confirmed')
+                  .eq('camp_id', camp.id)
+                  .eq('trainer_index', index)
+                  .in('participant_id', participantIds)
+                  .then(({ data, error }) => ({ type: `trainer_${index}`, data: data || [], error }))
+                  .catch(err => ({ type: `trainer_${index}`, data: [], error: err }))
+              );
             }
           });
         }
       }
 
+      // Wait for ALL data to load in parallel
+      console.log(`[CREATE-CAMP-DETAILS-TABLE] Starting parallel data loading for ${dataPromises.length} queries...`);
+      const startTime = Date.now();
+      const dbResults = await Promise.all(dataPromises);
+      const loadTime = Date.now() - startTime;
+      console.log(`[CREATE-CAMP-DETAILS-TABLE] Parallel data loading completed in ${loadTime}ms`);
+
+      // Process results
+      let attentionData = {};
+      let commentData = {};
+
+      dbResults.forEach(result => {
+        if (result.error) {
+          console.error(`Error loading ${result.type} data:`, result.error);
+          return;
+        }
+
+        switch (result.type) {
+          case 'attention':
+            result.data.forEach(item => {
+              attentionData[item.participant_id] = item.has_attention;
+            });
+            break;
+
+          case 'comments':
+            result.data.forEach(item => {
+              commentData[item.participant_id] = item.comment;
+            });
+            break;
+
+          case 'camp_payments':
+            result.data.forEach(item => {
+              campPaymentData[item.participant_id] = item.amount?.toString() || '';
+              campConfirmedData[item.participant_id] = item.confirmed || false;
+            });
+            break;
+
+          default:
+            // Handle trainer payments
+            if (result.type.startsWith('trainer_')) {
+              const trainerIndex = parseInt(result.type.split('_')[1]);
+              result.data.forEach(item => {
+                if (!trainerPaymentData[item.participant_id]) {
+                  trainerPaymentData[item.participant_id] = {};
+                  trainerConfirmedData[item.participant_id] = {};
+                }
+                trainerPaymentData[item.participant_id][trainerIndex] = item.amount?.toString() || '';
+                trainerConfirmedData[item.participant_id][trainerIndex] = item.confirmed || false;
+              });
+            }
+            break;
+        }
+      });
+
       // Process participants with batched data
-      const dataPromises = participants.map(async participant => {
+      const participantDataPromises = participants.map(async participant => {
         const participantId = participant.id;
 
         // Get data from batched results
@@ -3381,7 +3406,7 @@
       });
 
       // Wait for all data to load
-      const dataResults = await Promise.all(dataPromises);
+      const dataResults = await Promise.all(participantDataPromises);
       const dataMap = {};
       dataResults.forEach(item => {
         dataMap[item.participantId] = item;
