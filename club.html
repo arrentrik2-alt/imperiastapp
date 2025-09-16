@@ -492,6 +492,157 @@
       color: var(--gold);
     }
 
+    /* Training Details Table */
+    .training-details-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .training-details-table th {
+      background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
+      color: var(--primary-bg);
+      padding: 16px 8px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+      line-height: 1.3;
+      position: relative;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .training-details-table th::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    }
+
+    .training-details-table th:first-child {
+      border-top-left-radius: 12px;
+    }
+
+    .training-details-table th:last-child {
+      border-top-right-radius: 12px;
+    }
+
+    .training-details-table th .amount-badge {
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      display: inline-block;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .training-details-table th small {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      margin-top: 2px;
+      display: block;
+    }
+
+    .training-details-table td {
+      padding: 8px 4px;
+      border: 1px solid var(--border-dark);
+      text-align: center;
+      color: var(--text-light);
+      vertical-align: middle;
+      position: relative;
+    }
+
+    .training-details-table tr:hover {
+      background-color: rgba(212, 175, 55, 0.05);
+    }
+
+    /* Alternating row colors */
+    .training-details-table tbody tr:nth-child(even) {
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .training-details-table tbody tr:nth-child(odd) {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    /* Attention highlighting for participant names */
+    .training-details-table .participant-name.attention-highlight {
+      background-color: rgba(255, 165, 0, 0.3) !important;
+      color: #ff8c00 !important;
+      font-weight: 600;
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+
+    /* Payment status highlighting - only on payment cells */
+    .training-details-table tr.payment-unconfirmed-training .training-payment-cell {
+      background: linear-gradient(135deg, rgba(220, 53, 69, 0.15) 0%, rgba(220, 53, 69, 0.08) 100%);
+    }
+
+    .training-details-table tr.payment-confirmed-training .training-payment-cell {
+      background: linear-gradient(135deg, rgba(40, 167, 69, 0.15) 0%, rgba(40, 167, 69, 0.08) 100%);
+    }
+
+    .training-details-table tr.payment-unconfirmed-trainer .trainer-payment-cell {
+      background: linear-gradient(135deg, rgba(220, 53, 69, 0.12) 0%, rgba(220, 53, 69, 0.06) 100%);
+    }
+
+    .training-details-table tr.payment-confirmed-trainer .trainer-payment-cell {
+      background: linear-gradient(135deg, rgba(40, 167, 69, 0.12) 0%, rgba(40, 167, 69, 0.06) 100%);
+    }
+
+    /* Cell-specific highlighting */
+    .training-details-table td.training-payment-cell {
+      position: relative;
+    }
+
+    .training-details-table td.trainer-payment-cell {
+      position: relative;
+    }
+
+    .training-details-table td.training-payment-cell::before,
+    .training-details-table td.trainer-payment-cell::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .training-details-table td.training-payment-cell.unconfirmed::before {
+      background: radial-gradient(circle, rgba(220, 53, 69, 0.3) 0%, rgba(220, 53, 69, 0.1) 70%, transparent 100%);
+      box-shadow: 0 0 20px rgba(220, 53, 69, 0.4), inset 0 0 20px rgba(220, 53, 69, 0.1);
+    }
+
+    .training-details-table td.training-payment-cell.confirmed::before {
+      background: radial-gradient(circle, rgba(40, 167, 69, 0.3) 0%, rgba(40, 167, 69, 0.1) 70%, transparent 100%);
+      box-shadow: 0 0 20px rgba(40, 167, 69, 0.4), inset 0 0 20px rgba(40, 167, 69, 0.1);
+    }
+
+    .training-details-table td.trainer-payment-cell.unconfirmed::before {
+      background: radial-gradient(circle, rgba(220, 53, 69, 0.25) 0%, rgba(220, 53, 69, 0.08) 70%, transparent 100%);
+      box-shadow: 0 0 15px rgba(220, 53, 69, 0.3), inset 0 0 15px rgba(220, 53, 69, 0.08);
+    }
+
+    .training-details-table td.trainer-payment-cell.confirmed::before {
+      background: radial-gradient(circle, rgba(40, 167, 69, 0.25) 0%, rgba(40, 167, 69, 0.08) 70%, transparent 100%);
+      box-shadow: 0 0 15px rgba(40, 167, 69, 0.3), inset 0 0 15px rgba(40, 167, 69, 0.08);
+    }
+
     /* Camp Details Table */
     .camp-details-table {
       width: 100%;
@@ -1248,6 +1399,12 @@
         </a>
       </li>
       <li>
+        <a href="#" id="nav-trainings">
+          <i class="fas fa-graduation-cap"></i>
+          <span class="link-text">Szkolenia</span>
+        </a>
+      </li>
+      <li>
         <a href="#" id="nav-schedule">
           <i class="fas fa-calendar"></i>
           <span class="link-text">Harmonogram</span>
@@ -1368,6 +1525,45 @@
         <div class="summary-currencies" id="summary-currencies">
           <!-- Currency summaries will be loaded here -->
         </div>
+      </div>
+    </div>
+
+    <!-- Trainings Section -->
+    <div class="content-box" id="trainings-section" style="display: none;">
+      <div class="content-header">
+        <h3>Szkolenia <span id="trainings-count"></span></h3>
+        <div class="camp-actions">
+          <button class="btn btn-primary" id="create-training-btn">
+            <i class="fas fa-plus"></i> Utwórz szkolenie
+          </button>
+        </div>
+      </div>
+
+      <div class="camps-list" id="trainings-list"></div>
+    </div>
+
+    <!-- Training Details Section -->
+    <div class="content-box" id="training-details-section" style="display: none;">
+      <div class="content-header">
+        <h3 id="training-details-title">Szczegóły szkolenia</h3>
+        <div class="camp-actions">
+          <button class="btn btn-primary" id="add-training-participant-btn">
+            <i class="fas fa-user-plus"></i> Dodaj uczestnika
+          </button>
+          <button class="btn btn-outline" id="back-to-trainings-btn">
+            <i class="fas fa-arrow-left"></i> Powrót do szkoleń
+          </button>
+        </div>
+      </div>
+
+      <!-- Training Participant Search -->
+      <div class="participant-search" style="margin-bottom: 20px;">
+        <input type="text" id="training-participant-search" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;">
+      </div>
+
+      <div class="training-details-content" id="training-details-content"></div>
+      <div class="training-financial-summary" id="training-financial-summary" style="display: none;">
+        <div class="summary-currencies" id="training-summary-currencies"></div>
       </div>
     </div>
   </main>
@@ -1564,6 +1760,93 @@
             <button type="button" class="btn btn-outline" id="cancel-create-camp">Anuluj</button>
             <button type="submit" class="btn btn-primary" id="submit-create-camp">
               <i class="fas fa-save"></i> <span id="submit-create-camp-text">Utwórz camp</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Create Training Modal -->
+    <div class="modal" id="create-training-modal">
+      <div class="modal-content">
+        <button class="modal-close" id="close-create-training-modal">&times;</button>
+        <div class="modal-header">
+          <h3>Utwórz nowe szkolenie</h3>
+        </div>
+
+        <form id="create-training-form">
+          <div class="form-group">
+            <label for="training-name">Nazwa szkolenia *</label>
+            <input type="text" id="training-name" name="training-name" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="training-date">Data szkolenia *</label>
+            <input type="date" id="training-date" name="training-date" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="training-amount">Kwota szkolenia *</label>
+            <input type="number" id="training-amount" name="training-amount" class="form-control" step="0.01" min="0" required>
+          </div>
+
+          <div class="form-group">
+            <label for="training-currency">Waluta *</label>
+            <select id="training-currency" name="training-currency" class="form-control" required>
+              <option value="">Wybierz walutę</option>
+              <option value="PLN">PLN</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="training-dance-type">Typ tańca *</label>
+            <select id="training-dance-type" name="training-dance-type" class="form-control" required>
+              <option value="st">ST (standard)</option>
+              <option value="la">LA (latino)</option>
+            </select>
+            <div style="font-size:0.85rem; color:var(--text-gray); margin-top:6px;">Wybierz widok, w którym tworzysz szkolenie — automatycznie dobiorą się uczestnicy.</div>
+          </div>
+
+          <!-- Trainers Section -->
+          <div class="form-group">
+            <label>Szkoleniowcy</label>
+            <button type="button" class="btn btn-outline" id="add-training-trainer-btn" style="margin-top: 5px;">
+              <i class="fas fa-plus"></i> Dodaj szkoleniowca
+            </button>
+            <div id="training-trainers-container" style="margin-top: 10px;">
+              <!-- Trainers will be added here -->
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="cancel-create-training">Anuluj</button>
+            <button type="submit" class="btn btn-primary" id="submit-create-training">
+              <i class="fas fa-save"></i> <span id="submit-create-training-text">Utwórz szkolenie</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add Training Participant Modal -->
+    <div class="modal" id="add-training-participant-modal">
+      <div class="modal-content">
+        <button class="modal-close" id="close-add-training-participant-modal">&times;</button>
+        <div class="modal-header">
+          <h3>Dodaj uczestnika do szkolenia</h3>
+        </div>
+
+        <form id="add-training-participant-form">
+          <div class="form-group">
+            <label for="training-participant-name">Imię i nazwisko *</label>
+            <input type="text" id="training-participant-name" name="training-participant-name" class="form-control" required placeholder="Wpisz imię i nazwisko">
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="cancel-add-training-participant">Anuluj</button>
+            <button type="submit" class="btn btn-primary" id="submit-add-training-participant">
+              <i class="fas fa-user-plus"></i> Dodaj uczestnika
             </button>
           </div>
         </form>
@@ -1995,6 +2278,8 @@
       document.getElementById('members-section').style.display = 'none';
       document.getElementById('camps-section').style.display = 'none';
       document.getElementById('camp-details-section').style.display = 'none';
+      document.getElementById('trainings-section').style.display = 'none';
+      document.getElementById('training-details-section').style.display = 'none';
 
       // Remove active class from all nav links
       document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
@@ -2007,12 +2292,19 @@
         document.getElementById('camps-section').style.display = 'block';
         document.getElementById('nav-camps').classList.add('active');
         loadCamps();
+      } else if (section === 'trainings') {
+        document.getElementById('trainings-section').style.display = 'block';
+        document.getElementById('nav-trainings').classList.add('active');
+        loadTrainings();
       }
     }
 
     // Camps functionality
     let currentMonth = '2025-09';
     let currentCamp = null;
+
+    // Trainings functionality
+    let currentTraining = null;
     let campParticipants = []; // Additional participants added to camp
 
     // DOM Elements for camps
@@ -2029,6 +2321,17 @@
     const viewStBtn = document.getElementById('view-st-btn');
     const viewLaBtn = document.getElementById('view-la-btn');
     const campsTitle = document.getElementById('camps-title');
+
+    // DOM Elements for trainings
+    const createTrainingBtn = document.getElementById('create-training-btn');
+    const createTrainingModal = document.getElementById('create-training-modal');
+    const closeCreateTrainingModal = document.getElementById('close-create-training-modal');
+    const cancelCreateTraining = document.getElementById('cancel-create-training');
+    const createTrainingForm = document.getElementById('create-training-form');
+    const addTrainingTrainerBtn = document.getElementById('add-training-trainer-btn');
+    const trainingTrainersContainer = document.getElementById('training-trainers-container');
+    const trainingsList = document.getElementById('trainings-list');
+    const backToTrainingsBtn = document.getElementById('back-to-trainings-btn');
 
     // Current view: 'st' or 'la'
     let currentView = 'st';
@@ -3733,6 +4036,64 @@
       }
     });
 
+    // Trainings modal event listeners
+    createTrainingBtn.addEventListener('click', openCreateTrainingModal);
+    closeCreateTrainingModal.addEventListener('click', closeCreateTrainingModalFunc);
+    cancelCreateTraining.addEventListener('click', closeCreateTrainingModalFunc);
+    addTrainingTrainerBtn.addEventListener('click', addTrainingTrainerInput);
+
+    // Close modal when clicking outside
+    createTrainingModal.addEventListener('click', (e) => {
+      if (e.target === createTrainingModal) {
+        closeCreateTrainingModalFunc();
+      }
+    });
+
+    // Create training form submission
+    createTrainingForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('submit-create-training');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Tworzenie...';
+      submitBtn.disabled = true;
+
+      try {
+        const formData = new FormData(createTrainingForm);
+        const trainingData = {
+          name: formData.get('training-name'),
+          date: formData.get('training-date'),
+          amount: formData.get('training-amount'),
+          currency: formData.get('training-currency'),
+          dance_type: formData.get('training-dance-type'),
+          trainers: []
+        };
+
+        // Collect trainer data
+        const trainerInputs = trainingTrainersContainer.querySelectorAll('.trainer-input-group');
+        trainerInputs.forEach((trainerDiv, index) => {
+          const nameInput = trainerDiv.querySelector('.trainer-name');
+          const amountInput = trainerDiv.querySelector('.trainer-amount');
+
+          if (nameInput && nameInput.value.trim() && amountInput && amountInput.value) {
+            trainingData.trainers.push({
+              name: nameInput.value.trim(),
+              amount: amountInput.value,
+              currency: trainingData.currency
+            });
+          }
+        });
+
+        await createTraining(trainingData);
+      } catch (err) {
+        console.error('Error creating training:', err);
+        alert('Błąd tworzenia szkolenia: ' + (err.message || 'Nieznany błąd'));
+      } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+
     // Create camp form submission
     createCampForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -3779,6 +4140,14 @@
       currentCamp = null;
     });
 
+    // Back to trainings button
+    backToTrainingsBtn.addEventListener('click', () => {
+      document.getElementById('training-details-section').style.display = 'none';
+      document.getElementById('training-financial-summary').style.display = 'none';
+      document.getElementById('trainings-section').style.display = 'block';
+      currentTraining = null;
+    });
+
     // Navigation event listeners
     document.getElementById('nav-members').addEventListener('click', (e) => {
       e.preventDefault();
@@ -3788,6 +4157,11 @@
     document.getElementById('nav-camps').addEventListener('click', (e) => {
       e.preventDefault();
       setActiveNav('camps');
+    });
+
+    document.getElementById('nav-trainings').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('trainings');
     });
 
     // Update the original navigation function
@@ -4273,6 +4647,1485 @@
         console.error('💥 Database connection test failed:', err);
         return false;
       }
+    }
+
+    // ===========================================
+    // SZKOLENIA (TRAININGS) MANAGEMENT - Copy of Camp functionality
+    // ===========================================
+
+    // Load trainings for selected month
+    async function loadTrainings() {
+      try {
+        // Show loading state
+        trainingsList.innerHTML = `
+          <div class="loading-state">
+            <div class="loading"></div>
+            <p>Ładowanie szkoleń...</p>
+          </div>
+        `;
+
+        // Load trainings with trainer data in a single batch query
+        const { data: trainings, error } = await supabase
+          .from('trainings')
+          .select(`
+            *,
+            trainers (
+              name,
+              amount,
+              currency,
+              trainer_index
+            )
+          `)
+          .order('date', { ascending: false });
+
+        if (error) {
+          console.error('Error loading trainings:', error);
+          trainingsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania szkoleń</p></div>';
+          return;
+        }
+
+        if (!trainings || trainings.length === 0) {
+          trainingsList.innerHTML = `
+            <div class="empty-state">
+              <p>Brak szkoleń w wybranym okresie</p>
+              <button class="btn btn-primary" id="create-first-training-btn">Utwórz pierwsze szkolenie</button>
+            </div>
+          `;
+
+          // Add event listener for create first training button
+          const createBtn = document.getElementById('create-first-training-btn');
+          if (createBtn) {
+            createBtn.addEventListener('click', () => {
+              openCreateTrainingModal();
+            });
+          }
+          return;
+        }
+
+        // Process trainings and calculate participant counts
+        const processedTrainings = await Promise.all(trainings.map(async (training) => {
+          // Get external participants count
+          const externalParticipants = await getTrainingParticipants(training.id);
+          const participantCount = externalParticipants.length;
+
+          // Calculate training status
+          const trainingWithTrainers = {
+            ...training,
+            trainers: training.trainers || []
+          };
+
+          const status = await calculateTrainingStatus(trainingWithTrainers, externalParticipants);
+
+          return {
+            ...training,
+            participantCount,
+            externalParticipants,
+            status
+          };
+        }));
+
+        // Clear loading state and render trainings
+        trainingsList.innerHTML = '';
+
+        // Create and append training cards
+        processedTrainings.forEach(training => {
+          const trainingCard = createTrainingCard(training, training.externalParticipants);
+          trainingsList.appendChild(trainingCard);
+        });
+
+        // Update trainings count
+        const trainingsCount = document.getElementById('trainings-count');
+        if (trainingsCount) {
+          trainingsCount.textContent = `(${processedTrainings.length})`;
+        }
+
+        // Store trainings globally for status updates
+        window.allTrainings = processedTrainings;
+
+        console.log(`Loaded ${processedTrainings.length} trainings`);
+
+      } catch (err) {
+        console.error('Error in loadTrainings:', err);
+        trainingsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania szkoleń</p></div>';
+      }
+    }
+
+    // Delete training and all related data
+    async function deleteTraining(training) {
+      if (!confirm(`Czy na pewno chcesz usunąć szkolenie "${training.name}"?\n\nTa operacja usunie wszystkie dane szkolenia, włącznie z uczestnikami, trenerami, płatnościami i uwagami.`)) {
+        return;
+      }
+
+      try {
+        const trainingId = training.id;
+
+        // Delete in order: payments, participants, expenses, trainers, then training
+        const deleteOperations = [
+          // Delete training payments
+          supabase.from('training_payments').delete().eq('training_id', trainingId),
+          // Delete trainer payments
+          supabase.from('trainer_payments').delete().eq('training_id', trainingId),
+          // Delete training participants
+          supabase.from('training_participants').delete().eq('training_id', trainingId),
+          // Delete training expenses
+          supabase.from('training_expenses').delete().eq('training_id', trainingId),
+          // Delete participant attention for this training
+          supabase.from('participant_attention').delete().eq('training_id', trainingId),
+          // Delete participant comments for this training
+          supabase.from('participant_comments').delete().eq('training_id', trainingId),
+          // Delete trainers for this training
+          supabase.from('trainers').delete().eq('training_id', trainingId),
+          // Finally delete the training itself
+          supabase.from('trainings').delete().eq('id', trainingId)
+        ];
+
+        // Execute all delete operations
+        for (const operation of deleteOperations) {
+          const { error } = await operation;
+          if (error) {
+            console.error('Error in delete operation:', error);
+            alert('Błąd podczas usuwania szkolenia: ' + error.message);
+            return;
+          }
+        }
+
+        // Reload trainings list
+        await loadTrainings();
+
+        alert('Szkolenie zostało usunięte pomyślnie.');
+
+      } catch (err) {
+        console.error('Error deleting training:', err);
+        alert('Błąd usuwania szkolenia: ' + (err.message || 'Nieznany błąd'));
+      }
+    }
+
+    // Update status for all trainings in the list
+    async function updateAllTrainingStatuses() {
+      console.log(`[UPDATE-ALL-TRAININGS] Starting update for ${window.allTrainings?.length || 0} trainings`);
+      if (!window.allTrainings || !Array.isArray(window.allTrainings)) {
+        console.log('[UPDATE-ALL-TRAININGS] No trainings data available');
+        return;
+      }
+
+      // PARALLEL TRAINING STATUS UPDATES - Process all trainings simultaneously for maximum speed
+      console.log(`[UPDATE-ALL-TRAININGS] Starting parallel status updates for ${window.allTrainings.length} trainings...`);
+      const startTime = Date.now();
+
+      const statusPromises = window.allTrainings.map(training => {
+        console.log(`[UPDATE-ALL-TRAININGS] Queuing status update for training: ${training.name} (ID: ${training.id})`);
+        return updateTrainingStatus(training.id);
+      });
+
+      await Promise.all(statusPromises);
+
+      const loadTime = Date.now() - startTime;
+      console.log(`[UPDATE-ALL-TRAININGS] Parallel training status updates completed in ${loadTime}ms`);
+      console.log('[UPDATE-ALL-TRAININGS] Finished updating all training statuses');
+    }
+
+    // ===========================================
+    // PAYMENT CACHE SYSTEM FOR TRAININGS
+    // ===========================================
+    let trainingPaymentCache = {
+      training: {},      // {participantId: {amount: number, confirmed: boolean}}
+      trainer: {}    // {participantId: {trainerIndex: {amount: number, confirmed: boolean}}}
+    };
+
+    // Global attention cache to avoid repeated database queries
+    let trainingAttentionCache = {};
+
+    // Clear training attention cache
+    function clearTrainingAttentionCache() {
+      trainingAttentionCache = {};
+    }
+
+    // Initialize payment cache for current training - SUPER FAST VERSION
+    async function initializeTrainingPaymentCache(trainingId, participants) {
+      // Clear cache first to ensure clean state
+      clearTrainingPaymentCache();
+      clearTrainingAttentionCache();
+      trainingPaymentCache = { training: {}, trainer: {} };
+
+      const participantIds = participants.map(p => p.id);
+
+      // PARALLEL LOADING - Load all payments at the same time for maximum speed
+      const promises = [];
+
+      // Load training payments
+      promises.push(
+        supabase
+          .from('training_payments')
+          .select('participant_id, amount, confirmed')
+          .eq('training_id', trainingId)
+          .in('participant_id', participantIds)
+          .then(({ data, error }) => {
+            if (!error && data) {
+              data.forEach(payment => {
+                trainingPaymentCache.training[payment.participant_id] = {
+                  amount: parseFloat(payment.amount) || 0,
+                  confirmed: payment.confirmed || false
+                };
+              });
+            }
+            return { type: 'training', error };
+          })
+          .catch(err => ({ type: 'training', error: err }))
+      );
+
+      // Load trainer payments for each trainer in parallel
+      const training = window.currentTraining;
+      if (training && training.trainers && training.trainers.length > 0) {
+        training.trainers.forEach((trainer, index) => {
+          if (trainer) {
+            promises.push(
+              supabase
+                .from('trainer_payments')
+                .select('participant_id, amount, confirmed')
+                .eq('training_id', trainingId)
+                .eq('trainer_index', index)
+                .in('participant_id', participantIds)
+                .then(({ data, error }) => {
+                  if (!error && data) {
+                    data.forEach(payment => {
+                      if (!trainingPaymentCache.trainer[payment.participant_id]) {
+                        trainingPaymentCache.trainer[payment.participant_id] = {};
+                      }
+                      trainingPaymentCache.trainer[payment.participant_id][index] = {
+                        amount: parseFloat(payment.amount) || 0,
+                        confirmed: payment.confirmed || false
+                      };
+                    });
+                  }
+                  return { type: `trainer_${index}`, error };
+                })
+                .catch(err => ({ type: `trainer_${index}`, error: err }))
+            );
+          }
+        });
+      }
+
+      // Wait for all queries to complete in parallel
+      const results = await Promise.all(promises);
+
+      // Log any errors but don't block initialization
+      results.forEach(result => {
+        if (result.error) {
+          console.error(`[TRAINING-CACHE] Error loading ${result.type} payments:`, result.error);
+        }
+      });
+
+      console.log('[TRAINING-CACHE] Payment cache initialized with', Object.keys(trainingPaymentCache.training).length, 'training payments');
+    }
+
+    // Update training payment cache after saving
+    function updateTrainingPaymentCache(participantId, columnType, amount, confirmed, trainerIndex = null) {
+      if (columnType === 'training') {
+        trainingPaymentCache.training[participantId] = {
+          amount: parseFloat(amount) || 0,
+          confirmed: confirmed || false
+        };
+      } else if (columnType === 'trainer') {
+        if (!trainingPaymentCache.trainer[participantId]) {
+          trainingPaymentCache.trainer[participantId] = {};
+        }
+        trainingPaymentCache.trainer[participantId][trainerIndex] = {
+          amount: parseFloat(amount) || 0,
+          confirmed: confirmed || false
+        };
+      }
+    }
+
+    // Clear training payment cache
+    function clearTrainingPaymentCache() {
+      trainingPaymentCache = { training: {}, trainer: {} };
+    }
+
+    // Get cached training payment
+    function getCachedTrainingPayment(participantId, columnType, trainerIndex = null) {
+      if (columnType === 'training') {
+        const cached = trainingPaymentCache.training[participantId];
+        return cached ? { amount: cached.amount, confirmed: cached.confirmed } : { amount: 0, confirmed: false };
+      } else if (columnType === 'trainer') {
+        const trainerPayments = trainingPaymentCache.trainer[participantId];
+        if (trainerPayments && trainerPayments[trainerIndex]) {
+          return trainerPayments[trainerIndex];
+        }
+      }
+      return { amount: 0, confirmed: false };
+    }
+
+    // Update status for a specific training
+    async function updateTrainingStatus(trainingId) {
+      console.log(`[UPDATE-TRAINING-STATUS] Starting update for training ID: ${trainingId}`);
+      const trainingCard = document.querySelector(`.training-card[data-training-id="${trainingId}"]`);
+      if (!trainingCard) {
+        console.log(`[UPDATE-TRAINING-STATUS] Training card not found for ID: ${trainingId}`);
+        return;
+      }
+
+      // Get training data
+      const training = Array.isArray(window.allTrainings) ? window.allTrainings.find(t => t.id === trainingId) : null;
+      if (!training) {
+        console.log(`[UPDATE-TRAINING-STATUS] Training not found in allTrainings`);
+        return;
+      }
+
+      // Get external participants
+      const externalParticipants = await getTrainingParticipants(trainingId);
+
+      // Calculate status
+      const trainingWithTrainers = {
+        ...training,
+        trainers: training.trainers || []
+      };
+
+      const status = await calculateTrainingStatus(trainingWithTrainers, externalParticipants);
+
+      // Update card status class
+      trainingCard.className = `training-card status-${status}`;
+
+      // Update status display
+      const statusElement = trainingCard.querySelector('.training-status');
+      if (statusElement) {
+        statusElement.textContent = getStatusText(status);
+        statusElement.className = `training-status status-${status}`;
+      }
+
+      console.log(`[UPDATE-TRAINING-STATUS] Training ${training.name} final status: ${status}`);
+    }
+
+    // Calculate training status
+    async function calculateTrainingStatus(training, participants) {
+      if (!participants || participants.length === 0) {
+        return 'empty';
+      }
+
+      // Check if all participants have paid for training
+      let allPaid = true;
+      let hasPartialPayments = false;
+
+      for (const participant of participants) {
+        const trainingPayment = await getSavedTrainingPayment(training.id, participant.id, 'training');
+        const hasPaidTraining = trainingPayment.amount > 0 && trainingPayment.confirmed;
+
+        if (!hasPaidTraining) {
+          allPaid = false;
+        }
+
+        // Check trainer payments
+        if (training.trainers && training.trainers.length > 0) {
+          for (let i = 0; i < training.trainers.length; i++) {
+            const trainer = training.trainers[i];
+            if (trainer) {
+              const trainerPayment = await getSavedTrainingPayment(training.id, participant.id, 'trainer', i);
+              const hasPaidTrainer = trainerPayment.amount > 0 && trainerPayment.confirmed;
+
+              if (hasPaidTrainer) {
+                hasPartialPayments = true;
+              } else if (trainingPayment.amount > 0) {
+                // Has paid for training but not for trainer
+                allPaid = false;
+              }
+            }
+          }
+        }
+      }
+
+      if (allPaid) {
+        return 'completed';
+      } else if (hasPartialPayments) {
+        return 'incomplete';
+      } else {
+        return 'unpaid';
+      }
+    }
+
+    // Get status text
+    function getTrainingStatusText(status) {
+      switch (status) {
+        case 'completed': return 'Opłacony';
+        case 'incomplete': return 'Częściowo opłacony';
+        case 'unpaid': return 'Nieopłacony';
+        case 'empty': return 'Brak uczestników';
+        default: return 'Nieznany';
+      }
+    }
+
+    // Update trainings with new participants data
+    async function updateTrainingStatuses(trainings, participantsByTraining) {
+      const statusPromises = trainings.map(async (training) => {
+        try {
+          const externalParticipants = participantsByTraining[training.id] || [];
+          const members = window.allMembers || [];
+          const danceTypeForStatus = training.dance_type || currentView || 'st';
+          const eligibleMembers = members.filter(m => danceTypeForStatus === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
+
+          // Combine external participants and club members, but avoid duplicates
+          let allParticipants = [...externalParticipants];
+          eligibleMembers.forEach(member => {
+            // Only add if not already in external participants
+            if (!allParticipants.find(p => p.id === member.id)) {
+              allParticipants.push(member);
+            }
+          });
+
+          const status = await calculateTrainingStatus(training, allParticipants);
+          return { trainingId: training.id, status };
+        } catch (error) {
+          console.error(`Error updating status for training ${training.id}:`, error);
+          return { trainingId: training.id, status: 'error' };
+        }
+      });
+
+      const results = await Promise.all(statusPromises);
+      return results;
+    }
+
+    // Create training card
+    function createTrainingCard(training, externalParticipants = []) {
+      const card = document.createElement('div');
+      card.className = `training-card status-${training.status || 'unknown'}`;
+      card.setAttribute('data-training-id', training.id);
+
+      const trainersText = training.trainers && training.trainers.length > 0
+        ? training.trainers.map(t => t.name).join(', ')
+        : 'Brak trenerów';
+
+      const participantCount = externalParticipants.length;
+
+      card.innerHTML = `
+        <div class="training-header">
+          <div class="training-name">${training.name}</div>
+          <div class="training-date">${new Date(training.date).toLocaleDateString('pl-PL')}</div>
+        </div>
+        <div class="training-details">
+          <span class="training-detail">
+            <i class="fas fa-euro-sign"></i>${training.amount} ${training.currency}
+          </span>
+          <span class="training-detail">
+            <i class="fas fa-users"></i>Szkoleniowcy: ${trainersText}
+          </span>
+          <span class="training-detail">
+            <i class="fas fa-user-friends"></i>Uczestnicy: ${participantCount}
+          </span>
+        </div>
+        <div class="training-status status-${training.status || 'unknown'}">
+          ${getTrainingStatusText(training.status || 'unknown')}
+        </div>
+        <div class="training-actions">
+          <button class="btn btn-sm btn-outline delete-training-btn" title="Usuń szkolenie">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+
+      // Add click handler for card
+      card.addEventListener('click', (e) => {
+        // Don't trigger if delete button was clicked
+        if (!e.target.closest('.delete-training-btn')) {
+          showTrainingDetails(training);
+        }
+      });
+
+      // Handle delete button click
+      const deleteBtn = card.querySelector('.delete-training-btn');
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent card click
+        deleteTraining(training);
+      });
+
+      return card;
+    }
+
+    // Show training details
+    async function showTrainingDetails(training) {
+      // Load trainer data for this training if not already loaded
+      if (!training.trainers) {
+        const { data: trainers, error: trainerError } = await supabase
+          .from('trainers')
+          .select('*')
+          .eq('training_id', training.id)
+          .order('trainer_index', { ascending: true });
+
+        if (!trainerError && trainers) {
+          // Sort trainers by trainer_index and create sequential array
+          trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
+          training.trainers = trainers.map(trainer => ({
+            name: trainer.name,
+            amount: parseFloat(trainer.amount),
+            currency: trainer.currency
+          }));
+        } else {
+          training.trainers = [];
+        }
+      }
+
+      window.currentTraining = training;
+      document.getElementById('training-details-title').textContent = `Szkolenie: ${training.name}`;
+
+      // Hide trainings list and show details
+      document.getElementById('trainings-section').style.display = 'none';
+      document.getElementById('training-details-section').style.display = 'block';
+
+      // Show loading state in training details
+      const detailsContent = document.getElementById('training-details-content');
+      detailsContent.innerHTML = `
+        <div class="loading-state">
+          <div class="loading"></div>
+          <p>Ładowanie szczegółów szkolenia...</p>
+        </div>
+      `;
+
+      // ULTRA FAST LOADING - Load all data in parallel
+      try {
+        // PARALLEL DATA LOADING
+        const dataPromises = [];
+
+        // Load members if not already loaded (optimized - only load once per session)
+        let allMembers = window.allMembers;
+        if (!allMembers) {
+          dataPromises.push(
+            supabase
+              .from('members')
+              .select('*')
+              .order('name', { ascending: true })
+              .then(({ data, error }) => {
+                if (error) throw error;
+                window.allMembers = data;
+                return data;
+              })
+          );
+        } else {
+          dataPromises.push(Promise.resolve(allMembers));
+        }
+
+        // Load training participants in parallel
+        dataPromises.push(getTrainingParticipants(training.id));
+
+        // Wait for all data to load in parallel
+        const [membersData, additionalParticipants] = await Promise.all(dataPromises);
+
+        if (!allMembers) {
+          allMembers = membersData;
+        }
+
+        // Get members eligible for this training based on dance type
+        const danceTypeForDetails = training.dance_type || currentView || 'st';
+        const members = allMembers.filter(m => danceTypeForDetails === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
+
+        // Combine members and additional participants
+        const allParticipants = [...members, ...additionalParticipants];
+
+        // Cache participants for later use
+        window.currentTrainingParticipants = allParticipants;
+
+        // Initialize payment cache in background (do not block UI)
+        (async () => {
+          try {
+            await initializeTrainingPaymentCache(training.id, allParticipants);
+            // After cache ready, update UI rows status quickly
+            if (typeof updateAllTrainingStatuses === 'function') updateAllTrainingStatuses();
+          } catch (err) {
+            console.error('Background training payment cache init failed:', err);
+          }
+        })();
+
+        // ULTRA FAST UI SETUP - Create table and summary in parallel
+        // Render table first (fast) then start expensive financial summary async (don't block)
+        try {
+          const tableHtml = await createTrainingDetailsTable(training, allParticipants);
+          detailsContent.innerHTML = tableHtml;
+
+          // Setup UI elements immediately after table render
+          setupTrainingParticipantSearch();
+          const searchInput = document.getElementById('training-participant-search');
+          if (searchInput) searchInput.value = '';
+
+          // Kick off financial summary in background (non-blocking)
+          (async () => {
+            try {
+              const financialSummary = document.getElementById('training-financial-summary');
+              const summaryCurrencies = document.getElementById('training-summary-currencies');
+              if (financialSummary && summaryCurrencies) {
+                const html = await createTrainingFinancialSummaryHTML(training, allParticipants);
+                summaryCurrencies.innerHTML = html;
+                financialSummary.style.display = 'block';
+              }
+            } catch (err) {
+              console.error('[TRAINING-DETAILS] Error creating financial summary (background):', err);
+            }
+          })();
+        } catch (err) {
+          console.error('[TRAINING-DETAILS] Error creating training details table:', err);
+          detailsContent.innerHTML = '<div class="empty-state"><p>Błąd tworzenia widoku</p></div>';
+        }
+
+        // Financial summary already updated above, no need to call again
+
+        // Set currency data for payment inputs and calculate totals immediately
+        document.querySelectorAll('#training-details-content .payment-input').forEach(input => {
+          if (!input.dataset.currency) {
+            const tableType = input.getAttribute('data-column-type');
+
+            if (tableType === 'training' && window.currentTraining) {
+              input.dataset.currency = window.currentTraining.currency || 'PLN';
+            } else if (tableType === 'trainer') {
+              const idxStr = input.getAttribute('data-trainer-index');
+              const idx = parseInt(idxStr, 10);
+
+              if (window.currentTraining && window.currentTraining.trainers && window.currentTraining.trainers[idx]) {
+                input.dataset.currency = window.currentTraining.trainers[idx].currency || 'PLN';
+              } else {
+                input.dataset.currency = 'PLN';
+              }
+            }
+          }
+        });
+
+        // INSTANT UI CALCULATIONS - All in parallel for maximum speed
+        const calculationPromises = [];
+
+        // Calculate participant totals in parallel
+        const participantsToUpdate = window.currentTrainingParticipants || [];
+        participantsToUpdate.forEach(p => {
+          calculationPromises.push(updateTrainingParticipantTotalsFast(training.id, p.id));
+        });
+
+        // Update summaries
+        if (typeof updateTrainingSummariesFast === 'function') {
+          calculationPromises.push(updateTrainingSummariesFast());
+        }
+
+        await Promise.all(calculationPromises);
+
+        // Training statuses are updated globally when members data is loaded
+
+      } catch (err) {
+        console.error('Błąd ładowania uczestników szkolenia:', err);
+        document.getElementById('training-details-content').innerHTML = '<div class="empty-state"><p>Błąd ładowania danych</p></div>';
+      }
+    }
+
+    // Training participants management
+
+
+    // Calculate financial summary for a training currency
+    async function calculateTrainingCurrencySummary(training, currency, participants) {
+      let totalAmount = 0; // Wszystkie kwoty (potwierdzone + niepotwierdzone)
+      let paidAmount = 0;  // Tylko potwierdzone kwoty
+
+      // Calculate training payments using cache (much faster!)
+      for (const participant of participants) {
+        const trainingPayment = getCachedTrainingPayment(participant.id, 'training');
+
+        if (training.currency === currency) {
+          totalAmount += trainingPayment.amount;
+          if (trainingPayment.confirmed) {
+            paidAmount += trainingPayment.amount;
+          }
+        }
+      }
+
+      // Calculate trainer payments using cache (much faster!)
+      if (training.trainers && training.trainers.length > 0) {
+        for (const [trainerIndex, trainer] of training.trainers.entries()) {
+          if (trainer.currency === currency) {
+            for (const participant of participants) {
+              const trainerPayment = getCachedTrainingPayment(participant.id, 'trainer', trainerIndex);
+
+              totalAmount += trainerPayment.amount;
+              if (trainerPayment.confirmed) {
+                paidAmount += trainerPayment.amount;
+              }
+            }
+          }
+        }
+      }
+
+      // Calculate expenses and profit (this still needs database query)
+      const totalExpenses = await getTotalTrainingExpenses(training.id, currency);
+      const profit = paidAmount - totalExpenses;
+
+      return {
+        currency,
+        totalAmount,
+        paidAmount,
+        totalExpenses,
+        profit
+      };
+    }
+
+    async function createTrainingFinancialSummaryHTML(training, participants) {
+      // Determine which currencies to show
+      const currencies = [];
+      if (training.currency === 'PLN' || (training.trainers && training.trainers.some(t => t.currency === 'PLN'))) {
+        currencies.push('PLN');
+      }
+      if (training.currency === 'EUR' || (training.trainers && training.trainers.some(t => t.currency === 'EUR'))) {
+        currencies.push('EUR');
+      }
+
+      if (currencies.length === 0) {
+        return '<p style="text-align: center; color: var(--text-gray);">Brak danych finansowych</p>';
+      }
+
+      // PARALLEL FINANCIAL CALCULATIONS - Process all currencies simultaneously
+      console.log(`[CREATE-TRAINING-FINANCIAL-SUMMARY] Starting parallel calculations for ${currencies.length} currencies...`);
+      const startTime = Date.now();
+
+      const financialPromises = currencies.map(async currency => {
+        const [summary, expenses] = await Promise.all([
+          calculateTrainingCurrencySummary(training, currency, participants),
+          getTrainingExpenses(training.id, currency)
+        ]);
+        return { currency, summary, expenses };
+      });
+
+      const financialResults = await Promise.all(financialPromises);
+      const loadTime = Date.now() - startTime;
+      console.log(`[CREATE-TRAINING-FINANCIAL-SUMMARY] Parallel financial calculations completed in ${loadTime}ms`);
+
+      let summaryHtml = '';
+
+      for (const result of financialResults) {
+        const { currency, summary, expenses } = result;
+
+        summaryHtml += `
+          <div class="currency-summary">
+            <div class="currency-header">
+              <div class="currency-flag">${currency === 'PLN' ? '🇵🇱' : '🇪🇺'}</div>
+              <div class="currency-title">${currency}</div>
+            </div>
+
+            <div class="summary-item">
+              <span class="summary-label">Kwota ogólna szkolenia</span>
+              <span class="summary-value total">${summary.totalAmount.toFixed(2)} ${currency}</span>
+            </div>
+
+            <div class="summary-item">
+              <span class="summary-label">Zapłacona kwota szkolenia</span>
+              <span class="summary-value paid">${summary.paidAmount.toFixed(2)} ${currency}</span>
+            </div>
+
+            <div class="summary-item">
+              <span class="summary-label">Zysk</span>
+              <span class="summary-value ${summary.profit >= 0 ? 'profit' : 'loss'}">${summary.profit.toFixed(2)} ${currency}</span>
+            </div>
+
+            <!-- Expenses Section -->
+            <div class="expenses-section">
+              <div class="expenses-header">
+                <div class="expenses-title">Wydatki</div>
+              </div>
+
+              <div id="training-expenses-list-${currency}" class="expenses-list">
+                ${expenses.map(expense => `
+                  <div class="expense-item" data-expense-id="${expense.id}">
+                    <div class="expense-info">
+                      <div class="expense-name">${expense.name}</div>
+                      <div class="expense-amount">${expense.amount} ${currency}</div>
+                    </div>
+                    <div class="expense-actions">
+                      <button class="btn btn-sm btn-outline edit-expense-btn" data-currency="${currency}" data-expense-id="${expense.id}" title="Edytuj wydatek">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-danger remove-expense-btn" data-currency="${currency}" data-expense-id="${expense.id}" title="Usuń wydatek">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+
+              <div class="add-expense-section">
+                <button class="btn btn-sm btn-primary add-expense-btn" data-currency="${currency}" title="Dodaj wydatek">
+                  <i class="fas fa-plus"></i> Dodaj wydatek
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      return summaryHtml;
+    }
+
+    // Create training details table
+    async function createTrainingDetailsTable(training, participants) {
+      // Debug: Check if function is called
+      console.log('[CREATE-TRAINING-DETAILS-TABLE] Function called with training:', training?.name);
+      let tableHtml = `
+        <table class="training-details-table">
+          <thead>
+            <tr>
+              <th style="width: 200px; text-align: left;">Uczestnik</th>
+              <th style="width: 120px;">Szkolenie<br><span class="amount-badge">${training.amount} ${training.currency}</span></th>
+      `;
+
+      // Add columns for each trainer
+      if (training.trainers && training.trainers.length > 0) {
+        training.trainers.forEach((trainer, index) => {
+          if (trainer) { // Only add if trainer exists at this index
+            tableHtml += `<th style="width: 120px;">Lekcje ${trainer.name}<br><span class="amount-badge">${trainer.amount} ${trainer.currency}</span></th>`;
+          }
+        });
+      }
+
+      // Add attention and comment columns
+      tableHtml += `
+            <th style="width: 50px;">Uwaga</th>
+            <th style="width: 150px;">Komentarz</th>
+      `;
+
+      // Determine which total columns to show
+      const hasPLNPayments = training.currency === 'PLN' || (training.trainers && training.trainers.some(t => t.currency === 'PLN'));
+      const hasEURPayments = training.currency === 'EUR' || (training.trainers && training.trainers.some(t => t.currency === 'EUR'));
+
+      if (hasPLNPayments) {
+        tableHtml += `<th style="width: 80px;">Razem PLN</th>`;
+      }
+      if (hasEURPayments) {
+        tableHtml += `<th style="width: 80px;">Razem EUR</th>`;
+      }
+
+      tableHtml += `
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      // PARALLEL DATA LOADING - Load all data simultaneously for maximum speed
+      const participantIds = participants.map(p => p.id);
+
+      // Prepare all data loading promises
+      const dataPromises = [];
+
+      // Load attention data
+      dataPromises.push(
+        supabase
+          .from('participant_attention')
+          .select('participant_id, has_attention')
+          .eq('training_id', training.id)
+          .in('participant_id', participantIds)
+          .then(({ data, error }) => ({ type: 'attention', data: data || [], error }))
+          .catch(err => ({ type: 'attention', data: [], error: err }))
+      );
+
+      // Load comment data
+      dataPromises.push(
+        supabase
+          .from('participant_comments')
+          .select('participant_id, comment')
+          .eq('training_id', training.id)
+          .in('participant_id', participantIds)
+          .then(({ data, error }) => ({ type: 'comments', data: data || [], error }))
+          .catch(err => ({ type: 'comments', data: [], error: err }))
+      );
+
+      // Load training payment data - prefer cache to avoid extra DB calls
+      let trainingPaymentData = {};
+      let trainingConfirmedData = {};
+      if (trainingPaymentCache && Object.keys(trainingPaymentCache.training).length > 0) {
+        // Use cache - instant loading
+        participantIds.forEach(pid => {
+          const cached = trainingPaymentCache.training[pid];
+          trainingPaymentData[pid] = (cached && cached.amount) ? String(cached.amount) : '';
+          trainingConfirmedData[pid] = (cached && cached.confirmed) ? true : false;
+        });
+        console.log('[CREATE-TRAINING-DETAILS-TABLE] Used trainingPaymentCache for training payments - instant!');
+      } else {
+        // Load from database
+        dataPromises.push(
+          supabase
+            .from('training_payments')
+            .select('participant_id, amount, confirmed')
+            .eq('training_id', training.id)
+            .in('participant_id', participantIds)
+            .then(({ data, error }) => ({ type: 'training_payments', data: data || [], error }))
+            .catch(err => ({ type: 'training_payments', data: [], error: err }))
+        );
+      }
+
+      // Load trainer payment data - prefer cache
+      let trainerPaymentData = {};
+      let trainerConfirmedData = {};
+      if (training.trainers && training.trainers.length > 0) {
+        if (trainingPaymentCache && Object.keys(trainingPaymentCache.trainer).length > 0) {
+          // Use cache - instant loading
+          participantIds.forEach(pid => {
+            const tMap = trainingPaymentCache.trainer[pid] || {};
+            trainerPaymentData[pid] = {};
+            trainerConfirmedData[pid] = {};
+            training.trainers.forEach((t, idx) => {
+              const cached = tMap[idx];
+              trainerPaymentData[pid][idx] = (cached && cached.amount) ? String(cached.amount) : '';
+              trainerConfirmedData[pid][idx] = (cached && cached.confirmed) ? true : false;
+            });
+          });
+          console.log('[CREATE-TRAINING-DETAILS-TABLE] Used trainingPaymentCache for trainer payments - instant!');
+        } else {
+          // Parallel DB queries per trainer
+          training.trainers.forEach((trainer, index) => {
+            if (trainer) {
+              dataPromises.push(
+                supabase
+                  .from('trainer_payments')
+                  .select('participant_id, amount, confirmed')
+                  .eq('training_id', training.id)
+                  .eq('trainer_index', index)
+                  .in('participant_id', participantIds)
+                  .then(({ data, error }) => ({ type: `trainer_${index}`, data: data || [], error }))
+                  .catch(err => ({ type: `trainer_${index}`, data: [], error: err }))
+              );
+            }
+          });
+        }
+      }
+
+      // Wait for ALL data to load in parallel
+      console.log(`[CREATE-TRAINING-DETAILS-TABLE] Starting parallel data loading for ${dataPromises.length} queries...`);
+      const startTime = Date.now();
+      const dbResults = await Promise.all(dataPromises);
+      const loadTime = Date.now() - startTime;
+      console.log(`[CREATE-TRAINING-DETAILS-TABLE] Parallel data loading completed in ${loadTime}ms`);
+
+      // Process results
+      let attentionData = {};
+      let commentData = {};
+
+      dbResults.forEach(result => {
+        if (result.error) {
+          console.error(`Error loading ${result.type} data:`, result.error);
+          return;
+        }
+
+        switch (result.type) {
+          case 'attention':
+            result.data.forEach(item => {
+              attentionData[item.participant_id] = item.has_attention;
+            });
+            break;
+
+          case 'comments':
+            result.data.forEach(item => {
+              commentData[item.participant_id] = item.comment;
+            });
+            break;
+
+          case 'training_payments':
+            result.data.forEach(item => {
+              trainingPaymentData[item.participant_id] = item.amount?.toString() || '';
+              trainingConfirmedData[item.participant_id] = item.confirmed || false;
+            });
+            break;
+
+          default:
+            // Handle trainer payments
+            if (result.type.startsWith('trainer_')) {
+              const trainerIndex = parseInt(result.type.split('_')[1]);
+              result.data.forEach(item => {
+                if (!trainerPaymentData[item.participant_id]) {
+                  trainerPaymentData[item.participant_id] = {};
+                  trainerConfirmedData[item.participant_id] = {};
+                }
+                trainerPaymentData[item.participant_id][trainerIndex] = item.amount?.toString() || '';
+                trainerConfirmedData[item.participant_id][trainerIndex] = item.confirmed || false;
+              });
+            }
+            break;
+        }
+      });
+
+      // Process participants with batched data
+      const participantDataPromises = participants.map(async participant => {
+        const participantId = participant.id;
+
+        // Get data from batched results
+        const hasAttention = attentionData[participantId] || false;
+        const comment = commentData[participantId] || '';
+        const trainingPayment = trainingPaymentData[participantId] || '';
+        const trainingConfirmed = trainingConfirmedData[participantId] || false;
+
+        // Get trainer payments from batched results
+        const trainerPayments = [];
+        if (training.trainers && training.trainers.length > 0) {
+          for (const [index, trainer] of training.trainers.entries()) {
+            if (trainer) {
+              const payment = (trainerPaymentData[participantId] && trainerPaymentData[participantId][index]) || '';
+              const confirmed = (trainerConfirmedData[participantId] && trainerConfirmedData[participantId][index]) || false;
+              trainerPayments.push({
+                amount: payment,
+                confirmed: confirmed
+              });
+            } else {
+              trainerPayments.push({ amount: '', confirmed: false });
+            }
+          }
+        }
+
+        return {
+          participantId: participant.id,
+          hasAttention,
+          comment,
+          trainingPayment,
+          trainingConfirmed,
+          trainerPayments
+        };
+      });
+
+      // Wait for all data to load
+      const dataResults = await Promise.all(participantDataPromises);
+      const dataMap = {};
+      dataResults.forEach(item => {
+        dataMap[item.participantId] = item;
+      });
+
+      // Add rows for each participant
+      participants.forEach(participant => {
+        const participantData = dataMap[participant.id];
+        const isAttentionChecked = participantData.hasAttention;
+        const attentionClass = isAttentionChecked ? 'attention-highlight' : '';
+
+        // Use pre-loaded payment data
+        const trainingPayment = participantData.trainingPayment;
+        const trainingConfirmed = participantData.trainingConfirmed;
+
+        let rowClasses = '';
+
+        if (trainingPayment && trainingConfirmed) {
+          rowClasses += ' payment-confirmed-training';
+        } else if (trainingPayment && !trainingConfirmed) {
+          rowClasses += ' payment-unconfirmed-training';
+        }
+
+        // Check trainer payments for additional row styling
+        if (training.trainers && training.trainers.length > 0) {
+          let hasUnconfirmedTrainer = false;
+          let hasConfirmedTrainer = false;
+
+          training.trainers.forEach((trainer, trainerIndex) => {
+            const trainerData = participantData.trainerPayments[trainerIndex];
+            const trainerPayment = trainerData.amount;
+            const trainerConfirmed = trainerData.confirmed;
+
+            if (trainerPayment && trainerConfirmed) {
+              hasConfirmedTrainer = true;
+            } else if (trainerPayment && !trainerConfirmed) {
+              hasUnconfirmedTrainer = true;
+            }
+          });
+
+          if (hasConfirmedTrainer && !rowClasses.includes('payment-confirmed-training')) {
+            rowClasses += ' payment-confirmed-trainer';
+          } else if (hasUnconfirmedTrainer && !rowClasses.includes('payment-unconfirmed-training')) {
+            rowClasses += ' payment-unconfirmed-trainer';
+          }
+        }
+
+        tableHtml += `<tr class="${rowClasses} participant-row" data-participant-id="${participant.id}"><td class="participant-name ${attentionClass}">${participant.name}</td>`;
+
+        // Training payment cell
+        const trainingCellHtml = createPaymentCell(training.id, participant.id, 'training', trainingPayment, trainingConfirmed);
+        tableHtml += trainingCellHtml;
+
+        // Add cells for each trainer
+        if (training.trainers && training.trainers.length > 0) {
+          training.trainers.forEach((trainer, trainerIndex) => {
+            if (trainer) { // Only add if trainer exists at this index
+              const trainerData = participantData.trainerPayments[trainerIndex];
+              const trainerCellHtml = createPaymentCell(training.id, participant.id, 'trainer', trainerData.amount, trainerData.confirmed, trainerIndex);
+              tableHtml += trainerCellHtml;
+            }
+          });
+        }
+
+        // Add attention checkbox
+        tableHtml += `<td><input type="checkbox" class="attention-checkbox" data-training-id="${training.id}" data-participant-id="${participant.id}" ${isAttentionChecked ? 'checked' : ''}></td>`;
+
+        // Add comment field
+        const savedComment = participantData.comment || '';
+        tableHtml += `<td><input type="text" class="comment-input" data-training-id="${training.id}" data-participant-id="${participant.id}" placeholder="Komentarz..." value="${savedComment}"></td>`;
+
+        // Calculate and add total columns
+        let totalPLN = 0;
+        let totalEUR = 0;
+
+        // Add training payment to totals
+        if (training.currency === 'PLN') {
+          totalPLN += parseFloat(trainingPayment) || 0;
+        } else if (training.currency === 'EUR') {
+          totalEUR += parseFloat(trainingPayment) || 0;
+        }
+
+        // Add trainer payments to totals
+        if (training.trainers && training.trainers.length > 0) {
+          training.trainers.forEach((trainer, trainerIndex) => {
+            if (trainer) {
+              const trainerData = participantData.trainerPayments[trainerIndex];
+              const trainerAmount = parseFloat(trainerData.amount) || 0;
+
+              if (trainer.currency === 'PLN') {
+                totalPLN += trainerAmount;
+              } else if (trainer.currency === 'EUR') {
+                totalEUR += trainerAmount;
+              }
+            }
+          });
+        }
+
+        if (hasPLNPayments) {
+          tableHtml += `<td class="total-cell">${totalPLN.toFixed(2)} PLN</td>`;
+        }
+        if (hasEURPayments) {
+          tableHtml += `<td class="total-cell">${totalEUR.toFixed(2)} EUR</td>`;
+        }
+
+        tableHtml += `</tr>`;
+      });
+
+      // Summary row 1: Kwota ogólna
+      tableHtml += `<tr class="summary-row"><td class="participant-name">Kwota ogólna</td>`;
+      tableHtml += `<td><span class="summary-amount total">${formatCurrency(training.amount, training.currency)}</span></td>`;
+
+      trainerSummaries.forEach(summary => {
+        tableHtml += `<td><span class="summary-amount total">${formatCurrency(summary.total, summary.currency)}</span></td>`;
+      });
+
+      tableHtml += `</tr>`;
+
+      // Summary row 2: Kwota zapłacona
+      tableHtml += `<tr class="summary-row"><td class="participant-name">Kwota zapłacona</td>`;
+      tableHtml += `<td><span class="summary-amount paid">${formatCurrency(training.amount, training.currency)}</span></td>`;
+
+      trainerSummaries.forEach(summary => {
+        tableHtml += `<td><span class="summary-amount paid">${formatCurrency(summary.paid, summary.currency)}</span></td>`;
+      });
+
+      tableHtml += `</tr>`;
+
+      tableHtml += `
+          </tbody>
+        </table>
+      `;
+
+      return tableHtml;
+    }
+
+    // Helper functions for trainings
+    async function getTrainingParticipants(trainingId) {
+      try {
+        const { data, error } = await supabase
+          .from('training_participants')
+          .select('*')
+          .eq('training_id', trainingId);
+
+        if (error) {
+          console.error('Error getting training participants:', error);
+          return [];
+        }
+
+        // Transform data to match expected format
+        return data ? data.map(p => ({
+          id: p.participant_id,
+          name: p.name,
+          isTrainingParticipant: true // Flag to distinguish from club members
+        })) : [];
+      } catch (err) {
+        console.error('Error in getTrainingParticipants:', err);
+        return [];
+      }
+    }
+
+    async function getTrainingExpenses(trainingId, currency) {
+      try {
+        const { data, error } = await supabase
+          .from('training_expenses')
+          .select('*')
+          .eq('training_id', trainingId)
+          .eq('currency', currency)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('Error getting training expenses:', error);
+          return [];
+        }
+
+        return data || [];
+      } catch (err) {
+        console.error('Error in getTrainingExpenses:', err);
+        return [];
+      }
+    }
+
+    async function getTotalTrainingExpenses(trainingId, currency) {
+      const expenses = await getTrainingExpenses(trainingId, currency);
+      return expenses.reduce((total, expense) => total + parseFloat(expense.amount || 0), 0);
+    }
+
+    async function getSavedTrainingPayment(trainingId, participantId, columnType, trainerIndex = null) {
+      try {
+        let query = supabase
+          .from(columnType === 'training' ? 'training_payments' : 'trainer_payments')
+          .select('amount, confirmed')
+          .eq(columnType === 'training' ? 'training_id' : 'training_id', trainingId)
+          .eq('participant_id', participantId);
+
+        if (columnType === 'trainer') {
+          query = query.eq('trainer_index', trainerIndex);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Error getting saved training payment:', error);
+          return { amount: 0, confirmed: false };
+        }
+
+        if (data && data.length > 0) {
+          return {
+            amount: parseFloat(data[0].amount) || 0,
+            confirmed: data[0].confirmed || false
+          };
+        }
+
+        return { amount: 0, confirmed: false };
+      } catch (err) {
+        console.error('Error in getSavedTrainingPayment:', err);
+        return { amount: 0, confirmed: false };
+      }
+    }
+
+    function setupTrainingParticipantSearch() {
+      const searchInput = document.getElementById('training-participant-search');
+      if (!searchInput) return;
+
+      searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const participantRows = document.querySelectorAll('#training-details-content .participant-row');
+
+        participantRows.forEach(row => {
+          const participantName = row.querySelector('.participant-name');
+          if (participantName) {
+            const name = participantName.textContent.toLowerCase();
+            if (name.includes(searchTerm)) {
+              row.style.display = '';
+            } else {
+              row.style.display = 'none';
+            }
+          }
+        });
+      });
+    }
+
+    async function updateTrainingParticipantTotalsFast(trainingId, participantId) {
+      const training = window.currentTraining;
+      const participants = window.currentTrainingParticipants;
+      if (!training || !participants) return;
+
+      const participant = window.currentTrainingParticipants.find(p => p.id === participantId);
+      if (!participant) return;
+
+      // Find the participant's row
+      const participantRow = document.querySelector(`tr[data-participant-id="${participantId}"]`);
+      if (!participantRow) {
+        return;
+      }
+
+      // Calculate totals using cache (much faster!)
+      let totalPLN = 0;
+      let totalEUR = 0;
+
+      // Add training payment to totals
+      const trainingPayment = getCachedTrainingPayment(participant.id, 'training');
+      if (training.currency === 'PLN') {
+        totalPLN += trainingPayment.amount;
+      } else if (training.currency === 'EUR') {
+        totalEUR += trainingPayment.amount;
+      }
+
+      // Add trainer payments to totals
+      if (training.trainers && training.trainers.length > 0) {
+        training.trainers.forEach((trainer, trainerIndex) => {
+          if (trainer) {
+            const trainerPayment = getCachedTrainingPayment(participant.id, 'trainer', trainerIndex);
+            if (trainer.currency === 'PLN') {
+              totalPLN += trainerPayment.amount;
+            } else if (trainer.currency === 'EUR') {
+              totalEUR += trainerPayment.amount;
+            }
+          }
+        });
+      }
+
+      // Update total cells in the row
+      const totalCells = participantRow.querySelectorAll('.total-cell');
+      totalCells.forEach((cell, index) => {
+        if (index === 0 && totalPLN > 0) { // PLN cell
+          cell.textContent = `${totalPLN.toFixed(2)} PLN`;
+        } else if (index === 1 && totalEUR > 0) { // EUR cell
+          cell.textContent = `${totalEUR.toFixed(2)} EUR`;
+        }
+      });
+    }
+
+    async function updateTrainingSummariesFast() {
+      const training = window.currentTraining;
+      const participants = window.currentTrainingParticipants;
+      if (!training || !participants) return;
+
+      // Calculate training summary using cache
+      let trainingTotal = 0;
+      let trainingPaid = 0;
+      let trainingCurrency = training.currency;
+
+      for (const participant of participants) {
+        const trainingPayment = getCachedTrainingPayment(participant.id, 'training');
+        trainingTotal += trainingPayment.amount;
+        if (trainingPayment.confirmed) {
+          trainingPaid += trainingPayment.amount;
+        }
+      }
+
+      // Calculate trainer summaries
+      const trainerSummaries = [];
+      if (training.trainers && training.trainers.length > 0) {
+        training.trainers.forEach((trainer, index) => {
+          if (trainer) {
+            let trainerTotal = 0;
+            let trainerPaid = 0;
+
+            for (const participant of participants) {
+              const trainerPayment = getCachedTrainingPayment(participant.id, 'trainer', index);
+              trainerTotal += trainerPayment.amount;
+              if (trainerPayment.confirmed) {
+                trainerPaid += trainerPayment.amount;
+              }
+            }
+
+            trainerSummaries.push({
+              total: trainerTotal,
+              paid: trainerPaid,
+              currency: trainer.currency
+            });
+          }
+        });
+      }
+
+      // This would update summary rows, but for now just calculate
+      return { trainingTotal, trainingPaid, trainingCurrency, trainerSummaries };
+    }
+
+    // ===========================================
+    // SZKOLENIA - DODATKOWE FUNKCJE
+    // ===========================================
+
+    // Funkcje do tworzenia szkoleń
+    async function createTraining(trainingData) {
+      try {
+        const trainingId = `training_${Date.now()}`;
+
+        // Create training
+        const { data: training, error: trainingError } = await supabase
+          .from('trainings')
+          .insert({
+            id: trainingId,
+            name: trainingData.name,
+            amount: parseFloat(trainingData.amount),
+            currency: trainingData.currency,
+            date: trainingData.date,
+            dance_type: trainingData.dance_type || 'st'
+          })
+          .select()
+          .single();
+
+        if (trainingError) {
+          console.error('Error creating training:', trainingError);
+          alert('Błąd tworzenia szkolenia: ' + trainingError.message);
+          return;
+        }
+
+        // Add trainers if provided
+        if (trainingData.trainers && trainingData.trainers.length > 0) {
+          const trainerInserts = trainingData.trainers.map((trainer, index) => ({
+            training_id: trainingId,
+            trainer_index: index,
+            name: trainer.name,
+            amount: parseFloat(trainer.amount),
+            currency: trainer.currency
+          }));
+
+          const { error: trainerError } = await supabase
+            .from('trainers')
+            .insert(trainerInserts);
+
+          if (trainerError) {
+            console.error('Error creating training trainers:', trainerError);
+            // Continue anyway, training is created
+          }
+        }
+
+        // Reload trainings list
+        await loadTrainings();
+
+        alert('Szkolenie zostało utworzone pomyślnie!');
+        closeCreateTrainingModalFunc();
+
+      } catch (err) {
+        console.error('Error in createTraining:', err);
+        alert('Błąd tworzenia szkolenia: ' + (err.message || 'Nieznany błąd'));
+      }
+    }
+
+    // Modal functions for create training
+    function openCreateTrainingModal() {
+      const modal = document.getElementById('create-training-modal');
+      if (modal) {
+        modal.style.display = 'block';
+        document.getElementById('training-name').focus();
+      }
+    }
+
+    function closeCreateTrainingModalFunc() {
+      const modal = document.getElementById('create-training-modal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.getElementById('create-training-form').reset();
+        // Clear trainer inputs
+        const trainerContainer = document.getElementById('training-trainers-container');
+        trainerContainer.innerHTML = '';
+        addTrainingTrainerInput();
+      }
+    }
+
+    function addTrainingTrainerInput() {
+      const container = document.getElementById('training-trainers-container');
+      const trainerCount = container.children.length;
+
+      const trainerDiv = document.createElement('div');
+      trainerDiv.className = 'trainer-input-group';
+      trainerDiv.innerHTML = `
+        <div class="form-row">
+          <div class="form-group">
+            <label>Imię trenera ${trainerCount + 1}:</label>
+            <input type="text" class="trainer-name" placeholder="Imię i nazwisko trenera" required>
+          </div>
+          <div class="form-group">
+            <label>Kwota (PLN):</label>
+            <input type="number" class="trainer-amount" step="0.01" min="0" placeholder="0.00" required>
+          </div>
+          <button type="button" class="btn btn-sm btn-danger remove-trainer-btn" title="Usuń trenera">
+            <i class="fas fa-minus"></i>
+          </button>
+        </div>
+      `;
+
+      container.appendChild(trainerDiv);
+
+      // Add event listener to remove button
+      trainerDiv.querySelector('.remove-trainer-btn').addEventListener('click', () => {
+        trainerDiv.remove();
+      });
     }
 
     // ===========================================
