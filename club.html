@@ -1243,7 +1243,19 @@
       <li>
         <a href="#" id="nav-camps">
           <i class="fas fa-campground"></i>
-          <span class="link-text">Campy</span>
+          <span class="link-text">Campy ST</span>
+        </a>
+      </li>
+      <li>
+        <a href="#" id="nav-la-trainings">
+          <i class="fas fa-drum"></i>
+          <span class="link-text">Szkolenia LA</span>
+        </a>
+      </li>
+      <li>
+        <a href="#" id="nav-multi">
+          <i class="fas fa-users-cog"></i>
+          <span class="link-text">Multi</span>
         </a>
       </li>
       <li>
@@ -1307,29 +1319,22 @@
       </div>
     </div>
 
-    <!-- Camps Section -->
+    <!-- Camps ST Section -->
     <div class="content-box" id="camps-section" style="display: none;">
       <div class="content-header">
-        <h3 id="camps-title">Campy</h3>
+        <h3>Campy ST</h3>
         <button class="btn btn-primary" id="create-camp-btn">
           <i class="fas fa-plus"></i> Utwórz camp
         </button>
       </div>
 
-      <!-- Month Selector + View Toggle -->
-      <div class="month-selector" style="margin-bottom: 20px; display:flex; align-items:center; gap:12px;">
-        <div style="display:flex; gap:8px; align-items:center;">
-          <label style="color:var(--text-gray); font-size:0.95rem;">Widok:</label>
-          <button id="view-st-btn" class="btn btn-outline" style="padding:6px 10px;">ST</button>
-          <button id="view-la-btn" class="btn btn-outline" style="padding:6px 10px;">LA</button>
-        </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <label for="camp-month-select">Wybierz miesiąc:</label>
-          <select id="camp-month-select" class="form-control" style="margin-left: 10px;">
-            <option value="2025-09">Wrzesień 2025</option>
-            <option value="2025-08">Sierpień 2025</option>
-          </select>
-        </div>
+      <!-- Month Selector -->
+      <div class="month-selector" style="margin-bottom: 20px;">
+        <label for="camp-month-select">Wybierz miesiąc:</label>
+        <select id="camp-month-select" class="form-control" style="margin-left: 10px;">
+          <option value="2025-09">Wrzesień 2025</option>
+          <option value="2025-08">Sierpień 2025</option>
+        </select>
       </div>
 
       <!-- Camps List -->
@@ -1367,6 +1372,101 @@
         <div class="summary-currencies" id="summary-currencies">
           <!-- Currency summaries will be loaded here -->
         </div>
+      </div>
+    </div>
+
+    <!-- LA Trainings Section -->
+    <div class="content-box" id="la-trainings-section" style="display: none;">
+      <div class="content-header">
+        <h3>Szkolenia LA</h3>
+        <button class="btn btn-primary" id="create-la-training-btn">
+          <i class="fas fa-plus"></i> Utwórz szkolenie
+        </button>
+      </div>
+
+      <!-- Month Selector -->
+      <div class="month-selector" style="margin-bottom: 20px;">
+        <label for="la-training-month-select">Wybierz miesiąc:</label>
+        <select id="la-training-month-select" class="form-control" style="margin-left: 10px;">
+          <option value="2025-09">Wrzesień 2025</option>
+          <option value="2025-08">Sierpień 2025</option>
+        </select>
+      </div>
+
+      <!-- LA Trainings List -->
+      <div class="camps-list" id="la-trainings-list">
+        <!-- LA Trainings will be loaded here -->
+      </div>
+    </div>
+
+    <!-- LA Training Details Section -->
+    <div class="content-box" id="la-training-details-section" style="display: none;">
+      <div class="content-header">
+        <h3 id="la-training-details-title">Szczegóły szkolenia</h3>
+        <div class="camp-actions">
+          <button class="btn btn-primary" id="add-la-participant-btn">
+            <i class="fas fa-user-plus"></i> Dodaj uczestnika
+          </button>
+          <button class="btn btn-outline" id="back-to-la-trainings-btn">
+            <i class="fas fa-arrow-left"></i> Powrót do szkoleń
+          </button>
+        </div>
+      </div>
+
+      <!-- Participant Search -->
+      <div class="participant-search" style="margin-bottom: 20px;">
+        <input type="text" id="la-participant-search" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;">
+      </div>
+
+      <div class="camp-details-content" id="la-training-details-content">
+        <!-- LA Training details table will be loaded here -->
+      </div>
+
+      <!-- Financial Summary Section -->
+      <div class="financial-summary" id="la-financial-summary">
+        <h3>Podsumowanie Finansowe</h3>
+        <div class="summary-currencies" id="la-summary-currencies">
+          <!-- Currency summaries will be loaded here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Multi Section -->
+    <div class="content-box" id="multi-section" style="display: none;">
+      <div class="content-header">
+        <h3>Zarządzanie Multi</h3>
+      </div>
+
+      <!-- Month Selector -->
+      <div class="month-selector" style="margin-bottom: 20px;">
+        <label for="multi-month-select">Wybierz miesiąc:</label>
+        <select id="multi-month-select" class="form-control" style="margin-left: 10px;">
+          <option value="2025-09">Wrzesień 2025</option>
+          <option value="2025-08">Sierpień 2025</option>
+        </select>
+      </div>
+
+      <!-- Multi Price Settings -->
+      <div class="multi-price-settings" style="margin-bottom: 30px; padding: 20px; background: var(--secondary-bg); border-radius: 8px;">
+        <h4 style="margin-bottom: 15px; color: var(--gold);">Ustawienia cen Multi</h4>
+        <div class="price-inputs" style="display: flex; gap: 20px; align-items: center;">
+          <div class="form-group" style="margin: 0;">
+            <label for="multi-price">Cena Multi (zł)</label>
+            <input type="number" id="multi-price" class="form-control" step="0.01" min="0" placeholder="0.00" style="width: 120px;">
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label for="multi-kids-price">Cena Multi Dzieci (zł)</label>
+            <input type="number" id="multi-kids-price" class="form-control" step="0.01" min="0" placeholder="0.00" style="width: 120px;">
+          </div>
+          <button class="btn btn-primary" id="save-multi-prices-btn">
+            <i class="fas fa-save"></i> Zapisz ceny
+          </button>
+        </div>
+      </div>
+
+      <!-- Multi Members List -->
+      <div class="multi-members-list" id="multi-members-list">
+        <!-- Multi members will be loaded here -->
       </div>
     </div>
   </main>
@@ -1539,15 +1639,6 @@
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="camp-dance-type">Typ tańca *</label>
-            <select id="camp-dance-type" name="camp-dance-type" class="form-control" required>
-              <option value="st">ST (standard)</option>
-              <option value="la">LA (latino)</option>
-            </select>
-            <div style="font-size:0.85rem; color:var(--text-gray); margin-top:6px;">Wybierz widok, w którym tworzysz camp — automatycznie dobiorą się uczestnicy.</div>
-          </div>
-
           <!-- Trainers Section -->
           <div class="form-group">
             <label>Szkoleniowcy</label>
@@ -1562,7 +1653,7 @@
           <div class="form-actions">
             <button type="button" class="btn btn-outline" id="cancel-create-camp">Anuluj</button>
             <button type="submit" class="btn btn-primary" id="submit-create-camp">
-              <i class="fas fa-save"></i> <span id="submit-create-camp-text">Utwórz camp</span>
+              <i class="fas fa-save"></i> Utwórz camp
             </button>
           </div>
         </form>
@@ -1692,7 +1783,7 @@
 
         const { data: members, error } = await supabase
           .from('members')
-          .select('id, name, style, phone, email')
+          .select('*')
           .order('name', { ascending: true });
 
         if (error) throw error;
@@ -1859,7 +1950,7 @@
       // Find member by ID
       supabase
         .from('members')
-        .select('id, name, style, phone, email')
+        .select('*')
         .eq('id', memberId)
         .maybeSingle()
         .then(({ data: member, error }) => {
@@ -1994,6 +2085,9 @@
       document.getElementById('members-section').style.display = 'none';
       document.getElementById('camps-section').style.display = 'none';
       document.getElementById('camp-details-section').style.display = 'none';
+      document.getElementById('la-trainings-section').style.display = 'none';
+      document.getElementById('la-training-details-section').style.display = 'none';
+      document.getElementById('multi-section').style.display = 'none';
 
       // Remove active class from all nav links
       document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
@@ -2006,6 +2100,14 @@
         document.getElementById('camps-section').style.display = 'block';
         document.getElementById('nav-camps').classList.add('active');
         loadCamps();
+      } else if (section === 'la-trainings') {
+        document.getElementById('la-trainings-section').style.display = 'block';
+        document.getElementById('nav-la-trainings').classList.add('active');
+        loadLaTrainings();
+      } else if (section === 'multi') {
+        document.getElementById('multi-section').style.display = 'block';
+        document.getElementById('nav-multi').classList.add('active');
+        loadMultiMembers();
       }
     }
 
@@ -2025,12 +2127,6 @@
     const campMonthSelect = document.getElementById('camp-month-select');
     const campsList = document.getElementById('camps-list');
     const backToCampsBtn = document.getElementById('back-to-camps-btn');
-    const viewStBtn = document.getElementById('view-st-btn');
-    const viewLaBtn = document.getElementById('view-la-btn');
-    const campsTitle = document.getElementById('camps-title');
-
-    // Current view: 'st' or 'la'
-    let currentView = 'st';
 
     // DOM Elements for participants
     const addParticipantBtn = document.getElementById('add-participant-btn');
@@ -2042,9 +2138,6 @@
 
     // Trainer management
     let trainerCount = 0;
-
-    const campDanceTypeSelect = document.getElementById('camp-dance-type');
-    const submitCreateCampText = document.getElementById('submit-create-camp-text');
 
     function addTrainer() {
       trainerCount++;
@@ -2073,97 +2166,6 @@
         </div>
       `;
       trainersContainer.appendChild(trainerItem);
-    }
-
-    // Handle create camp submit - save dance_type and auto-assign eligible members
-    createCampForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const name = document.getElementById('camp-name').value.trim();
-      const date = document.getElementById('camp-date').value;
-      const amount = parseFloat(document.getElementById('camp-amount').value) || 0;
-      const currency = document.getElementById('camp-currency').value;
-      const danceType = (campDanceTypeSelect && campDanceTypeSelect.value) ? campDanceTypeSelect.value : currentView || 'st';
-
-      if (!name || !date || !currency) {
-        alert('Uzupełnij wszystkie wymagane pola');
-        return;
-      }
-
-      // Collect trainers
-      const trainers = [];
-      document.querySelectorAll('.trainer-item').forEach((item, idx) => {
-        const tName = item.querySelector(`[name=\`trainer-name-${idx+1}\`]`)?.value || '';
-        const tAmount = parseFloat(item.querySelector(`[name=\`trainer-amount-${idx+1}\`]`)?.value || 0);
-        const tCurrency = item.querySelector(`[name=\`trainer-currency-${idx+1}\`]`)?.value || 'EUR';
-        if (tName) trainers.push({ name: tName, amount: tAmount, currency: tCurrency, trainer_index: idx });
-      });
-
-      // Create camp ID
-      const campId = `camp_${Date.now()}`;
-
-      try {
-        // Insert camp with dance_type
-        const { error: insertError } = await supabase
-          .from('camps')
-          .insert([{ id: campId, month: currentMonth, name, date, amount, currency, trainers: JSON.stringify(trainers), dance_type: danceType }]);
-
-        if (insertError) throw insertError;
-
-        // Auto-add eligible members as camp_participants based on dance type
-        const { data: members } = await supabase
-          .from('members')
-          .select('id, name, style')
-          .order('name', { ascending: true });
-        const eligible = (danceType === 'st') ? members.filter(m => m.style === 'st' || m.style === '10t') : members.filter(m => m.style === 'la' || m.style === '10t');
-
-        if (eligible && eligible.length > 0) {
-          const inserts = eligible.map(m => ({ camp_id: campId, participant_id: m.id, name: m.name }));
-          // batch insert
-          const { error: partError } = await supabase.from('camp_participants').insert(inserts);
-          if (partError) console.error('Error adding participants:', partError);
-        }
-
-        // Close modal and reload camps
-        cancelCreateCamp && cancelCreateCamp.click();
-        await loadCamps();
-        alert('Camp utworzony');
-      } catch (err) {
-        console.error('Błąd tworzenia campu:', err);
-        alert('Błąd tworzenia campu');
-      }
-    });
-
-    // Setup view toggle
-    if (viewStBtn && viewLaBtn) {
-      function applyViewButtons() {
-        if (currentView === 'st') {
-          viewStBtn.classList.add('active');
-          viewLaBtn.classList.remove('active');
-          campsTitle.textContent = 'Campy ST';
-          submitCreateCampText && (submitCreateCampText.textContent = 'Utwórz camp (ST)');
-        } else {
-          viewLaBtn.classList.add('active');
-          viewStBtn.classList.remove('active');
-          campsTitle.textContent = 'Campy LA';
-          submitCreateCampText && (submitCreateCampText.textContent = 'Utwórz camp (LA)');
-        }
-      }
-
-      viewStBtn.addEventListener('click', () => {
-        currentView = 'st';
-        applyViewButtons();
-        loadCamps();
-      });
-
-      viewLaBtn.addEventListener('click', () => {
-        currentView = 'la';
-        applyViewButtons();
-        loadCamps();
-      });
-
-      // initialize
-      applyViewButtons();
     }
 
     function removeTrainer(button) {
@@ -2226,9 +2228,12 @@
       }
     }
 
-    // Calculate camp status for coloring - OPTIMIZED VERSION
+    // Calculate camp status for coloring
     async function calculateCampStatus(camp, participants) {
+      console.log(`[CALCULATE-STATUS] Starting calculation for camp ${camp.name} with ${participants.length} participants`);
+
       if (!participants || participants.length === 0) {
+        console.log(`[CALCULATE-STATUS] No participants found, returning normal status`);
         return ''; // No participants = no status (normal background)
       }
 
@@ -2236,45 +2241,24 @@
       let hasUnconfirmedPayments = false;
       let hasAttentions = false;
 
-      // Use attention cache (loaded on demand)
-      const cacheKey = `${camp.id}`;
-      let attentionMap = attentionCache[cacheKey] || {};
-
-      // Load attention data if not cached
-      if (!attentionCache[cacheKey]) {
-        try {
-          const participantIds = participants.map(p => p.id);
-          const { data, error } = await supabase
-            .from('participant_attention')
-            .select('participant_id, has_attention')
-            .eq('camp_id', camp.id)
-            .in('participant_id', participantIds);
-
-          if (!error && data) {
-            attentionMap = data.reduce((map, item) => {
-              map[item.participant_id] = item.has_attention;
-              return map;
-            }, {});
-            attentionCache[cacheKey] = attentionMap;
-          }
-        } catch (err) {
-          console.error('Error loading attentions:', err);
-        }
-      }
-
       for (const participant of participants) {
         const participantId = participant.id;
+        console.log(`[STATUS-CHECK] Checking ${participant.name} (${participantId})`);
 
         // Check camp payment status using cache
         const campPayment = getCachedPayment(participantId, 'camp');
 
+        console.log(`[STATUS-CHECK] ${participant.name}: campPayment=${campPayment.amount}, campConfirmed=${campPayment.confirmed}`);
+
         // Consider payment as existing if amount > 0
         const hasValidPayment = campPayment.amount > 0;
+        console.log(`[STATUS-CHECK] ${participant.name}: hasValidPayment=${hasValidPayment}`);
 
         if (hasValidPayment) {
           hasAnyPayments = true;
           if (!campPayment.confirmed) {
             hasUnconfirmedPayments = true;
+            console.log(`[STATUS-CHECK] ${participant.name}: Found unconfirmed payment - setting RED status`);
           }
         }
 
@@ -2289,21 +2273,40 @@
                 hasAnyPayments = true;
                 if (!trainerPayment.confirmed) {
                   hasUnconfirmedPayments = true;
+                  console.log(`[STATUS-CHECK] ${participant.name}: Found unconfirmed trainer payment - setting RED status`);
                 }
               }
             }
           }
         }
 
-        // Check if participant has attention flag (from batch query)
-        const hasAttention = attentionMap[participantId] || false;
+        // Check if participant has attention flag
+        let hasAttention = false;
+        try {
+          const { data, error } = await supabase
+            .from('participant_attention')
+            .select('has_attention')
+            .eq('camp_id', camp.id)
+            .eq('participant_id', participantId)
+            .maybeSingle();
+
+          if (!error && data) {
+            hasAttention = data.has_attention;
+          }
+        } catch (err) {
+          console.error('Error checking attention:', err);
+        }
+
+        console.log(`[STATUS-CHECK] ${participant.name}: attention=${hasAttention}`);
         if (hasAttention) {
           hasAttentions = true;
+          console.log(`[STATUS-CHECK] ${participant.name}: Found attention - setting ORANGE status`);
         }
       }
 
       // If no payments and no attentions, return empty string (normal background)
       if (!hasAnyPayments && !hasAttentions) {
+        console.log(`[CALCULATE-STATUS] No payments and no attentions, returning normal status`);
         return '';
       }
 
@@ -2316,6 +2319,7 @@
         statusResult = 'status-complete'; // Green - all confirmed, no attentions
       }
 
+      console.log(`[CALCULATE-STATUS] Final status for camp ${camp.name}: ${statusResult} (payments: ${hasAnyPayments}, unconfirmed: ${hasUnconfirmedPayments}, attentions: ${hasAttentions})`);
       return statusResult;
     }
 
@@ -2420,120 +2424,51 @@
       trainer: {}    // {participantId: {trainerIndex: {amount: number, confirmed: boolean}}}
     };
 
-    // ULTRA-FAST REDIS-LIKE IN-MEMORY CACHE SYSTEM
-    // 🚀 Lightning-fast cache for frequently accessed data
-    const superCache = {
-      camps: new Map(), // camp_id -> camp_data
-      members: new Map(), // member_id -> member_data
-      payments: new Map(), // participant_id -> payment_data
-      attentions: new Map(), // camp_id -> attention_data
-      comments: new Map(), // participant_id -> comment_data
+    // Initialize payment cache for current camp - SUPER FAST VERSION
+    async function initializePaymentCache(campId, participants) {
+      console.log('[CACHE] Initializing payment cache for camp:', campId);
+      // Clear cache first to ensure clean state
+      clearPaymentCache();
+      paymentCache = { camp: {}, trainer: {} };
 
-      // Cache statistics for monitoring
-      stats: { hits: 0, misses: 0, sets: 0 },
+      const participantIds = participants.map(p => p.id);
 
-      // Get data from cache with statistics
-      get(key, type) {
-        const data = this[type]?.get(key);
-        if (data) {
-          this.stats.hits++;
-          return data;
-        }
-        this.stats.misses++;
-        return null;
-      },
+      // PARALLEL LOADING - Load all payments at the same time for maximum speed
+      const promises = [];
 
-      // Set data in cache with statistics
-      set(key, data, type) {
-        this[type]?.set(key, data);
-        this.stats.sets++;
-      },
+      // Load camp payments
+      promises.push(
+        supabase
+          .from('camp_payments')
+          .select('participant_id, amount, confirmed')
+          .eq('camp_id', campId)
+          .in('participant_id', participantIds)
+          .then(({ data, error }) => {
+            if (!error && data) {
+              data.forEach(payment => {
+                paymentCache.camp[payment.participant_id] = {
+                  amount: parseFloat(payment.amount) || 0,
+                  confirmed: payment.confirmed || false
+                };
+              });
+            }
+            return { type: 'camp', error };
+          })
+          .catch(err => ({ type: 'camp', error: err }))
+      );
 
-      // Clear specific cache type
-      clear(type) {
-        if (this[type]) {
-          this[type].clear();
-        }
-      },
-
-      // Clear all caches
-      clearAll() {
-        Object.keys(this).forEach(key => {
-          if (key !== 'stats' && this[key] instanceof Map) {
-            this[key].clear();
-          }
-        });
-        this.stats = { hits: 0, misses: 0, sets: 0 };
-      },
-
-      // Get cache hit ratio
-      getHitRatio() {
-        const total = this.stats.hits + this.stats.misses;
-        return total > 0 ? (this.stats.hits / total * 100).toFixed(1) : '0.0';
-      }
-    };
-
-    // Global attention cache to avoid repeated database queries
-    let attentionCache = {};
-
-    // Clear attention cache
-    function clearAttentionCache() {
-      attentionCache = {};
-    }
-
-    // 🚀 PRELOAD ALL PAYMENTS FOR ALL CAMPS IN BATCH QUERIES
-    async function preloadAllPaymentsForCamps(camps, participantsByCamp) {
-      const allCampIds = camps.map(camp => camp.id);
-      const allParticipantIds = [];
-
-      // Collect all participant IDs from all camps
-      camps.forEach(camp => {
-        const externalParticipants = participantsByCamp[camp.id] || [];
-        const members = window.allMembers || [];
-        const danceTypeForStatus = camp.dance_type || currentView || 'st';
-        const eligibleMembers = members.filter(m => danceTypeForStatus === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
-
-        externalParticipants.forEach(p => {
-          if (!allParticipantIds.includes(p.id)) allParticipantIds.push(p.id);
-        });
-        eligibleMembers.forEach(m => {
-          if (!allParticipantIds.includes(m.id)) allParticipantIds.push(m.id);
-        });
-      });
-
-      if (allParticipantIds.length === 0) return;
-
-      console.log(`[PRELOAD] Loading payments for ${allParticipantIds.length} participants across ${allCampIds.length} camps`);
-
-      // Load ALL camp payments in one query
-      const { data: allCampPayments, error: campError } = await supabase
-        .from('camp_payments')
-        .select('camp_id, participant_id, amount, confirmed')
-        .in('camp_id', allCampIds)
-        .in('participant_id', allParticipantIds);
-
-      if (!campError && allCampPayments) {
-        allCampPayments.forEach(payment => {
-          paymentCache.camp[payment.participant_id] = {
-            amount: parseFloat(payment.amount) || 0,
-            confirmed: payment.confirmed || false
-          };
-        });
-        console.log(`[PRELOAD] Loaded ${allCampPayments.length} camp payments`);
-      }
-
-      // Load ALL trainer payments in parallel
-      const trainerPromises = [];
-      camps.forEach(camp => {
-        if (camp.trainers && camp.trainers.length > 0) {
-          camp.trainers.forEach((trainer, index) => {
-            trainerPromises.push(
+      // Load trainer payments for each trainer in parallel
+      const camp = window.currentCamp;
+      if (camp && camp.trainers && camp.trainers.length > 0) {
+        camp.trainers.forEach((trainer, index) => {
+          if (trainer) {
+            promises.push(
               supabase
                 .from('trainer_payments')
                 .select('participant_id, amount, confirmed')
-                .eq('camp_id', camp.id)
+                .eq('camp_id', campId)
                 .eq('trainer_index', index)
-                .in('participant_id', allParticipantIds)
+                .in('participant_id', participantIds)
                 .then(({ data, error }) => {
                   if (!error && data) {
                     data.forEach(payment => {
@@ -2546,86 +2481,25 @@
                       };
                     });
                   }
-                  return { campId: camp.id, trainerIndex: index, count: data?.length || 0 };
+                  return { type: `trainer_${index}`, error };
                 })
+                .catch(err => ({ type: `trainer_${index}`, error: err }))
             );
-          });
+          }
+        });
+      }
+
+      // Wait for all queries to complete in parallel
+      const results = await Promise.all(promises);
+
+      // Log any errors but don't block initialization
+      results.forEach(result => {
+        if (result.error) {
+          console.error(`[CACHE] Error loading ${result.type} payments:`, result.error);
         }
       });
 
-      const trainerResults = await Promise.all(trainerPromises);
-      const totalTrainerPayments = trainerResults.reduce((sum, result) => sum + result.count, 0);
-      console.log(`[PRELOAD] Loaded ${totalTrainerPayments} trainer payments`);
-    }
-
-    // Initialize payment cache for current camp - ULTRA FAST VERSION
-    async function initializePaymentCache(campId, participants) {
-      // 🚀 CHECK IF PAYMENTS ARE ALREADY PRELOADED
-      const participantIds = participants.map(p => p.id);
-      let hasAllPayments = true;
-
-      for (const participantId of participantIds) {
-        if (!paymentCache.camp[participantId]) {
-          hasAllPayments = false;
-          break;
-        }
-      }
-
-      // If all payments are already cached, skip DB queries
-      if (hasAllPayments) {
-        console.log(`[CACHE] Payments already loaded for camp ${campId}`);
-        return;
-      }
-
-      console.log(`[CACHE] Loading missing payments for camp ${campId}`);
-
-      // Clear only this camp's cache to avoid conflicts
-      // (Don't clear all cache as other camps may be using it)
-
-      // Load missing camp payments
-      const { data: campPayments, error: campError } = await supabase
-        .from('camp_payments')
-        .select('participant_id, amount, confirmed')
-        .eq('camp_id', campId)
-        .in('participant_id', participantIds);
-
-      if (!campError && campPayments) {
-        campPayments.forEach(payment => {
-          paymentCache.camp[payment.participant_id] = {
-            amount: parseFloat(payment.amount) || 0,
-            confirmed: payment.confirmed || false
-          };
-        });
-      }
-
-      // Load trainer payments for each trainer in parallel
-      const currentCamp = window.currentCamp;
-      if (currentCamp && currentCamp.trainers && currentCamp.trainers.length > 0) {
-        const trainerPromises = currentCamp.trainers.map(async (trainer, index) => {
-          if (trainer) {
-            const { data: trainerPayments, error: trainerError } = await supabase
-              .from('trainer_payments')
-              .select('participant_id, amount, confirmed')
-              .eq('camp_id', campId)
-              .eq('trainer_index', index)
-              .in('participant_id', participantIds);
-
-            if (!trainerError && trainerPayments) {
-              trainerPayments.forEach(payment => {
-                if (!paymentCache.trainer[payment.participant_id]) {
-                  paymentCache.trainer[payment.participant_id] = {};
-                }
-                paymentCache.trainer[payment.participant_id][index] = {
-                  amount: parseFloat(payment.amount) || 0,
-                  confirmed: payment.confirmed || false
-                };
-              });
-            }
-          }
-        });
-
-        await Promise.all(trainerPromises);
-      }
+      console.log('[CACHE] Payment cache initialized with', Object.keys(paymentCache.camp).length, 'camp payments');
     }
 
     // Update payment cache after saving
@@ -2666,9 +2540,6 @@
 
     // Load camps for selected month
     async function loadCamps() {
-      const loadStartTime = performance.now();
-      console.log('🚀 STARTING CAMP LOADING PROCESS...');
-
       try {
         // Show loading state
         campsList.innerHTML = `
@@ -2678,7 +2549,7 @@
           </div>
         `;
 
-          // RELIABLE OPTIMIZED QUERY - Load camps with trainers, then participants separately
+        // Load camps with trainer data in a single batch query
         const { data: camps, error } = await supabase
           .from('camps')
           .select(`
@@ -2693,36 +2564,21 @@
           .eq('month', currentMonth)
           .order('date', { ascending: false });
 
-        // Filter camps by selected view (dance_type)
-        const filteredCamps = (camps || []).filter(c => {
-          if (!c.dance_type) return true; // keep if missing
-          return currentView === 'st' ? c.dance_type === 'st' : c.dance_type === 'la';
-        });
+        if (error) throw error;
 
-        if (error) {
-          console.error('Error loading camps:', error);
-          throw error;
+        // Load all camp participants at once (batch query)
+        const { data: allCampParticipants, error: participantsError } = await supabase
+          .from('camp_participants')
+          .select('*')
+          .in('camp_id', camps.map(camp => camp.id));
+
+        if (participantsError) {
+          console.error('Error loading camp participants:', participantsError);
         }
 
-        if (!camps) {
-          console.warn('No camps data returned from database');
-          camps = [];
-        }
-
-        // Load camp participants separately (reliable approach)
+        // Group participants by camp_id
         const participantsByCamp = {};
-        if (camps && camps.length > 0) {
-          const participantsStartTime = performance.now();
-          console.log(`Loading participants for ${camps.length} camps...`);
-          const { data: allCampParticipants, error: participantsError } = await supabase
-            .from('camp_participants')
-            .select('camp_id, participant_id, name')
-            .in('camp_id', camps.map(camp => camp.id));
-
-          const participantsEndTime = performance.now();
-          console.log(`🚀 PARTICIPANTS LOADING TIME: ${(participantsEndTime - participantsStartTime).toFixed(2)}ms`);
-
-          if (!participantsError && allCampParticipants) {
+        if (allCampParticipants) {
           allCampParticipants.forEach(p => {
             if (!participantsByCamp[p.camp_id]) {
               participantsByCamp[p.camp_id] = [];
@@ -2733,7 +2589,6 @@
               isCampParticipant: true
             });
           });
-          }
         }
 
         // Process trainer data for each camp
@@ -2751,41 +2606,16 @@
           }
         }
 
-        // Store camps for status calculation and cache them for ultra-fast access
+        // Store camps for status calculation
         window.allCamps = camps;
 
-        // 🚀 CACHE CAMP DATA for lightning-fast future access
-        camps.forEach(camp => {
-          // Create a clean copy without potentially problematic nested data
-          const campCopy = { ...camp };
-          superCache.set(camp.id, campCopy, 'camps');
-        });
-
-        // 🚀 ENSURE MEMBERS ARE LOADED BEFORE STATUS CALCULATION
-        if (!window.allMembers) {
-          const membersStartTime = performance.now();
-          console.log('[LOAD-CAMPS] Loading members for status calculation...');
-          const { data: members, error: membersError } = await supabase
-            .from('members')
-            .select('id, name, style')
-            .order('name', { ascending: true });
-
-          const membersEndTime = performance.now();
-
-          if (!membersError && members) {
-            window.allMembers = members;
-            superCache.set('allMembers', members, 'members');
-            console.log(`[LOAD-CAMPS] Loaded ${members.length} members in ${(membersEndTime - membersStartTime).toFixed(2)}ms`);
-          }
-        }
 
 
-
-        if (filteredCamps.length === 0) {
+        if (camps.length === 0) {
           campsList.innerHTML = `
             <div class="empty-state">
               <i class="fas fa-campground"></i>
-              <p>Brak campów w wybranym miesiącu / widoku</p>
+              <p>Brak campów w wybranym miesiącu</p>
               <p>Kliknij "Utwórz camp" aby dodać pierwszy camp</p>
             </div>
           `;
@@ -2793,29 +2623,18 @@
         }
 
         campsList.innerHTML = '';
-        for (const camp of filteredCamps) {
+        for (const camp of camps) {
           const campCard = createCampCard(camp, participantsByCamp[camp.id] || []);
           campsList.appendChild(campCard);
         }
 
-        // 🚀 SKIP PRELOADING PAYMENTS - Load only when needed for better performance
-        console.log('[LOAD-CAMPS] Skipping payment preload for faster loading');
-
         // Calculate and apply camp statuses immediately to show colors on first load
-        const statusStartTime = performance.now();
         await updateCampStatuses(camps, participantsByCamp);
-        const statusEndTime = performance.now();
-        console.log(`🚀 STATUS CALCULATION TIME: ${(statusEndTime - statusStartTime).toFixed(2)}ms for ${camps.length} camps`);
 
         // Camp statuses will be updated when member data is loaded in showCampDetails()
 
-        const loadEndTime = performance.now();
-        console.log(`🚀 TOTAL CAMP LOADING TIME: ${(loadEndTime - loadStartTime).toFixed(2)}ms`);
-
       } catch (err) {
         console.error('Błąd ładowania campów:', err);
-        const loadEndTime = performance.now();
-        console.log(`🚀 CAMP LOADING FAILED after ${(loadEndTime - loadStartTime).toFixed(2)}ms`);
         campsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania campów</p></div>';
       }
     }
@@ -2939,17 +2758,13 @@
       }
     }
 
-    // Update camp statuses asynchronously after rendering - OPTIMIZED VERSION
+    // Update camp statuses asynchronously after rendering
     async function updateCampStatuses(camps, participantsByCamp) {
-      // Process camps sequentially to avoid database overload
-      console.log(`[STATUS] Updating ${camps.length} camp statuses...`);
-
       for (const camp of camps) {
         try {
           const externalParticipants = participantsByCamp[camp.id] || [];
           const members = window.allMembers || [];
-          const danceTypeForStatus = camp.dance_type || currentView || 'st';
-          const eligibleMembers = members.filter(m => danceTypeForStatus === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
+          const eligibleMembers = members.filter(m => m.style === 'st' || m.style === '10t');
 
           // Combine external participants and club members, but avoid duplicates
           let allParticipants = [...externalParticipants];
@@ -2960,8 +2775,8 @@
             }
           });
 
-          // Calculate status (will load attention data on demand if needed)
-          if (allParticipants.length > 0) {
+          // Calculate status if we have participants data available
+          if (allParticipants.length > 0 || (window.allMembers && window.allMembers.length > 0)) {
             const statusClass = await calculateCampStatus(camp, allParticipants);
             if (statusClass) {
               const campCard = document.querySelector(`[data-camp-id="${camp.id}"]`);
@@ -2974,8 +2789,6 @@
           console.error(`Error updating status for camp ${camp.name}:`, err);
         }
       }
-
-      console.log(`[STATUS] Updated ${camps.length} camp statuses`);
     }
 
     // Create camp card element
@@ -2995,8 +2808,7 @@
 
       // Always include club members eligible for this camp
       const members = window.allMembers || [];
-      const danceTypeForCard = camp.dance_type || currentView || 'st';
-      const eligibleMembers = members.filter(m => danceTypeForCard === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
+      const eligibleMembers = members.filter(m => m.style === 'st' || m.style === '10t');
 
       // Combine external participants and club members, but avoid duplicates
       let allParticipants = [...externalParticipants];
@@ -3043,17 +2855,26 @@
 
     // Show camp details
     async function showCampDetails(camp) {
-      // Trainer data already loaded in main query - just process it
-      if (camp.trainers && camp.trainers.length > 0) {
+      // Load trainer data for this camp if not already loaded
+      if (!camp.trainers) {
+        console.log(`[SHOW-CAMP-DETAILS] Loading trainer data for camp ${camp.id}`);
+        const { data: trainers, error: trainerError } = await supabase
+          .from('trainers')
+          .select('*')
+          .eq('camp_id', camp.id)
+          .order('trainer_index', { ascending: true });
+
+        if (!trainerError && trainers) {
           // Sort trainers by trainer_index and create sequential array
-        camp.trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
-        camp.trainers = camp.trainers.map(trainer => ({
+          trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
+          camp.trainers = trainers.map(trainer => ({
             name: trainer.name,
             amount: parseFloat(trainer.amount),
             currency: trainer.currency
           }));
         } else {
           camp.trainers = [];
+        }
       }
 
       window.currentCamp = camp;
@@ -3074,16 +2895,18 @@
 
       // ULTRA FAST LOADING - Load all data in parallel
       try {
+        console.log('[CAMP-DETAILS] Starting ultra-fast parallel loading...');
+
         // PARALLEL DATA LOADING
         const dataPromises = [];
 
-        // Load members if not already loaded (optimized - only load once per session)
+        // Load members if not already loaded
         let allMembers = window.allMembers;
         if (!allMembers) {
           dataPromises.push(
             supabase
               .from('members')
-              .select('id, name, style')
+              .select('*')
               .order('name', { ascending: true })
               .then(({ data, error }) => {
                 if (error) throw error;
@@ -3105,56 +2928,58 @@
           allMembers = membersData;
         }
 
-        // Get members eligible for this camp based on dance type
-        const danceTypeForDetails = camp.dance_type || currentView || 'st';
-        const members = allMembers.filter(m => danceTypeForDetails === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
+        // Get members eligible for this camp (ST or 10T style)
+        const members = allMembers.filter(m => m.style === 'st' || m.style === '10t');
+        console.log(`[SHOW-CAMP-DETAILS] Found ${members.length} eligible club members (ST/10T)`);
+        console.log(`[SHOW-CAMP-DETAILS] Found ${additionalParticipants.length} external participants`);
 
         // Combine members and additional participants
         const allParticipants = [...members, ...additionalParticipants];
+        console.log(`[SHOW-CAMP-DETAILS] Total participants: ${allParticipants.length}`);
 
         // Cache participants for later use
         window.currentParticipants = allParticipants;
 
-        // Initialize payment cache in background (do not block UI)
-        (async () => {
-          try {
-            await initializePaymentCache(camp.id, allParticipants);
-            // After cache ready, update UI rows status quickly
-            if (typeof updateAllCampStatuses === 'function') updateAllCampStatuses();
-          } catch (err) {
-            console.error('Background payment cache init failed:', err);
-          }
-        })();
+        // Initialize payment cache - this already loads data in parallel
+        console.log('[CAMP-DETAILS] Initializing payment cache...');
+        await initializePaymentCache(camp.id, allParticipants);
+        console.log('[CAMP-DETAILS] Payment cache initialized, all data loaded in parallel');
 
         // ULTRA FAST UI SETUP - Create table and summary in parallel
-        // Render table first (fast) then start expensive financial summary async (don't block)
+        console.log('[CAMP-DETAILS] Setting up UI components in parallel...');
+
+        const uiPromises = [];
+
+        // Create table
         const detailsContent = document.getElementById('camp-details-content');
-        try {
-          const tableHtml = await createCampDetailsTable(camp, allParticipants);
-          detailsContent.innerHTML = tableHtml;
+        uiPromises.push(
+          createCampDetailsTable(camp, allParticipants).then(tableHtml => {
+            detailsContent.innerHTML = tableHtml; // The returned HTML
+            console.log('[CAMP-DETAILS] Camp details table created');
+          })
+        );
 
-          // Setup UI elements immediately after table render
-          setupParticipantSearch();
-          const searchInput = document.getElementById('participant-search');
-          if (searchInput) searchInput.value = '';
+        // Create financial summary in parallel
+        const financialSummary = document.getElementById('financial-summary');
+        const summaryCurrencies = document.getElementById('summary-currencies');
+        if (financialSummary && summaryCurrencies) {
+          uiPromises.push(
+            createFinancialSummaryHTML(camp, allParticipants).then(html => {
+              summaryCurrencies.innerHTML = html;
+              financialSummary.style.display = 'block';
+              console.log('[CAMP-DETAILS] Financial summary displayed');
+            })
+          );
+        }
 
-          // Kick off financial summary in background (non-blocking)
-          (async () => {
-            try {
-              const financialSummary = document.getElementById('financial-summary');
-              const summaryCurrencies = document.getElementById('summary-currencies');
-              if (financialSummary && summaryCurrencies) {
-                const html = await createFinancialSummaryHTML(camp, allParticipants);
-                summaryCurrencies.innerHTML = html;
-                financialSummary.style.display = 'block';
-              }
-            } catch (err) {
-              console.error('[CAMP-DETAILS] Error creating financial summary (background):', err);
-            }
-          })();
-        } catch (err) {
-          console.error('[CAMP-DETAILS] Error creating camp details table:', err);
-          detailsContent.innerHTML = '<div class="empty-state"><p>Błąd tworzenia widoku</p></div>';
+        // Wait for both to complete
+        await Promise.all(uiPromises);
+
+        // Setup UI elements instantly
+        setupParticipantSearch();
+        const searchInput = document.getElementById('participant-search');
+        if (searchInput) {
+          searchInput.value = '';
         }
 
         // Financial summary already updated above, no need to call again
@@ -3180,6 +3005,7 @@
           });
 
         // INSTANT UI CALCULATIONS - All in parallel for maximum speed
+        console.log('[CAMP-DETAILS] Performing instant UI calculations...');
 
         const calculationPromises = [];
 
@@ -3195,11 +3021,9 @@
         }
 
         await Promise.all(calculationPromises);
+        console.log('[CAMP-DETAILS] All UI calculations completed instantly');
 
         // Camp statuses are updated globally when members data is loaded
-
-        // 🚀 Display cache performance statistics (for development/debugging)
-        console.log(`🚀 SuperCache Stats: Hit Ratio ${superCache.getHitRatio()}% (${superCache.stats.hits} hits, ${superCache.stats.misses} misses, ${superCache.stats.sets} sets)`);
 
       } catch (err) {
         console.error('Błąd ładowania uczestników campu:', err);
@@ -3312,7 +3136,7 @@
               <div id="expenses-list-${currency}" class="expenses-list">
                 ${expenses.map(expense => `
                   <div class="expense-item" data-expense-id="${expense.id}">
-                    <span class="expense-name">${expense.description || 'Brak opisu'}</span>
+                    <span class="expense-name">${expense.name}</span>
                     <span class="expense-amount">${expense.amount.toFixed(2)} ${currency}</span>
                     <span class="expense-remove" onclick="removeExpense('${camp.id}', '${currency}', '${expense.id}')">×</span>
                   </div>
@@ -3429,83 +3253,54 @@
         console.error('Error loading comment data:', err);
       }
 
-      // Batch load all camp payment data - prefer in-memory cache to avoid extra DB calls
+      // Batch load all camp payment data
       let campPaymentData = {};
       let campConfirmedData = {};
       try {
-        // Use paymentCache if already initialized
-        if (paymentCache && Object.keys(paymentCache.camp).length > 0) {
-          participantIds.forEach(pid => {
-            const cached = paymentCache.camp[pid];
-            campPaymentData[pid] = (cached && cached.amount) ? String(cached.amount) : '';
-            campConfirmedData[pid] = (cached && cached.confirmed) ? true : false;
-          });
-          console.log('[CREATE-CAMP-DETAILS-TABLE] Used paymentCache for camp payments');
-        } else {
-          const { data, error } = await supabase
-            .from('camp_payments')
-            .select('participant_id, amount, confirmed')
-            .eq('camp_id', camp.id)
-            .in('participant_id', participantIds);
+        const { data, error } = await supabase
+          .from('camp_payments')
+          .select('participant_id, amount, confirmed')
+          .eq('camp_id', camp.id)
+          .in('participant_id', participantIds);
 
-          if (!error && data) {
-            data.forEach(item => {
-              campPaymentData[item.participant_id] = item.amount?.toString() || '';
-              campConfirmedData[item.participant_id] = item.confirmed || false;
-            });
-          }
+        if (!error && data) {
+          data.forEach(item => {
+            campPaymentData[item.participant_id] = item.amount?.toString() || '';
+            campConfirmedData[item.participant_id] = item.confirmed || false;
+          });
         }
-      } catch (err) {
+        } catch (err) {
         console.error('Error loading camp payment data:', err);
       }
 
-      // Batch load all trainer payment data - prefer cache
+      // Batch load all trainer payment data
       let trainerPaymentData = {};
       let trainerConfirmedData = {};
-      if (camp.trainers && camp.trainers.length > 0) {
-        if (paymentCache && Object.keys(paymentCache.trainer).length > 0) {
-          // populate from cache
-          participantIds.forEach(pid => {
-            const tMap = paymentCache.trainer[pid] || {};
-            trainerPaymentData[pid] = {};
-            trainerConfirmedData[pid] = {};
-            camp.trainers.forEach((t, idx) => {
-              const cached = tMap[idx];
-              trainerPaymentData[pid][idx] = (cached && cached.amount) ? String(cached.amount) : '';
-              trainerConfirmedData[pid][idx] = (cached && cached.confirmed) ? true : false;
-            });
-          });
-          console.log('[CREATE-CAMP-DETAILS-TABLE] Used paymentCache for trainer payments');
-        } else {
-          // Parallel DB queries per trainer (batched)
-          const trainerPromises = camp.trainers.map((trainer, index) => {
-            if (!trainer) return Promise.resolve({ index, data: [] });
-            return supabase
-              .from('trainer_payments')
-              .select('participant_id, amount, confirmed')
-              .eq('camp_id', camp.id)
-              .eq('trainer_index', index)
-              .in('participant_id', participantIds)
-              .then(({ data, error }) => ({ index, data: data || [], error }))
-              .catch(err => ({ index, data: [], error: err }));
-          });
+        if (camp.trainers && camp.trainers.length > 0) {
+          for (const [index, trainer] of camp.trainers.entries()) {
+          if (trainer) {
+            try {
+              const { data, error } = await supabase
+                .from('trainer_payments')
+                .select('participant_id, amount, confirmed')
+                .eq('camp_id', camp.id)
+                .eq('trainer_index', index)
+                .in('participant_id', participantIds);
 
-          const trainerResults = await Promise.all(trainerPromises);
-          trainerResults.forEach(res => {
-            const index = res.index;
-            if (!res.error && res.data) {
-              res.data.forEach(item => {
-                if (!trainerPaymentData[item.participant_id]) {
-                  trainerPaymentData[item.participant_id] = {};
-                  trainerConfirmedData[item.participant_id] = {};
-                }
-                trainerPaymentData[item.participant_id][index] = item.amount?.toString() || '';
-                trainerConfirmedData[item.participant_id][index] = item.confirmed || false;
-              });
-            } else if (res.error) {
-              console.error(`Error loading trainer ${index} payment data:`, res.error);
+              if (!error && data) {
+                data.forEach(item => {
+                  if (!trainerPaymentData[item.participant_id]) {
+                    trainerPaymentData[item.participant_id] = {};
+                    trainerConfirmedData[item.participant_id] = {};
+                  }
+                  trainerPaymentData[item.participant_id][index] = item.amount?.toString() || '';
+                  trainerConfirmedData[item.participant_id][index] = item.confirmed || false;
+                });
+              }
+              } catch (err) {
+              console.error(`Error loading trainer ${index} payment data:`, err);
             }
-          });
+          }
         }
       }
 
@@ -3886,6 +3681,725 @@
       currentCamp = null;
     });
 
+    // LA Trainings functionality
+    let currentLaTrainingMonth = '2025-09';
+    let currentLaTraining = null;
+    let laTrainingParticipants = []; // Additional participants added to LA training
+
+    // DOM Elements for LA trainings
+    const createLaTrainingBtn = document.getElementById('create-la-training-btn');
+    const laTrainingsList = document.getElementById('la-trainings-list');
+    const laTrainingMonthSelect = document.getElementById('la-training-month-select');
+    const laTrainingDetailsContent = document.getElementById('la-training-details-content');
+    const laParticipantSearch = document.getElementById('la-participant-search');
+    const addLaParticipantBtn = document.getElementById('add-la-participant-btn');
+    const backToLaTrainingsBtn = document.getElementById('back-to-la-trainings-btn');
+
+    // LA Trainings functions (copied from camps with modifications)
+    async function loadLaTrainings() {
+      try {
+        // Show loading state
+        laTrainingsList.innerHTML = `
+          <div class="loading-state">
+            <div class="loading"></div>
+            <p>Ładowanie szkoleń LA...</p>
+          </div>
+        `;
+
+        // Load LA trainings with trainer data in a single batch query
+        const { data: laTrainings, error } = await supabase
+          .from('camps')
+          .select(`
+            *,
+            trainers (
+              name,
+              amount,
+              currency,
+              trainer_index
+            )
+          `)
+          .eq('month', currentLaTrainingMonth)
+          .order('date', { ascending: false });
+
+        if (error) throw error;
+
+        // Load all LA training participants at once (batch query)
+        const { data: allLaTrainingParticipants, error: participantsError } = await supabase
+          .from('camp_participants')
+          .select('*')
+          .in('camp_id', laTrainings.map(laTraining => laTraining.id));
+
+        if (participantsError) {
+          console.error('Error loading LA training participants:', participantsError);
+        }
+
+        // Group participants by camp_id
+        const participantsByLaTraining = {};
+        if (allLaTrainingParticipants) {
+          allLaTrainingParticipants.forEach(p => {
+            if (!participantsByLaTraining[p.camp_id]) {
+              participantsByLaTraining[p.camp_id] = [];
+            }
+            participantsByLaTraining[p.camp_id].push({
+              id: p.participant_id,
+              name: p.name,
+              isCampParticipant: true
+            });
+          });
+        }
+
+        // Process trainer data for each LA training
+        for (const laTraining of laTrainings) {
+          if (laTraining.trainers && laTraining.trainers.length > 0) {
+            // Sort trainers by trainer_index and create sequential array
+            laTraining.trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
+            laTraining.trainers = laTraining.trainers.map(trainer => ({
+              name: trainer.name,
+              amount: parseFloat(trainer.amount),
+              currency: trainer.currency
+            }));
+          } else {
+            laTraining.trainers = [];
+          }
+        }
+
+        // Store LA trainings for status calculation
+        window.allLaTrainings = laTrainings;
+
+        if (laTrainings.length === 0) {
+          laTrainingsList.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-drum"></i>
+              <p>Brak szkoleń LA w wybranym miesiącu</p>
+              <p>Kliknij "Utwórz szkolenie" aby dodać pierwsze szkolenie LA</p>
+            </div>
+          `;
+          return;
+        }
+
+        laTrainingsList.innerHTML = '';
+        for (const laTraining of laTrainings) {
+          const laTrainingCard = createLaTrainingCard(laTraining, participantsByLaTraining[laTraining.id] || []);
+          laTrainingsList.appendChild(laTrainingCard);
+        }
+
+        // Calculate and apply LA training statuses immediately to show colors on first load
+        await updateLaTrainingStatuses(laTrainings, participantsByLaTraining);
+
+      } catch (err) {
+        console.error('Błąd ładowania szkoleń LA:', err);
+        laTrainingsList.innerHTML = `
+          <div class="error-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Błąd ładowania szkoleń LA</p>
+            <button onclick="loadLaTrainings()" class="btn btn-primary">Spróbuj ponownie</button>
+          </div>
+        `;
+      }
+    }
+
+    // Create LA training card (copied from createCampCard)
+    function createLaTrainingCard(laTraining, participants) {
+      const card = document.createElement('div');
+      card.className = 'camp-card status-incomplete'; // Default status
+      card.onclick = () => showLaTrainingDetails(laTraining);
+
+      const participantCount = participants.length;
+      const participantText = participantCount === 1 ? 'uczestnik' : participantCount < 5 ? 'uczestników' : 'uczestników';
+
+      card.innerHTML = `
+        <div class="camp-header">
+          <h4>${laTraining.name}</h4>
+          <div class="camp-date">${new Date(laTraining.date).toLocaleDateString('pl-PL')}</div>
+        </div>
+        <div class="camp-info">
+          <div class="camp-detail">
+            <i class="fas fa-users"></i>
+            <span>${participantCount} ${participantText}</span>
+          </div>
+          <div class="camp-detail">
+            <i class="fas fa-euro-sign"></i>
+            <span>${laTraining.amount} ${laTraining.currency}</span>
+          </div>
+        </div>
+        <div class="camp-actions">
+          <button class="btn btn-outline edit-btn" onclick="event.stopPropagation(); editLaTraining('${laTraining.id}')">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn btn-outline delete-btn" onclick="event.stopPropagation(); deleteLaTraining('${laTraining.id}', '${laTraining.name}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Show LA training details (copied from showCampDetails with modifications)
+    async function showLaTrainingDetails(laTraining) {
+      // Load trainer data for this LA training if not already loaded
+      if (!laTraining.trainers) {
+        console.log(`[SHOW-LA-TRAINING-DETAILS] Loading trainer data for LA training ${laTraining.id}`);
+        const { data: trainers, error: trainerError } = await supabase
+          .from('trainers')
+          .select('*')
+          .eq('camp_id', laTraining.id)
+          .order('trainer_index', { ascending: true });
+
+        if (!trainerError && trainers) {
+          // Sort trainers by trainer_index and create sequential array
+          trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
+          laTraining.trainers = trainers.map(trainer => ({
+            name: trainer.name,
+            amount: parseFloat(trainer.amount),
+            currency: trainer.currency
+          }));
+        } else {
+          laTraining.trainers = [];
+        }
+      }
+
+      window.currentLaTraining = laTraining;
+      document.getElementById('la-training-details-title').textContent = `Szkolenie LA: ${laTraining.name}`;
+
+      // Hide LA trainings list and show details
+      document.getElementById('la-trainings-section').style.display = 'none';
+      document.getElementById('la-training-details-section').style.display = 'block';
+
+      // Show loading state in LA training details
+      const detailsContent = document.getElementById('la-training-details-content');
+      detailsContent.innerHTML = `
+        <div class="loading-state">
+          <div class="loading"></div>
+          <p>Ładowanie szczegółów szkolenia LA...</p>
+        </div>
+      `;
+
+      // ULTRA FAST LOADING - Load all data in parallel
+      try {
+        console.log('[LA-TRAINING-DETAILS] Starting ultra-fast parallel loading...');
+
+        // PARALLEL DATA LOADING
+        const dataPromises = [];
+
+        // Load members if not already loaded
+        let allMembers = window.allMembers;
+        if (!allMembers) {
+          dataPromises.push(
+            supabase
+              .from('members')
+              .select('*')
+              .order('name', { ascending: true })
+              .then(({ data, error }) => {
+                if (error) throw error;
+                window.allMembers = data;
+                return data;
+              })
+          );
+        } else {
+          dataPromises.push(Promise.resolve(allMembers));
+        }
+
+        // Load LA training participants in parallel
+        dataPromises.push(getCampParticipants(laTraining.id));
+
+        // Wait for all data to load in parallel
+        const [membersData, additionalParticipants] = await Promise.all(dataPromises);
+
+        if (!allMembers) {
+          allMembers = membersData;
+        }
+
+        // Get members eligible for this LA training (LA or 10T style) - MODIFIED FILTER
+        const members = allMembers.filter(m => m.style === 'la' || m.style === '10t');
+        console.log(`[SHOW-LA-TRAINING-DETAILS] Found ${members.length} eligible club members (LA/10T)`);
+        console.log(`[SHOW-LA-TRAINING-DETAILS] Found ${additionalParticipants.length} external participants`);
+
+        // Combine members and additional participants
+        const allParticipants = [...members, ...additionalParticipants];
+        console.log(`[SHOW-LA-TRAINING-DETAILS] Total participants: ${allParticipants.length}`);
+
+        // Cache participants for later use
+        window.currentLaParticipants = allParticipants;
+
+        // Initialize payment cache - this already loads data in parallel
+        console.log('[LA-TRAINING-DETAILS] Initializing payment cache...');
+        await initializePaymentCache(laTraining.id, allParticipants);
+        console.log('[LA-TRAINING-DETAILS] Payment cache initialized, all data loaded in parallel');
+
+        // ULTRA FAST UI SETUP - Create table and summary in parallel
+        console.log('[LA-TRAINING-DETAILS] Setting up UI components in parallel...');
+
+        const uiPromises = [];
+
+        // Create participant table
+        uiPromises.push(
+          createCampDetailsTable(laTraining, allParticipants).then(tableHtml => {
+            detailsContent.innerHTML = tableHtml;
+          })
+        );
+
+        // Create financial summary
+        uiPromises.push(
+          createFinancialSummaryHTML(laTraining, allParticipants).then(summaryHtml => {
+            const summaryContainer = document.getElementById('la-financial-summary');
+            if (summaryContainer) {
+              summaryContainer.style.display = 'block';
+              document.getElementById('la-summary-currencies').innerHTML = summaryHtml;
+            }
+          })
+        );
+
+        // Wait for UI to be ready
+        await Promise.all(uiPromises);
+        console.log('[LA-TRAINING-DETAILS] All UI components loaded in parallel');
+
+        // Initialize participant search for LA trainings
+        initializeLaParticipantSearch(allParticipants);
+
+        // Update LA training status based on loaded data
+        await updateLaTrainingStatus(laTraining.id);
+
+      } catch (err) {
+        console.error('Błąd ładowania szczegółów szkolenia LA:', err);
+        detailsContent.innerHTML = `
+          <div class="error-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Błąd ładowania szczegółów szkolenia LA</p>
+            <button onclick="showLaTrainingDetails(window.currentLaTraining)" class="btn btn-primary">Spróbuj ponownie</button>
+          </div>
+        `;
+      }
+    }
+
+    // Initialize LA participant search
+    function initializeLaParticipantSearch(participants) {
+      const searchInput = document.getElementById('la-participant-search');
+      if (!searchInput) return;
+
+      searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const participantRows = document.querySelectorAll('#la-training-details-content .participant-row');
+
+        participantRows.forEach(row => {
+          const participantName = row.querySelector('.participant-name')?.textContent.toLowerCase() || '';
+          const participantId = row.querySelector('.participant-id')?.textContent.toLowerCase() || '';
+
+          if (participantName.includes(searchTerm) || participantId.includes(searchTerm)) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // Update LA training statuses
+    async function updateLaTrainingStatuses(laTrainings, participantsByLaTraining) {
+      for (const laTraining of laTrainings) {
+        try {
+          const externalParticipants = participantsByLaTraining[laTraining.id] || [];
+          const members = window.allMembers || [];
+          const eligibleMembers = members.filter(m => m.style === 'la' || m.style === '10t'); // MODIFIED FILTER
+
+          // Combine external participants and club members, but avoid duplicates
+          const uniqueParticipants = [];
+          const participantIds = new Set();
+
+          // Add external participants first
+          externalParticipants.forEach(p => {
+            if (!participantIds.has(p.id)) {
+              uniqueParticipants.push(p);
+              participantIds.add(p.id);
+            }
+          });
+
+          // Add eligible club members
+          eligibleMembers.forEach(member => {
+            if (!participantIds.has(member.id)) {
+              uniqueParticipants.push({
+                id: member.id,
+                name: member.name,
+                isClubMember: true
+              });
+              participantIds.add(member.id);
+            }
+          });
+
+          const status = await calculateCampStatus(laTraining, uniqueParticipants);
+          const card = document.querySelector(`.camp-card[onclick*="${laTraining.id}"]`);
+          if (card) {
+            card.className = `camp-card status-${status}`;
+          }
+        } catch (err) {
+          console.error(`Error updating status for LA training ${laTraining.id}:`, err);
+        }
+      }
+    }
+
+    // Update single LA training status
+    async function updateLaTrainingStatus(laTrainingId) {
+      try {
+        const laTraining = window.allLaTrainings?.find(t => t.id === laTrainingId);
+        if (!laTraining) return;
+
+        const participants = window.currentLaParticipants || [];
+        const status = await calculateCampStatus(laTraining, participants);
+
+        // Update card in list if visible
+        const card = document.querySelector(`.camp-card[onclick*="${laTrainingId}"]`);
+        if (card) {
+          card.className = `camp-card status-${status}`;
+        }
+
+        // Update stored status
+        if (window.allLaTrainings) {
+          const storedLaTraining = window.allLaTrainings.find(t => t.id === laTrainingId);
+          if (storedLaTraining) {
+            storedLaTraining.status = status;
+          }
+        }
+      } catch (err) {
+        console.error(`Error updating status for LA training ${laTrainingId}:`, err);
+      }
+    }
+
+    // Edit LA training (placeholder - same as camp editing)
+    window.editLaTraining = function(laTrainingId) {
+      // For now, use the same edit function as camps
+      // This could be customized later if needed
+      window.editCamp(laTrainingId);
+    };
+
+    // Delete LA training (placeholder - same as camp deletion)
+    window.deleteLaTraining = function(laTrainingId, laTrainingName) {
+      // For now, use the same delete function as camps
+      // This could be customized later if needed
+      window.deleteCamp({id: laTrainingId, name: laTrainingName});
+    };
+
+    // Add LA participant (placeholder)
+    window.addLaParticipant = function() {
+      // For now, use the same add participant function as camps
+      // This could be customized later if needed
+      window.addParticipant();
+    };
+
+    // LA Training event listeners
+    createLaTrainingBtn.addEventListener('click', () => {
+      // For now, use the same create camp modal
+      // This could be customized later if needed
+      createCampBtn.click();
+    });
+
+    laTrainingMonthSelect.addEventListener('change', (e) => {
+      currentLaTrainingMonth = e.target.value;
+      loadLaTrainings();
+    });
+
+    addLaParticipantBtn.addEventListener('click', () => {
+      addLaParticipant();
+    });
+
+    backToLaTrainingsBtn.addEventListener('click', () => {
+      document.getElementById('la-training-details-section').style.display = 'none';
+      document.getElementById('la-trainings-section').style.display = 'block';
+      currentLaTraining = null;
+    });
+
+    // Multi functionality
+    let currentMultiMonth = '2025-09';
+
+    // DOM Elements for Multi
+    const multiMembersList = document.getElementById('multi-members-list');
+    const multiMonthSelect = document.getElementById('multi-month-select');
+    const multiPriceInput = document.getElementById('multi-price');
+    const multiKidsPriceInput = document.getElementById('multi-kids-price');
+    const saveMultiPricesBtn = document.getElementById('save-multi-prices-btn');
+
+    // Multi functions
+    async function loadMultiMembers() {
+      try {
+        // Show loading state
+        multiMembersList.innerHTML = `
+          <div class="loading-state">
+            <div class="loading"></div>
+            <p>Ładowanie członków Multi...</p>
+          </div>
+        `;
+
+        // Load members if not already loaded
+        let allMembers = window.allMembers;
+        if (!allMembers) {
+          const { data: members, error } = await supabase
+            .from('members')
+            .select('*')
+            .order('name', { ascending: true });
+
+          if (error) throw error;
+          window.allMembers = members;
+          allMembers = members;
+        }
+
+        // Filter members with multi or multi_dzieci
+        const multiMembers = allMembers.filter(m => m.multi === 'multi' || m.multi === 'multi_dzieci');
+
+        // Load current multi prices for this month
+        const { data: multiPrices, error: pricesError } = await supabase
+          .from('multi_prices')
+          .select('*')
+          .eq('month', currentMultiMonth)
+          .single();
+
+        // Set current prices in form
+        if (multiPrices && !pricesError) {
+          multiPriceInput.value = multiPrices.multi_price || '';
+          multiKidsPriceInput.value = multiPrices.multi_kids_price || '';
+        } else {
+          multiPriceInput.value = '';
+          multiKidsPriceInput.value = '';
+        }
+
+        // Load check-ins for current month for all multi members
+        const memberIds = multiMembers.map(m => m.id);
+        const year = currentMultiMonth.split('-')[0];
+        const month = parseInt(currentMultiMonth.split('-')[1]);
+
+        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+        const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+
+        const { data: checkins, error: checkinsError } = await supabase
+          .from('multi_checkins')
+          .select('member_id, checkin_date')
+          .in('member_id', memberIds)
+          .gte('checkin_date', startDate)
+          .lte('checkin_date', endDate);
+
+        // Group check-ins by member
+        const checkinsByMember = {};
+        if (checkins) {
+          checkins.forEach(checkin => {
+            if (!checkinsByMember[checkin.member_id]) {
+              checkinsByMember[checkin.member_id] = [];
+            }
+            checkinsByMember[checkin.member_id].push(checkin);
+          });
+        }
+
+        if (multiMembers.length === 0) {
+          multiMembersList.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-users"></i>
+              <p>Brak członków z karnetem Multi w wybranym miesiącu</p>
+              <p>Oznacz członków jako "multi" lub "multi_dzieci" w sekcji Członkowie</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Create member cards
+        multiMembersList.innerHTML = '';
+        let totalDeduction = 0;
+        let totalCheckins = 0;
+
+        for (const member of multiMembers) {
+          const memberCheckins = checkinsByMember[member.id] || [];
+          const memberCard = createMultiMemberCard(member, memberCheckins.length, multiPrices);
+          multiMembersList.appendChild(memberCard);
+
+          // Calculate totals
+          const isKids = member.multi === 'multi_dzieci';
+          const price = isKids ? (multiPrices?.multi_kids_price || 0) : (multiPrices?.multi_price || 0);
+          const deductionAmount = memberCheckins.length * price;
+          totalDeduction += deductionAmount;
+          totalCheckins += memberCheckins.length;
+        }
+
+        // Add summary card
+        if (multiMembers.length > 0) {
+          const summaryCard = document.createElement('div');
+          summaryCard.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            border-radius: 8px;
+            border: 2px solid var(--border-dark);
+            color: var(--primary-bg);
+            font-weight: bold;
+          `;
+
+          summaryCard.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <i class="fas fa-chart-line" style="font-size: 1.5rem;"></i>
+              <div>
+                <div style="font-size: 1.2rem;">PODSUMOWANIE MULTI</div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">${multiMembers.length} członków • ${currentMultiMonth}</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 30px;">
+              <div style="text-align: center;">
+                <div style="font-size: 1.5rem;">${totalCheckins}</div>
+                <div style="font-size: 0.8rem; opacity: 0.9;">Razem odbić</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 1.5rem;">-${totalDeduction.toFixed(2)} zł</div>
+                <div style="font-size: 0.8rem; opacity: 0.9;">Do odliczenia</div>
+              </div>
+            </div>
+          `;
+
+          multiMembersList.appendChild(summaryCard);
+        }
+
+      } catch (err) {
+        console.error('Błąd ładowania członków Multi:', err);
+        multiMembersList.innerHTML = `
+          <div class="error-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Błąd ładowania członków Multi</p>
+            <button onclick="loadMultiMembers()" class="btn btn-primary">Spróbuj ponownie</button>
+          </div>
+        `;
+      }
+    }
+
+    // Create Multi member card
+    function createMultiMemberCard(member, checkinsCount, multiPrices) {
+      const card = document.createElement('div');
+      card.className = 'member-card';
+      card.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 15px;
+        margin-bottom: 10px;
+        background: var(--secondary-bg);
+        border-radius: 8px;
+        border: 1px solid var(--border-dark);
+      `;
+
+      const isKids = member.multi === 'multi_dzieci';
+      const multiType = isKids ? 'Multi Dzieci' : 'Multi';
+
+      // Calculate deduction amount
+      const price = isKids ? (multiPrices?.multi_kids_price || 0) : (multiPrices?.multi_price || 0);
+      const deductionAmount = checkinsCount * price;
+
+      card.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <div style="font-weight: bold; font-size: 1.1rem;">${member.name}</div>
+          <div style="color: var(--text-gray); font-size: 0.9rem;">
+            <i class="fas fa-ticket-alt"></i> ${multiType}
+          </div>
+          <div style="color: var(--text-gray); font-size: 0.9rem;">
+            <i class="fas fa-envelope"></i> ${member.email || 'Brak'}
+          </div>
+          <div style="color: var(--text-gray); font-size: 0.9rem;">
+            <i class="fas fa-phone"></i> ${member.phone || 'Brak'}
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <div style="text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--gold); font-weight: bold;">
+              ${checkinsCount} odbić
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-gray);">
+              w miesiącu
+            </div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 1rem; color: var(--success); font-weight: bold;">
+              -${deductionAmount.toFixed(2)} zł
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-gray);">
+              do odliczenia
+            </div>
+          </div>
+          <div style="font-size: 0.9rem; color: var(--gold);">
+            Styl: ${member.style?.toUpperCase() || 'Brak'}
+          </div>
+          <div style="font-size: 0.9rem; color: ${isKids ? 'var(--success)' : 'var(--primary)'}">
+            Karnet: ${member.karnet || 'Brak'}
+          </div>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Save multi prices
+    async function saveMultiPrices() {
+      try {
+        const multiPrice = parseFloat(multiPriceInput.value) || 0;
+        const multiKidsPrice = parseFloat(multiKidsPriceInput.value) || 0;
+
+        if (multiPrice <= 0 && multiKidsPrice <= 0) {
+          alert('Wprowadź przynajmniej jedną cenę Multi');
+          return;
+        }
+
+        // Show loading state
+        const originalText = saveMultiPricesBtn.innerHTML;
+        saveMultiPricesBtn.innerHTML = '<div class="loading"></div> Zapisywanie...';
+        saveMultiPricesBtn.disabled = true;
+
+        // Check if prices already exist for this month
+        const { data: existingPrices, error: checkError } = await supabase
+          .from('multi_prices')
+          .select('id')
+          .eq('month', currentMultiMonth)
+          .single();
+
+        let saveError;
+        if (existingPrices && !checkError) {
+          // Update existing prices
+          const { error } = await supabase
+            .from('multi_prices')
+            .update({
+              multi_price: multiPrice > 0 ? multiPrice : null,
+              multi_kids_price: multiKidsPrice > 0 ? multiKidsPrice : null,
+              updated_at: new Date().toISOString()
+            })
+            .eq('month', currentMultiMonth);
+          saveError = error;
+        } else {
+          // Insert new prices
+          const { error } = await supabase
+            .from('multi_prices')
+            .insert({
+              month: currentMultiMonth,
+              multi_price: multiPrice > 0 ? multiPrice : null,
+              multi_kids_price: multiKidsPrice > 0 ? multiKidsPrice : null
+            });
+          saveError = error;
+        }
+
+        if (saveError) throw saveError;
+
+        // Show success message
+        alert('Ceny Multi zostały zapisane pomyślnie!');
+
+      } catch (err) {
+        console.error('Błąd zapisywania cen Multi:', err);
+        alert('Błąd zapisywania cen Multi: ' + (err.message || 'Nieznany błąd'));
+      } finally {
+        // Reset button state
+        saveMultiPricesBtn.innerHTML = originalText;
+        saveMultiPricesBtn.disabled = false;
+      }
+    }
+
+    // Multi event listeners
+    multiMonthSelect.addEventListener('change', (e) => {
+      currentMultiMonth = e.target.value;
+      loadMultiMembers();
+    });
+
+    saveMultiPricesBtn.addEventListener('click', saveMultiPrices);
+
     // Navigation event listeners
     document.getElementById('nav-members').addEventListener('click', (e) => {
       e.preventDefault();
@@ -3895,6 +4409,16 @@
     document.getElementById('nav-camps').addEventListener('click', (e) => {
       e.preventDefault();
       setActiveNav('camps');
+    });
+
+    document.getElementById('nav-la-trainings').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('la-trainings');
+    });
+
+    document.getElementById('nav-multi').addEventListener('click', (e) => {
+      e.preventDefault();
+      setActiveNav('multi');
     });
 
     // Update the original navigation function
@@ -4188,7 +4712,7 @@
       try {
         const { data, error } = await supabase
           .from('camp_expenses')
-          .select('id, description, amount, currency, created_at')
+          .select('*')
           .eq('camp_id', campId)
           .eq('currency', currency)
           .order('created_at', { ascending: true });
@@ -4212,7 +4736,7 @@
           .insert({
             camp_id: campId,
             currency: currency,
-            description: name,
+            name: name,
             amount: parseFloat(amount)
           });
 
@@ -4309,7 +4833,7 @@
       try {
         const { data, error } = await supabase
           .from('camp_participants')
-          .select('participant_id, name')
+          .select('*')
           .eq('camp_id', campId);
 
         if (error) {
@@ -4317,10 +4841,11 @@
           return [];
         }
 
+        // Transform data to match expected format
         return data ? data.map(p => ({
           id: p.participant_id,
           name: p.name,
-          isCampParticipant: true
+          isCampParticipant: true // Flag to distinguish from club members
         })) : [];
       } catch (err) {
         console.error('Error in getCampParticipants:', err);
@@ -4338,7 +4863,7 @@
         // Test 1: Check if camps table exists
         const { data: camps, error: campsError } = await supabase
           .from('camps')
-          .select('id')
+          .select('*')
           .limit(1);
 
         if (campsError) {
@@ -4389,7 +4914,7 @@
 
       try {
         // Check if camps table exists
-        const { error: campsError } = await supabase.from('camps').select('id').limit(1);
+        const { error: campsError } = await supabase.from('camps').select('*').limit(1);
 
         if (campsError && campsError.message?.includes('406')) {
           console.log('📋 Tables missing, creating them...');
@@ -5432,7 +5957,7 @@
         console.log('[LOAD-MEMBERS-STATUS] Starting to load members for status calculation...');
         const { data: allMembers, error } = await supabase
           .from('members')
-          .select('id, name, style')
+          .select('*')
           .order('name', { ascending: true });
 
         if (error) throw error;
@@ -5449,6 +5974,4 @@
     }
   </script>
 </body>
-</html>
-</html>
 </html>
