@@ -3451,6 +3451,179 @@
       paymentCache = { camp: {}, trainer: {} };
     }
 
+    // Training payment cache helpers (identical behavior to camp payment helpers)
+    function updateTrainingPaymentCache(participantId, columnType, amount, confirmed, trainerIndex = null) {
+      if (columnType === 'training') {
+        trainingPaymentCache.training[participantId] = {
+          amount: parseFloat(amount) || 0,
+          confirmed: confirmed
+        };
+      } else if (columnType === 'trainer' && trainerIndex !== null) {
+        if (!trainingPaymentCache.trainer[participantId]) {
+          trainingPaymentCache.trainer[participantId] = {};
+        }
+        trainingPaymentCache.trainer[participantId][trainerIndex] = {
+          amount: parseFloat(amount) || 0,
+          confirmed: confirmed
+        };
+      }
+    }
+
+    function getCachedTrainingPayment(participantId, columnType, trainerIndex = null) {
+      if (columnType === 'training') {
+        return trainingPaymentCache.training[participantId] || { amount: 0, confirmed: false };
+      } else if (columnType === 'trainer' && trainerIndex !== null) {
+        const trainerPayments = trainingPaymentCache.trainer[participantId];
+        if (trainerPayments && trainerPayments[trainerIndex]) {
+          return trainerPayments[trainerIndex];
+        }
+      }
+      return { amount: 0, confirmed: false };
+    }
+
+    // Save / confirm / remove functions for training payments (copies of camp equivalents)
+    function saveTrainingPayment(trainingId, participantId, columnType, amount, trainerIndex = null) {
+      try {
+        let cleanAmount = amount.toString().trim().replace(',', '.');
+        if (!cleanAmount || cleanAmount === '' || cleanAmount === '0') {
+          cleanAmount = 0;
+        }
+        const numericAmount = parseFloat(cleanAmount);
+        if (isNaN(numericAmount)) return;
+
+        // Update cache and UI instantly
+        updateTrainingPaymentCache(participantId, columnType, numericAmount, false, trainerIndex);
+        updateTrainingParticipantTotalsFast(trainingId, participantId);
+        if (typeof updateTrainingSummariesFast === 'function') updateTrainingSummariesFast();
+
+        // Visual feedback for input if present
+        const input = document.querySelector(`input[data-training-id="${trainingId}"][data-participant-id="${participantId}"][data-column-type="${columnType}"]${trainerIndex !== null ? `[data-trainer-index="${trainerIndex}"]` : ''}`);
+        if (input) {
+          input.style.backgroundColor = '#d4edda';
+          setTimeout(() => { input.style.backgroundColor = ''; }, 500);
+        }
+
+        // Background save
+        setTimeout(() => {
+          try {
+            const paymentData = {
+              training_id: trainingId,
+              participant_id: participantId,
+              amount: numericAmount,
+              confirmed: false,
+              updated_at: new Date().toISOString()
+            };
+            if (columnType === 'trainer') paymentData.trainer_index = trainerIndex;
+
+            const training = window.currentTraining;
+            if (columnType === 'training') {
+              paymentData.currency = training ? (training.currency || 'PLN') : 'PLN';
+            } else if (columnType === 'trainer' && training && training.trainers && training.trainers[parseInt(trainerIndex, 10)]) {
+              paymentData.currency = training.trainers[parseInt(trainerIndex, 10)].currency || 'PLN';
+            }
+
+            let tableName = columnType === 'training' ? 'training_payments' : 'training_trainer_payments';
+            const onConflict = columnType === 'training' ? ['training_id', 'participant_id'] : ['training_id', 'participant_id', 'trainer_index'];
+
+            supabase
+              .from(tableName)
+              .upsert(paymentData, { onConflict })
+              .then(({ error: upsertError }) => { if (upsertError) console.error('Training background save error:', upsertError); })
+              .catch(err => console.error('Training background save failed:', err));
+          } catch (err) {
+            console.error('Training background save setup failed:', err);
+          }
+        }, 100);
+
+      } catch (err) {
+        console.error('Error in saveTrainingPayment:', err);
+      }
+    }
+
+    function confirmTrainingPayment(trainingId, participantId, columnType, trainerIndex = null) {
+      try {
+        const currentPayment = getCachedTrainingPayment(participantId, columnType, trainerIndex);
+        updateTrainingPaymentCache(participantId, columnType, currentPayment.amount, true, trainerIndex);
+        updateTrainingParticipantTotalsFast(trainingId, participantId);
+        if (typeof updateTrainingSummariesFast === 'function') updateTrainingSummariesFast();
+
+        const button = document.querySelector(`button[data-training-id="${trainingId}"][data-participant-id="${participantId}"][data-column-type="${columnType}"]${trainerIndex !== null ? `[data-trainer-index="${trainerIndex}"]` : ''}.confirm-payment-btn`);
+        if (button) {
+          const originalColor = button.style.backgroundColor;
+          button.style.backgroundColor = '#28a745';
+          button.innerHTML = '<i class="fas fa-check"></i>';
+          setTimeout(() => { button.style.backgroundColor = originalColor; button.innerHTML = '<i class="fas fa-check-circle"></i>'; }, 1000);
+        }
+
+        setTimeout(() => {
+          try {
+            let tableName = columnType === 'training' ? 'training_payments' : 'training_trainer_payments';
+            const updateData = { confirmed: true, updated_at: new Date().toISOString() };
+            supabase
+              .from(tableName)
+              .update(updateData)
+              .eq('training_id', trainingId)
+              .eq('participant_id', participantId)
+              .eq(columnType === 'trainer' ? 'trainer_index' : 'training_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : trainingId)
+              .then(({ error }) => { if (error) console.error('Training background confirmation error:', error); })
+              .catch(err => console.error('Training background confirmation failed:', err));
+          } catch (err) {
+            console.error('Training background confirmation setup failed:', err);
+          }
+        }, 100);
+
+      } catch (err) {
+        console.error('Error in confirmTrainingPayment:', err);
+      }
+    }
+
+    function removeTrainingPayment(trainingId, participantId, columnType, trainerIndex = null) {
+      try {
+        updateTrainingPaymentCache(participantId, columnType, 0, false, trainerIndex);
+        updateTrainingParticipantTotalsFast(trainingId, participantId);
+        if (typeof updateTrainingSummariesFast === 'function') updateTrainingSummariesFast();
+
+        const button = document.querySelector(`button[data-training-id="${trainingId}"][data-participant-id="${participantId}"][data-column-type="${columnType}"]${trainerIndex !== null ? `[data-trainer-index="${trainerIndex}"]` : ''}.remove-payment-btn`);
+        if (button) {
+          const originalColor = button.style.backgroundColor;
+          button.style.backgroundColor = '#dc3545';
+          button.innerHTML = '<i class="fas fa-trash"></i>';
+          setTimeout(() => { button.style.backgroundColor = originalColor; button.innerHTML = '<i class="fas fa-times"></i>'; }, 1000);
+        }
+
+        const input = document.querySelector(`input[data-training-id="${trainingId}"][data-participant-id="${participantId}"][data-column-type="${columnType}"]${trainerIndex !== null ? `[data-trainer-index="${trainerIndex}"]` : ''}`);
+        if (input) {
+          input.value = '';
+          input.style.backgroundColor = '#f8d7da';
+          setTimeout(() => { input.style.backgroundColor = ''; }, 500);
+        }
+
+        setTimeout(() => {
+          try {
+            let tableName = columnType === 'training' ? 'training_payments' : 'training_trainer_payments';
+            supabase
+              .from(tableName)
+              .delete()
+              .eq('training_id', trainingId)
+              .eq('participant_id', participantId)
+              .eq(columnType === 'trainer' ? 'trainer_index' : 'training_id', columnType === 'trainer' ? parseInt(trainerIndex, 10) : trainingId)
+              .then(({ error }) => { if (error) console.error('Training background removal error:', error); })
+              .catch(err => console.error('Training background removal failed:', err));
+          } catch (err) {
+            console.error('Training background removal setup failed:', err);
+          }
+        }, 100);
+
+      } catch (err) {
+        console.error('Error in removeTrainingPayment:', err);
+      }
+    }
+
+    // Expose training payment helpers globally
+    window.saveTrainingPayment = saveTrainingPayment;
+    window.confirmTrainingPayment = confirmTrainingPayment;
+    window.removeTrainingPayment = removeTrainingPayment;
+
     // Load camps for selected month
     async function loadCamps() {
       try {
