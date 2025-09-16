@@ -4918,13 +4918,19 @@
       currentCamp = null;
     });
 
-    // Back to trainings button
-    backToTrainingsBtn.addEventListener('click', () => {
-      document.getElementById('training-details-section').style.display = 'none';
-      document.getElementById('training-financial-summary').style.display = 'none';
-      document.getElementById('trainings-section').style.display = 'block';
-      currentTraining = null;
-    });
+    // Back to trainings button (guarded - trainings merged into camps view)
+    const backToTrainingsBtnEl = document.getElementById('back-to-trainings-btn');
+    if (backToTrainingsBtnEl) {
+      backToTrainingsBtnEl.addEventListener('click', () => {
+        const trainingDetails = document.getElementById('training-details-section');
+        if (trainingDetails) trainingDetails.style.display = 'none';
+        const trainingSummary = document.getElementById('training-financial-summary');
+        if (trainingSummary) trainingSummary.style.display = 'none';
+        const trainingsSection = document.getElementById('trainings-section');
+        if (trainingsSection) trainingsSection.style.display = 'block';
+        currentTraining = null;
+      });
+    }
 
     // Navigation event listeners
     document.getElementById('nav-members').addEventListener('click', (e) => {
