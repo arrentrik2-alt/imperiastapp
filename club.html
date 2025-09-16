@@ -1398,12 +1398,7 @@
           <span class="link-text">Campy</span>
         </a>
       </li>
-      <li>
-        <a href="#" id="nav-trainings">
-          <i class="fas fa-graduation-cap"></i>
-          <span class="link-text">Szkolenia</span>
-        </a>
-      </li>
+      
       <li>
         <a href="#" id="nav-schedule">
           <i class="fas fa-calendar"></i>
@@ -1480,6 +1475,11 @@
           <label style="color:var(--text-gray); font-size:0.95rem;">Widok:</label>
           <button id="view-st-btn" class="btn btn-outline" style="padding:6px 10px;">ST</button>
           <button id="view-la-btn" class="btn btn-outline" style="padding:6px 10px;">LA</button>
+        </div>
+        <div id="type-toggle" style="display:flex; gap:8px; align-items:center;">
+          <label style="color:var(--text-gray); font-size:0.95rem;">Typ:</label>
+          <button id="type-camp-btn" class="btn btn-outline" style="padding:6px 10px;">Campy</button>
+          <button id="type-training-btn" class="btn btn-outline" style="padding:6px 10px;">Szkolenia</button>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           <label for="camp-month-select">Wybierz miesiąc:</label>
@@ -1564,44 +1564,7 @@
       <div class="camp-details-content" id="camp-details-content"></div>
     </div>
 
-    <!-- Trainings Section - COPY OF CAMPS -->
-    <div class="content-box" id="trainings-section" style="display: none;">
-      <div class="content-header">
-        <h3 id="trainings-title">Szkolenia</h3>
-        <div class="camp-actions">
-          <button class="btn btn-primary" id="create-training-btn">
-            <i class="fas fa-plus"></i> Utwórz szkolenie
-          </button>
-        </div>
-      </div>
-
-      <div class="camps-list" id="trainings-list"></div>
-    </div>
-
-    <!-- Training Details Section - COPY OF CAMP DETAILS -->
-    <div class="content-box" id="training-details-section" style="display: none;">
-      <div class="content-header">
-        <h3 id="training-details-title">Szczegóły szkolenia</h3>
-        <div class="camp-actions">
-          <button class="btn btn-primary" id="add-training-participant-btn">
-            <i class="fas fa-user-plus"></i> Dodaj uczestnika
-          </button>
-          <button class="btn btn-outline" id="back-to-trainings-btn">
-            <i class="fas fa-arrow-left"></i> Powrót do szkoleń
-          </button>
-        </div>
-      </div>
-
-      <!-- Training Participant Search -->
-      <div class="participant-search" style="margin-bottom: 20px;">
-        <input type="text" id="training-participant-search" class="form-control" placeholder="Szukaj uczestnika..." style="max-width: 300px;">
-      </div>
-
-      <div class="training-details-content" id="training-details-content"></div>
-      <div class="training-financial-summary" id="training-financial-summary" style="display: none;">
-        <div class="summary-currencies" id="training-summary-currencies"></div>
-      </div>
-    </div>
+    <!-- Trainings merged into Camp view; separate sections removed -->
   </main>
 
   <div id="global-loader">
@@ -1779,6 +1742,14 @@
               <option value="la">LA (latino)</option>
             </select>
             <div style="font-size:0.85rem; color:var(--text-gray); margin-top:6px;">Wybierz widok, w którym tworzysz camp — automatycznie dobiorą się uczestnicy.</div>
+          </div>
+          <div class="form-group">
+            <label for="camp-entry-type">Typ wpisu *</label>
+            <select id="camp-entry-type" name="camp-entry-type" class="form-control" required>
+              <option value="camp">Camp</option>
+              <option value="training">Szkolenie</option>
+            </select>
+            <div style="font-size:0.85rem; color:var(--text-gray); margin-top:6px;">Wybierz czy zapisujesz wydarzenie jako camp czy szkolenie.</div>
           </div>
 
           <!-- Trainers Section -->
@@ -2358,16 +2329,7 @@
     const viewLaBtn = document.getElementById('view-la-btn');
     const campsTitle = document.getElementById('camps-title');
 
-    // DOM Elements for trainings
-    const createTrainingBtn = document.getElementById('create-training-btn');
-    const createTrainingModal = document.getElementById('create-training-modal');
-    const closeCreateTrainingModal = document.getElementById('close-create-training-modal');
-    const cancelCreateTraining = document.getElementById('cancel-create-training');
-    const createTrainingForm = document.getElementById('create-training-form');
-    const addTrainingTrainerBtn = document.getElementById('add-training-trainer-btn');
-    const trainingTrainersContainer = document.getElementById('training-trainers-container');
-    const trainingsList = document.getElementById('trainings-list');
-    const backToTrainingsBtn = document.getElementById('back-to-trainings-btn');
+    // Trainings merged into camps view - no separate training DOM elements
 
     // Current view: 'st' or 'la'
     let currentView = 'st';
@@ -2499,8 +2461,38 @@
         loadCamps();
       });
 
-      // initialize
-      applyViewButtons();
+      // Type toggle buttons (Campy / Szkolenia)
+      const typeCampBtn = document.getElementById('type-camp-btn');
+      const typeTrainingBtn = document.getElementById('type-training-btn');
+      let currentType = 'camp';
+
+      function applyTypeButtons() {
+        if (!typeCampBtn || !typeTrainingBtn) return;
+        if (currentType === 'camp') {
+          typeCampBtn.classList.add('active');
+          typeTrainingBtn.classList.remove('active');
+        } else {
+          typeTrainingBtn.classList.add('active');
+          typeCampBtn.classList.remove('active');
+        }
+      }
+
+      if (typeCampBtn && typeTrainingBtn) {
+        typeCampBtn.addEventListener('click', () => {
+          currentType = 'camp';
+          applyTypeButtons();
+          loadCamps();
+        });
+
+        typeTrainingBtn.addEventListener('click', () => {
+          currentType = 'training';
+          applyTypeButtons();
+          loadCamps();
+        });
+
+        // initialize
+        applyTypeButtons();
+      }
     }
 
     function removeTrainer(button) {
