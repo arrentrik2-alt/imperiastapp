@@ -2280,6 +2280,9 @@
     });
 
     // Navigation functions
+    // currentType determines whether camps view shows 'camp' or 'training'
+    let currentType = 'camp';
+
     function setActiveNav(section) {
       // Hide all sections (guarded)
       const membersSection = document.getElementById('members-section');
@@ -2487,7 +2490,7 @@
       // Type toggle buttons (Campy / Szkolenia)
       const typeCampBtn = document.getElementById('type-camp-btn');
       const typeTrainingBtn = document.getElementById('type-training-btn');
-      let currentType = 'camp';
+      // local temporary currentType removed (global at top)
 
       function applyTypeButtons() {
         if (!typeCampBtn || !typeTrainingBtn) return;
@@ -2510,10 +2513,10 @@
         typeTrainingBtn.addEventListener('click', () => {
           currentType = 'training';
           applyTypeButtons();
-          loadCamps();
-        });
+        loadCamps();
+      });
 
-        // initialize
+      // initialize
         applyTypeButtons();
       }
     }
@@ -4962,16 +4965,16 @@
 
     if (navMembersEl) {
       navMembersEl.addEventListener('click', (e) => {
-        e.preventDefault();
-        setActiveNav('members');
-      });
+      e.preventDefault();
+      setActiveNav('members');
+    });
     }
 
     if (navCampsEl) {
       navCampsEl.addEventListener('click', (e) => {
-        e.preventDefault();
-        setActiveNav('camps');
-      });
+      e.preventDefault();
+      setActiveNav('camps');
+    });
     }
 
     if (navTrainingsEl) {
