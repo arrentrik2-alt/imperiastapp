@@ -4932,21 +4932,31 @@
       });
     }
 
-    // Navigation event listeners
-    document.getElementById('nav-members').addEventListener('click', (e) => {
-      e.preventDefault();
-      setActiveNav('members');
-    });
+    // Navigation event listeners (guarded)
+    const navMembersEl = document.getElementById('nav-members');
+    const navCampsEl = document.getElementById('nav-camps');
+    const navTrainingsEl = document.getElementById('nav-trainings');
 
-    document.getElementById('nav-camps').addEventListener('click', (e) => {
-      e.preventDefault();
-      setActiveNav('camps');
-    });
+    if (navMembersEl) {
+      navMembersEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveNav('members');
+      });
+    }
 
-    document.getElementById('nav-trainings').addEventListener('click', (e) => {
-      e.preventDefault();
-      setActiveNav('trainings');
-    });
+    if (navCampsEl) {
+      navCampsEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveNav('camps');
+      });
+    }
+
+    if (navTrainingsEl) {
+      navTrainingsEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveNav('trainings');
+      });
+    }
 
     // Update the original navigation function
     navMembers.addEventListener('click', (e) => {
