@@ -2404,13 +2404,19 @@
         return;
       }
 
-      for (const camp of window.allCamps) {
-        console.log(`[UPDATE-ALL-STATUSES] Updating status for camp: ${camp.name} (ID: ${camp.id})`);
-        if (camp.name === 'rtert') {
-          console.log(`[UPDATE-ALL-STATUSES] Found camp 'rtert' - processing now`);
-        }
-        await updateCampStatus(camp.id);
-      }
+      // PARALLEL CAMP STATUS UPDATES - Process all camps simultaneously for maximum speed
+      console.log(`[UPDATE-ALL-STATUSES] Starting parallel status updates for ${window.allCamps.length} camps...`);
+      const startTime = Date.now();
+
+      const statusPromises = window.allCamps.map(camp => {
+        console.log(`[UPDATE-ALL-STATUSES] Queuing status update for camp: ${camp.name} (ID: ${camp.id})`);
+        return updateCampStatus(camp.id);
+      });
+
+      await Promise.all(statusPromises);
+
+      const loadTime = Date.now() - startTime;
+      console.log(`[UPDATE-ALL-STATUSES] Parallel camp status updates completed in ${loadTime}ms`);
       console.log('[UPDATE-ALL-STATUSES] Finished updating all camp statuses');
     }
 
@@ -3109,11 +3115,26 @@
         return '<p style="text-align: center; color: var(--text-gray);">Brak danych finansowych</p>';
       }
 
+      // PARALLEL FINANCIAL CALCULATIONS - Process all currencies simultaneously
+      console.log(`[CREATE-FINANCIAL-SUMMARY] Starting parallel calculations for ${currencies.length} currencies...`);
+      const startTime = Date.now();
+
+      const financialPromises = currencies.map(async currency => {
+        const [summary, expenses] = await Promise.all([
+          calculateCurrencySummary(camp, currency, participants),
+          getExpenses(camp.id, currency)
+        ]);
+        return { currency, summary, expenses };
+      });
+
+      const financialResults = await Promise.all(financialPromises);
+      const loadTime = Date.now() - startTime;
+      console.log(`[CREATE-FINANCIAL-SUMMARY] Parallel financial calculations completed in ${loadTime}ms`);
+
       let summaryHtml = '';
 
-      for (const currency of currencies) {
-        const summary = await calculateCurrencySummary(camp, currency, participants);
-        const expenses = await getExpenses(camp.id, currency);
+      for (const result of financialResults) {
+        const { currency, summary, expenses } = result;
 
         summaryHtml += `
           <div class="currency-summary">
