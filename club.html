@@ -2981,9 +2981,12 @@
           const searchInput = document.getElementById('participant-search');
           if (searchInput) searchInput.value = '';
 
-          // Kick off financial summary in background (non-blocking)
+          console.log('[CAMP-DETAILS] Table rendered, starting background calculations...');
+
+          // Kick off financial summary and participant calculations in background (non-blocking)
           (async () => {
             try {
+              // Start financial summary creation
               const financialSummary = document.getElementById('financial-summary');
               const summaryCurrencies = document.getElementById('summary-currencies');
               if (financialSummary && summaryCurrencies) {
@@ -2995,51 +2998,61 @@
               console.error('[CAMP-DETAILS] Error creating financial summary (background):', err);
             }
           })();
+
+          // Start participant totals calculations in background (don't block UI)
+          (async () => {
+            try {
+              console.log('[CAMP-DETAILS] Starting participant totals calculations in background...');
+              const startTime = Date.now();
+
+              const calculationPromises = [];
+
+              // Calculate participant totals in parallel (but don't block UI)
+              const participantsToUpdate = window.currentParticipants || [];
+              participantsToUpdate.forEach(p => {
+                calculationPromises.push(updateParticipantTotalsFast(camp.id, p.id));
+              });
+
+              // Update summaries
+              if (typeof updateSummariesFast === 'function') {
+                calculationPromises.push(updateSummariesFast());
+              }
+
+              await Promise.all(calculationPromises);
+
+              const calcTime = Date.now() - startTime;
+              console.log(`[CAMP-DETAILS] Background calculations completed in ${calcTime}ms`);
+            } catch (err) {
+              console.error('[CAMP-DETAILS] Error in background calculations:', err);
+            }
+          })();
+
         } catch (err) {
           console.error('[CAMP-DETAILS] Error creating camp details table:', err);
           detailsContent.innerHTML = '<div class="empty-state"><p>Błąd tworzenia widoku</p></div>';
         }
 
-        // Financial summary already updated above, no need to call again
+        // Set currency data for payment inputs immediately (fast operation)
+        document.querySelectorAll('.payment-input').forEach(input => {
+          if (!input.dataset.currency) {
+            const tableType = input.getAttribute('data-column-type');
 
-        // Set currency data for payment inputs and calculate totals immediately
-          document.querySelectorAll('.payment-input').forEach(input => {
-            if (!input.dataset.currency) {
-              const tableType = input.getAttribute('data-column-type');
+            if (tableType === 'camp' && window.currentCamp) {
+              input.dataset.currency = window.currentCamp.currency || 'PLN';
+            } else if (tableType === 'trainer') {
+              const idxStr = input.getAttribute('data-trainer-index');
+              const idx = parseInt(idxStr, 10);
 
-              if (tableType === 'camp' && window.currentCamp) {
-                input.dataset.currency = window.currentCamp.currency || 'PLN';
-              } else if (tableType === 'trainer') {
-                const idxStr = input.getAttribute('data-trainer-index');
-                const idx = parseInt(idxStr, 10);
-
-                if (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[idx]) {
-                  input.dataset.currency = window.currentCamp.trainers[idx].currency || 'PLN';
-                } else {
-                  input.dataset.currency = 'PLN';
-                }
+              if (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[idx]) {
+                input.dataset.currency = window.currentCamp.trainers[idx].currency || 'PLN';
+              } else {
+                input.dataset.currency = 'PLN';
               }
             }
-          });
-
-        // INSTANT UI CALCULATIONS - All in parallel for maximum speed
-
-        const calculationPromises = [];
-
-        // Calculate participant totals in parallel
-        const participantsToUpdate = window.currentParticipants || [];
-        participantsToUpdate.forEach(p => {
-          calculationPromises.push(updateParticipantTotalsFast(camp.id, p.id));
+          }
         });
 
-        // Update summaries
-        if (typeof updateSummariesFast === 'function') {
-          calculationPromises.push(updateSummariesFast());
-        }
-
-        await Promise.all(calculationPromises);
-
-        // Camp statuses are updated globally when members data is loaded
+        console.log('[CAMP-DETAILS] Camp details loaded - UI is now interactive!');
 
       } catch (err) {
         console.error('Błąd ładowania uczestników campu:', err);
