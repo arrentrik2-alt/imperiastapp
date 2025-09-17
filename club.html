@@ -6086,38 +6086,42 @@
     // ===========================================
 
     // Funkcje do tworzenia szkoleń
+    // When called, createTraining will insert into the single `camps` table with entry_type='training'
     async function createTraining(trainingData) {
       try {
-        const trainingId = `training_${Date.now()}`;
+        const campId = Date.now().toString();
 
-        // Create training
-        const { data: training, error: trainingError } = await supabase
-          .from('trainings')
-          .insert({
-            id: trainingId,
+        // Insert into camps table marked as training
+        const { error: campError } = await supabase
+          .from('camps')
+          .insert([{
+            id: campId,
+            month: currentMonth,
             name: trainingData.name,
+            date: trainingData.date,
             amount: parseFloat(trainingData.amount),
             currency: trainingData.currency,
-            date: trainingData.date,
-            dance_type: trainingData.dance_type || 'st'
-          })
-          .select()
-          .single();
+            trainers: JSON.stringify(trainingData.trainers || []),
+            dance_type: trainingData.dance_type || 'st',
+            entry_type: 'training',
+            created_at: new Date().toISOString()
+          }]);
 
-        if (trainingError) {
-          console.error('Error creating training:', trainingError);
-          alert('Błąd tworzenia szkolenia: ' + trainingError.message);
+        if (campError) {
+          console.error('Error creating training (as camp):', campError);
+          alert('Błąd tworzenia szkolenia: ' + (campError.message || 'Nieznany błąd'));
           return;
         }
 
-        // Add trainers if provided
+        // Save trainers into trainers table linked by camp_id
         if (trainingData.trainers && trainingData.trainers.length > 0) {
           const trainerInserts = trainingData.trainers.map((trainer, index) => ({
-            training_id: trainingId,
-            trainer_index: index,
+            id: `${campId}_trainer_${index}`,
+            camp_id: campId,
             name: trainer.name,
-            amount: parseFloat(trainer.amount),
-            currency: trainer.currency
+            amount: parseFloat(trainer.amount) || 0,
+            currency: trainer.currency || trainingData.currency || 'PLN',
+            trainer_index: index
           }));
 
           const { error: trainerError } = await supabase
@@ -6125,19 +6129,19 @@
             .insert(trainerInserts);
 
           if (trainerError) {
-            console.error('Error creating training trainers:', trainerError);
-            // Continue anyway, training is created
+            console.error('Error inserting trainers for training:', trainerError);
           }
         }
 
-        // Reload trainings list
-        await loadTrainings();
+        // Reload camps list (will filter by entry_type='training')
+        await loadCamps();
 
         alert('Szkolenie zostało utworzone pomyślnie!');
-        closeCreateTrainingModalFunc();
+        // If modal exists, close it
+        closeCreateCampModalFunc();
 
       } catch (err) {
-        console.error('Error in createTraining:', err);
+        console.error('Error in createTraining (converted):', err);
         alert('Błąd tworzenia szkolenia: ' + (err.message || 'Nieznany błąd'));
       }
     }
