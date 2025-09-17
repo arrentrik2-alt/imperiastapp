@@ -2361,14 +2361,14 @@
         return;
       }
 
-        // Collect trainers
-        const trainers = [];
-        document.querySelectorAll('.trainer-item').forEach((item, idx) => {
+      // Collect trainers
+      const trainers = [];
+      document.querySelectorAll('.trainer-item').forEach((item, idx) => {
           const tName = item.querySelector('.trainer-name')?.value || '';
           const tAmount = parseFloat(item.querySelector('.trainer-amount')?.value || 0);
           const tCurrency = item.querySelector('.trainer-currency')?.value || 'EUR';
-          if (tName) trainers.push({ name: tName, amount: tAmount, currency: tCurrency, trainer_index: idx });
-        });
+        if (tName) trainers.push({ name: tName, amount: tAmount, currency: tCurrency, trainer_index: idx });
+      });
 
       // Create camp ID
       const campId = `camp_${Date.now()}`;
@@ -2465,10 +2465,10 @@
         typeTrainingBtn.addEventListener('click', () => {
           currentType = 'training';
           applyTypeButtons();
-          loadCamps();
-        });
+        loadCamps();
+      });
 
-        // initialize
+      // initialize
         applyTypeButtons();
       }
     }
@@ -4775,35 +4775,57 @@
       }
     })();
 
-    // Create camp form submission
+    // Create camp/training form submission (single modal) - choose action by currentType
     createCampForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const formData = new FormData(createCampForm);
-      const campData = {
-        name: formData.get('camp-name').trim(),
-        date: formData.get('camp-date'),
-        amount: formData.get('camp-amount'),
-        currency: formData.get('camp-currency')
-      };
+      const name = (formData.get('camp-name') || '').toString().trim();
+      const date = formData.get('camp-date');
+      const amount = formData.get('camp-amount');
+      const currency = formData.get('camp-currency');
 
-      // Basic validation
-      if (!campData.name || !campData.date || !campData.amount || !campData.currency) {
+      if (!name || !date || !amount || !currency) {
         alert('Proszę wypełnić wszystkie wymagane pola');
         return;
       }
 
+      // Collect trainers from DOM (class-based inputs)
+      const trainers = [];
+      document.querySelectorAll('.trainer-item').forEach((item, idx) => {
+        const tName = item.querySelector('.trainer-name')?.value || '';
+        const tAmount = parseFloat(item.querySelector('.trainer-amount')?.value || 0);
+        const tCurrency = item.querySelector('.trainer-currency')?.value || currency;
+        if (tName) trainers.push({ name: tName, amount: tAmount, currency: tCurrency, trainer_index: idx });
+      });
+
+      // Use currentView for dance_type (ST/LA)
+      const danceType = currentView || 'st';
+
       // Show loading state
       const submitBtn = document.getElementById('submit-create-camp');
-      const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<div class="loading"></div> Tworzenie...';
-      submitBtn.disabled = true;
+      const originalText = submitBtn ? submitBtn.innerHTML : '';
+      if (submitBtn) { submitBtn.innerHTML = '<div class="loading"></div> Tworzenie...'; submitBtn.disabled = true; }
 
       try {
+        if (currentType === 'training') {
+          // Create training stored in camps table with entry_type='training'
+          const trainingData = {
+            name,
+            date,
+            amount,
+            currency,
+            dance_type: danceType,
+            trainers
+          };
+          await createTraining(trainingData);
+        } else {
+          // Create camp using existing flow; createCamp will read trainers from DOM and insert trainers table rows
+          const campData = { name, date, amount, currency };
         await createCamp(campData);
+        }
       } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
+        if (submitBtn) { submitBtn.innerHTML = originalText; submitBtn.disabled = false; }
       }
     });
 
