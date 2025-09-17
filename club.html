@@ -2324,16 +2324,16 @@
       trainerItem.innerHTML = `
         <div class="trainer-fields">
           <div class="form-group">
-            <label for="trainer-name-${trainerCount}">Imię szkoleniowca</label>
-            <input type="text" id="trainer-name-${trainerCount}" name="trainer-name-${trainerCount}" class="form-control" required>
+            <label>Imię szkoleniowca</label>
+            <input type="text" class="form-control trainer-name" required>
           </div>
           <div class="form-group">
-            <label for="trainer-amount-${trainerCount}">Kwota</label>
-            <input type="number" id="trainer-amount-${trainerCount}" name="trainer-amount-${trainerCount}" class="form-control" step="0.01" min="0" required>
+            <label>Kwota</label>
+            <input type="number" class="form-control trainer-amount" step="0.01" min="0" required>
           </div>
           <div class="form-group">
-            <label for="trainer-currency-${trainerCount}">Waluta</label>
-            <select id="trainer-currency-${trainerCount}" name="trainer-currency-${trainerCount}" class="form-control" required>
+            <label>Waluta</label>
+            <select class="form-control trainer-currency" required>
               <option value="EUR">EUR</option>
               <option value="PLN">PLN</option>
             </select>
@@ -2361,14 +2361,14 @@
         return;
       }
 
-      // Collect trainers
-      const trainers = [];
-      document.querySelectorAll('.trainer-item').forEach((item, idx) => {
-        const tName = item.querySelector(`[name="trainer-name-${idx+1}"]`)?.value || '';
-        const tAmount = parseFloat(item.querySelector(`[name="trainer-amount-${idx+1}"]`)?.value || 0);
-        const tCurrency = item.querySelector(`[name="trainer-currency-${idx+1}"]`)?.value || 'EUR';
-        if (tName) trainers.push({ name: tName, amount: tAmount, currency: tCurrency, trainer_index: idx });
-      });
+        // Collect trainers
+        const trainers = [];
+        document.querySelectorAll('.trainer-item').forEach((item, idx) => {
+          const tName = item.querySelector('.trainer-name')?.value || '';
+          const tAmount = parseFloat(item.querySelector('.trainer-amount')?.value || 0);
+          const tCurrency = item.querySelector('.trainer-currency')?.value || 'EUR';
+          if (tName) trainers.push({ name: tName, amount: tAmount, currency: tCurrency, trainer_index: idx });
+        });
 
       // Create camp ID
       const campId = `camp_${Date.now()}`;
