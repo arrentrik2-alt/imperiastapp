@@ -2858,12 +2858,13 @@
 
           // Real-time amount editing
           const amountInput = participantCard.querySelector('.amount-input');
-          // disable amount editing if payment was already confirmed
-          if (payment && payment.confirmed) {
-            amountInput.disabled = true;
-            amountInput.classList.add('readonly-locked');
-          }
-          amountInput.addEventListener('change', async (e) => {
+          if (amountInput) {
+            // disable amount editing if payment was already confirmed
+            if (payment && payment.confirmed) {
+              amountInput.disabled = true;
+              amountInput.classList.add('readonly-locked');
+            }
+            amountInput.addEventListener('change', async (e) => {
             const newAmount = parseFloat(e.target.value) || 0;
             const participantId = e.target.dataset.participantId;
             const groupId = e.target.dataset.groupId;
@@ -2926,17 +2927,19 @@
             } catch (err) {
               alert('Błąd aktualizacji kwoty: ' + (err.message || 'Nieznany'));
             }
-          });
+            });
+          }
 
           // Real-time payment method editing
           const paymentMethodSelect = participantCard.querySelector('.payment-method-select');
-          // Do not save on change; lock the select if payment is confirmed
-          if (payment && payment.confirmed) {
-            paymentMethodSelect.disabled = true;
-          } else {
-            paymentMethodSelect.disabled = false;
-          }
-          paymentMethodSelect.addEventListener('change', async (e) => {
+          if (paymentMethodSelect) {
+            // Do not save on change; lock the select if payment is confirmed
+            if (payment && payment.confirmed) {
+              paymentMethodSelect.disabled = true;
+            } else {
+              paymentMethodSelect.disabled = false;
+            }
+            paymentMethodSelect.addEventListener('change', async (e) => {
             const newMethod = e.target.value;
             const participantId = e.target.dataset.participantId;
             
@@ -2952,11 +2955,13 @@
         } catch (err) {
               alert('Błąd aktualizacji sposobu płatności: ' + (err.message || 'Nieznany'));
             }
-          });
+            });
+          }
 
           // Real-time comment editing
           const commentInput = participantCard.querySelector('.payment-comment');
-          commentInput.addEventListener('input', async (e) => {
+          if (commentInput) {
+            commentInput.addEventListener('input', async (e) => {
             const newComment = e.target.value;
             const participantId = e.target.dataset.participantId;
             
@@ -2981,8 +2986,10 @@
               e.stopPropagation();
               const participantId = e.currentTarget.dataset.participantId;
               const groupId = e.currentTarget.dataset.groupId;
-              const paymentMethod = participantCard.querySelector('.payment-method-select').value;
-              const comment = participantCard.querySelector('.payment-comment').value || null;
+              const paymentMethodEl = participantCard.querySelector('.payment-method-select');
+              const commentEl = participantCard.querySelector('.payment-comment');
+              const paymentMethod = paymentMethodEl ? paymentMethodEl.value : null;
+              const comment = commentEl ? (commentEl.value || null) : null;
               if (!paymentMethod) { alert('Wybierz sposób płatności'); return; }
               try {
                 const { error } = await supabase.rpc('update_payment_confirmation', {
