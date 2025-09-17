@@ -615,7 +615,7 @@
       flex-wrap: wrap; /* allow wrapping on small screens */
       align-items: center;
       gap: 6px; /* tighter gap */
-      white-space: normal; /* allow wrapping */
+      white-space: normal;
       overflow: hidden;
     }
     
@@ -624,13 +624,13 @@
       min-width: 0;
     }
     
-    /* Tighter widths so everything fits on one line where possible */
-    .amount-section { min-width: 60px; max-width: 120px; }
-    .amount-section input { width: 80px; padding:6px; }
-    .payment-method-section { min-width: 90px; max-width: 140px; }
-    .comment-section { flex: 1; min-width: 80px; max-width: 220px; }
-    .action-buttons { min-width: 60px; gap: 6px; display:flex; align-items:center; }
-    .action-buttons .btn { padding: 6px 6px; font-size: 0.82rem; }
+    /* Tighter widths so everything fits on one line */
+    .amount-section { min-width: 70px; max-width: 100px; }
+    .amount-section input { width: 60px; padding:6px; }
+    .payment-method-section { min-width: 100px; max-width: 120px; }
+    .comment-section { flex: 1; min-width: 100px; max-width: 280px; }
+    .action-buttons { min-width: 70px; gap: 6px; display:flex; align-items:center; }
+    .action-buttons .btn { padding: 6px 6px; font-size: 0.85rem; }
     .participant-row { padding: 10px 8px; }
     
     .month-selector select {
@@ -667,7 +667,7 @@
       
       .main-content {
         margin-left: 70px;
-        font-size: 14px; /* smaller font on tablets */
+        font-size: 13px; /* smaller font on tablets */
       }
     }
     
@@ -2729,31 +2729,25 @@
 
         const summaryEl = document.getElementById('group-participants-summary');
         if (summaryEl) {
-          // Hide financial summary for trainers
-          if (window.currentUser && window.currentUser.role === 'trainer') {
-            summaryEl.style.display = 'none';
-          } else {
-            summaryEl.style.display = 'block';
-            let methodsHtmlG = '';
-            Object.keys(byMethod).forEach(k => { methodsHtmlG += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
-            const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
-            summaryEl.innerHTML = `
-              <div style="text-align:right; min-width:180px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <div style="font-size:0.95rem;color:var(--text-gray)">Zapłacono</div>
-                  <div style="font-weight:700;color:var(--success)">${paidSum.toFixed(2)} zł</div>
-          </div>
-                <div style="margin-top:6px;">${methodsHtmlG}</div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-                  <div style="font-size:0.95rem;color:var(--text-gray)">Niezapłacono</div>
-                  <div style="font-weight:700;color:${unpaidColor}">${unpaidSum.toFixed(2)} zł</div>
-          </div>
-                <div style="color:var(--text-gray);margin-top:6px">Razem: ${totalSum.toFixed(2)} zł</div>
-          </div>
-            `;
-            // draw donut for group: paid vs unpaid
-            drawDonut('group-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
-          }
+          let methodsHtmlG = '';
+          Object.keys(byMethod).forEach(k => { methodsHtmlG += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
+          const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
+          summaryEl.innerHTML = `
+            <div style="text-align:right; min-width:180px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:0.95rem;color:var(--text-gray)">Zapłacono</div>
+                <div style="font-weight:700;color:var(--success)">${paidSum.toFixed(2)} zł</div>
+        </div>
+              <div style="margin-top:6px;">${methodsHtmlG}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                <div style="font-size:0.95rem;color:var(--text-gray)">Niezapłacono</div>
+                <div style="font-weight:700;color:${unpaidColor}">${unpaidSum.toFixed(2)} zł</div>
+        </div>
+              <div style="color:var(--text-gray);margin-top:6px">Razem: ${totalSum.toFixed(2)} zł</div>
+        </div>
+          `;
+          // draw donut for group: paid vs unpaid
+          drawDonut('group-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
         }
 
         if (!participants || participants.length === 0) {
@@ -2761,7 +2755,7 @@
           return;
         }
 
-            groupParticipantsList.innerHTML = '';
+        groupParticipantsList.innerHTML = '';
         
         participants.forEach((participant, index) => {
           const participantData = participant.participants_month;
@@ -2769,29 +2763,17 @@
           const amount = payment.amount || 0;
           
           const participantCard = document.createElement('div');
-           participantCard.className = 'group-card'; // Reusing group-card style
-           participantCard.style.cursor = 'default'; // No pointer for participant cards
-           
-           // Trainer view: show only name and phone
-           if (window.currentUser && window.currentUser.role === 'trainer') {
-             participantCard.innerHTML = `
-               <div class="participant-row" style="display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; margin-bottom:8px;">
-                 <div style="min-width:30px; text-align:center; color:var(--text-gray); font-weight:600;">${index+1}.</div>
-                 <div style="flex:1; overflow:hidden;">
-                   <div style="font-weight:700; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${participantData.name}</div>
-                   <div style="color:var(--text-gray); font-size:0.85rem">${participantData.phone || 'Brak'}</div>
-                 </div>
-               </div>
-             `;
-           } else {
-             // Use the same subtle background as other group cards; avoid aggressive red/green inline styles
-             participantCard.innerHTML = `
-             <div class="participant-row ${payment && payment.confirmed ? 'payment-paid' : 'payment-unpaid'}" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-               <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
-               <div class="participant-info" style="flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;">
-                 <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
-                 <div style="color: var(--text-gray); font-size: 0.9rem;">${participantData.phone || 'Brak'}</div>
-               </div>
+          participantCard.className = 'group-card'; // Reusing group-card style
+          participantCard.style.cursor = 'default'; // No pointer for participant cards
+          
+          // Use the same subtle background as other group cards; avoid aggressive red/green inline styles
+          participantCard.innerHTML = `
+            <div class="participant-row ${payment && payment.confirmed ? 'payment-paid' : 'payment-unpaid'}" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+              <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
+              <div class="participant-info" style="flex: 0 0 180px; overflow: hidden; text-overflow: ellipsis;">
+                <div style="font-weight: bold; margin-bottom: 5px; font-size: 0.95rem;">${participantData.name}</div>
+                <div style="color: var(--text-gray); font-size: 0.85rem;">${participantData.phone || 'Brak'}</div>
+              </div>
               
               <div class="amount-section" style="min-width: 120px;">
                 <div style="display: flex; align-items: center; gap: 5px;">
