@@ -2346,70 +2346,7 @@
       trainersContainer.appendChild(trainerItem);
     }
 
-    // Handle create camp submit - save dance_type and auto-assign eligible members
-    createCampForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const name = document.getElementById('camp-name').value.trim();
-      const date = document.getElementById('camp-date').value;
-      const amount = parseFloat(document.getElementById('camp-amount').value) || 0;
-      const currency = document.getElementById('camp-currency').value;
-      const danceType = (campDanceTypeSelect && campDanceTypeSelect.value) ? campDanceTypeSelect.value : currentView || 'st';
-
-      if (!name || !date || !currency) {
-        alert('Uzupełnij wszystkie wymagane pola');
-        return;
-      }
-
-      // Collect trainers
-      const trainers = [];
-      document.querySelectorAll('.trainer-item').forEach((item, idx) => {
-          const tName = item.querySelector('.trainer-name')?.value || '';
-          const tAmount = parseFloat(item.querySelector('.trainer-amount')?.value || 0);
-          const tCurrency = item.querySelector('.trainer-currency')?.value || 'EUR';
-        if (tName) trainers.push({ name: tName, amount: tAmount, currency: tCurrency, trainer_index: idx });
-      });
-
-      // Create camp ID
-      const campId = `camp_${Date.now()}`;
-
-      try {
-        // Insert camp with dance_type
-        const { error: insertError } = await supabase
-          .from('camps')
-          .insert([{ id: campId, month: currentMonth, name, date, amount, currency, trainers: JSON.stringify(trainers), dance_type: danceType }]);
-
-        if (insertError) throw insertError;
-
-        // Auto-add eligible members as camp_participants based on dance type
-        const { data: members } = await supabase.from('members').select('*');
-        const eligible = (danceType === 'st') ? members.filter(m => m.style === 'st' || m.style === '10t') : members.filter(m => m.style === 'la' || m.style === '10t');
-
-        if (eligible && eligible.length > 0) {
-          const inserts = eligible.map(m => ({ camp_id: campId, participant_id: m.id, name: m.name }));
-          // batch insert
-          const { error: partError } = await supabase.from('camp_participants').insert(inserts);
-          if (partError) console.error('Error adding participants:', partError);
-        }
-
-        // Set entry_type on the camp row according to selected type
-        if (typeof currentType !== 'undefined') {
-          const { error: updateTypeErr } = await supabase
-            .from('camps')
-            .update({ entry_type: currentType })
-            .eq('id', campId);
-          if (updateTypeErr) console.error('Error setting entry_type on camp:', updateTypeErr);
-        }
-
-        // Close modal and reload camps
-        cancelCreateCamp && cancelCreateCamp.click();
-        await loadCamps();
-        alert('Camp utworzony');
-      } catch (err) {
-        console.error('Błąd tworzenia campu:', err);
-        alert('Błąd tworzenia campu');
-      }
-    });
+    // old createCampForm handler removed to prevent duplicate inserts; unified handler used later
 
     // Setup view toggle
     if (viewStBtn && viewLaBtn) {
@@ -4622,21 +4559,21 @@
 
         if (campError) throw campError;
 
-        // Now save trainers to separate table
+        // Now save trainers to separate table (collect by class selectors)
         const trainerItems = document.querySelectorAll('.trainer-item');
         if (trainerItems.length > 0) {
           const trainerInserts = [];
           trainerItems.forEach((item, index) => {
-            const nameInput = item.querySelector(`input[name="trainer-name-${index + 1}"]`);
-            const amountInput = item.querySelector(`input[name="trainer-amount-${index + 1}"]`);
-            const currencySelect = item.querySelector(`select[name="trainer-currency-${index + 1}"]`);
+            const nameInput = item.querySelector('.trainer-name');
+            const amountInput = item.querySelector('.trainer-amount');
+            const currencySelect = item.querySelector('.trainer-currency');
 
             if (nameInput && amountInput && currencySelect) {
               trainerInserts.push({
                 id: `${campId}_trainer_${index}`,
                 camp_id: campId,
                 name: nameInput.value.trim(),
-                amount: parseFloat(amountInput.value),
+                amount: parseFloat(amountInput.value) || 0,
                 currency: currencySelect.value,
                 trainer_index: index
               });
@@ -4712,10 +4649,10 @@
       const elCreateTrainingForm = document.getElementById('create-training-form');
       const elTrainingTrainersContainer = document.getElementById('training-trainers-container');
 
-      if (elCreateTrainingBtn) elCreateTrainingBtn.addEventListener('click', openCreateTrainingModal);
+      // Training modal elements are present only for legacy compatibility.
+      // Do NOT attach submit/open listeners here to avoid double-creation; unified create modal handles creation.
       if (elCloseCreateTrainingModal) elCloseCreateTrainingModal.addEventListener('click', closeCreateTrainingModalFunc);
       if (elCancelCreateTraining) elCancelCreateTraining.addEventListener('click', closeCreateTrainingModalFunc);
-      if (elAddTrainingTrainerBtn) elAddTrainingTrainerBtn.addEventListener('click', addTrainingTrainerInput);
 
       // Close modal when clicking outside
       if (elCreateTrainingModal) {
@@ -4726,53 +4663,8 @@
         });
       }
 
-      // Create training form submission (guarded)
-      if (elCreateTrainingForm) {
-        elCreateTrainingForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-
-          const submitBtn = document.getElementById('submit-create-training');
-          const originalText = submitBtn ? submitBtn.innerHTML : '';
-          if (submitBtn) {
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Tworzenie...';
-            submitBtn.disabled = true;
-          }
-
-          try {
-            const formData = new FormData(elCreateTrainingForm);
-            const trainingData = {
-              name: formData.get('training-name'),
-              date: formData.get('training-date'),
-              amount: formData.get('training-amount'),
-              currency: formData.get('training-currency'),
-              dance_type: formData.get('training-dance-type'),
-              trainers: []
-            };
-
-            // Collect trainer data if container exists
-            if (elTrainingTrainersContainer) {
-              const trainerInputs = elTrainingTrainersContainer.querySelectorAll('.trainer-input-group');
-              trainerInputs.forEach((trainerDiv) => {
-                const nameInput = trainerDiv.querySelector('.trainer-name');
-                const amountInput = trainerDiv.querySelector('.trainer-amount');
-                if (nameInput && nameInput.value.trim() && amountInput && amountInput.value) {
-                  trainingData.trainers.push({ name: nameInput.value.trim(), amount: amountInput.value, currency: trainingData.currency });
-                }
-              });
-            }
-
-            await createTraining(trainingData);
-          } catch (err) {
-            console.error('Error creating training:', err);
-            alert('Błąd tworzenia szkolenia: ' + (err.message || 'Nieznany błąd'));
-          } finally {
-            if (submitBtn) {
-              submitBtn.innerHTML = originalText;
-              submitBtn.disabled = false;
-            }
-          }
-        });
-      }
+      // We intentionally do not attach a submit handler for any legacy training form here
+      // to prevent duplicate inserts. Creation is handled via the unified create modal.
     })();
 
     // Create camp/training form submission (single modal) - choose action by currentType
