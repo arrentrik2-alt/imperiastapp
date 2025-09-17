@@ -5023,6 +5023,15 @@
     function autoCollapseSidebar() {
       sidebar.classList.add('collapsed');
       document.body.classList.add('sidebar-collapsed');
+      document.body.classList.remove('sidebar-expanded');
+
+      // On small screens hide the sidebar entirely; on desktop keep it collapsed (narrow)
+      if (window.innerWidth <= 768) {
+        sidebar.style.display = 'none';
+      } else {
+        sidebar.style.display = 'block';
+      }
+
       // reposition floating toggle immediately
       updateFloatingPosition();
     }
