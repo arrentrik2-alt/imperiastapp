@@ -3645,6 +3645,13 @@
     // Load camps for selected month
     async function loadCamps() {
       try {
+        // If currentType is training, delegate to loadTrainings
+        if (typeof currentType !== 'undefined' && currentType === 'training') {
+          if (typeof loadTrainings === 'function') {
+            await loadTrainings();
+            return;
+          }
+        }
         // Show loading state
         campsList.innerHTML = `
           <div class="loading-state">
