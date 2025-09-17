@@ -105,6 +105,12 @@
     .sidebar.collapsed .logo {
       padding: 10px;
     }
+
+    /* mobile icons-only when expanded on mobile */
+    .sidebar.icons-only-mobile .link-text,
+    .sidebar.icons-only-mobile .logo-text {
+      display: none;
+    }
     
     .logo {
       text-align: center;
@@ -705,9 +711,7 @@
       <h1><span class="logo-text">Studio Tańca Imperia</span></h1>
     </div>
 
-    <button class="sidebar-toggle" id="sidebar-toggle-inside">
-      <i class="fas fa-bars"></i>
-    </button>
+    <!-- internal sidebar toggle removed; use floating toggle only -->
 
     <ul class="nav-links">
       <li>
@@ -4947,18 +4951,26 @@
     // Floating toggle (outside button) - always visible on all views
     if (floatingToggle) {
       floatingToggle.addEventListener('click', () => {
-        // If currently collapsed, expand; if expanded, collapse
-        sidebar.classList.toggle('collapsed');
-        document.body.classList.toggle('sidebar-collapsed', sidebar.classList.contains('collapsed'));
-        document.body.classList.toggle('sidebar-expanded', !sidebar.classList.contains('collapsed'));
+        // Toggle collapsed state
+        const collapsed = sidebar.classList.toggle('collapsed');
+        document.body.classList.toggle('sidebar-collapsed', collapsed);
+        document.body.classList.toggle('sidebar-expanded', !collapsed);
 
-        // On mobile widths, hide sidebar when collapsed
+        // Mobile handling: if collapsing, hide; if expanding, show icons-only (narrow)
         if (window.innerWidth <= 768) {
-          if (sidebar.classList.contains('collapsed')) {
+          if (collapsed) {
+            // if collapsed on mobile, fully hide sidebar
             sidebar.style.display = 'none';
           } else {
+            // if expanded on mobile, show sidebar but icons-only
             sidebar.style.display = 'block';
+            // add class for icons-only
+            sidebar.classList.add('icons-only-mobile');
           }
+        } else {
+          // Desktop: ensure sidebar visible
+          sidebar.style.display = 'block';
+          sidebar.classList.remove('icons-only-mobile');
         }
       });
     }
