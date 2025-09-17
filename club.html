@@ -827,6 +827,17 @@
       border-color: var(--gold);
     }
 
+/* Active button styles */
+.btn.active, .btn.active.btn-outline {
+  background-color: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.type-toggle .btn.active {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
     .payment-input.unconfirmed {
       background-color: rgba(220, 53, 69, 0.1);
       border-color: var(--error);
@@ -1478,8 +1489,8 @@
         </div>
         <div id="type-toggle" style="display:flex; gap:8px; align-items:center;">
           <label style="color:var(--text-gray); font-size:0.95rem;">Typ:</label>
-          <button id="type-camp-btn" class="btn btn-outline" style="padding:6px 10px;">Campy</button>
           <button id="type-training-btn" class="btn btn-outline" style="padding:6px 10px;">Szkolenia</button>
+          <button id="type-camp-btn" class="btn btn-outline" style="padding:6px 10px;">Campy</button>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           <label for="camp-month-select">Wybierz miesiąc:</label>
@@ -1743,14 +1754,7 @@
             </select>
             <div style="font-size:0.85rem; color:var(--text-gray); margin-top:6px;">Wybierz widok, w którym tworzysz camp — automatycznie dobiorą się uczestnicy.</div>
           </div>
-          <div class="form-group">
-            <label for="camp-entry-type">Typ wpisu *</label>
-            <select id="camp-entry-type" name="camp-entry-type" class="form-control" required>
-              <option value="camp">Camp</option>
-              <option value="training">Szkolenie</option>
-            </select>
-            <div style="font-size:0.85rem; color:var(--text-gray); margin-top:6px;">Wybierz czy zapisujesz wydarzenie jako camp czy szkolenie.</div>
-          </div>
+          <!-- entry type selection removed; creation type is determined by current view (Campy / Szkolenia) -->
 
           <!-- Trainers Section -->
           <div class="form-group">
@@ -1773,68 +1777,7 @@
       </div>
     </div>
 
-    <!-- Create Training Modal -->
-    <div class="modal" id="create-training-modal">
-      <div class="modal-content">
-        <button class="modal-close" id="close-create-training-modal">&times;</button>
-        <div class="modal-header">
-          <h3>Utwórz nowe szkolenie</h3>
-        </div>
-
-        <form id="create-training-form">
-          <div class="form-group">
-            <label for="training-name">Nazwa szkolenia *</label>
-            <input type="text" id="training-name" name="training-name" class="form-control" required>
-          </div>
-
-          <div class="form-group">
-            <label for="training-date">Data szkolenia *</label>
-            <input type="date" id="training-date" name="training-date" class="form-control" required>
-          </div>
-
-          <div class="form-group">
-            <label for="training-amount">Kwota szkolenia *</label>
-            <input type="number" id="training-amount" name="training-amount" class="form-control" step="0.01" min="0" required>
-          </div>
-
-          <div class="form-group">
-            <label for="training-currency">Waluta *</label>
-            <select id="training-currency" name="training-currency" class="form-control" required>
-              <option value="">Wybierz walutę</option>
-              <option value="PLN">PLN</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="training-dance-type">Typ tańca *</label>
-            <select id="training-dance-type" name="training-dance-type" class="form-control" required>
-              <option value="st">ST (standard)</option>
-              <option value="la">LA (latino)</option>
-            </select>
-            <div style="font-size:0.85rem; color:var(--text-gray); margin-top:6px;">Wybierz widok, w którym tworzysz szkolenie — automatycznie dobiorą się uczestnicy.</div>
-          </div>
-
-          <!-- Trainers Section -->
-          <div class="form-group">
-            <label>Szkoleniowcy</label>
-            <button type="button" class="btn btn-outline" id="add-training-trainer-btn" style="margin-top: 5px;">
-              <i class="fas fa-plus"></i> Dodaj szkoleniowca
-            </button>
-            <div id="training-trainers-container" style="margin-top: 10px;">
-              <!-- Trainers will be added here -->
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn btn-outline" id="cancel-create-training">Anuluj</button>
-            <button type="submit" class="btn btn-primary" id="submit-create-training">
-              <i class="fas fa-save"></i> <span id="submit-create-training-text">Utwórz szkolenie</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <!-- Create Training Modal removed; creation uses single modal that adapts to current view -->
 
     <!-- Add Training Participant Modal -->
     <div class="modal" id="add-training-participant-modal">
@@ -2522,10 +2465,10 @@
         typeTrainingBtn.addEventListener('click', () => {
           currentType = 'training';
           applyTypeButtons();
-        loadCamps();
-      });
+          loadCamps();
+        });
 
-      // initialize
+        // initialize
         applyTypeButtons();
       }
     }
@@ -4720,6 +4663,21 @@
 
     // Modal functions for create camp
     function openCreateCampModal() {
+      // Set modal labels depending on currentType
+      const title = document.querySelector('#create-camp-modal .modal-header h3');
+      const submitText = document.getElementById('submit-create-camp-text');
+      if (currentType === 'training') {
+        if (title) title.textContent = 'Utwórz szkolenie';
+        if (submitText) submitText.textContent = 'Utwórz szkolenie';
+      } else {
+        if (title) title.textContent = 'Utwórz nowy camp';
+        if (submitText) submitText.textContent = 'Utwórz camp';
+      }
+
+      // Default dance type to currentView
+      const danceSelect = document.getElementById('camp-dance-type');
+      if (danceSelect) danceSelect.value = currentView || 'st';
+
       createCampModal.classList.add('active');
       trainerCount = 0;
       trainersContainer.innerHTML = '';
