@@ -2386,9 +2386,13 @@
         if (currentType === 'camp') {
           typeCampBtn.classList.add('active');
           typeTrainingBtn.classList.remove('active');
+          // Update create button label
+          if (createCampBtn) createCampBtn.innerHTML = `<i class="fas fa-plus"></i> Utwórz camp`;
         } else {
           typeTrainingBtn.classList.add('active');
           typeCampBtn.classList.remove('active');
+          // Update create button label
+          if (createCampBtn) createCampBtn.innerHTML = `<i class="fas fa-plus"></i> Utwórz szkolenie`;
         }
       }
 
