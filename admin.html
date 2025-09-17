@@ -2729,25 +2729,30 @@
 
         const summaryEl = document.getElementById('group-participants-summary');
         if (summaryEl) {
-          let methodsHtmlG = '';
-          Object.keys(byMethod).forEach(k => { methodsHtmlG += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
-          const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
-          summaryEl.innerHTML = `
-            <div style="text-align:right; min-width:180px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div style="font-size:0.95rem;color:var(--text-gray)">Zapłacono</div>
-                <div style="font-weight:700;color:var(--success)">${paidSum.toFixed(2)} zł</div>
+          // Hide financial summary for trainers
+          if (window.currentUser && window.currentUser.role === 'trainer') {
+            summaryEl.style.display = 'none';
+          } else {
+            let methodsHtmlG = '';
+            Object.keys(byMethod).forEach(k => { methodsHtmlG += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
+            const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
+            summaryEl.innerHTML = `
+              <div style="text-align:right; min-width:180px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <div style="font-size:0.95rem;color:var(--text-gray)">Zapłacono</div>
+                  <div style="font-weight:700;color:var(--success)">${paidSum.toFixed(2)} zł</div>
         </div>
-              <div style="margin-top:6px;">${methodsHtmlG}</div>
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-                <div style="font-size:0.95rem;color:var(--text-gray)">Niezapłacono</div>
-                <div style="font-weight:700;color:${unpaidColor}">${unpaidSum.toFixed(2)} zł</div>
+                <div style="margin-top:6px;">${methodsHtmlG}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                  <div style="font-size:0.95rem;color:var(--text-gray)">Niezapłacono</div>
+                  <div style="font-weight:700;color:${unpaidColor}">${unpaidSum.toFixed(2)} zł</div>
         </div>
-              <div style="color:var(--text-gray);margin-top:6px">Razem: ${totalSum.toFixed(2)} zł</div>
+                <div style="color:var(--text-gray);margin-top:6px">Razem: ${totalSum.toFixed(2)} zł</div>
         </div>
-          `;
-          // draw donut for group: paid vs unpaid
-          drawDonut('group-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
+            `;
+            // draw donut for group: paid vs unpaid
+            drawDonut('group-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
+          }
         }
 
         if (!participants || participants.length === 0) {
@@ -2766,62 +2771,70 @@
           participantCard.className = 'group-card'; // Reusing group-card style
           participantCard.style.cursor = 'default'; // No pointer for participant cards
           
-          // Use the same subtle background as other group cards; avoid aggressive red/green inline styles
-          participantCard.innerHTML = `
-            <div class="participant-row ${payment && payment.confirmed ? 'payment-paid' : 'payment-unpaid'}" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-              <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
-              <div class="participant-info" style="flex: 0 0 180px; overflow: hidden; text-overflow: ellipsis;">
-                <div style="font-weight: bold; margin-bottom: 5px; font-size: 0.95rem;">${participantData.name}</div>
-                <div style="color: var(--text-gray); font-size: 0.85rem;">${participantData.phone || 'Brak'}</div>
+          // Render participant card: trainers see only name+phone; admins see full controls
+          if (window.currentUser && window.currentUser.role === 'trainer') {
+            participantCard.innerHTML = `
+              <div class="participant-row" style="display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; margin-bottom:8px;">
+                <div class="participant-number" style="min-width:30px; text-align:center; color:var(--text-gray); font-weight:600;">${index+1}.</div>
+                <div style="flex:1; overflow:hidden; text-overflow:ellipsis;">
+                  <div style="font-weight:700; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${participantData.name}</div>
+                  <div style="color:var(--text-gray); font-size:0.9rem">${participantData.phone || 'Brak'}</div>
+                </div>
               </div>
-              
-              <div class="amount-section" style="min-width: 120px;">
-                <div style="display: flex; align-items: center; gap: 5px;">
-                  <input type="number" class="amount-input form-control" value="${amount}" step="0.01" min="0" 
-                         data-participant-id="${participant.participant_id}" data-group-id="${groupId}" 
-                         style="width: 100px; text-align: center;">
-                  <span style="font-size: 0.9rem; color: var(--text-gray);">zł</span>
-              </div>
-              </div>
-              
-              <div class="payment-method-section" style="min-width: 150px;">
-                <select class="payment-method-select form-control" data-participant-id="${participant.participant_id}" style="width: 130px;">
-                  <option value="">Sposób płatności</option>
-                  <option value="karta" ${payment.payment_method === 'karta' ? 'selected' : ''}>Karta</option>
-                  <option value="przelew" ${payment.payment_method === 'przelew' ? 'selected' : ''}>Przelew</option>
-                  <option value="gotowka" ${payment.payment_method === 'gotowka' ? 'selected' : ''}>Gotówka</option>
-                </select>
-              </div>
-              
-              <div class="comment-section" style="flex: 1 1 200px; overflow: hidden; text-overflow: ellipsis;">
-                <input type="text" class="payment-comment form-control" placeholder="Komentarz" 
-                       value="${payment.comment || ''}" data-participant-id="${participant.participant_id}" 
-                       style="width: 100%;">
-              </div>
-              <div style="min-width:110px; display:flex; align-items:center; gap:8px;">
-                <label style="color:var(--text-gray); font-size:0.85rem;">RODO</label>
-                <input type="checkbox" class="rodo-checkbox" data-participant-id="${participant.participant_id}" ${participantData.rodo ? 'checked' : ''}>
-              </div>
-              
-              <div class="action-buttons" style="display: flex; gap: 10px; min-width: 120px;">
-                ${payment && payment.confirmed ? `
-                  <button class="btn btn-outline delete-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}">
-                    <i class="fas fa-times"></i>
+            `;
+          } else {
+            participantCard.innerHTML = `
+              <div class="participant-row ${payment && payment.confirmed ? 'payment-paid' : 'payment-unpaid'}" style="display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                <div class="participant-number" style="min-width: 30px; text-align: center; font-weight: bold; color: var(--text-gray);">${index + 1}.</div>
+                <div class="participant-info" style="flex: 0 0 220px; overflow: hidden; text-overflow: ellipsis;">
+                  <div style="font-weight: bold; margin-bottom: 5px;">${participantData.name}</div>
+                  <div style="color: var(--text-gray); font-size: 0.9rem;">${participantData.phone || 'Brak'}</div>
+                </div>
+                <div class="amount-section" style="min-width: 120px;">
+                  <div style="display: flex; align-items: center; gap: 5px;">
+                    <input type="number" class="amount-input form-control" value="${amount}" step="0.01" min="0" 
+                           data-participant-id="${participant.participant_id}" data-group-id="${groupId}" 
+                           style="width: 100px; text-align: center;">
+                    <span style="font-size: 0.9rem; color: var(--text-gray);">zł</span>
+                </div>
+                </div>
+                <div class="payment-method-section" style="min-width: 150px;">
+                  <select class="payment-method-select form-control" data-participant-id="${participant.participant_id}" style="width: 130px;">
+                    <option value="">Sposób płatności</option>
+                    <option value="karta" ${payment.payment_method === 'karta' ? 'selected' : ''}>Karta</option>
+                    <option value="przelew" ${payment.payment_method === 'przelew' ? 'selected' : ''}>Przelew</option>
+                    <option value="gotowka" ${payment.payment_method === 'gotowka' ? 'selected' : ''}>Gotówka</option>
+                  </select>
+                </div>
+                <div class="comment-section" style="flex: 1 1 200px; overflow: hidden; text-overflow: ellipsis;">
+                  <input type="text" class="payment-comment form-control" placeholder="Komentarz" 
+                         value="${payment.comment || ''}" data-participant-id="${participant.participant_id}" 
+                         style="width: 100%;">
+                </div>
+                <div style="min-width:110px; display:flex; align-items:center; gap:8px;">
+                  <label style="color:var(--text-gray); font-size:0.85rem;">RODO</label>
+                  <input type="checkbox" class="rodo-checkbox" data-participant-id="${participant.participant_id}" ${participantData.rodo ? 'checked' : ''}>
+                </div>
+                <div class="action-buttons" style="display: flex; gap: 10px; min-width: 120px;">
+                  ${payment && payment.confirmed ? `
+                    <button class="btn btn-outline delete-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  ` : `
+                    <button class="btn btn-primary confirm-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}">
+                      <i class="fas fa-check"></i>
+                    </button>
+                  `}
+                  <button class="btn btn-outline edit-btn" data-id="${participant.participant_id}">
+                    <i class="fas fa-edit"></i>
                   </button>
-                ` : `
-                  <button class="btn btn-primary confirm-payment-btn" data-participant-id="${participant.participant_id}" data-group-id="${groupId}">
-                    <i class="fas fa-check"></i>
+                  <button class="btn btn-outline delete-btn" data-id="${participant.participant_id}">
+                    <i class="fas fa-trash"></i>
                   </button>
-                `}
-                <button class="btn btn-outline edit-btn" data-id="${participant.participant_id}">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-outline delete-btn" data-id="${participant.participant_id}">
-                  <i class="fas fa-trash"></i>
-                </button>
+                </div>
               </div>
-            </div>
-          `;
+            `;
+          }
 
           // Add event listeners for action buttons
           const participantEditBtn = participantCard.querySelector('.edit-btn');
