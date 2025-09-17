@@ -2449,6 +2449,15 @@
           if (partError) console.error('Error adding participants:', partError);
         }
 
+        // Set entry_type on the camp row according to selected type
+        if (typeof currentType !== 'undefined') {
+          const { error: updateTypeErr } = await supabase
+            .from('camps')
+            .update({ entry_type: currentType })
+            .eq('id', campId);
+          if (updateTypeErr) console.error('Error setting entry_type on camp:', updateTypeErr);
+        }
+
         // Close modal and reload camps
         cancelCreateCamp && cancelCreateCamp.click();
         await loadCamps();
@@ -2781,105 +2790,12 @@
     // TRAININGS FUNCTIONALITY - COPY OF CAMPS
     // ===========================================
 
-    // Load trainings (copy of loadCamps)
+    // loadTrainings now delegates to loadCamps filtered by entry_type (we don't use a separate trainings table)
     async function loadTrainings() {
-      try {
-        // Show loading state
-        trainingsList.innerHTML = `
-          <div class="loading-state">
-            <div class="loading"></div>
-            <p>Ładowanie szkoleń...</p>
-          </div>
-        `;
-
-        // Load trainings with trainer data in a single batch query
-        const { data: trainings, error } = await supabase
-          .from('trainings')
-          .select(`
-            *,
-            trainers (
-              name,
-              amount,
-              currency,
-              trainer_index
-            )
-          `)
-          .order('date', { ascending: false });
-
-        if (error) {
-          console.error('Error loading trainings:', error);
-          trainingsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania szkoleń</p></div>';
-          return;
-        }
-
-        // Load all training participants at once (batch query)
-        const { data: allTrainingParticipants, error: participantsError } = await supabase
-          .from('training_participants')
-          .select('*')
-          .in('training_id', trainings.map(training => training.id));
-
-        if (participantsError) {
-          console.error('Error loading training participants:', participantsError);
-        }
-
-        // Group participants by training_id
-        const participantsByTraining = {};
-        if (allTrainingParticipants) {
-          allTrainingParticipants.forEach(p => {
-            if (!participantsByTraining[p.training_id]) {
-              participantsByTraining[p.training_id] = [];
-            }
-            participantsByTraining[p.training_id].push({
-              id: p.participant_id,
-              name: p.name,
-              isTrainingParticipant: true
-            });
-          });
-        }
-
-        // Process trainer data for each training
-        for (const training of trainings) {
-          if (training.trainers && training.trainers.length > 0) {
-            // Sort trainers by trainer_index and create sequential array
-            training.trainers.sort((a, b) => parseInt(a.trainer_index, 10) - parseInt(b.trainer_index, 10));
-            training.trainers = training.trainers.map(trainer => ({
-              name: trainer.name,
-              amount: parseFloat(trainer.amount),
-              currency: trainer.currency
-            }));
-          } else {
-            training.trainers = [];
-          }
-        }
-
-        // Store trainings for status calculation
-        window.allTrainings = trainings;
-
-        if (!trainings || trainings.length === 0) {
-          trainingsList.innerHTML = `
-            <div class="empty-state">
-              <i class="fas fa-graduation-cap"></i>
-              <p>Brak szkoleń</p>
-              <p>Kliknij "Utwórz szkolenie" aby dodać pierwsze szkolenie</p>
-            </div>
-          `;
-          return;
-        }
-
-        trainingsList.innerHTML = '';
-        for (const training of trainings) {
-          const trainingCard = createTrainingCard(training, participantsByTraining[training.id] || []);
-          trainingsList.appendChild(trainingCard);
-        }
-
-        // Calculate and apply training statuses immediately to show colors on first load
-        await updateTrainingStatuses(trainings, participantsByTraining);
-
-        console.log(`Loaded ${trainings.length} trainings`);
-
-      } catch (err) {
-        console.error('Error in loadTrainings:', err);
-        trainingsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania szkoleń</p></div>';
+      if (typeof loadCamps === 'function') {
+        // Ensure currentType is 'training' so loadCamps filters by entry_type
+        currentType = 'training';
+        await loadCamps();
       }
     }
 
@@ -3645,13 +3561,6 @@
     // Load camps for selected month
     async function loadCamps() {
       try {
-        // If currentType is training, delegate to loadTrainings
-        if (typeof currentType !== 'undefined' && currentType === 'training') {
-          if (typeof loadTrainings === 'function') {
-            await loadTrainings();
-            return;
-          }
-        }
         // Show loading state
         campsList.innerHTML = `
           <div class="loading-state">
@@ -3661,6 +3570,7 @@
         `;
 
         // Load camps with trainer data in a single batch query
+        // Only load camps matching currentType (camp or training)
         const { data: camps, error } = await supabase
           .from('camps')
           .select(`
@@ -3672,6 +3582,7 @@
               trainer_index
             )
           `)
+          .eq('entry_type', currentType || 'camp')
           .eq('month', currentMonth)
           .order('date', { ascending: false });
 
