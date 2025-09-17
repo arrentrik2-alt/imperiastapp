@@ -2743,8 +2743,9 @@
         }
 
         groupParticipantsList.innerHTML = '';
-        
+
         participants.forEach((participant, index) => {
+          // participant provided by forEach
           const participantData = participant.participants_month;
           const payment = paymentLookup[participant.participant_id] || {};
           const amount = payment.amount || 0;
