@@ -19,6 +19,8 @@
       --error: #dc3545;
     }
 
+    
+
     * {
       margin: 0;
       padding: 0;
@@ -2351,17 +2353,21 @@
     // Setup view toggle
     if (viewStBtn && viewLaBtn) {
       function applyViewButtons() {
+        const noun = (currentType === 'training') ? 'Szkolenia' : 'Campy';
+        const actionNoun = (currentType === 'training') ? 'Utwórz szkolenie' : 'Utwórz camp';
         if (currentView === 'st') {
           viewStBtn.classList.add('active');
           viewLaBtn.classList.remove('active');
-          campsTitle.textContent = 'Campy ST';
-          submitCreateCampText && (submitCreateCampText.textContent = 'Utwórz camp (ST)');
+          campsTitle.textContent = `${noun} ST`;
+          submitCreateCampText && (submitCreateCampText.textContent = `${actionNoun} (ST)`);
         } else {
           viewLaBtn.classList.add('active');
           viewStBtn.classList.remove('active');
-          campsTitle.textContent = 'Campy LA';
-          submitCreateCampText && (submitCreateCampText.textContent = 'Utwórz camp (LA)');
+          campsTitle.textContent = `${noun} LA`;
+          submitCreateCampText && (submitCreateCampText.textContent = `${actionNoun} (LA)`);
         }
+        // Update other labels to match currentType
+        // updateUILabels() removed; labels updated inline when needed
       }
 
       viewStBtn.addEventListener('click', () => {
