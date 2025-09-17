@@ -671,11 +671,19 @@
     }
     
     @media (max-width: 576px) {
-      .sidebar {
+      /* On small screens, sidebar is hidden only when explicitly collapsed. When expanded (body.sidebar-expanded)
+         the sidebar will be shown in icons-only mode. */
+      body.sidebar-collapsed .sidebar {
         width: 0;
+        display: none;
         overflow: hidden;
       }
-      
+
+      body.sidebar-expanded .sidebar {
+        width: 70px;
+        display: block;
+      }
+
       .main-content {
         margin-left: 0;
       }
@@ -4960,11 +4968,15 @@
         if (window.innerWidth <= 768) {
           if (collapsed) {
             // if collapsed on mobile, fully hide sidebar
+            document.body.classList.add('sidebar-collapsed');
+            document.body.classList.remove('sidebar-expanded');
             sidebar.style.display = 'none';
           } else {
             // if expanded on mobile, show sidebar but icons-only
+            document.body.classList.add('sidebar-expanded');
+            document.body.classList.remove('sidebar-collapsed');
             sidebar.style.display = 'block';
-            // add class for icons-only
+            // ensure icons-only class
             sidebar.classList.add('icons-only-mobile');
           }
         } else {
