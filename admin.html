@@ -667,6 +667,7 @@
       
       .main-content {
         margin-left: 70px;
+        font-size: 14px; /* smaller font on tablets */
       }
     }
     
@@ -686,6 +687,7 @@
 
       .main-content {
         margin-left: 0;
+        font-size: 13px; /* smaller font on phones */
       }
     }
 
@@ -2313,9 +2315,14 @@
           groupCard.className = 'group-card';
             groupCard.style.cursor = 'pointer';
             const sums = groupSummaryLookup[group.id] || { paidCount:0, unpaidCount:0, paidSum:0, unpaidSum:0 };
-            const paidText = `<span style="color: var(--success); font-weight:600; margin-left:10px;">Zapłacili: ${sums.paidCount}</span>`;
-            const unpaidColor = sums.unpaidCount > 0 ? 'var(--error)' : 'var(--success)';
-            const unpaidText = `<span style="color: ${unpaidColor}; font-weight:600; margin-left:10px;">Nie zapłacili: ${sums.unpaidCount}</span>`;
+            // If current user is a trainer, hide payment summary in group list
+            let paidText = `<span style="color: var(--success); font-weight:600; margin-left:10px;">Zapłacili: ${sums.paidCount}</span>`;
+            let unpaidColor = sums.unpaidCount > 0 ? 'var(--error)' : 'var(--success)';
+            let unpaidText = `<span style="color: ${unpaidColor}; font-weight:600; margin-left:10px;">Nie zapłacili: ${sums.unpaidCount}</span>`;
+            if (window.currentUser && window.currentUser.role === 'trainer') {
+              paidText = '';
+              unpaidText = '';
+            }
           // Format days display
           const daysToShow = group.allDays || [group.day];
           const daysText = daysToShow.length === 1
