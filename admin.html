@@ -4984,13 +4984,47 @@
           sidebar.style.display = 'block';
           sidebar.classList.remove('icons-only-mobile');
         }
+        // After any change, reposition floating button
+        updateFloatingPosition();
       });
     }
+
+    // Reposition floating toggle to sit near the sidebar edge
+    function updateFloatingPosition() {
+      if (!floatingToggle || !sidebar) return;
+      // If sidebar hidden (mobile collapsed), keep floating near left edge
+      if (document.body.classList.contains('sidebar-collapsed') && window.innerWidth <= 768) {
+        floatingToggle.style.left = '8px';
+        return;
+      }
+
+      // Compute sidebar right edge
+      const rect = sidebar.getBoundingClientRect();
+      // place floating button 8px to the right of sidebar
+      const left = Math.max(8, rect.right + 8);
+      floatingToggle.style.left = `${left}px`;
+    }
+
+    // Ensure correct placement on load and resize
+    window.addEventListener('resize', () => {
+      // if small screen and collapsed, ensure sidebar display state
+      if (window.innerWidth <= 768) {
+        if (document.body.classList.contains('sidebar-collapsed')) sidebar.style.display = 'none';
+      } else {
+        sidebar.style.display = 'block';
+      }
+      updateFloatingPosition();
+    });
+
+    // Run once initially
+    updateFloatingPosition();
 
     // Auto-collapse sidebar on navigation
     function autoCollapseSidebar() {
       sidebar.classList.add('collapsed');
       document.body.classList.add('sidebar-collapsed');
+      // reposition floating toggle immediately
+      updateFloatingPosition();
     }
 
     // Override setActiveNav to include auto-collapse
