@@ -1478,7 +1478,7 @@
       <div class="content-header">
         <h3 id="camps-title">Campy</h3>
         <button class="btn btn-primary" id="create-camp-btn">
-          <i class="fas fa-plus"></i> Utwórz camp
+          <i class="fas fa-plus"></i> <span id="create-button-label">Utwórz camp</span>
         </button>
       </div>
 
@@ -1547,7 +1547,7 @@
         <h3 id="camps-title">Campy</h3>
         <div class="camp-actions">
           <button class="btn btn-primary" id="create-camp-btn">
-            <i class="fas fa-plus"></i> Utwórz camp
+          <i class="fas fa-plus"></i> <span id="create-button-label-2">Utwórz camp</span>
           </button>
         </div>
       </div>
@@ -1725,17 +1725,17 @@
 
         <form id="create-camp-form">
           <div class="form-group">
-            <label for="camp-name">Nazwa campu *</label>
+            <label for="camp-name" id="label-name">Nazwa campu *</label>
             <input type="text" id="camp-name" name="camp-name" class="form-control" required>
           </div>
 
           <div class="form-group">
-            <label for="camp-date">Data campu *</label>
+            <label for="camp-date" id="label-date">Data campu *</label>
             <input type="date" id="camp-date" name="camp-date" class="form-control" required>
           </div>
 
           <div class="form-group">
-            <label for="camp-amount">Kwota campu *</label>
+            <label for="camp-amount" id="label-amount">Kwota campu *</label>
             <input type="number" id="camp-amount" name="camp-amount" class="form-control" step="0.01" min="0" required>
           </div>
 
@@ -2393,12 +2393,24 @@
           typeCampBtn.classList.add('active');
           typeTrainingBtn.classList.remove('active');
           // Update create button label
-          if (createCampBtn) createCampBtn.innerHTML = `<i class="fas fa-plus"></i> Utwórz camp`;
+          if (createCampBtn) createCampBtn.innerHTML = `<i class="fas fa-plus"></i> <span id="create-button-label">Utwórz camp</span>`;
+          if (document.getElementById('create-button-label-2')) document.getElementById('create-button-label-2').textContent = 'Utwórz camp';
+          // Update modal labels
+          if (document.getElementById('label-name')) document.getElementById('label-name').textContent = 'Nazwa campu *';
+          if (document.getElementById('label-date')) document.getElementById('label-date').textContent = 'Data campu *';
+          if (document.getElementById('label-amount')) document.getElementById('label-amount').textContent = 'Kwota campu *';
+          if (document.getElementById('camp-details-title')) document.getElementById('camp-details-title').textContent = 'Szczegóły campu';
         } else {
           typeTrainingBtn.classList.add('active');
           typeCampBtn.classList.remove('active');
           // Update create button label
-          if (createCampBtn) createCampBtn.innerHTML = `<i class="fas fa-plus"></i> Utwórz szkolenie`;
+          if (createCampBtn) createCampBtn.innerHTML = `<i class="fas fa-plus"></i> <span id="create-button-label">Utwórz szkolenie</span>`;
+          if (document.getElementById('create-button-label-2')) document.getElementById('create-button-label-2').textContent = 'Utwórz szkolenie';
+          // Update modal labels for trainings
+          if (document.getElementById('label-name')) document.getElementById('label-name').textContent = 'Nazwa szkolenia *';
+          if (document.getElementById('label-date')) document.getElementById('label-date').textContent = 'Data szkolenia *';
+          if (document.getElementById('label-amount')) document.getElementById('label-amount').textContent = 'Cena szkolenia *';
+          if (document.getElementById('camp-details-title')) document.getElementById('camp-details-title').textContent = 'Szczegóły szkolenia';
         }
       }
 
