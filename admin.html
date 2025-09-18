@@ -2829,6 +2829,30 @@
             </div>
           `;
 
+          // If current user is a trainer, hide payment controls and make background subtle
+          if (window.currentUser && window.currentUser.role === 'trainer') {
+            // Hide amount, payment method, comment fields and payment/delete buttons
+            const amt = participantCard.querySelector('.amount-section');
+            const pm = participantCard.querySelector('.payment-method-section');
+            const comm = participantCard.querySelector('.comment-section');
+            const actions = participantCard.querySelector('.action-buttons');
+            if (amt) amt.style.display = 'none';
+            if (pm) pm.style.display = 'none';
+            if (comm) comm.style.display = 'none';
+            if (actions) {
+              // Keep only edit button, remove others
+              actions.querySelectorAll('button').forEach(btn => {
+                if (!btn.classList.contains('edit-btn')) btn.remove();
+              });
+            }
+            // Make participant row background subtle gray
+            const prow = participantCard.querySelector('.participant-row');
+            if (prow) {
+              prow.style.backgroundColor = 'rgba(255,255,255,0.03)';
+              prow.style.border = '1px solid var(--border-dark)';
+            }
+          }
+
           // Add event listeners for action buttons
           const participantEditBtn = participantCard.querySelector('.edit-btn');
           if (participantEditBtn) {
