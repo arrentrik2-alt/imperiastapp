@@ -30,6 +30,8 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
+    
+
     body {
       background-color: var(--primary-bg);
       color: var(--text-light);
@@ -7179,6 +7181,35 @@
       setupActionButtons();
 
       await setupPaymentEventListeners(); // Setup payment event listeners
+
+      // Setup PDF button after listeners are ready
+      (function setupPdfDownload() {
+        const downloadBtn = document.getElementById('download-pdf-btn');
+        if (!downloadBtn) return;
+
+        downloadBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const camp = window.currentCamp;
+          if (!camp) { alert('Brak wybranego campu/szkolenia'); return; }
+
+          // PDF server URL (change if your server runs elsewhere)
+          const pdfServer = window.pdfServerUrl || 'http://localhost:4000';
+
+          // Build the target URL to render - keep same path and add hash so the page can open the camp
+          const targetUrl = window.location.origin + window.location.pathname + `#camp/${camp.id}`;
+
+          const generateUrl = `${pdfServer}/generate?url=${encodeURIComponent(targetUrl)}&waitForSelector=%23camp-details-content`;
+
+          // Open in new tab to trigger download / show PDF. If you prefer background download, we can fetch blob and save.
+          try {
+            window.open(generateUrl, '_blank');
+          } catch (err) {
+            console.error('Nie można otworzyć PDF:', err);
+            alert('Błąd pobierania PDF');
+          }
+        });
+      })();
+
       // Hide global loader when initialization finished
       hideGlobalLoader();
     });
