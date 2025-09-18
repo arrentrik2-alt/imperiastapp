@@ -3985,32 +3985,65 @@
               // Clone content to avoid modifying live DOM
               const printable = contentEl.cloneNode(true);
 
+              // Remove "Razem" columns from any tables
+              printable.querySelectorAll('table').forEach(table => {
+                // find header indexes containing 'Razem'
+                const ths = Array.from(table.querySelectorAll('th'));
+                const removeIdxs = [];
+                ths.forEach((th, idx) => {
+                  if ((th.textContent || '').trim().toLowerCase().includes('razem')) removeIdxs.push(idx);
+                });
+                if (removeIdxs.length > 0) {
+                  // remove header cells
+                  removeIdxs.slice().reverse().forEach(i => {
+                    const headerRow = table.querySelector('thead');
+                    if (headerRow) {
+                      const cells = headerRow.querySelectorAll('th');
+                      if (cells[i]) cells[i].remove();
+                    }
+                    // remove corresponding td in all rows
+                    table.querySelectorAll('tr').forEach(tr => {
+                      const cells = tr.querySelectorAll('td');
+                      if (cells[i]) cells[i].remove();
+                    });
+                  });
+                }
+              });
+
               // Add header info
               const header = document.createElement('div');
               header.style.textAlign = 'center';
-              header.style.marginBottom = '8px';
-              header.innerHTML = `<h2 style="margin:0">${(window.currentCamp && window.currentCamp.name) || ''}</h2><div style="font-size:12px">Data: ${(window.currentCamp && window.currentCamp.date) || ''}</div>`;
+              header.style.marginBottom = '6px';
+              header.innerHTML = `<h2 style="margin:0; font-size:16px; color:#000">${(window.currentCamp && window.currentCamp.name) || ''}</h2><div style="font-size:11px; color:#000">Data: ${(window.currentCamp && window.currentCamp.date) || ''}</div>`;
 
               const wrapper = document.createElement('div');
               wrapper.style.background = '#fff';
               wrapper.style.color = '#000';
-              wrapper.style.padding = '12px';
+              wrapper.style.padding = '6px';
+              wrapper.style.fontSize = '11px';
               wrapper.appendChild(header);
               wrapper.appendChild(printable);
 
-              // Adjust styles for printing: make tables full-width and readable
-              wrapper.querySelectorAll('table').forEach(t => {
-                t.style.width = '100%';
-                t.style.borderCollapse = 'collapse';
-                t.querySelectorAll('th, td').forEach(cell => {
-                  cell.style.border = '1px solid #000';
-                  cell.style.padding = '6px';
-                  cell.style.fontSize = '12px';
-                });
+              // Inject print CSS to avoid row breaks and force black text
+              const styleEl = document.createElement('style');
+              styleEl.innerHTML = `
+                @page { size: A4; margin: 10mm }
+                * { color: #000 !important; background: transparent !important; }
+                table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
+                th, td { border: 1px solid #000 !important; padding: 4px !important; font-size: 11px !important; word-break: break-word; }
+                tr { page-break-inside: avoid; break-inside: avoid; }
+                thead { display: table-header-group; }
+                tfoot { display: table-footer-group; }
+              `;
+              wrapper.insertBefore(styleEl, wrapper.firstChild);
+
+              // Reduce column widths where possible
+              wrapper.querySelectorAll('th').forEach(th => {
+                th.style.whiteSpace = 'nowrap';
               });
 
               const opt = {
-                margin:       [10,10,10,10],
+                margin:       [8,8,8,8],
                 filename:     `${(window.currentCamp && (window.currentCamp.name || window.currentCamp.id)) || 'camp'}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
