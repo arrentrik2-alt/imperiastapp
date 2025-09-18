@@ -2729,10 +2729,11 @@
 
         const summaryEl = document.getElementById('group-participants-summary');
         if (summaryEl) {
-          // Hide financial summary for trainers
+          // If current user is a trainer, hide financial summary in group details
           if (window.currentUser && window.currentUser.role === 'trainer') {
             summaryEl.style.display = 'none';
           } else {
+            summaryEl.style.display = 'block';
             let methodsHtmlG = '';
             Object.keys(byMethod).forEach(k => { methodsHtmlG += `<div style="color:var(--success); font-size:0.9rem">- ${k}: ${byMethod[k].toFixed(2)} zł</div>`; });
             const unpaidColor = unpaidSum > 0 ? 'var(--error)' : 'var(--success)';
@@ -2741,14 +2742,14 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                   <div style="font-size:0.95rem;color:var(--text-gray)">Zapłacono</div>
                   <div style="font-weight:700;color:var(--success)">${paidSum.toFixed(2)} zł</div>
-        </div>
+                </div>
                 <div style="margin-top:6px;">${methodsHtmlG}</div>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
                   <div style="font-size:0.95rem;color:var(--text-gray)">Niezapłacono</div>
                   <div style="font-weight:700;color:${unpaidColor}">${unpaidSum.toFixed(2)} zł</div>
-        </div>
+                </div>
                 <div style="color:var(--text-gray);margin-top:6px">Razem: ${totalSum.toFixed(2)} zł</div>
-        </div>
+              </div>
             `;
             // draw donut for group: paid vs unpaid
             drawDonut('group-donut', paidSum, unpaidSum, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
@@ -2771,12 +2772,12 @@
           participantCard.className = 'group-card'; // Reusing group-card style
           participantCard.style.cursor = 'default'; // No pointer for participant cards
           
-          // Render compact view for trainers: only name and phone
+          // If current user is a trainer, render compact participant view (name + phone only)
           if (window.currentUser && window.currentUser.role === 'trainer') {
             participantCard.innerHTML = `
               <div class="participant-row" style="display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; margin-bottom:8px;">
                 <div class="participant-number" style="min-width:30px; text-align:center; color:var(--text-gray); font-weight:600;">${index+1}.</div>
-                <div style="flex:1; overflow:hidden; text-overflow:ellipsis;">
+                <div style="flex:1; overflow:hidden;">
                   <div style="font-weight:700; font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${participantData.name}</div>
                   <div style="color:var(--text-gray); font-size:0.9rem">${participantData.phone || 'Brak'}</div>
                 </div>
