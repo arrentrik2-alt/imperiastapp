@@ -3985,29 +3985,69 @@
               // Clone content to avoid modifying live DOM
               const printable = contentEl.cloneNode(true);
 
-              // Remove "Razem" columns from any tables
+              // Remove action buttons and convert inputs to text, color payment cells, remove zero amounts
+              printable.querySelectorAll('button, .confirm-payment-btn, .remove-payment-btn').forEach(b => b.remove());
+
               printable.querySelectorAll('table').forEach(table => {
-                // find header indexes containing 'Razem'
+                // find header indexes containing 'Razem' and remove them
                 const ths = Array.from(table.querySelectorAll('th'));
                 const removeIdxs = [];
                 ths.forEach((th, idx) => {
                   if ((th.textContent || '').trim().toLowerCase().includes('razem')) removeIdxs.push(idx);
                 });
                 if (removeIdxs.length > 0) {
-                  // remove header cells
                   removeIdxs.slice().reverse().forEach(i => {
                     const headerRow = table.querySelector('thead');
                     if (headerRow) {
                       const cells = headerRow.querySelectorAll('th');
                       if (cells[i]) cells[i].remove();
                     }
-                    // remove corresponding td in all rows
                     table.querySelectorAll('tr').forEach(tr => {
                       const cells = tr.querySelectorAll('td');
                       if (cells[i]) cells[i].remove();
                     });
                   });
                 }
+
+                // Convert inputs to spans and color cells based on payment cache
+                table.querySelectorAll('input').forEach(input => {
+                  const participantId = input.getAttribute('data-participant-id') || input.dataset.participantId;
+                  const columnType = input.getAttribute('data-column-type') || input.dataset.columnType;
+                  const trainerIndex = input.getAttribute('data-trainer-index') || input.dataset.trainerIndex;
+
+                  let payment = { amount: 0, confirmed: false };
+                  try {
+                    if (typeof getCachedPayment === 'function') {
+                      payment = getCachedPayment(participantId, columnType, trainerIndex !== undefined ? parseInt(trainerIndex, 10) : null) || payment;
+                    }
+                    if ((!payment || !payment.amount) && typeof getCachedTrainingPayment === 'function') {
+                      payment = getCachedTrainingPayment(participantId, columnType, trainerIndex !== undefined ? parseInt(trainerIndex, 10) : null) || payment;
+                    }
+                  } catch (e) {
+                    // ignore
+                  }
+
+                  const display = payment && payment.amount > 0 ? Number(payment.amount).toFixed(2) : '';
+                  const span = document.createElement('span');
+                  span.textContent = display;
+
+                  const td = input.closest('td');
+                  if (td) {
+                    if (payment && payment.amount > 0) {
+                      td.style.backgroundColor = payment.confirmed ? '#c8e6c9' : '#ffcdd2';
+                    } else {
+                      td.style.backgroundColor = 'transparent';
+                    }
+                  }
+
+                  input.parentNode.replaceChild(span, input);
+                });
+
+                // Remove any leftover 0 or 0.00 text
+                table.querySelectorAll('td').forEach(td => {
+                  const txt = (td.textContent || '').trim();
+                  if (txt === '0' || txt === '0.0' || txt === '0.00') td.textContent = '';
+                });
               });
 
               // Add header info
@@ -4042,9 +4082,14 @@
                 th.style.whiteSpace = 'nowrap';
               });
 
+              // Build filename with camp date
+              const datePart = (window.currentCamp && window.currentCamp.date) ? (window.currentCamp.date.toString().split('T')[0] || window.currentCamp.date) : '';
+              const fileBase = ((window.currentCamp && (window.currentCamp.name || window.currentCamp.id)) || 'camp').replace(/\s+/g, '_');
+              const filename = datePart ? `${fileBase}_${datePart}.pdf` : `${fileBase}.pdf`;
+
               const opt = {
                 margin:       [8,8,8,8],
-                filename:     `${(window.currentCamp && (window.currentCamp.name || window.currentCamp.id)) || 'camp'}.pdf`,
+                filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
