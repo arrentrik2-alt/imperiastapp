@@ -7,8 +7,6 @@
   <title>Klub Tańca - Studio Tańca Imperia</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root {
       --primary-bg: #121212;
@@ -3981,82 +3979,164 @@
         if (downloadPdfBtn) {
           downloadPdfBtn.onclick = async () => {
             try {
-              const camp = window.currentCamp;
-              const participants = window.currentParticipants || [];
-              if (!camp || !participants.length) { alert('Brak danych do PDF'); return; }
+              const contentEl = document.getElementById('camp-details-content');
+              if (!contentEl) { alert('Brak zawartości do wydruku'); return; }
 
-              const rows = participants.map((p, idx) => {
-                const pid = p.id || p.participant_id || '';
-                const name = p.name || p.participant_name || '';
-                const lessons = camp.dance_type || '';
-                const trainerNames = (camp.trainers && camp.trainers.length) ? camp.trainers.map(t => t.name).join(', ') : '';
+              // Clone content to avoid modifying live DOM
+              const printable = contentEl.cloneNode(true);
 
-                let comment = '';
-                const commentInput = document.querySelector(`input.comment-input[data-participant-id="${pid}"]`);
-                if (commentInput) comment = (commentInput.value || commentInput.getAttribute('value') || '').toString();
-
-                let payment = { amount: 0, confirmed: false };
-                try {
-                  if (typeof getCachedPayment === 'function') payment = getCachedPayment(pid, 'camp') || payment;
-                  if ((!payment || !payment.amount) && typeof getCachedTrainingPayment === 'function') payment = getCachedTrainingPayment(pid, 'training') || payment;
-                } catch (e) {}
-
-                return {
-                  lp: idx + 1,
-                  participant: name,
-                  camp: camp.name || '',
-                  lessons: lessons,
-                  trainer: trainerNames,
-                  comment: comment,
-                  kwota: payment.amount ? Number(payment.amount).toFixed(2) : '',
-                  status: payment.amount ? (payment.confirmed ? 'Zapłacono' : 'Nie zapłacono') : '',
-                  _confirmed: !!payment.confirmed
-                };
-              });
-
-              const { jsPDF } = window.jspdf;
-              const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-              doc.setFontSize(14);
-              doc.text(`${camp.name || 'Camp'}`, 105, 15, { align: 'center' });
-              doc.setFontSize(10);
-              if (camp.date) doc.text(`Data: ${camp.date}`, 105, 20, { align: 'center' });
-
-              const columns = [
-                { header: 'Lp.', dataKey: 'lp' },
-                { header: 'Uczestnik', dataKey: 'participant' },
-                { header: 'Camp', dataKey: 'camp' },
-                { header: 'Lekcje', dataKey: 'lessons' },
-                { header: 'Trener', dataKey: 'trainer' },
-                { header: 'Komentarz', dataKey: 'comment' },
-                { header: 'Kwota', dataKey: 'kwota' },
-                { header: 'Status', dataKey: 'status' }
-              ];
-
-              doc.autoTable({
-                startY: 25,
-                columns: columns,
-                body: rows,
-                styles: { fontSize: 9, cellPadding: 2 },
-                headStyles: { fillColor: [230,230,230], textColor: 0, halign: 'center' },
-                didParseCell: function (data) {
-                  if (data.section === 'body' && (data.column.dataKey === 'kwota' || data.column.dataKey === 'status')) {
-                    const rowMeta = rows[data.row.index];
-                    if (rowMeta && rowMeta.kwota) {
-                      data.cell.styles.fillColor = rowMeta._confirmed ? [200,230,201] : [255,205,210];
-                    }
+              // Process each table: remove action buttons, keep comments, remove 'Razem' and 'Uwaga' columns,
+              // convert inputs to spans, color payment cells inline, then split into per-page tables with repeated THEAD
+              printable.querySelectorAll('table').forEach(origTable => {
+                // ensure thead
+                let thead = origTable.querySelector('thead');
+                if (!thead) {
+                  const firstRow = origTable.querySelector('tr');
+                  if (firstRow && firstRow.querySelectorAll('th').length > 0) {
+                    thead = document.createElement('thead');
+                    thead.appendChild(firstRow);
+                    origTable.insertBefore(thead, origTable.firstChild);
                   }
-                },
-                margin: { left: 8, right: 8, top: 8 },
-                pageBreak: 'auto'
+                }
+
+                const headerCells = thead ? Array.from(thead.querySelectorAll('th')) : [];
+                const removeIdxs = [];
+                headerCells.forEach((th, idx) => {
+                  const txt = (th.textContent || '').trim().toLowerCase();
+                  if (txt.includes('razem') || txt === 'uwaga' || txt === 'uwagi') removeIdxs.push(idx);
+                });
+
+                // normalize rows: convert inputs and textareas
+                const rows = origTable.querySelectorAll('tr');
+                rows.forEach(tr => {
+                  tr.querySelectorAll('td').forEach((td, colIdx) => {
+                    // remove buttons
+                    td.querySelectorAll('button, .confirm-payment-btn, .remove-payment-btn').forEach(b => b.remove());
+
+                    const input = td.querySelector('input, textarea');
+                    if (input) {
+                      const isComment = input.classList && input.classList.contains('comment-input');
+                      if (isComment) {
+                        const txt = (input.value || input.getAttribute('value') || '').toString();
+                        td.innerHTML = '';
+                        const span = document.createElement('span');
+                        span.textContent = txt;
+                        td.appendChild(span);
+                        td.style.backgroundColor = 'transparent';
+                        return;
+                      }
+
+                      const participantId = input.getAttribute('data-participant-id') || input.dataset.participantId;
+                      const columnType = input.getAttribute('data-column-type') || input.dataset.columnType;
+                      const trainerIndex = input.getAttribute('data-trainer-index') || input.dataset.trainerIndex;
+                      let payment = { amount: 0, confirmed: false };
+                      try {
+                        if (typeof getCachedPayment === 'function') payment = getCachedPayment(participantId, columnType, trainerIndex !== undefined ? parseInt(trainerIndex, 10) : null) || payment;
+                        if ((!payment || !payment.amount) && typeof getCachedTrainingPayment === 'function') payment = getCachedTrainingPayment(participantId, columnType, trainerIndex !== undefined ? parseInt(trainerIndex, 10) : null) || payment;
+                      } catch (e) {}
+
+                      const display = payment && payment.amount > 0 ? Number(payment.amount).toFixed(2) : '';
+                      td.innerHTML = '';
+                      const span = document.createElement('span');
+                      span.textContent = display;
+                      td.appendChild(span);
+                      if (payment && payment.amount > 0) td.style.backgroundColor = payment.confirmed ? '#c8e6c9' : '#ffcdd2';
+                      return;
+                    }
+                  });
+                });
+
+                // remove columns by index (Razem/Uwaga)
+                if (removeIdxs.length > 0) {
+                  removeIdxs.slice().reverse().forEach(i => {
+                    if (thead) {
+                      const cells = thead.querySelectorAll('th');
+                      if (cells[i]) cells[i].remove();
+                    }
+                    origTable.querySelectorAll('tr').forEach(tr => {
+                      const cells = tr.querySelectorAll('td');
+                      if (cells[i]) cells[i].remove();
+                    });
+                  });
+                }
+
+                // remove 0 values
+                origTable.querySelectorAll('td').forEach(td => {
+                  const txt = (td.textContent || '').trim();
+                  if (txt === '0' || txt === '0.0' || txt === '0.00') td.textContent = '';
+                });
+
+                // split into pages with repeated thead
+                const dataRows = origTable.querySelectorAll('tbody tr');
+                const rowsArray = dataRows.length > 0 ? Array.from(dataRows) : Array.from(origTable.querySelectorAll('tr')).filter(r => !r.closest('thead'));
+                if (rowsArray.length > 0) {
+                  const rowsPerPage = 30;
+                  const pages = [];
+                  for (let i = 0; i < rowsArray.length; i += rowsPerPage) {
+                    const chunk = rowsArray.slice(i, i + rowsPerPage);
+                    const newTable = document.createElement('table');
+                    newTable.style.width = '100%';
+                    if (thead) newTable.appendChild(thead.cloneNode(true));
+                    const newTbody = document.createElement('tbody');
+                    chunk.forEach(r => newTbody.appendChild(r.cloneNode(true)));
+                    newTable.appendChild(newTbody);
+                    pages.push(newTable);
+                  }
+                  const wrapperDiv = document.createElement('div');
+                  pages.forEach(t => {
+                    const pageDiv = document.createElement('div');
+                    pageDiv.style.pageBreakAfter = 'always';
+                    pageDiv.appendChild(t);
+                    wrapperDiv.appendChild(pageDiv);
+                  });
+                  origTable.parentNode.replaceChild(wrapperDiv, origTable);
+                }
               });
 
-              const datePart = (camp.date) ? (camp.date.toString().split('T')[0] || camp.date) : '';
-              const base = ((camp.name || camp.id) || 'camp').replace(/\s+/g, '_');
-              const fname = datePart ? `${base}_${datePart}.pdf` : `${base}.pdf`;
-              doc.save(fname);
+              // Add header info and prepare wrapper
+              const header = document.createElement('div');
+              header.style.textAlign = 'center';
+              header.style.marginBottom = '6px';
+              header.innerHTML = `<h2 style="margin:0; font-size:16px; color:#000">${(window.currentCamp && window.currentCamp.name) || ''}</h2><div style="font-size:11px; color:#000">Data: ${(window.currentCamp && window.currentCamp.date) || ''}</div>`;
 
+              const wrapper = document.createElement('div');
+              wrapper.className = 'pdf-wrapper';
+              wrapper.style.background = '#fff';
+              wrapper.style.color = '#000';
+              wrapper.style.padding = '6px';
+              wrapper.style.fontSize = '11px';
+              wrapper.appendChild(header);
+              wrapper.appendChild(printable);
+
+              // Inject print CSS to force header repetition and black text
+              const styleEl = document.createElement('style');
+              styleEl.innerHTML = `
+                @page { size: A4; margin: 8mm }
+                body, html, .pdf-wrapper { background: #fff !important; }
+                * { color: #000 !important; }
+                table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
+                th, td { border: 1px solid #000 !important; padding: 4px !important; font-size: 11px !important; word-break: break-word; }
+                tr { page-break-inside: avoid; break-inside: avoid; }
+                thead { display: table-header-group; }
+                tfoot { display: table-footer-group; }
+              `;
+              wrapper.insertBefore(styleEl, wrapper.firstChild);
+
+              const datePart = (window.currentCamp && window.currentCamp.date) ? (window.currentCamp.date.toString().split('T')[0] || window.currentCamp.date) : '';
+              const fileBase = ((window.currentCamp && (window.currentCamp.name || window.currentCamp.id)) || 'camp').replace(/\s+/g, '_');
+              const filename = datePart ? `${fileBase}_${datePart}.pdf` : `${fileBase}.pdf`;
+
+              const opt = {
+                margin:       [6,6,6,6],
+                filename:     filename,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+              };
+
+              await html2pdf().set(opt).from(wrapper).save();
             } catch (err) {
-              console.error('Błąd generowania PDF (autotable):', err);
+              console.error('Błąd generowania PDF (client):', err);
               alert('Błąd generowania PDF');
             }
           };
