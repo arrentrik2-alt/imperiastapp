@@ -3989,19 +3989,32 @@
               printable.querySelectorAll('button, .confirm-payment-btn, .remove-payment-btn').forEach(b => b.remove());
 
               printable.querySelectorAll('table').forEach(table => {
-                // find header indexes containing 'Razem' and remove them
-                const ths = Array.from(table.querySelectorAll('th'));
+                // Ensure header row is wrapped in <thead> so it repeats on each PDF page
+                if (!table.querySelector('thead')) {
+                  const firstRow = table.querySelector('tr');
+                  if (firstRow && firstRow.querySelectorAll('th').length > 0) {
+                    const thead = document.createElement('thead');
+                    thead.appendChild(firstRow);
+                    table.insertBefore(thead, table.firstChild);
+                  }
+                }
+
+                // identify header indices to remove (Razem, Uwaga) but keep 'Komentarz'
+                const headerCells = table.querySelectorAll('thead th');
                 const removeIdxs = [];
-                ths.forEach((th, idx) => {
-                  if ((th.textContent || '').trim().toLowerCase().includes('razem')) removeIdxs.push(idx);
+                headerCells.forEach((th, idx) => {
+                  const txt = (th.textContent || '').trim().toLowerCase();
+                  if (txt.includes('razem') || txt === 'uwaga' || txt === 'uwagi') removeIdxs.push(idx);
                 });
                 if (removeIdxs.length > 0) {
                   removeIdxs.slice().reverse().forEach(i => {
+                    // remove header cell
                     const headerRow = table.querySelector('thead');
                     if (headerRow) {
                       const cells = headerRow.querySelectorAll('th');
                       if (cells[i]) cells[i].remove();
                     }
+                    // remove corresponding cells in all rows
                     table.querySelectorAll('tr').forEach(tr => {
                       const cells = tr.querySelectorAll('td');
                       if (cells[i]) cells[i].remove();
@@ -4009,44 +4022,57 @@
                   });
                 }
 
-                // Convert inputs to spans and color cells based on payment cache
-                table.querySelectorAll('input').forEach(input => {
-                  const participantId = input.getAttribute('data-participant-id') || input.dataset.participantId;
-                  const columnType = input.getAttribute('data-column-type') || input.dataset.columnType;
-                  const trainerIndex = input.getAttribute('data-trainer-index') || input.dataset.trainerIndex;
+                // Process each td: convert inputs/textarea to text, color payment cells, keep comments visible
+                table.querySelectorAll('tr').forEach((tr, rowIdx) => {
+                  tr.querySelectorAll('td').forEach((td, colIdx) => {
+                    // Remove action buttons inside td
+                    td.querySelectorAll('button, .confirm-payment-btn, .remove-payment-btn').forEach(b => b.remove());
 
-                  let payment = { amount: 0, confirmed: false };
-                  try {
-                    if (typeof getCachedPayment === 'function') {
-                      payment = getCachedPayment(participantId, columnType, trainerIndex !== undefined ? parseInt(trainerIndex, 10) : null) || payment;
+                    // If cell contains an input or textarea
+                    const input = td.querySelector('input, textarea');
+                    if (input) {
+                      const isComment = input.classList && input.classList.contains('comment-input');
+                      const participantId = input.getAttribute('data-participant-id') || input.dataset.participantId;
+                      const columnType = input.getAttribute('data-column-type') || input.dataset.columnType;
+                      const trainerIndex = input.getAttribute('data-trainer-index') || input.dataset.trainerIndex;
+
+                      if (isComment) {
+                        const commentText = (input.value || input.getAttribute('value') || '').toString();
+                        const span = document.createElement('span');
+                        span.textContent = commentText;
+                        td.innerHTML = '';
+                        td.appendChild(span);
+                        td.style.backgroundColor = 'transparent';
+                        return;
+                      }
+
+                      // For payment inputs - determine payment from cache
+                      let payment = { amount: 0, confirmed: false };
+                      try {
+                        if (typeof getCachedPayment === 'function') {
+                          payment = getCachedPayment(participantId, columnType, trainerIndex !== undefined ? parseInt(trainerIndex, 10) : null) || payment;
+                        }
+                        if ((!payment || !payment.amount) && typeof getCachedTrainingPayment === 'function') {
+                          payment = getCachedTrainingPayment(participantId, columnType, trainerIndex !== undefined ? parseInt(trainerIndex, 10) : null) || payment;
+                        }
+                      } catch (e) {}
+
+                      const display = payment && payment.amount > 0 ? Number(payment.amount).toFixed(2) : '';
+                      td.innerHTML = '';
+                      const span = document.createElement('span');
+                      span.textContent = display;
+                      td.appendChild(span);
+                      if (payment && payment.amount > 0) {
+                        td.classList.add('payment-td');
+                        td.classList.add(payment.confirmed ? 'confirmed' : 'unconfirmed');
+                      }
+                      return;
                     }
-                    if ((!payment || !payment.amount) && typeof getCachedTrainingPayment === 'function') {
-                      payment = getCachedTrainingPayment(participantId, columnType, trainerIndex !== undefined ? parseInt(trainerIndex, 10) : null) || payment;
-                    }
-                  } catch (e) {
-                    // ignore
-                  }
 
-                  const display = payment && payment.amount > 0 ? Number(payment.amount).toFixed(2) : '';
-                  const span = document.createElement('span');
-                  span.textContent = display;
-
-                  const td = input.closest('td');
-                  if (td) {
-                    if (payment && payment.amount > 0) {
-                      td.style.backgroundColor = payment.confirmed ? '#c8e6c9' : '#ffcdd2';
-                    } else {
-                      td.style.backgroundColor = 'transparent';
-                    }
-                  }
-
-                  input.parentNode.replaceChild(span, input);
-                });
-
-                // Remove any leftover 0 or 0.00 text
-                table.querySelectorAll('td').forEach(td => {
-                  const txt = (td.textContent || '').trim();
-                  if (txt === '0' || txt === '0.0' || txt === '0.00') td.textContent = '';
+                    // If cell contains text like 'Zapłacili' marker, color based on dataset if present
+                    const txt = (td.textContent || '').trim();
+                    // leave text cells as-is
+                  });
                 });
               });
 
@@ -4068,12 +4094,15 @@
               const styleEl = document.createElement('style');
               styleEl.innerHTML = `
                 @page { size: A4; margin: 10mm }
-                * { color: #000 !important; background: transparent !important; }
+                body, html, .pdf-wrapper { background: #fff !important; }
+                * { color: #000 !important; }
                 table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
                 th, td { border: 1px solid #000 !important; padding: 4px !important; font-size: 11px !important; word-break: break-word; }
                 tr { page-break-inside: avoid; break-inside: avoid; }
                 thead { display: table-header-group; }
                 tfoot { display: table-footer-group; }
+                .payment-td.confirmed { background-color: #c8e6c9 !important; }
+                .payment-td.unconfirmed { background-color: #ffcdd2 !important; }
               `;
               wrapper.insertBefore(styleEl, wrapper.firstChild);
 
