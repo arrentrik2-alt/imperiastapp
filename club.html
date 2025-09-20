@@ -3982,8 +3982,13 @@
               const contentEl = document.getElementById('camp-details-content');
               if (!contentEl) { alert('Brak zawartości do wydruku'); return; }
 
+              // Ask user for orientation
+              const choice = (prompt('Wybierz orientację PDF: wpisz P dla pion (portrait) lub L dla poziom (landscape)', 'P') || 'P').toString().trim().toLowerCase();
+              const userPrefLandscape = choice.startsWith('l');
+
               // Clone content to avoid modifying live DOM
               const printable = contentEl.cloneNode(true);
+              printable.dataset.pdfOrientation = userPrefLandscape ? 'landscape' : 'portrait';
 
               // Process each table: remove action buttons, keep comments, remove 'Razem' and 'Uwaga' columns,
               // convert inputs to spans, color payment cells inline, then split into per-page tables with repeated THEAD
@@ -4160,7 +4165,8 @@
                   });
                   origTable.parentNode.replaceChild(wrapperDiv, origTable);
 
-                  // If we prefer landscape, set a flag on printable to adjust CSS later
+                  // If user chose orientation, respect it; otherwise keep auto-detection
+                  if (typeof userPrefLandscape !== 'undefined') preferLandscape = userPrefLandscape || preferLandscape;
                   if (preferLandscape) printable.dataset.pdfOrientation = 'landscape';
                 }
               });
@@ -4206,29 +4212,13 @@
               const fileBase = ((window.currentCamp && (window.currentCamp.name || window.currentCamp.id)) || 'camp').replace(/\s+/g, '_');
               const filename = datePart ? `${fileBase}_${datePart}.pdf` : `${fileBase}.pdf`;
 
-              // Ask user for orientation before generating PDF
-              const useLandscape = window.confirm('Czy chcesz pobrać PDF w orientacji poziomej? (OK = poziomo, Anuluj = pionowo)');
-              const orientation = useLandscape ? 'landscape' : 'portrait';
-
-              // Apply orientation marker to wrapper for CSS adjustments
-              wrapper.dataset.orientation = orientation;
-
-              // Force wrapper to fill the printable A4 area (subtract margins)
-              const pageHeights = { portrait: { mm: 297, marginMm: 16 }, landscape: { mm: 210, marginMm: 16 } };
-              const chosen = pageHeights[orientation];
-              // Set minHeight in mm so html2pdf will render full page height
-              wrapper.style.minHeight = `calc(${chosen.mm}mm - ${chosen.marginMm}mm)`;
-
               const opt = {
                 margin:       [6,6,6,6],
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: orientation }
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: (printable.dataset.pdfOrientation === 'landscape') ? 'landscape' : 'portrait' }
               };
-
-              // If landscape, slightly reduce canvas scale to avoid clipping on some browsers
-              if (orientation === 'landscape') opt.html2canvas.scale = 1.8;
 
               await html2pdf().set(opt).from(wrapper).save();
             } catch (err) {
