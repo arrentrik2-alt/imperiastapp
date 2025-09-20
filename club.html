@@ -4122,30 +4122,48 @@
                     currentPageRows = [];
                   }
 
-                  // Iterate rows and measure cumulative height
+                  // Measure header height once
+                  let headerHeight = 0;
+                  if (thead) {
+                    const headerTable = document.createElement('table');
+                    headerTable.style.width = '100%';
+                    headerTable.appendChild(thead.cloneNode(true));
+                    measurementContainer.appendChild(headerTable);
+                    headerHeight = headerTable.offsetHeight;
+                    measurementContainer.removeChild(headerTable);
+                  }
+
+                  // Iterate rows and measure each row height individually to avoid cumulative reflow issues
+                  let currentHeight = headerHeight;
                   for (let i = 0; i < rowsArray.length; i++) {
-                    currentPageRows.push(rowsArray[i]);
-                    // Build a measuring table
-                    const measureTable = document.createElement('div');
-                    measureTable.className = 'pdf-measure';
+                    const row = rowsArray[i];
+
+                    // measure single row in context of a table with header for accurate height
                     const tmpTable = document.createElement('table');
                     tmpTable.style.width = '100%';
                     if (thead) tmpTable.appendChild(thead.cloneNode(true));
                     const tmpTbody = document.createElement('tbody');
-                    currentPageRows.forEach(r => tmpTbody.appendChild(r.cloneNode(true)));
+                    tmpTbody.appendChild(row.cloneNode(true));
                     tmpTable.appendChild(tmpTbody);
-                    measureTable.appendChild(tmpTable);
-                    measurementContainer.appendChild(measureTable);
+                    measurementContainer.appendChild(tmpTable);
+                    const rowHeight = tmpTable.offsetHeight - headerHeight;
+                    measurementContainer.removeChild(tmpTable);
 
-                    const h = measureTable.offsetHeight;
-                    measurementContainer.removeChild(measureTable);
+                    // If empty current page, start with header height
+                    if (currentPageRows.length === 0) {
+                      currentHeight = headerHeight + rowHeight;
+                      currentPageRows.push(row);
+                      continue;
+                    }
 
-                    if (h > usableHeightPx) {
-                      // current addition overflowed - remove last row and flush
-                      currentPageRows.pop();
+                    if (currentHeight + rowHeight <= usableHeightPx) {
+                      currentPageRows.push(row);
+                      currentHeight += rowHeight;
+                    } else {
+                      // flush page and start new one
                       flushPage();
-                      // start new page with this row
-                      currentPageRows.push(rowsArray[i]);
+                      currentPageRows.push(row);
+                      currentHeight = headerHeight + rowHeight;
                     }
                   }
 
