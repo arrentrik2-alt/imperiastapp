@@ -4180,10 +4180,16 @@
               wrapper.appendChild(header);
               wrapper.appendChild(printable);
 
+              // Apply orientation if set
+              if (printable.dataset.pdfOrientation === 'landscape') {
+                wrapper.dataset.orientation = 'landscape';
+              }
+
               // Inject print CSS to force header repetition and black text
               const styleEl = document.createElement('style');
+              const finalOrientation = wrapper.dataset.orientation === 'landscape' ? 'landscape' : 'portrait';
               styleEl.innerHTML = `
-                @page { size: A4; margin: 8mm }
+                @page { size: A4 ${finalOrientation}; margin: 8mm }
                 body, html, .pdf-wrapper { background: #fff !important; }
                 * { color: #000 !important; }
                 table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
@@ -4197,24 +4203,50 @@
               `;
               wrapper.insertBefore(styleEl, wrapper.firstChild);
 
-              // Apply orientation if set
-              if (printable.dataset.pdfOrientation === 'landscape') {
-                wrapper.dataset.orientation = 'landscape';
-              }
-
               const datePart = (window.currentCamp && window.currentCamp.date) ? (window.currentCamp.date.toString().split('T')[0] || window.currentCamp.date) : '';
               const fileBase = ((window.currentCamp && (window.currentCamp.name || window.currentCamp.id)) || 'camp').replace(/\s+/g, '_');
               const filename = datePart ? `${fileBase}_${datePart}.pdf` : `${fileBase}.pdf`;
 
+              // Decide orientation explicitly based on number of trainer columns to avoid mis-detection
+              const trainerCount = (window.currentCamp && Array.isArray(window.currentCamp.trainers)) ? window.currentCamp.trainers.filter(Boolean).length : 0;
+              const forceLandscape = trainerCount > 2;
+              if (forceLandscape) {
+                wrapper.dataset.orientation = 'landscape';
+                wrapper.style.width = '297mm';
+              } else {
+                wrapper.dataset.orientation = 'portrait';
+                wrapper.style.width = '210mm';
+              }
+
+              // Compact further when landscape to fill page
+              if (wrapper.dataset.orientation === 'landscape') {
+                wrapper.style.fontSize = '10px';
+                wrapper.style.padding = '4px';
+              } else {
+                wrapper.style.fontSize = '11px';
+                wrapper.style.padding = '6px';
+              }
+
+              // Ensure wrapper is attached to DOM with explicit positioning so html2canvas measures correctly
+              wrapper.style.position = 'absolute';
+              wrapper.style.left = '-9999px';
+              wrapper.style.top = '0';
+              document.body.appendChild(wrapper);
+
+              // Configure html2pdf options, respect forced orientation and use tighter margins to fill page
               const opt = {
-                margin:       [6,6,6,6],
+                margin:       forceLandscape ? [4,4,4,4] : [6,6,6,6],
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: (wrapper.dataset.orientation === 'landscape' ? 'landscape' : 'portrait') }
               };
 
-              await html2pdf().set(opt).from(wrapper).save();
+              try {
+                await html2pdf().set(opt).from(wrapper).save();
+              } finally {
+                if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+              }
             } catch (err) {
               console.error('Błąd generowania PDF (client):', err);
               alert('Błąd generowania PDF');
