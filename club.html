@@ -4066,30 +4066,102 @@
                   if (txt === '0' || txt === '0.0' || txt === '0.00') td.textContent = '';
                 });
 
-                // split into pages with repeated thead
+                // split into pages with repeated thead - dynamic pagination to avoid clipping on many columns
                 const dataRows = origTable.querySelectorAll('tbody tr');
                 const rowsArray = dataRows.length > 0 ? Array.from(dataRows) : Array.from(origTable.querySelectorAll('tr')).filter(r => !r.closest('thead'));
                 if (rowsArray.length > 0) {
-                  const rowsPerPage = 30;
+                  // Detect trainer columns to decide orientation and compactness
+                  const trainerCols = headerCells.filter(h => /lekcje|lekcje/i.test((h.textContent||'').toLowerCase()));
+                  const trainerCount = trainerCols.length;
+
+                  // If many trainer columns, switch to landscape and compact styling
+                  let preferLandscape = trainerCount > 2;
+
+                  // Estimate printable page height in px (A4 portrait = 297mm, landscape = 210mm)
+                  const mmToPx = (mm) => mm * (96/25.4);
+                  const pageHeightMm = preferLandscape ? 210 : 297;
+                  const pageMarginMm = 16; // top+bottom as in CSS (~8mm each)
+                  const usableHeightPx = mmToPx(pageHeightMm - pageMarginMm);
+
+                  // Create a temporary container to measure heights
+                  const measurementContainer = document.createElement('div');
+                  measurementContainer.style.position = 'absolute';
+                  measurementContainer.style.left = '-9999px';
+                  measurementContainer.style.top = '0';
+                  measurementContainer.style.width = '210mm';
+                  if (preferLandscape) measurementContainer.style.width = '297mm';
+                  document.body.appendChild(measurementContainer);
+
+                  // Compact styles when landscape/ many columns
+                  const compactStyle = document.createElement('style');
+                  compactStyle.innerHTML = `
+                    .pdf-measure table { width:100%; border-collapse:collapse; table-layout:fixed }
+                    .pdf-measure th, .pdf-measure td { padding:3px; font-size:10px; }
+                  `;
+                  measurementContainer.appendChild(compactStyle);
+
                   const pages = [];
-                  for (let i = 0; i < rowsArray.length; i += rowsPerPage) {
-                    const chunk = rowsArray.slice(i, i + rowsPerPage);
+                  let currentPageRows = [];
+
+                  // helper to flush currentPageRows into a table and push to pages
+                  function flushPage() {
+                    if (currentPageRows.length === 0) return;
                     const newTable = document.createElement('table');
+                    newTable.className = 'pdf-measure';
                     newTable.style.width = '100%';
                     if (thead) newTable.appendChild(thead.cloneNode(true));
                     const newTbody = document.createElement('tbody');
-                    chunk.forEach(r => newTbody.appendChild(r.cloneNode(true)));
+                    currentPageRows.forEach(r => newTbody.appendChild(r.cloneNode(true)));
                     newTable.appendChild(newTbody);
                     pages.push(newTable);
+                    currentPageRows = [];
                   }
+
+                  // Iterate rows and measure cumulative height
+                  for (let i = 0; i < rowsArray.length; i++) {
+                    currentPageRows.push(rowsArray[i]);
+                    // Build a measuring table
+                    const measureTable = document.createElement('div');
+                    measureTable.className = 'pdf-measure';
+                    const tmpTable = document.createElement('table');
+                    tmpTable.style.width = '100%';
+                    if (thead) tmpTable.appendChild(thead.cloneNode(true));
+                    const tmpTbody = document.createElement('tbody');
+                    currentPageRows.forEach(r => tmpTbody.appendChild(r.cloneNode(true)));
+                    tmpTable.appendChild(tmpTbody);
+                    measureTable.appendChild(tmpTable);
+                    measurementContainer.appendChild(measureTable);
+
+                    const h = measureTable.offsetHeight;
+                    measurementContainer.removeChild(measureTable);
+
+                    if (h > usableHeightPx) {
+                      // current addition overflowed - remove last row and flush
+                      currentPageRows.pop();
+                      flushPage();
+                      // start new page with this row
+                      currentPageRows.push(rowsArray[i]);
+                    }
+                  }
+
+                  // flush remaining
+                  flushPage();
+
+                  // remove measurement container
+                  document.body.removeChild(measurementContainer);
+
+                  // Replace original table with wrapped pages
                   const wrapperDiv = document.createElement('div');
-                  pages.forEach(t => {
+                  pages.forEach((t, idx) => {
                     const pageDiv = document.createElement('div');
-                    pageDiv.style.pageBreakAfter = 'always';
+                    pageDiv.style.pageBreakAfter = (idx === pages.length - 1) ? 'auto' : 'always';
                     pageDiv.appendChild(t);
                     wrapperDiv.appendChild(pageDiv);
                   });
                   origTable.parentNode.replaceChild(wrapperDiv, origTable);
+
+                  // If we prefer landscape, set a flag on printable to adjust CSS later
+                  if (preferLandscape) printable.dataset.pdfOrientation = 'landscape';
                 }
               });
 
@@ -4119,8 +4191,16 @@
                 tr { page-break-inside: avoid; break-inside: avoid; }
                 thead { display: table-header-group; }
                 tfoot { display: table-footer-group; }
+                /* Landscape adjustment when many columns */
+                .pdf-wrapper[data-orientation="landscape"] table { width: 100%; }
+                .pdf-wrapper[data-orientation="landscape"] th, .pdf-wrapper[data-orientation="landscape"] td { font-size: 10px !important; padding: 3px !important; }
               `;
               wrapper.insertBefore(styleEl, wrapper.firstChild);
+
+              // Apply orientation if set
+              if (printable.dataset.pdfOrientation === 'landscape') {
+                wrapper.dataset.orientation = 'landscape';
+              }
 
               const datePart = (window.currentCamp && window.currentCamp.date) ? (window.currentCamp.date.toString().split('T')[0] || window.currentCamp.date) : '';
               const fileBase = ((window.currentCamp && (window.currentCamp.name || window.currentCamp.id)) || 'camp').replace(/\s+/g, '_');
