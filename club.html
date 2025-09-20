@@ -4133,42 +4133,40 @@
                     measurementContainer.removeChild(headerTable);
                   }
 
-                  // Iterate rows and measure each row height individually to avoid cumulative reflow issues
-                  let currentHeight = headerHeight;
-                  for (let i = 0; i < rowsArray.length; i++) {
-                    const row = rowsArray[i];
-
-                    // measure single row in context of a table with header for accurate height
+                  // Determine a stable rows-per-page using sampled row height(s)
+                  let sampleRowHeight = 0;
+                  const sampleCount = Math.min(5, rowsArray.length);
+                  for (let s = 0; s < sampleCount; s++) {
                     const tmpTable = document.createElement('table');
                     tmpTable.style.width = '100%';
                     if (thead) tmpTable.appendChild(thead.cloneNode(true));
                     const tmpTbody = document.createElement('tbody');
-                    tmpTbody.appendChild(row.cloneNode(true));
+                    tmpTbody.appendChild(rowsArray[s].cloneNode(true));
                     tmpTable.appendChild(tmpTbody);
                     measurementContainer.appendChild(tmpTable);
-                    const rowHeight = tmpTable.offsetHeight - headerHeight;
+                    const sampledHeight = tmpTable.offsetHeight - headerHeight;
                     measurementContainer.removeChild(tmpTable);
-
-                    // If empty current page, start with header height
-                    if (currentPageRows.length === 0) {
-                      currentHeight = headerHeight + rowHeight;
-                      currentPageRows.push(row);
-                      continue;
-                    }
-
-                    if (currentHeight + rowHeight <= usableHeightPx) {
-                      currentPageRows.push(row);
-                      currentHeight += rowHeight;
-                    } else {
-                      // flush page and start new one
-                      flushPage();
-                      currentPageRows.push(row);
-                      currentHeight = headerHeight + rowHeight;
-                    }
+                    if (sampledHeight > sampleRowHeight) sampleRowHeight = sampledHeight;
                   }
 
-                  // flush remaining
-                  flushPage();
+                  // Fallback when no rows measured
+                  if (sampleRowHeight <= 0) sampleRowHeight = mmToPx(8); // ~8mm default
+
+                  // Calculate rows per page deterministically
+                  const rowsPerPage = Math.max(1, Math.floor((usableHeightPx - headerHeight) / sampleRowHeight));
+
+                  // Build pages by slicing rowsArray into chunks of rowsPerPage
+                  for (let i = 0; i < rowsArray.length; i += rowsPerPage) {
+                    const chunk = rowsArray.slice(i, i + rowsPerPage);
+                    const newTable = document.createElement('table');
+                    newTable.className = 'pdf-measure';
+                    newTable.style.width = '100%';
+                    if (thead) newTable.appendChild(thead.cloneNode(true));
+                    const newTbody = document.createElement('tbody');
+                    chunk.forEach(r => newTbody.appendChild(r.cloneNode(true)));
+                    newTable.appendChild(newTbody);
+                    pages.push(newTable);
+                  }
 
                   // remove measurement container
                   document.body.removeChild(measurementContainer);
