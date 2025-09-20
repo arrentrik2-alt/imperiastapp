@@ -4152,7 +4152,11 @@
                   let avgRowHeight = totalSample > 0 ? (totalSample / sampleCount) : mmToPx(7);
                   if (!isFinite(avgRowHeight) || avgRowHeight <= 0) avgRowHeight = mmToPx(7);
 
-                  const rowsPerPage = Math.max(1, Math.floor((usableHeightPx - headerHeight) / avgRowHeight));
+                  // Respect fixed rows per page based on orientation: landscape=25, portrait=40
+                  const orientation = (printable && printable.dataset && printable.dataset.pdfOrientation) ? printable.dataset.pdfOrientation : (preferLandscape ? 'landscape' : 'portrait');
+                  let rowsPerPage = orientation === 'landscape' ? 25 : 40;
+                  // Safety: ensure at least 1 and not more than available rows
+                  rowsPerPage = Math.max(1, Math.min(rowsPerPage, rowsArray.length));
 
                   // Build pages by slicing rowsArray into equal chunks of rowsPerPage
                   for (let i = 0; i < rowsArray.length; i += rowsPerPage) {
