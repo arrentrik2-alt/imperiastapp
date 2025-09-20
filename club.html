@@ -4153,9 +4153,8 @@
                   if (!isFinite(avgRowHeight) || avgRowHeight <= 0) avgRowHeight = mmToPx(7);
 
                   // Respect fixed rows per page based on orientation: landscape=25, portrait=40
-                  const orientationRaw = (printable && printable.dataset && printable.dataset.pdfOrientation) ? printable.dataset.pdfOrientation.toString().toLowerCase() : null;
-                  const orientation = orientationRaw || (typeof userPrefLandscape !== 'undefined' ? (userPrefLandscape ? 'landscape' : 'portrait') : (preferLandscape ? 'landscape' : 'portrait'));
-                  let rowsPerPage = orientation && orientation.startsWith('l') ? 25 : 40;
+                  const orientation = (printable && printable.dataset && printable.dataset.pdfOrientation) ? printable.dataset.pdfOrientation : (preferLandscape ? 'landscape' : 'portrait');
+                  let rowsPerPage = orientation === 'landscape' ? 25 : 40;
                   // Safety: ensure at least 1 and not more than available rows
                   rowsPerPage = Math.max(1, Math.min(rowsPerPage, rowsArray.length));
 
@@ -4175,8 +4174,13 @@
                   // remove measurement container
                   document.body.removeChild(measurementContainer);
 
-                  // Ensure every page keeps the header (thead) so header appears on each page
-                  // (we already cloned the thead into each newTable above)
+                  // Remove THEAD from all pages except the first (keep only first header)
+                  pages.forEach((tbl, idx) => {
+                    if (idx > 0) {
+                      const th = tbl.querySelector('thead');
+                      if (th) th.remove();
+                    }
+                  });
 
                   // Replace original table with wrapped pages
                   const wrapperDiv = document.createElement('div');
