@@ -4133,37 +4133,69 @@
                     measurementContainer.removeChild(headerTable);
                   }
 
-                  // Determine a stable rows-per-page using sampled row height(s)
-                  let sampleRowHeight = 0;
-                  const sampleCount = Math.min(5, rowsArray.length);
-                  for (let s = 0; s < sampleCount; s++) {
-                    const tmpTable = document.createElement('table');
-                    tmpTable.style.width = '100%';
-                    if (thead) tmpTable.appendChild(thead.cloneNode(true));
-                    const tmpTbody = document.createElement('tbody');
-                    tmpTbody.appendChild(rowsArray[s].cloneNode(true));
-                    tmpTable.appendChild(tmpTbody);
-                    measurementContainer.appendChild(tmpTable);
-                    const sampledHeight = tmpTable.offsetHeight - headerHeight;
-                    measurementContainer.removeChild(tmpTable);
-                    if (sampledHeight > sampleRowHeight) sampleRowHeight = sampledHeight;
+                  // Build pages by appending rows into a single measurement table until it overflows
+                  const tmpTable = document.createElement('table');
+                  tmpTable.style.width = '100%';
+                  if (thead) tmpTable.appendChild(thead.cloneNode(true));
+                  let tmpTbody = document.createElement('tbody');
+                  tmpTable.appendChild(tmpTbody);
+                  measurementContainer.appendChild(tmpTable);
+
+                  let currentChunk = [];
+                  for (let i = 0; i < rowsArray.length; i++) {
+                    const rowClone = rowsArray[i].cloneNode(true);
+                    tmpTbody.appendChild(rowClone);
+
+                    const h = tmpTable.offsetHeight;
+                    // If it fits, continue
+                    if (h <= usableHeightPx) {
+                      currentChunk.push(rowsArray[i]);
+                      continue;
+                    }
+
+                    // overflowed: remove last appended clone
+                    tmpTbody.removeChild(tmpTbody.lastChild);
+
+                    // flush currentChunk into a new page table
+                    if (currentChunk.length > 0) {
+                      const newTable = document.createElement('table');
+                      newTable.className = 'pdf-measure';
+                      newTable.style.width = '100%';
+                      if (thead) newTable.appendChild(thead.cloneNode(true));
+                      const newTbody = document.createElement('tbody');
+                      currentChunk.forEach(r => newTbody.appendChild(r.cloneNode(true)));
+                      newTable.appendChild(newTbody);
+                      pages.push(newTable);
+                    }
+
+                    // reset tmpTbody and start new page with current row
+                    tmpTbody.innerHTML = '';
+                    tmpTbody.appendChild(rowClone.cloneNode(true));
+                    currentChunk = [rowsArray[i]];
+
+                    // If single row itself is larger than page, still include it (prevents infinite loop)
+                    if (tmpTable.offsetHeight > usableHeightPx && currentChunk.length === 1) {
+                      const newTable = document.createElement('table');
+                      newTable.className = 'pdf-measure';
+                      newTable.style.width = '100%';
+                      if (thead) newTable.appendChild(thead.cloneNode(true));
+                      const newTbody = document.createElement('tbody');
+                      newTbody.appendChild(rowClone.cloneNode(true));
+                      newTable.appendChild(newTbody);
+                      pages.push(newTable);
+                      tmpTbody.innerHTML = '';
+                      currentChunk = [];
+                    }
                   }
 
-                  // Fallback when no rows measured
-                  if (sampleRowHeight <= 0) sampleRowHeight = mmToPx(8); // ~8mm default
-
-                  // Calculate rows per page deterministically
-                  const rowsPerPage = Math.max(1, Math.floor((usableHeightPx - headerHeight) / sampleRowHeight));
-
-                  // Build pages by slicing rowsArray into chunks of rowsPerPage
-                  for (let i = 0; i < rowsArray.length; i += rowsPerPage) {
-                    const chunk = rowsArray.slice(i, i + rowsPerPage);
+                  // flush remaining
+                  if (currentChunk.length > 0) {
                     const newTable = document.createElement('table');
                     newTable.className = 'pdf-measure';
                     newTable.style.width = '100%';
                     if (thead) newTable.appendChild(thead.cloneNode(true));
                     const newTbody = document.createElement('tbody');
-                    chunk.forEach(r => newTbody.appendChild(r.cloneNode(true)));
+                    currentChunk.forEach(r => newTbody.appendChild(r.cloneNode(true)));
                     newTable.appendChild(newTbody);
                     pages.push(newTable);
                   }
