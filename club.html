@@ -4203,6 +4203,14 @@
                   // remove measurement container
                   document.body.removeChild(measurementContainer);
 
+                  // Remove THEAD from all pages except the first (keep only first header)
+                  pages.forEach((tbl, idx) => {
+                    if (idx > 0) {
+                      const th = tbl.querySelector('thead');
+                      if (th) th.remove();
+                    }
+                  });
+
                   // Replace original table with wrapped pages
                   const wrapperDiv = document.createElement('div');
                   pages.forEach((t, idx) => {
