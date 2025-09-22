@@ -1415,6 +1415,12 @@
           <span class="link-text">Campy</span>
         </a>
       </li>
+      <li>
+        <a href="#" id="nav-club-home">
+          <i class="fas fa-wallet"></i>
+          <span class="link-text">Kasa</span>
+        </a>
+      </li>
       
       <li>
         <a href="#" id="nav-schedule">
@@ -2242,6 +2248,7 @@
       const campDetailsSection = document.getElementById('camp-details-section');
       const trainingsSection = document.getElementById('trainings-section');
       const trainingDetailsSection = document.getElementById('training-details-section');
+      const clubHomeSection = document.getElementById('club-home-page');
 
       if (membersSection) membersSection.style.display = 'none';
       if (campsSection) campsSection.style.display = 'none';
@@ -2257,6 +2264,11 @@
         if (membersSection) membersSection.style.display = 'block';
         const navMembersEl = document.getElementById('nav-members');
         if (navMembersEl) navMembersEl.classList.add('active');
+      } else if (section === 'club-home') {
+        if (clubHomeSection) clubHomeSection.style.display = 'block';
+        const navEl = document.getElementById('nav-club-home');
+        if (navEl) navEl.classList.add('active');
+        if (typeof loadClubHomeSummary === 'function') loadClubHomeSummary();
       } else if (section === 'camps' || section === 'trainings') {
         // We merged trainings into the camps view; toggle currentType accordingly
         currentType = (section === 'trainings') ? 'training' : 'camp';
@@ -5082,6 +5094,14 @@
       navTrainingsEl.addEventListener('click', (e) => {
         e.preventDefault();
         setActiveNav('trainings');
+      });
+    }
+
+    const navClubHomeEl = document.getElementById('nav-club-home');
+    if (navClubHomeEl) {
+      navClubHomeEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveNav('club-home');
       });
     }
 
