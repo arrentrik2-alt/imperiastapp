@@ -7518,5 +7518,278 @@
     }
   </script>
 </body>
+  <!-- Club home financial summary page -->
+  <div id="club-home-page" class="content-box" style="display:none; max-width:900px; margin:16px auto;">
+    <div style="display:flex;gap:16px;align-items:center;">
+      <canvas id="club-home-donut" width="140" height="140" style="flex:0 0 140px"></canvas>
+      <div style="flex:1; display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:700">Kasa (suma wpłat ze wszystkich ST)</div>
+          <div id="club-kasa-pln" style="font-weight:700">0.00 zł</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:700">Zysk</div>
+          <div id="club-profit-pln" style="font-weight:700">0.00 zł</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:700">Wydatki</div>
+          <div id="club-expenses-total-pln" style="font-weight:700">0.00 zł</div>
+        </div>
+      </div>
+    </div>
+
+    <hr style="margin:12px 0">
+
+    <!-- Expenses input (independent) -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:260px;border:1px solid var(--muted);padding:12px;border-radius:6px;background:var(--primary-bg);">
+        <div style="font-weight:700;margin-bottom:8px">Dodaj wydatek (PLN)</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="club-expense-name-pln" type="text" placeholder="Nazwa wydatku" style="flex:1;padding:6px;border-radius:4px;border:1px solid #ccc">
+          <input id="club-expense-amount-pln" type="number" step="0.01" placeholder="0.00" style="width:110px;padding:6px;border-radius:4px;border:1px solid #ccc">
+          <button id="club-add-expense-pln" class="btn btn-sm btn-primary">Dodaj</button>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:260px;border:1px solid var(--muted);padding:12px;border-radius:6px;background:var(--primary-bg);">
+        <div style="font-weight:700;margin-bottom:8px">Dodaj wydatek (EUR)</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="club-expense-name-eur" type="text" placeholder="Nazwa wydatku" style="flex:1;padding:6px;border-radius:4px;border:1px solid #ccc">
+          <input id="club-expense-amount-eur" type="number" step="0.01" placeholder="0.00" style="width:110px;padding:6px;border-radius:4px;border:1px solid #ccc">
+          <button id="club-add-expense-eur" class="btn btn-sm btn-primary">Dodaj</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:16px;">
+      <div style="flex:1">
+        <div style="font-weight:700;margin-bottom:8px">Lista wydatków (PLN)</div>
+        <div id="club-expenses-list-PLN" class="expenses-list"></div>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700;margin-bottom:8px">Lista wydatków (EUR)</div>
+        <div id="club-expenses-list-EUR" class="expenses-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Helper: draw donut (copied from admin.html)
+    function drawDonut(canvasId, paid, unpaid, colorPaid, colorUnpaid) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w/2; const cy = h/2; const r = Math.min(w,h)/2 - 6;
+      const total = (parseFloat(paid)||0) + (parseFloat(unpaid)||0);
+      ctx.clearRect(0,0,w,h);
+
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,0,Math.PI*2);
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.stroke();
+
+      if (total <= 0) {
+        ctx.beginPath();
+        ctx.arc(cx,cy,r-16,0,Math.PI*2);
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-bg') || '#1e1e1e';
+        ctx.fill();
+        ctx.fillStyle = 'var(--text-gray)';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Brak danych', cx, cy);
+        return;
+      }
+
+      const start = -Math.PI/2;
+      const paidAngle = (paid/total) * Math.PI * 2;
+
+      if (paid > 0) {
+        ctx.beginPath();
+        ctx.arc(cx,cy,r,start,start + paidAngle, false);
+        ctx.strokeStyle = colorPaid;
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'butt';
+        ctx.stroke();
+      }
+
+      if (unpaid > 0) {
+        ctx.beginPath();
+        ctx.arc(cx,cy,r,start + paidAngle, start + 2*Math.PI, false);
+        ctx.strokeStyle = colorUnpaid;
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'butt';
+        ctx.stroke();
+      }
+
+      ctx.beginPath();
+      ctx.arc(cx,cy,r-18,0,Math.PI*2);
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-bg') || '#121212';
+      ctx.fill();
+
+      ctx.fillStyle = 'var(--text-light)';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${((paid/total)*100).toFixed(0)}%`, cx, cy - 8);
+      ctx.font = '12px sans-serif';
+      ctx.fillText(`${(paid+unpaid).toFixed(2)} zł`, cx, cy + 12);
+    }
+
+    // Club expenses API (independent table 'club_expenses')
+    async function getClubExpenses(currency) {
+      try {
+        const { data, error } = await supabase.from('club_expenses').select('*').eq('currency', currency).order('created_at', { ascending: true });
+        if (error) {
+          console.error('Error getting club expenses:', error);
+          return [];
+        }
+        return data || [];
+      } catch (err) {
+        console.error('Error in getClubExpenses:', err);
+        return [];
+      }
+    }
+
+    async function addClubExpense(currency, name, amount) {
+      try {
+        const { error } = await supabase.from('club_expenses').insert({ currency, name, amount: parseFloat(amount) });
+        if (error) throw error;
+      } catch (err) {
+        console.error('Error adding club expense:', err);
+        throw err;
+      }
+    }
+
+    async function removeClubExpense(expenseId) {
+      try {
+        const { error } = await supabase.from('club_expenses').delete().eq('id', expenseId);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Error removing club expense:', err);
+        throw err;
+      }
+    }
+
+    window.removeClubExpense = async function(expenseId) {
+      if (!confirm('Czy na pewno usunąć wydatek?')) return;
+      try {
+        await removeClubExpense(expenseId);
+        await loadClubHomeSummary();
+      } catch (err) {
+        alert('Błąd usuwania wydatku: ' + (err.message || 'Nieznany'));
+      }
+    };
+
+    // Load club home summary
+    async function loadClubHomeSummary() {
+      try {
+        // Show section
+        const page = document.getElementById('club-home-page');
+        if (!page) return;
+        page.style.display = 'block';
+
+        // Get all ST camps/trainings
+        const { data: camps, error: campsErr } = await supabase.from('camps').select('id, currency, dance_type').eq('dance_type', 'ST');
+        if (campsErr) { console.error('Error loading camps for club summary:', campsErr); }
+
+        const idMap = {};
+        (camps || []).forEach(c => { idMap[c.id] = { currency: c.currency || 'PLN', entry_type: c.entry_type || 'camp' }; });
+
+        // We'll sum per-camp/per-training profits (from their financial summaries)
+        const sumProfitsByCurrency = { PLN: 0, EUR: 0 };
+        const sumPaidByCurrency = { PLN: 0, EUR: 0 };
+        const sumTotalByCurrency = { PLN: 0, EUR: 0 };
+
+        // For each camp/training, call the appropriate summary calculator and accumulate
+        for (const c of (camps || [])) {
+          try {
+            const cur = c.currency || 'PLN';
+            if ((c.entry_type || '').toString().toLowerCase() === 'training') {
+              // training summary
+              const participants = await getTrainingParticipants(c.id);
+              const summaryPLN = await calculateTrainingCurrencySummary(c, 'PLN', participants).catch(() => null);
+              const summaryEUR = await calculateTrainingCurrencySummary(c, 'EUR', participants).catch(() => null);
+              if (summaryPLN) {
+                sumProfitsByCurrency['PLN'] += parseFloat(summaryPLN.profit || 0);
+                sumPaidByCurrency['PLN'] += parseFloat(summaryPLN.paidAmount || 0);
+                sumTotalByCurrency['PLN'] += parseFloat(summaryPLN.totalAmount || 0);
+              }
+              if (summaryEUR) {
+                sumProfitsByCurrency['EUR'] += parseFloat(summaryEUR.profit || 0);
+                sumPaidByCurrency['EUR'] += parseFloat(summaryEUR.paidAmount || 0);
+                sumTotalByCurrency['EUR'] += parseFloat(summaryEUR.totalAmount || 0);
+              }
+            } else {
+              // camp summary
+              const participants = await getCampParticipants(c.id);
+              const summaryPLN = await calculateCurrencySummary(c, 'PLN', participants).catch(() => null);
+              const summaryEUR = await calculateCurrencySummary(c, 'EUR', participants).catch(() => null);
+              if (summaryPLN) {
+                sumProfitsByCurrency['PLN'] += parseFloat(summaryPLN.profit || 0);
+                sumPaidByCurrency['PLN'] += parseFloat(summaryPLN.paidAmount || 0);
+                sumTotalByCurrency['PLN'] += parseFloat(summaryPLN.totalAmount || 0);
+              }
+              if (summaryEUR) {
+                sumProfitsByCurrency['EUR'] += parseFloat(summaryEUR.profit || 0);
+                sumPaidByCurrency['EUR'] += parseFloat(summaryEUR.paidAmount || 0);
+                sumTotalByCurrency['EUR'] += parseFloat(summaryEUR.totalAmount || 0);
+              }
+            }
+          } catch (err) {
+            console.error('Error computing summary for camp/training', c.id, err);
+          }
+        }
+
+        // Expenses
+        const expensesPLN = await getClubExpenses('PLN');
+        const expensesEUR = await getClubExpenses('EUR');
+        const totalExpensesPLN = (expensesPLN || []).reduce((s,e) => s + (e.amount||0), 0);
+        const totalExpensesEUR = (expensesEUR || []).reduce((s,e) => s + (e.amount||0), 0);
+
+        // Update DOM using per-camp/training profit sums
+        document.getElementById('club-kasa-pln').textContent = (sumPaidByCurrency['PLN']||0).toFixed(2) + ' zł';
+        document.getElementById('club-expenses-total-pln').textContent = totalExpensesPLN.toFixed(2) + ' zł';
+        document.getElementById('club-profit-pln').textContent = ((sumProfitsByCurrency['PLN']||0) - totalExpensesPLN).toFixed(2) + ' zł';
+
+        // Update lists
+        const listPLN = document.getElementById('club-expenses-list-PLN');
+        listPLN.innerHTML = (expensesPLN || []).map(e => `<div class="expense-item" data-expense-id="${e.id}"><span class="expense-name">${e.name}</span> <span class="expense-amount">${e.amount.toFixed(2)} PLN</span> <button class="btn btn-sm btn-danger" onclick="removeClubExpense('${e.id}')">×</button></div>`).join('') || '<div class="empty-state">Brak wydatków</div>';
+
+        const listEUR = document.getElementById('club-expenses-list-EUR');
+        listEUR.innerHTML = (expensesEUR || []).map(e => `<div class="expense-item" data-expense-id="${e.id}"><span class="expense-name">${e.name}</span> <span class="expense-amount">${e.amount.toFixed(2)} EUR</span> <button class="btn btn-sm btn-danger" onclick="removeClubExpense('${e.id}')">×</button></div>`).join('') || '<div class="empty-state">Brak wydatków</div>';
+
+        // Draw donut (use totals: paid vs unpaid combined)
+        const paidTotal = (paidByCurrency['PLN']||0);
+        const unpaidTotal = (unpaidByCurrency['PLN']||0);
+        drawDonut('club-home-donut', paidTotal, unpaidTotal, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
+      } catch (err) {
+        console.error('Error loading club home summary:', err);
+      }
+    }
+
+    // Add expense handlers
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'club-add-expense-pln') {
+        const name = document.getElementById('club-expense-name-pln').value.trim();
+        const amount = document.getElementById('club-expense-amount-pln').value.trim();
+        if (!name || !amount || parseFloat(amount) <= 0) { alert('Wypełnij nazwę i poprawną kwotę'); return; }
+        addClubExpense('PLN', name, amount).then(() => { document.getElementById('club-expense-name-pln').value=''; document.getElementById('club-expense-amount-pln').value=''; loadClubHomeSummary(); }).catch(err=>alert('Błąd: '+(err.message||err)));
+      }
+      if (e.target && e.target.id === 'club-add-expense-eur') {
+        const name = document.getElementById('club-expense-name-eur').value.trim();
+        const amount = document.getElementById('club-expense-amount-eur').value.trim();
+        if (!name || !amount || parseFloat(amount) <= 0) { alert('Wypełnij nazwę i poprawną kwotę'); return; }
+        addClubExpense('EUR', name, amount).then(() => { document.getElementById('club-expense-name-eur').value=''; document.getElementById('club-expense-amount-eur').value=''; loadClubHomeSummary(); }).catch(err=>alert('Błąd: '+(err.message||err)));
+      }
+    });
+
+    // Expose loader
+    window.loadClubHomeSummary = loadClubHomeSummary;
+  </script>
+
 </html>
 </html>
