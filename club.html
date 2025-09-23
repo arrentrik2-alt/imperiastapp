@@ -7770,8 +7770,8 @@
         if (!page) return;
         page.style.display = 'block';
 
-        // Get all ST camps/trainings
-        const { data: camps, error: campsErr } = await supabase.from('camps').select('id, currency, dance_type').eq('dance_type', 'ST');
+        // Get all ST camps/trainings (case-insensitive match)
+        const { data: camps, error: campsErr } = await supabase.from('camps').select('id, currency, dance_type, entry_type').ilike('dance_type', 'st');
         if (campsErr) { console.error('Error loading camps for club summary:', campsErr); }
 
         const idMap = {};
