@@ -6533,6 +6533,13 @@
       await createTablesIfMissing();
     });
 
+    // Expose important functions from module scope to non-module scripts
+    // so that the club-home non-module script can call them.
+    window.getCampParticipants = getCampParticipants;
+    window.getTrainingParticipants = getTrainingParticipants;
+    window.calculateCurrencySummary = calculateCurrencySummary;
+    window.calculateTrainingCurrencySummary = calculateTrainingCurrencySummary;
+
     // Payment functions using Supabase
     async function getSavedPayment(campId, participantId, columnType, trainerIndex = null) {
       try {
