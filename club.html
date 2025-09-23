@@ -7782,15 +7782,19 @@
         const sumPaidByCurrency = { PLN: 0, EUR: 0 };
         const sumTotalByCurrency = { PLN: 0, EUR: 0 };
 
+        console.debug('[CLUB-SUMMARY] Found camps count:', (camps || []).length);
         // For each camp/training, call the appropriate summary calculator and accumulate
         for (const c of (camps || [])) {
+          console.debug('[CLUB-SUMMARY] Processing camp/training id:', c.id, 'currency:', c.currency, 'entry_type:', c.entry_type);
           try {
             const cur = c.currency || 'PLN';
             if ((c.entry_type || '').toString().toLowerCase() === 'training') {
               // training summary
               const participants = await getTrainingParticipants(c.id);
+              console.debug('[CLUB-SUMMARY] Training participants count for', c.id, participants.length);
               const summaryPLN = await calculateTrainingCurrencySummary(c, 'PLN', participants).catch(() => null);
               const summaryEUR = await calculateTrainingCurrencySummary(c, 'EUR', participants).catch(() => null);
+              console.debug('[CLUB-SUMMARY] Training summary for', c.id, { summaryPLN, summaryEUR });
               if (summaryPLN) {
                 sumProfitsByCurrency['PLN'] += parseFloat(summaryPLN.profit || 0);
                 sumPaidByCurrency['PLN'] += parseFloat(summaryPLN.paidAmount || 0);
@@ -7804,8 +7808,10 @@
             } else {
               // camp summary
               const participants = await getCampParticipants(c.id);
+              console.debug('[CLUB-SUMMARY] Camp participants count for', c.id, participants.length);
               const summaryPLN = await calculateCurrencySummary(c, 'PLN', participants).catch(() => null);
               const summaryEUR = await calculateCurrencySummary(c, 'EUR', participants).catch(() => null);
+              console.debug('[CLUB-SUMMARY] Camp summary for', c.id, { summaryPLN, summaryEUR });
               if (summaryPLN) {
                 sumProfitsByCurrency['PLN'] += parseFloat(summaryPLN.profit || 0);
                 sumPaidByCurrency['PLN'] += parseFloat(summaryPLN.paidAmount || 0);
