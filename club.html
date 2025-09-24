@@ -1,3 +1,20 @@
+-- SQL: create camp_profits table
+CREATE TABLE IF NOT EXISTS camp_profits (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  camp_id text NOT NULL,
+  entry_type text,
+  dance_type text,
+  currency text NOT NULL CHECK (currency IN ('PLN','EUR')),
+  total_amount numeric(12,2) DEFAULT 0,
+  paid_amount numeric(12,2) DEFAULT 0,
+  expenses numeric(12,2) DEFAULT 0,
+  profit numeric(12,2) DEFAULT 0,
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE (camp_id, currency)
+);
+
+CREATE INDEX IF NOT EXISTS idx_camp_profits_dance_type ON camp_profits (dance_type);
+
 
 <!DOCTYPE html>
 <html lang="pl">
@@ -1608,6 +1625,9 @@
           <div style="font-weight:700">Wydatki</div>
           <div id="club-expenses-total-pln" style="font-weight:700">0.00 zł</div>
         </div>
+      </div>
+      <div style="flex:0 0 180px; display:flex;justify-content:flex-end;align-items:flex-start;">
+        <button id="backfill-profits-btn" class="btn btn-sm btn-outline" style="margin-left:8px;">Wypełnij camp_profits</button>
       </div>
     </div>
 
@@ -4375,6 +4395,27 @@
       const totalExpenses = await getTotalExpenses(camp.id, currency);
       const profit = paidAmount - totalExpenses;
 
+      // Persist per-camp-per-currency profit to camp_profits table
+      (async () => {
+        try {
+          await supabase
+            .from('camp_profits')
+            .upsert({
+              camp_id: camp.id,
+              entry_type: camp.entry_type || 'camp',
+              dance_type: camp.dance_type || camp.danceType || null,
+              currency: currency,
+              total_amount: totalAmount,
+              paid_amount: paidAmount,
+              expenses: totalExpenses,
+              profit: profit,
+              updated_at: new Date().toISOString()
+            }, { onConflict: ['camp_id','currency'] });
+        } catch (err) {
+          console.error('Error upserting camp_profits for camp', camp.id, currency, err);
+        }
+      })();
+
       return {
         currency,
         totalAmount,
@@ -5714,6 +5755,27 @@
       const totalExpenses = await getTotalTrainingExpenses(training.id, currency);
       const profit = paidAmount - totalExpenses;
 
+      // Persist per-training-per-currency profit to camp_profits table
+      (async () => {
+        try {
+          await supabase
+            .from('camp_profits')
+            .upsert({
+              camp_id: training.id,
+              entry_type: 'training',
+              dance_type: training.dance_type || training.danceType || null,
+              currency: currency,
+              total_amount: totalAmount,
+              paid_amount: paidAmount,
+              expenses: totalExpenses,
+              profit: profit,
+              updated_at: new Date().toISOString()
+            }, { onConflict: ['camp_id','currency'] });
+        } catch (err) {
+          console.error('Error upserting camp_profits for training', training.id, currency, err);
+        }
+      })();
+
       return {
         currency,
         totalAmount,
@@ -6531,6 +6593,17 @@
     document.addEventListener('DOMContentLoaded', async () => {
       await testDatabaseConnection();
       await createTablesIfMissing();
+      // Start background auto-backfill of camp_profits so user doesn't need to click manually
+      // run asynchronously (don't block page load)
+      (async () => {
+        try {
+          if (typeof autoBackfillCampProfits === 'function') {
+            autoBackfillCampProfits();
+          }
+        } catch (e) {
+          console.error('Auto backfill failed to start:', e);
+        }
+      })();
     });
 
     // Expose important functions from module scope to non-module scripts
@@ -6708,6 +6781,8 @@
                   console.error('Background save error:', upsertError);
                 } else {
                   console.log('Background save successful');
+                  // Update aggregated profit row for this camp/training
+                  try { updateCampProfit(campId).catch(e=>console.error('updateCampProfit error:', e)); } catch(e){console.error(e)}
                 }
               })
               .catch(err => {
@@ -6770,6 +6845,7 @@
                   console.error('Background confirmation error:', error);
                 } else {
                   console.log('Background confirmation successful');
+                  try { updateCampProfit(campId).catch(e=>console.error('updateCampProfit error:', e)); } catch(e){console.error(e)}
                 }
               })
               .catch(err => {
@@ -6837,6 +6913,7 @@
                   console.error('Background removal error:', error);
                 } else {
                   console.log('Background removal successful');
+                  try { updateCampProfit(campId).catch(e=>console.error('updateCampProfit error:', e)); } catch(e){console.error(e)}
                 }
               })
               .catch(err => {
@@ -6887,6 +6964,45 @@
       }
 
       return { total, paid, currency };
+    }
+
+    // Update camp_profits row for a camp/training by recalculating its summary
+    async function updateCampProfit(campId) {
+      try {
+        // attempt to load camp record
+        const { data: campRows, error: campErr } = await supabase.from('camps').select('id, currency, entry_type, dance_type').eq('id', campId).limit(1).maybeSingle();
+        if (campErr) { console.error('Error loading camp for updateCampProfit:', campErr); return; }
+        const camp = campRows;
+        if (!camp) { console.warn('No camp found for updateCampProfit:', campId); return; }
+
+        // Load participants depending on type
+        let participants = [];
+        if ((camp.entry_type || '').toString().toLowerCase() === 'training') {
+          participants = await getTrainingParticipants(campId);
+        } else {
+          participants = await getCampParticipants(campId);
+        }
+
+        // Recalculate for PLN and EUR
+        const summaryPLN = await (camp.entry_type === 'training' ? calculateTrainingCurrencySummary(camp, 'PLN', participants) : calculateCurrencySummary(camp, 'PLN', participants));
+        const summaryEUR = await (camp.entry_type === 'training' ? calculateTrainingCurrencySummary(camp, 'EUR', participants) : calculateCurrencySummary(camp, 'EUR', participants));
+
+        // Upsert results into camp_profits
+        const upserts = [];
+        if (summaryPLN) upserts.push({ camp_id: campId, entry_type: camp.entry_type || 'camp', dance_type: camp.dance_type || null, currency: 'PLN', total_amount: summaryPLN.totalAmount, paid_amount: summaryPLN.paidAmount, expenses: summaryPLN.totalExpenses, profit: summaryPLN.profit, updated_at: new Date().toISOString() });
+        if (summaryEUR) upserts.push({ camp_id: campId, entry_type: camp.entry_type || 'camp', dance_type: camp.dance_type || null, currency: 'EUR', total_amount: summaryEUR.totalAmount, paid_amount: summaryEUR.paidAmount, expenses: summaryEUR.totalExpenses, profit: summaryEUR.profit, updated_at: new Date().toISOString() });
+
+        for (const row of upserts) {
+          await supabase.from('camp_profits').upsert(row, { onConflict: ['camp_id','currency'] });
+        }
+
+        // Optionally refresh club home view
+        if (document.getElementById('club-home-page') && document.getElementById('club-home-page').style.display === 'block') {
+          await loadClubHomeSummary();
+        }
+      } catch (err) {
+        console.error('Error in updateCampProfit:', err);
+      }
     }
 
     // Format currency
@@ -7858,6 +7974,7 @@
         const totalAmountPLN = (sumTotalByCurrency['PLN']||0);
         const unpaidTotal = Math.max(0, totalAmountPLN - paidTotal);
         drawDonut('club-home-donut', paidTotal, unpaidTotal, 'rgba(40,167,69,0.95)', 'rgba(220,53,69,0.95)');
+        console.debug('[CLUB-SUMMARY] Totals - paid:', paidTotal, 'total:', totalAmountPLN, 'unpaid:', unpaidTotal, 'sumProfits:', sumProfitsByCurrency['PLN']);
       } catch (err) {
         console.error('Error loading club home summary:', err);
       }
@@ -7881,6 +7998,84 @@
 
     // Expose loader
     window.loadClubHomeSummary = loadClubHomeSummary;
+
+    // Backfill button: compute summaries for all ST camps/trainings and upsert into camp_profits
+    const backfillBtn = document.getElementById('backfill-profits-btn');
+    if (backfillBtn) {
+      backfillBtn.addEventListener('click', async () => {
+        try {
+          backfillBtn.disabled = true;
+          backfillBtn.textContent = 'Wypełnianie...';
+          const { data: camps, error: campsErr } = await supabase.from('camps').select('id, currency, entry_type, dance_type').ilike('dance_type', 'st');
+          if (campsErr) throw campsErr;
+          for (const c of (camps || [])) {
+            try {
+              if ((c.entry_type || '').toString().toLowerCase() === 'training') {
+                const participants = await getTrainingParticipants(c.id);
+                await calculateTrainingCurrencySummary(c, 'PLN', participants).catch(e=>console.error(e));
+                await calculateTrainingCurrencySummary(c, 'EUR', participants).catch(e=>console.error(e));
+              } else {
+                const participants = await getCampParticipants(c.id);
+                await calculateCurrencySummary(c, 'PLN', participants).catch(e=>console.error(e));
+                await calculateCurrencySummary(c, 'EUR', participants).catch(e=>console.error(e));
+              }
+            } catch (err) {
+              console.error('Backfill error for', c.id, err);
+            }
+          }
+          alert('Backfill ukończony.');
+        } catch (err) {
+          console.error('Error backfilling camp_profits:', err);
+          alert('Błąd podczas backfilla: ' + (err.message || err));
+        } finally {
+          backfillBtn.disabled = false;
+          backfillBtn.textContent = 'Wypełnij camp_profits';
+          await loadClubHomeSummary();
+        }
+      });
+    }
+
+    // Auto backfill function (runs once on load, in background)
+    async function autoBackfillCampProfits() {
+      try {
+        console.debug('[AUTO-BACKFILL] Starting auto backfill of camp_profits');
+        const { data: existing, error: exErr } = await supabase.from('camp_profits').select('camp_id').limit(1);
+        if (exErr) {
+          console.error('Error checking camp_profits:', exErr);
+          return;
+        }
+        // If table already has rows, skip auto-backfill
+        if (existing && existing.length > 0) {
+          console.debug('[AUTO-BACKFILL] camp_profits already populated, skipping auto backfill');
+          return;
+        }
+
+        // Otherwise run backfill quietly
+        const { data: camps, error: campsErr } = await supabase.from('camps').select('id, currency, entry_type, dance_type').ilike('dance_type', 'st');
+        if (campsErr) {
+          console.error('Error loading camps for auto backfill:', campsErr);
+          return;
+        }
+        for (const c of (camps || [])) {
+          try {
+            if ((c.entry_type || '').toString().toLowerCase() === 'training') {
+              const participants = await getTrainingParticipants(c.id);
+              await calculateTrainingCurrencySummary(c, 'PLN', participants).catch(e=>console.error(e));
+              await calculateTrainingCurrencySummary(c, 'EUR', participants).catch(e=>console.error(e));
+            } else {
+              const participants = await getCampParticipants(c.id);
+              await calculateCurrencySummary(c, 'PLN', participants).catch(e=>console.error(e));
+              await calculateCurrencySummary(c, 'EUR', participants).catch(e=>console.error(e));
+            }
+          } catch (err) {
+            console.error('Auto backfill error for', c.id, err);
+          }
+        }
+        console.debug('[AUTO-BACKFILL] Auto backfill completed');
+      } catch (err) {
+        console.error('Auto backfill failed:', err);
+      }
+    }
   </script>
 
 </html>
