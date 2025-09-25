@@ -4697,6 +4697,22 @@
           calculateCurrencySummary(camp, currency, participants),
           getExpenses(camp.id, currency)
         ]);
+
+        // 🔥 ZAPISZ ZYSK DO TABELI camp_profits 🔥
+        const profit = (summary.paidAmount || 0) - (expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
+        if (profit > 0) {
+          await supabase.from('camp_profits').upsert({
+            camp_id: camp.id,
+            entry_type: camp.entry_type || 'camp',
+            dance_type: camp.dance_type || null,
+            currency: currency,
+            profit: profit,
+            camp_name: camp.name,
+            updated_at: new Date().toISOString()
+          }, { onConflict: ['camp_id', 'currency'] });
+          console.log(`[FINANCIAL-SUMMARY] Saved profit to camp_profits: ${profit} ${currency} for camp: ${camp.name}`);
+        }
+
         return { currency, summary, expenses };
       });
 
