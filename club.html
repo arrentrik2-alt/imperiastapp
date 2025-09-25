@@ -3272,7 +3272,7 @@
       promises.push(
         supabase
           .from('camp_payments')
-          .select('participant_id, amount, confirmed')
+          .select('participant_id, amount, confirmed, currency')
           .eq('camp_id', campId)
           .in('participant_id', participantIds)
           .then(({ data, error }) => {
@@ -3280,7 +3280,8 @@
               data.forEach(payment => {
                 paymentCache.camp[payment.participant_id] = {
                   amount: parseFloat(payment.amount) || 0,
-                  confirmed: payment.confirmed || false
+                  confirmed: payment.confirmed || false,
+                  currency: payment.currency || null
                 };
               });
             }
@@ -3297,7 +3298,7 @@
             promises.push(
               supabase
                 .from('trainer_payments')
-                .select('participant_id, amount, confirmed')
+                .select('participant_id, amount, confirmed, currency')
                 .eq('camp_id', campId)
                 .eq('trainer_index', index)
                 .in('participant_id', participantIds)
@@ -3309,7 +3310,8 @@
                       }
                       paymentCache.trainer[payment.participant_id][index] = {
                         amount: parseFloat(payment.amount) || 0,
-                        confirmed: payment.confirmed || false
+                        confirmed: payment.confirmed || false,
+                        currency: payment.currency || null
                       };
                     });
                   }
@@ -3335,11 +3337,12 @@
     }
 
     // Update payment cache after saving
-    function updatePaymentCache(participantId, columnType, amount, confirmed, trainerIndex = null) {
+    function updatePaymentCache(participantId, columnType, amount, confirmed, trainerIndex = null, currency = null) {
       if (columnType === 'camp') {
         paymentCache.camp[participantId] = {
           amount: parseFloat(amount) || 0,
-          confirmed: confirmed
+          confirmed: confirmed,
+          currency: currency || null
         };
       } else if (columnType === 'trainer' && trainerIndex !== null) {
         if (!paymentCache.trainer[participantId]) {
@@ -3347,7 +3350,8 @@
         }
         paymentCache.trainer[participantId][trainerIndex] = {
           amount: parseFloat(amount) || 0,
-          confirmed: confirmed
+          confirmed: confirmed,
+          currency: currency || null
         };
       }
     }
@@ -3355,14 +3359,14 @@
     // Get payment from cache
     function getCachedPayment(participantId, columnType, trainerIndex = null) {
       if (columnType === 'camp') {
-        return paymentCache.camp[participantId] || { amount: 0, confirmed: false };
+        return paymentCache.camp[participantId] || { amount: 0, confirmed: false, currency: null };
       } else if (columnType === 'trainer' && trainerIndex !== null) {
         const trainerPayments = paymentCache.trainer[participantId];
         if (trainerPayments && trainerPayments[trainerIndex]) {
           return trainerPayments[trainerIndex];
         }
       }
-      return { amount: 0, confirmed: false };
+      return { amount: 0, confirmed: false, currency: null };
     }
 
     // Clear payment cache
@@ -3371,11 +3375,12 @@
     }
 
     // Training payment cache helpers (identical behavior to camp payment helpers)
-    function updateTrainingPaymentCache(participantId, columnType, amount, confirmed, trainerIndex = null) {
+    function updateTrainingPaymentCache(participantId, columnType, amount, confirmed, trainerIndex = null, currency = null) {
       if (columnType === 'training') {
         trainingPaymentCache.training[participantId] = {
           amount: parseFloat(amount) || 0,
-          confirmed: confirmed
+          confirmed: confirmed,
+          currency: currency || null
         };
       } else if (columnType === 'trainer' && trainerIndex !== null) {
         if (!trainingPaymentCache.trainer[participantId]) {
@@ -3383,21 +3388,22 @@
         }
         trainingPaymentCache.trainer[participantId][trainerIndex] = {
           amount: parseFloat(amount) || 0,
-          confirmed: confirmed
+          confirmed: confirmed,
+          currency: currency || null
         };
       }
     }
 
     function getCachedTrainingPayment(participantId, columnType, trainerIndex = null) {
       if (columnType === 'training') {
-        return trainingPaymentCache.training[participantId] || { amount: 0, confirmed: false };
+        return trainingPaymentCache.training[participantId] || { amount: 0, confirmed: false, currency: null };
       } else if (columnType === 'trainer' && trainerIndex !== null) {
         const trainerPayments = trainingPaymentCache.trainer[participantId];
         if (trainerPayments && trainerPayments[trainerIndex]) {
           return trainerPayments[trainerIndex];
         }
       }
-      return { amount: 0, confirmed: false };
+      return { amount: 0, confirmed: false, currency: null };
     }
 
     // Save / confirm / remove functions for training payments (copies of camp equivalents)
@@ -3411,7 +3417,8 @@
         if (isNaN(numericAmount)) return;
 
         // Update cache and UI instantly
-        updateTrainingPaymentCache(participantId, columnType, numericAmount, false, trainerIndex);
+        const paymentCurrency = columnType === 'training' ? window.currentTraining?.currency : window.currentTraining?.trainers?.[parseInt(trainerIndex, 10)]?.currency;
+        updateTrainingPaymentCache(participantId, columnType, numericAmount, false, trainerIndex, paymentCurrency);
         updateTrainingParticipantTotalsFast(trainingId, participantId);
         if (typeof updateTrainingSummariesFast === 'function') updateTrainingSummariesFast();
 
@@ -3467,7 +3474,8 @@
     function confirmTrainingPayment(trainingId, participantId, columnType, trainerIndex = null) {
       try {
         const currentPayment = getCachedTrainingPayment(participantId, columnType, trainerIndex);
-        updateTrainingPaymentCache(participantId, columnType, currentPayment.amount, true, trainerIndex);
+        const paymentCurrency = columnType === 'training' ? window.currentTraining?.currency : window.currentTraining?.trainers?.[parseInt(trainerIndex, 10)]?.currency;
+        updateTrainingPaymentCache(participantId, columnType, currentPayment.amount, true, trainerIndex, paymentCurrency);
         updateTrainingParticipantTotalsFast(trainingId, participantId);
         if (typeof updateTrainingSummariesFast === 'function') updateTrainingSummariesFast();
 
@@ -3508,7 +3516,8 @@
 
     function removeTrainingPayment(trainingId, participantId, columnType, trainerIndex = null) {
       try {
-        updateTrainingPaymentCache(participantId, columnType, 0, false, trainerIndex);
+        const paymentCurrency = columnType === 'training' ? window.currentTraining?.currency : window.currentTraining?.trainers?.[parseInt(trainerIndex, 10)]?.currency;
+        updateTrainingPaymentCache(participantId, columnType, 0, false, trainerIndex, paymentCurrency);
         updateTrainingParticipantTotalsFast(trainingId, participantId);
         if (typeof updateTrainingSummariesFast === 'function') updateTrainingSummariesFast();
 
@@ -7150,7 +7159,8 @@
         }
 
         // Update cache immediately for instant UI feedback
-        updatePaymentCache(participantId, columnType, numericAmount, false, trainerIndex);
+        const paymentCurrency = columnType === 'camp' ? window.currentCamp?.currency : window.currentCamp?.trainers?.[parseInt(trainerIndex, 10)]?.currency;
+        updatePaymentCache(participantId, columnType, numericAmount, false, trainerIndex, paymentCurrency);
 
         // Update UI immediately using cache
         updateParticipantTotalsFast(campId, participantId);
@@ -7715,13 +7725,13 @@
 
         // Add empty payment data to cache for the new participant
         if (paymentCache.camp) {
-          paymentCache.camp[participantId] = { amount: 0, confirmed: false };
+          paymentCache.camp[participantId] = { amount: 0, confirmed: false, currency: null };
         }
         if (paymentCache.trainer && camp.trainers) {
           paymentCache.trainer[participantId] = {};
           camp.trainers.forEach((trainer, index) => {
             if (trainer) {
-              paymentCache.trainer[participantId][index] = { amount: 0, confirmed: false };
+              paymentCache.trainer[participantId][index] = { amount: 0, confirmed: false, currency: null };
             }
           });
         }
