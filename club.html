@@ -3706,30 +3706,34 @@
 
         console.log(`[CAMP-PROFITS] Calculated profits - PLN: ${profitPLN}, EUR: ${profitEUR}`);
 
-        // Always save both currencies (even if profit is 0)
+        // Save ONLY POSITIVE profits into camp_profits table
         const upserts = [];
-        upserts.push({
-          camp_id: campId,
-          entry_type: camp.entry_type || 'camp',
-          dance_type: camp.dance_type || null,
-          currency: 'PLN',
-          profit: profitPLN,
-          camp_name: camp.name,
-          updated_at: new Date().toISOString()
-        });
-        upserts.push({
-          camp_id: campId,
-          entry_type: camp.entry_type || 'camp',
-          dance_type: camp.dance_type || null,
-          currency: 'EUR',
-          profit: profitEUR,
-          camp_name: camp.name,
-          updated_at: new Date().toISOString()
-        });
+        if (profitPLN > 0) {
+          upserts.push({
+            camp_id: campId,
+            entry_type: camp.entry_type || 'camp',
+            dance_type: camp.dance_type || null,
+            currency: 'PLN',
+            profit: profitPLN,
+            camp_name: camp.name,
+            updated_at: new Date().toISOString()
+          });
+        }
+        if (profitEUR > 0) {
+          upserts.push({
+            camp_id: campId,
+            entry_type: camp.entry_type || 'camp',
+            dance_type: camp.dance_type || null,
+            currency: 'EUR',
+            profit: profitEUR,
+            camp_name: camp.name,
+            updated_at: new Date().toISOString()
+          });
+        }
 
         console.log(`[CAMP-PROFITS] Preparing to insert ${upserts.length} records`);
 
-        // Delete existing records for this camp
+        // Delete existing records for this camp (if any exist)
         const { error: deleteErr } = await supabase.from('camp_profits').delete().eq('camp_id', campId);
         if (deleteErr) {
           console.error('Error deleting existing camp profits:', deleteErr);
@@ -3741,11 +3745,13 @@
           }
         }
 
-        // Insert new records
-        const { error: insertErr } = await supabase.from('camp_profits').insert(upserts);
-        if (insertErr) {
-          console.error('Error inserting camp profits:', insertErr);
-          return;
+        // Insert new records only if there are positive profits
+        if (upserts.length > 0) {
+          const { error: insertErr } = await supabase.from('camp_profits').insert(upserts);
+          if (insertErr) {
+            console.error('Error inserting camp profits:', insertErr);
+            return;
+          }
         }
 
         console.log(`[CAMP-PROFITS] Successfully updated profit for ${camp.name}: PLN=${profitPLN.toFixed(2)}, EUR=${profitEUR.toFixed(2)}`);
