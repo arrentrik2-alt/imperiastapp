@@ -4283,7 +4283,87 @@
     }
 
     // Update kasa balance from all sources (revenues + incomes - expenses)
-    function updateKasaBalanceFromAll() {
+    async function updateKasaBalanceFromAll() {
+      try {
+        // Load current data from database for accurate calculations
+        const [incomesData, expensesData] = await Promise.all([
+          supabase.from('kasa_incomes').select('*'),
+          supabase.from('kasa_expenses').select('*')
+        ]);
+
+        // Get current revenues from DOM
+        const totalPLNEl = document.getElementById('kasa-total-pln');
+        const totalEUREl = document.getElementById('kasa-total-eur');
+
+        let revenuesPLN = 0;
+        let revenuesEUR = 0;
+        let incomesPLN = 0;
+        let incomesEUR = 0;
+        let expensesPLN = 0;
+        let expensesEUR = 0;
+
+        // Parse revenues
+        if (totalPLNEl) {
+          const text = totalPLNEl.textContent;
+          revenuesPLN = parseFloat(text.replace(' zł', '').replace(',', '.')) || 0;
+        }
+        if (totalEUREl) {
+          const text = totalEUREl.textContent;
+          revenuesEUR = parseFloat(text.replace(' €', '').replace(',', '.')) || 0;
+        }
+
+        // Calculate incomes from database data
+        if (incomesData.data && incomesData.data.length > 0) {
+          incomesData.data.forEach(income => {
+            const amount = parseFloat(income.amount || 0);
+            if (income.currency === 'PLN') {
+              incomesPLN += amount;
+            } else if (income.currency === 'EUR') {
+              incomesEUR += amount;
+            }
+          });
+        }
+
+        // Calculate expenses from database data
+        if (expensesData.data && expensesData.data.length > 0) {
+          expensesData.data.forEach(expense => {
+            const amount = parseFloat(expense.amount || 0);
+            if (expense.currency === 'PLN') {
+              expensesPLN += amount;
+            } else if (expense.currency === 'EUR') {
+              expensesEUR += amount;
+            }
+          });
+        }
+
+        // Calculate balance = revenues + incomes - expenses
+        const balancePLN = revenuesPLN + incomesPLN - expensesPLN;
+        const balanceEUR = revenuesEUR + incomesEUR - expensesEUR;
+
+        // Update balance display
+        const balancePLNEl = document.getElementById('kasa-balance-pln');
+        const balanceEUREl = document.getElementById('kasa-balance-eur');
+
+        if (balancePLNEl) {
+          balancePLNEl.textContent = balancePLN.toFixed(2) + ' zł';
+          balancePLNEl.style.color = balancePLN >= 0 ? '#28a745' : '#dc3545';
+        }
+
+        if (balanceEUREl) {
+          balanceEUREl.textContent = balanceEUR.toFixed(2) + ' €';
+          balanceEUREl.style.color = balanceEUR >= 0 ? '#28a745' : '#dc3545';
+        }
+
+        console.log(`[KASA-BALANCE] Updated - PLN: ${revenuesPLN} + ${incomesPLN} - ${expensesPLN} = ${balancePLN}, EUR: ${revenuesEUR} + ${incomesEUR} - ${expensesEUR} = ${balanceEUR}`);
+      } catch (err) {
+        console.error('Error in updateKasaBalanceFromAll:', err);
+        // Fallback to DOM parsing if database query fails
+        updateKasaBalanceFromDOM();
+      }
+    }
+
+    // Fallback function using DOM parsing (old method)
+    function updateKasaBalanceFromDOM() {
       // Get current revenues
       const totalPLNEl = document.getElementById('kasa-total-pln');
       const totalEUREl = document.getElementById('kasa-total-eur');
@@ -4359,7 +4439,7 @@
         balanceEUREl.style.color = balanceEUR >= 0 ? '#28a745' : '#dc3545';
       }
 
-      console.log(`[KASA-BALANCE] Updated - PLN: ${revenuesPLN} + ${incomesPLN} - ${expensesPLN} = ${balancePLN}, EUR: ${revenuesEUR} + ${incomesEUR} - ${expensesEUR} = ${balanceEUR}`);
+      console.log(`[KASA-BALANCE] Updated from DOM - PLN: ${revenuesPLN} + ${incomesPLN} - ${expensesPLN} = ${balancePLN}, EUR: ${revenuesEUR} + ${incomesEUR} - ${expensesEUR} = ${balanceEUR}`);
     }
 
     // Show add income form
