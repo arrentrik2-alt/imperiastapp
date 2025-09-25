@@ -4667,67 +4667,94 @@
 
 
 
-    // Calculate financial summary for a currency
+    // Calculate financial summary for a currency - USE CACHE FIRST, then fallback to database
     async function calculateCurrencySummary(camp, currency, participants) {
       let totalAmount = 0; // Wszystkie kwoty (potwierdzone + niepotwierdzone)
       let paidAmount = 0;  // Tylko potwierdzone kwoty
 
-      // Load camp payments directly from database (not from cache)
-      console.log(`[CAMP-PROFITS] Loading camp payments from database for currency: ${currency}`);
-      const { data: campPayments, error: campPaymentsErr } = await supabase
-        .from('camp_payments')
-        .select('participant_id, amount, confirmed, currency')
-        .eq('camp_id', camp.id)
-        .in('participant_id', participants.map(p => p.id));
+      console.log(`[CAMP-PROFITS] Calculating summary for ${currency} using cache first`);
 
-      if (!campPaymentsErr && campPayments) {
-        let currencyCount = 0;
-        let confirmedCount = 0;
-        let confirmedCurrencyCount = 0;
-        for (const payment of campPayments) {
-          if (payment.currency === currency) {
-            currencyCount++;
-            totalAmount += parseFloat(payment.amount || 0);
-            if (payment.confirmed) {
-              confirmedCount++;
-              confirmedCurrencyCount++;
-              paidAmount += parseFloat(payment.amount || 0);
+      // FIRST: Try to use cache for instant results (much faster)
+      let cacheTotal = 0;
+      let cachePaid = 0;
+
+      // Load from cache first
+      for (const participant of participants) {
+        // Camp payments
+        const campPayment = getCachedPayment(participant.id, 'camp', null);
+        if (campPayment && campPayment.currency === currency) {
+          cacheTotal += parseFloat(campPayment.amount || 0);
+          if (campPayment.confirmed) {
+            cachePaid += parseFloat(campPayment.amount || 0);
+          }
+        }
+
+        // Trainer payments
+        if (camp.trainers && camp.trainers.length > 0) {
+          for (let trainerIndex = 0; trainerIndex < camp.trainers.length; trainerIndex++) {
+            const trainerPayment = getCachedPayment(participant.id, 'trainer', trainerIndex);
+            if (trainerPayment && trainerPayment.currency === currency) {
+              cacheTotal += parseFloat(trainerPayment.amount || 0);
+              if (trainerPayment.confirmed) {
+                cachePaid += parseFloat(trainerPayment.amount || 0);
+              }
             }
           }
         }
-        console.log(`[CAMP-PROFITS] Found ${campPayments.length} total camp payments, ${currencyCount} in ${currency}, ${confirmedCount} confirmed total, ${confirmedCurrencyCount} confirmed in ${currency} for ${currency}`);
       }
-      console.log(`[CAMP-PROFITS] Found ${campPayments ? campPayments.length : 0} camp payments for ${currency}`);
 
-      // Load trainer payments directly from database (not from cache)
-      if (camp.trainers && camp.trainers.length > 0) {
-        for (const [trainerIndex, trainer] of camp.trainers.entries()) {
-          console.log(`[CAMP-PROFITS] Loading trainer payments from database for trainer ${trainerIndex}, currency: ${currency}`);
-          const { data: trainerPayments, error: trainerPaymentsErr } = await supabase
-            .from('trainer_payments')
-            .select('participant_id, amount, confirmed, currency')
-            .eq('camp_id', camp.id)
-            .eq('trainer_index', trainerIndex)
-            .in('participant_id', participants.map(p => p.id));
+      console.log(`[CAMP-PROFITS] Cache results for ${currency}: total=${cacheTotal}, paid=${cachePaid}`);
 
-          if (!trainerPaymentsErr && trainerPayments) {
-            let trainerCurrencyCount = 0;
-            let trainerConfirmedCurrencyCount = 0;
-            for (const payment of trainerPayments) {
-              // Sprawdzam czy currency płatności pasuje do currency którą analizuję
-              if (payment.currency === currency) {
-                trainerCurrencyCount++;
-                totalAmount += parseFloat(payment.amount || 0);
-                if (payment.confirmed) {
-                  trainerConfirmedCurrencyCount++;
-                  paidAmount += parseFloat(payment.amount || 0);
+      // If we have cached data, use it for instant UI feedback
+      if (cacheTotal > 0) {
+        totalAmount = cacheTotal;
+        paidAmount = cachePaid;
+        console.log(`[CAMP-PROFITS] Using cache data for ${currency}: total=${totalAmount}, paid=${paidAmount}`);
+      } else {
+        // FALLBACK: Load from database if no cache data
+        console.log(`[CAMP-PROFITS] No cache data, loading from database for ${currency}`);
+
+        const { data: campPayments, error: campPaymentsErr } = await supabase
+          .from('camp_payments')
+          .select('participant_id, amount, confirmed, currency')
+          .eq('camp_id', camp.id)
+          .in('participant_id', participants.map(p => p.id));
+
+        if (!campPaymentsErr && campPayments) {
+          for (const payment of campPayments) {
+            if (payment.currency === currency) {
+              totalAmount += parseFloat(payment.amount || 0);
+              if (payment.confirmed) {
+                paidAmount += parseFloat(payment.amount || 0);
+              }
+            }
+          }
+        }
+
+        // Load trainer payments from database
+        if (camp.trainers && camp.trainers.length > 0) {
+          for (const [trainerIndex, trainer] of camp.trainers.entries()) {
+            const { data: trainerPayments, error: trainerPaymentsErr } = await supabase
+              .from('trainer_payments')
+              .select('participant_id, amount, confirmed, currency')
+              .eq('camp_id', camp.id)
+              .eq('trainer_index', trainerIndex)
+              .in('participant_id', participants.map(p => p.id));
+
+            if (!trainerPaymentsErr && trainerPayments) {
+              for (const payment of trainerPayments) {
+                if (payment.currency === currency) {
+                  totalAmount += parseFloat(payment.amount || 0);
+                  if (payment.confirmed) {
+                    paidAmount += parseFloat(payment.amount || 0);
+                  }
                 }
               }
             }
-            console.log(`[CAMP-PROFITS] Trainer ${trainerIndex}: ${trainerPayments.length} total, ${trainerCurrencyCount} in ${currency}, ${trainerConfirmedCurrencyCount} confirmed in ${currency}`);
           }
-          console.log(`[CAMP-PROFITS] Found ${trainerPayments ? trainerPayments.length : 0} trainer payments for trainer ${trainerIndex}`);
         }
+
+        console.log(`[CAMP-PROFITS] Database results for ${currency}: total=${totalAmount}, paid=${paidAmount}`);
       }
 
       // Calculate expenses and profit (this still needs database query)
@@ -6183,29 +6210,62 @@
     // Training participants management
 
 
-    // Calculate financial summary for a training currency
+    // Calculate financial summary for a training currency - USE CACHE FIRST
     async function calculateTrainingCurrencySummary(training, currency, participants) {
       let totalAmount = 0; // Wszystkie kwoty (potwierdzone + niepotwierdzone)
       let paidAmount = 0;  // Tylko potwierdzone kwoty
 
-      // Load training payments - fallback to camp_payments since training_payments doesn't exist
-      console.log(`[TRAINING-PROFITS] Loading training payments from database for currency: ${currency}`);
-      const { data: trainingPayments, error: trainingPaymentsErr } = await supabase
-        .from('training_payments')
-        .select('participant_id, amount, confirmed, currency')
-        .eq('training_id', training.id)
-        .in('participant_id', participants.map(p => p.id));
+      console.log(`[TRAINING-PROFITS] Calculating summary for ${currency} using cache first`);
 
-      if (trainingPaymentsErr) {
-        console.warn('training_payments table missing, falling back to camp_payments');
-        const { data: fallbackPayments, error: fallbackErr } = await supabase
-          .from('camp_payments')
+      // FIRST: Try to use cache for instant results
+      let cacheTotal = 0;
+      let cachePaid = 0;
+
+      // Load from cache first
+      for (const participant of participants) {
+        // Training payments (use camp cache for training)
+        const trainingPayment = getCachedPayment(participant.id, 'camp', null);
+        if (trainingPayment && trainingPayment.currency === currency) {
+          cacheTotal += parseFloat(trainingPayment.amount || 0);
+          if (trainingPayment.confirmed) {
+            cachePaid += parseFloat(trainingPayment.amount || 0);
+          }
+        }
+
+        // Trainer payments
+        if (training.trainers && training.trainers.length > 0) {
+          for (let trainerIndex = 0; trainerIndex < training.trainers.length; trainerIndex++) {
+            const trainerPayment = getCachedPayment(participant.id, 'trainer', trainerIndex);
+            if (trainerPayment && trainerPayment.currency === currency) {
+              cacheTotal += parseFloat(trainerPayment.amount || 0);
+              if (trainerPayment.confirmed) {
+                cachePaid += parseFloat(trainerPayment.amount || 0);
+              }
+            }
+          }
+        }
+      }
+
+      console.log(`[TRAINING-PROFITS] Cache results for ${currency}: total=${cacheTotal}, paid=${cachePaid}`);
+
+      // If we have cached data, use it for instant UI feedback
+      if (cacheTotal > 0) {
+        totalAmount = cacheTotal;
+        paidAmount = cachePaid;
+        console.log(`[TRAINING-PROFITS] Using cache data for ${currency}: total=${totalAmount}, paid=${paidAmount}`);
+      } else {
+        // FALLBACK: Load from database if no cache data
+        console.log(`[TRAINING-PROFITS] No cache data, loading from database for ${currency}`);
+
+        // Try training_payments first (might exist)
+        const { data: trainingPayments, error: trainingPaymentsErr } = await supabase
+          .from('training_payments')
           .select('participant_id, amount, confirmed, currency')
-          .eq('camp_id', training.id)
+          .eq('training_id', training.id)
           .in('participant_id', participants.map(p => p.id));
 
-        if (!fallbackErr && fallbackPayments) {
-          for (const payment of fallbackPayments) {
+        if (!trainingPaymentsErr && trainingPayments) {
+          for (const payment of trainingPayments) {
             if (payment.currency === currency) {
               totalAmount += parseFloat(payment.amount || 0);
               if (payment.confirmed) {
@@ -6213,32 +6273,16 @@
               }
             }
           }
-        }
-      } else if (trainingPayments) {
-        for (const payment of trainingPayments) {
-          if (payment.currency === currency) {
-            totalAmount += parseFloat(payment.amount || 0);
-            if (payment.confirmed) {
-              paidAmount += parseFloat(payment.amount || 0);
-            }
-          }
-        }
-      }
-      console.log(`[TRAINING-PROFITS] Found ${trainingPayments ? trainingPayments.length : 0} training payments for ${currency}`);
-
-      // Load trainer payments directly from database (not from cache)
-      if (training.trainers && training.trainers.length > 0) {
-        for (const [trainerIndex, trainer] of training.trainers.entries()) {
-          console.log(`[TRAINING-PROFITS] Loading trainer payments from database for trainer ${trainerIndex}, currency: ${currency}`);
-          const { data: trainerPayments, error: trainerPaymentsErr } = await supabase
-            .from('trainer_payments')
+        } else {
+          // Fallback to camp_payments
+          const { data: fallbackPayments, error: fallbackErr } = await supabase
+            .from('camp_payments')
             .select('participant_id, amount, confirmed, currency')
             .eq('camp_id', training.id)
-            .eq('trainer_index', trainerIndex)
             .in('participant_id', participants.map(p => p.id));
 
-          if (!trainerPaymentsErr && trainerPayments) {
-            for (const payment of trainerPayments) {
+          if (!fallbackErr && fallbackPayments) {
+            for (const payment of fallbackPayments) {
               if (payment.currency === currency) {
                 totalAmount += parseFloat(payment.amount || 0);
                 if (payment.confirmed) {
@@ -6247,8 +6291,32 @@
               }
             }
           }
-          console.log(`[TRAINING-PROFITS] Found ${trainerPayments ? trainerPayments.length : 0} trainer payments for trainer ${trainerIndex}`);
         }
+
+        // Load trainer payments from database
+        if (training.trainers && training.trainers.length > 0) {
+          for (const [trainerIndex, trainer] of training.trainers.entries()) {
+            const { data: trainerPayments, error: trainerPaymentsErr } = await supabase
+              .from('trainer_payments')
+              .select('participant_id, amount, confirmed, currency')
+              .eq('camp_id', training.id)
+              .eq('trainer_index', trainerIndex)
+              .in('participant_id', participants.map(p => p.id));
+
+            if (!trainerPaymentsErr && trainerPayments) {
+              for (const payment of trainerPayments) {
+                if (payment.currency === currency) {
+                  totalAmount += parseFloat(payment.amount || 0);
+                  if (payment.confirmed) {
+                    paidAmount += parseFloat(payment.amount || 0);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        console.log(`[TRAINING-PROFITS] Database results for ${currency}: total=${totalAmount}, paid=${paidAmount}`);
       }
 
       // Calculate expenses and profit (this still needs database query)
