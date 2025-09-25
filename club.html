@@ -3733,7 +3733,12 @@
         const { error: deleteErr } = await supabase.from('camp_profits').delete().eq('camp_id', campId);
         if (deleteErr) {
           console.error('Error deleting existing camp profits:', deleteErr);
-          return;
+          // If it's a UUID format error, try to continue anyway
+          if (deleteErr.code === '22P02') {
+            console.warn('UUID format error, but continuing...');
+          } else {
+            return;
+          }
         }
 
         // Insert new records
