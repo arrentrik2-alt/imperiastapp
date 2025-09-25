@@ -3702,12 +3702,12 @@
         // Recalculate for PLN and EUR
         const [summaryPLN, expensesPLN] = await Promise.all([
           (camp.entry_type === 'training' ? calculateTrainingCurrencySummary(camp, 'PLN', participants) : calculateCurrencySummary(camp, 'PLN', participants)),
-          (camp.entry_type === 'training' ? getTrainingExpenses(campId, 'PLN') : getExpenses(campId, 'PLN'))
+          (camp.entry_type === 'training' ? getTrainingExpenses(camp.id, 'PLN') : getExpenses(camp.id, 'PLN'))
         ]);
 
         const [summaryEUR, expensesEUR] = await Promise.all([
           (camp.entry_type === 'training' ? calculateTrainingCurrencySummary(camp, 'EUR', participants) : calculateCurrencySummary(camp, 'EUR', participants)),
-          (camp.entry_type === 'training' ? getTrainingExpenses(campId, 'EUR') : getExpenses(campId, 'EUR'))
+          (camp.entry_type === 'training' ? getTrainingExpenses(camp.id, 'EUR') : getExpenses(camp.id, 'EUR'))
         ]);
 
         console.log(`[CAMP-PROFITS] PLN - paid: ${summaryPLN.paidAmount}, expenses: ${expensesPLN.reduce((sum, exp) => sum + (exp.amount || 0), 0)}`);
@@ -3751,29 +3751,15 @@
 
         console.log(`[CAMP-PROFITS] Preparing to insert ${upserts.length} records`);
 
-        // Delete existing records for this camp (if any exist)
-        console.log(`[CAMP-PROFITS] Deleting existing records for camp: ${camp.id}`);
-        const { error: deleteErr } = await supabase.from('camp_profits').delete().eq('camp_id', camp.id);
-        if (deleteErr) {
-          console.error('Error deleting existing camp profits:', deleteErr);
-          // If it's a UUID format error, try to continue anyway
-          if (deleteErr.code === '22P02') {
-            console.warn('UUID format error, but continuing...');
-          } else {
-            return;
-          }
-        }
-
-        // Insert new records only if there are positive profits
-        if (upserts.length > 0) {
-          console.log(`[CAMP-PROFITS] Inserting ${upserts.length} records for camp: ${camp.name}`);
-          const { error: insertErr } = await supabase.from('camp_profits').insert(upserts);
-          if (insertErr) {
-            console.error('Error inserting camp profits:', insertErr);
-            return;
-          }
-        } else {
-          console.log(`[CAMP-PROFITS] No profits to save for camp: ${camp.name} (all profits are zero)`);
+        // Use upsert to handle existing records (insert or update)
+        console.log(`[CAMP-PROFITS] Using upsert for ${upserts.length} records for camp: ${camp.name}`);
+        const { error: upsertErr } = await supabase.from('camp_profits').upsert(upserts, {
+          onConflict: 'camp_id,currency',
+          ignoreDuplicates: false
+        });
+        if (upsertErr) {
+          console.error('Error upserting camp profits:', upsertErr);
+          return;
         }
 
         console.log(`[CAMP-PROFITS] Successfully saved ${upserts.length} records for camp: ${camp.name}`);
@@ -4654,8 +4640,8 @@
 
       if (!campPaymentsErr && campPayments) {
         for (const payment of campPayments) {
-          // Płatności nie mają pola currency w bazie, więc sprawdzam walutę campu
-          if (camp.currency === currency) {
+          // Płatności mają pole currency w bazie, więc sprawdzam currency płatności
+          if (payment.currency === currency) {
             totalAmount += parseFloat(payment.amount || 0);
             if (payment.confirmed) {
               paidAmount += parseFloat(payment.amount || 0);
@@ -4668,26 +4654,26 @@
       // Load trainer payments directly from database (not from cache)
       if (camp.trainers && camp.trainers.length > 0) {
         for (const [trainerIndex, trainer] of camp.trainers.entries()) {
-          // Sprawdzam czy waluta trenera pasuje do waluty którą analizuję
-          if (trainer && trainer.currency === currency) {
-            console.log(`[CAMP-PROFITS] Loading trainer payments from database for trainer ${trainerIndex}, currency: ${currency}`);
-            const { data: trainerPayments, error: trainerPaymentsErr } = await supabase
-              .from('trainer_payments')
-              .select('participant_id, amount, confirmed')
-              .eq('camp_id', camp.id)
-              .eq('trainer_index', trainerIndex)
-              .in('participant_id', participants.map(p => p.id));
+          console.log(`[CAMP-PROFITS] Loading trainer payments from database for trainer ${trainerIndex}, currency: ${currency}`);
+          const { data: trainerPayments, error: trainerPaymentsErr } = await supabase
+            .from('trainer_payments')
+            .select('participant_id, amount, confirmed, currency')
+            .eq('camp_id', camp.id)
+            .eq('trainer_index', trainerIndex)
+            .in('participant_id', participants.map(p => p.id));
 
-            if (!trainerPaymentsErr && trainerPayments) {
-              for (const payment of trainerPayments) {
+          if (!trainerPaymentsErr && trainerPayments) {
+            for (const payment of trainerPayments) {
+              // Sprawdzam czy currency płatności pasuje do currency którą analizuję
+              if (payment.currency === currency) {
                 totalAmount += parseFloat(payment.amount || 0);
                 if (payment.confirmed) {
                   paidAmount += parseFloat(payment.amount || 0);
                 }
               }
             }
-            console.log(`[CAMP-PROFITS] Found ${trainerPayments ? trainerPayments.length : 0} trainer payments for trainer ${trainerIndex}`);
           }
+          console.log(`[CAMP-PROFITS] Found ${trainerPayments ? trainerPayments.length : 0} trainer payments for trainer ${trainerIndex}`);
         }
       }
 
