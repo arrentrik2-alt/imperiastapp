@@ -1708,14 +1708,17 @@
 
       <!-- Incomes Section -->
       <div class="kasa-incomes" style="margin-top:32px;">
-        <div class="content-header">
-          <h3>Przychody</h3>
-          <div class="kasa-actions">
-            <button class="btn btn-outline" id="add-kasa-income-btn">
-              <i class="fas fa-plus"></i> Dodaj przychód
-            </button>
-          </div>
+      <div class="content-header">
+        <h3>Przychody</h3>
+        <div class="kasa-actions">
+          <select id="kasa-month-selector" style="padding:8px;border:1px solid var(--muted);border-radius:4px;margin-right:12px;">
+            <!-- Months will be populated by JavaScript -->
+          </select>
+          <button class="btn btn-outline" id="add-kasa-income-btn">
+            <i class="fas fa-plus"></i> Dodaj przychód
+          </button>
         </div>
+      </div>
 
         <!-- Add/Edit Income Form -->
         <div id="add-kasa-income-form" style="display:none;margin-bottom:24px;padding:20px;border:1px solid var(--muted);border-radius:8px;background:var(--primary-bg);">
@@ -2486,6 +2489,7 @@
         const navKasaEl = document.getElementById('nav-kasa');
         if (navKasaEl) navKasaEl.classList.add('active');
         if (typeof loadKasaSummary === 'function') loadKasaSummary();
+        if (typeof loadKasaMonths === 'function') loadKasaMonths();
         if (typeof loadKasaExpenses === 'function') loadKasaExpenses();
         if (typeof loadKasaIncomes === 'function') loadKasaIncomes();
       } else {
@@ -2501,6 +2505,8 @@
     // Kasa functionality
     window.currentEditingExpenseId = null;
     window.currentEditingIncomeId = null;
+    window.currentKasaMonth = null; // Current selected month for Kasa
+    window.availableKasaMonths = []; // Available months for selector
 
     // Trainings functionality - COPY OF CAMPS FUNCTIONALITY
     let currentTraining = null;
@@ -4166,10 +4172,73 @@
       }
     }
 
+    // Load available months for Kasa
+    async function loadKasaMonths() {
+      try {
+        const currentDate = new Date();
+        const currentMonth = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0');
+
+        // Get all months from incomes and expenses
+        const [incomesData, expensesData] = await Promise.all([
+          supabase.from('kasa_incomes').select('month'),
+          supabase.from('kasa_expenses').select('month')
+        ]);
+
+        const months = new Set();
+
+        // Add current month as default
+        months.add(currentMonth);
+
+        // Add months from incomes
+        if (incomesData.data) {
+          incomesData.data.forEach(income => {
+            if (income.month) months.add(income.month);
+          });
+        }
+
+        // Add months from expenses
+        if (expensesData.data) {
+          expensesData.data.forEach(expense => {
+            if (expense.month) months.add(expense.month);
+          });
+        }
+
+        // Sort months chronologically
+        window.availableKasaMonths = Array.from(months).sort();
+
+        // Set current month if not set
+        if (!window.currentKasaMonth) {
+          window.currentKasaMonth = currentMonth;
+        }
+
+        // Populate month selector
+        const selector = document.getElementById('kasa-month-selector');
+        if (selector) {
+          selector.innerHTML = window.availableKasaMonths.map(month => {
+            const date = new Date(month + '-01');
+            const monthName = date.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+            const selected = month === window.currentKasaMonth ? 'selected' : '';
+            return `<option value="${month}" ${selected}>${monthName}</option>`;
+          }).join('');
+
+          // Add event listener for month change
+          selector.addEventListener('change', (e) => {
+            window.currentKasaMonth = e.target.value;
+            loadKasaIncomes();
+            loadKasaExpenses();
+          });
+        }
+
+        console.log(`[KASA-MONTHS] Loaded ${window.availableKasaMonths.length} months, current: ${window.currentKasaMonth}`);
+      } catch (err) {
+        console.error('Error loading Kasa months:', err);
+      }
+    }
+
     // Load kasa incomes
     async function loadKasaIncomes() {
       try {
-        console.log('[KASA-INCOMES] Loading incomes...');
+        console.log(`[KASA-INCOMES] Loading incomes for month: ${window.currentKasaMonth}`);
 
         // Show loading state
         const kasaIncomesPLN = document.getElementById('kasa-incomes-pln');
@@ -4181,6 +4250,7 @@
         const { data: incomes, error } = await supabase
           .from('kasa_incomes')
           .select('*')
+          .eq('month', window.currentKasaMonth)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -4282,10 +4352,11 @@
       updateKasaBalanceFromAll();
     }
 
-    // Update kasa balance from all sources (revenues + incomes - expenses)
+    // Update kasa balance from all sources (revenues + all months incomes - all months expenses)
     async function updateKasaBalanceFromAll() {
       try {
         // Load current data from database for accurate calculations
+        // Note: We load ALL months data for balance calculation, not just current month
         const [incomesData, expensesData] = await Promise.all([
           supabase.from('kasa_incomes').select('*'),
           supabase.from('kasa_expenses').select('*')
@@ -4581,6 +4652,7 @@
               amount: amount,
               currency: currency,
               description: description,
+              month: window.currentKasaMonth,
               updated_at: new Date().toISOString()
             })
             .eq('id', window.currentEditingIncomeId)
@@ -4594,7 +4666,15 @@
 
           console.log('[KASA-INCOMES] Income updated successfully');
           alert('Przychód został zaktualizowany pomyślnie');
-        } else {
+        }
+
+        // Reload incomes and update balance
+        await loadKasaIncomes();
+        await loadKasaMonths(); // Reload months after changes
+        updateKasaBalanceFromAll();
+
+        // Hide form
+        hideAddKasaIncomeForm();
           console.log(`[KASA-INCOMES] Saving income: ${name}, ${amount} ${currency}`);
 
           const { data, error } = await supabase
@@ -4604,6 +4684,7 @@
               amount: amount,
               currency: currency,
               description: description,
+              month: window.currentKasaMonth,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
@@ -4621,6 +4702,7 @@
 
         // Reload incomes and update balance
         await loadKasaIncomes();
+        await loadKasaMonths(); // Reload months after changes
         updateKasaBalanceFromAll();
 
         // Hide form
@@ -4655,6 +4737,7 @@
 
         // Reload incomes and update balance
         await loadKasaIncomes();
+        await loadKasaMonths(); // Reload months after changes
         updateKasaBalanceFromAll();
 
         // Show success message
@@ -4669,7 +4752,7 @@
     // Load kasa expenses
     async function loadKasaExpenses() {
       try {
-        console.log('[KASA-EXPENSES] Loading expenses...');
+        console.log(`[KASA-EXPENSES] Loading expenses for month: ${window.currentKasaMonth}`);
 
         // Show loading state
         const kasaExpensesPLN = document.getElementById('kasa-expenses-pln');
@@ -4681,6 +4764,7 @@
         const { data: expenses, error } = await supabase
           .from('kasa_expenses')
           .select('*')
+          .eq('month', window.currentKasaMonth)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -4962,6 +5046,7 @@
               amount: amount,
               currency: currency,
               description: description,
+              month: window.currentKasaMonth,
               updated_at: new Date().toISOString()
             })
             .eq('id', window.currentEditingExpenseId)
@@ -4975,7 +5060,15 @@
 
           console.log('[KASA-EXPENSES] Expense updated successfully');
           alert('Wydatek został zaktualizowany pomyślnie');
-        } else {
+        }
+
+        // Reload expenses and update balance
+        await loadKasaExpenses();
+        await loadKasaMonths(); // Reload months after changes
+        updateKasaBalanceFromAll();
+
+        // Hide form
+        hideAddKasaExpenseForm();
           console.log(`[KASA-EXPENSES] Saving expense: ${name}, ${amount} ${currency}`);
 
           const { data, error } = await supabase
@@ -4985,6 +5078,7 @@
               amount: amount,
               currency: currency,
               description: description,
+              month: window.currentKasaMonth,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
@@ -5036,6 +5130,7 @@
 
         // Reload expenses and update balance
         await loadKasaExpenses();
+        await loadKasaMonths(); // Reload months after changes
         updateKasaBalanceFromAll();
 
         // Show success message
@@ -6682,6 +6777,7 @@
       refreshKasaBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         await loadKasaSummary();
+        await loadKasaMonths();
         await loadKasaExpenses();
         await loadKasaIncomes();
       });
