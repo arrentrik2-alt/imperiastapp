@@ -1532,6 +1532,9 @@
           <button class="btn btn-outline" id="download-pdf-btn" style="margin-left:8px;">
             <i class="fas fa-file-pdf"></i> Pobierz PDF
           </button>
+          <button class="btn btn-warning" id="refresh-profits-btn" style="margin-left:8px;" onclick="if(window.currentCamp) refreshCampProfits(window.currentCamp.id)">
+            <i class="fas fa-sync-alt"></i> Odśwież zyski
+          </button>
         </div>
       </div>
 
@@ -3081,7 +3084,11 @@
         await loadTrainings();
 
         // Update camp_profits for the deleted training (will delete the records)
-        await updateCampProfit(training.id);
+        try {
+          await updateCampProfit(training.id);
+        } catch (err) {
+          console.error('Failed to update camp profits after deleting training:', err);
+        }
 
         // Show success message
         alert(`Szkolenie "${training.name}" zostało pomyślnie usunięte.`);
@@ -3452,7 +3459,9 @@
       }
 
       // Update camp_profits after saving training payment
-      updateCampProfit(trainingId);
+      updateCampProfit(trainingId).catch(err => {
+        console.error('Failed to update camp profits after saving training payment:', err);
+      });
     }
 
     function confirmTrainingPayment(trainingId, participantId, columnType, trainerIndex = null) {
@@ -3492,7 +3501,9 @@
       }
 
       // Update camp_profits after confirming training payment
-      updateCampProfit(trainingId);
+      updateCampProfit(trainingId).catch(err => {
+        console.error('Failed to update camp profits after confirming training payment:', err);
+      });
     }
 
     function removeTrainingPayment(trainingId, participantId, columnType, trainerIndex = null) {
@@ -3537,7 +3548,9 @@
       }
 
       // Update camp_profits after removing training payment
-      updateCampProfit(trainingId);
+      updateCampProfit(trainingId).catch(err => {
+        console.error('Failed to update camp profits after removing training payment:', err);
+      });
     }
 
     // Expose training payment helpers globally
@@ -3706,34 +3719,34 @@
 
         console.log(`[CAMP-PROFITS] Calculated profits - PLN: ${profitPLN}, EUR: ${profitEUR}`);
 
-        // Save ONLY POSITIVE profits into camp_profits table
+        // Save profits into camp_profits table (including negative values for debugging)
         const upserts = [];
-        if (profitPLN > 0) {
-          upserts.push({
-            camp_id: campId,
-            entry_type: camp.entry_type || 'camp',
-            dance_type: camp.dance_type || null,
-            currency: 'PLN',
-            profit: profitPLN,
-            camp_name: camp.name,
-            updated_at: new Date().toISOString()
-          });
-        }
-        if (profitEUR > 0) {
-          upserts.push({
-            camp_id: campId,
-            entry_type: camp.entry_type || 'camp',
-            dance_type: camp.dance_type || null,
-            currency: 'EUR',
-            profit: profitEUR,
-            camp_name: camp.name,
-            updated_at: new Date().toISOString()
-          });
-        }
+        console.log(`[CAMP-PROFITS] Saving PLN profit: ${profitPLN} for camp: ${camp.name}`);
+        upserts.push({
+          camp_id: campId,
+          entry_type: camp.entry_type || 'camp',
+          dance_type: camp.dance_type || null,
+          currency: 'PLN',
+          profit: profitPLN,
+          camp_name: camp.name,
+          updated_at: new Date().toISOString()
+        });
+
+        console.log(`[CAMP-PROFITS] Saving EUR profit: ${profitEUR} for camp: ${camp.name}`);
+        upserts.push({
+          camp_id: campId,
+          entry_type: camp.entry_type || 'camp',
+          dance_type: camp.dance_type || null,
+          currency: 'EUR',
+          profit: profitEUR,
+          camp_name: camp.name,
+          updated_at: new Date().toISOString()
+        });
 
         console.log(`[CAMP-PROFITS] Preparing to insert ${upserts.length} records`);
 
         // Delete existing records for this camp (if any exist)
+        console.log(`[CAMP-PROFITS] Deleting existing records for camp: ${campId}`);
         const { error: deleteErr } = await supabase.from('camp_profits').delete().eq('camp_id', campId);
         if (deleteErr) {
           console.error('Error deleting existing camp profits:', deleteErr);
@@ -3745,14 +3758,15 @@
           }
         }
 
-        // Insert new records only if there are positive profits
-        if (upserts.length > 0) {
-          const { error: insertErr } = await supabase.from('camp_profits').insert(upserts);
-          if (insertErr) {
-            console.error('Error inserting camp profits:', insertErr);
-            return;
-          }
+        // Insert new records (always, even if profit is negative)
+        console.log(`[CAMP-PROFITS] Inserting ${upserts.length} records for camp: ${camp.name}`);
+        const { error: insertErr } = await supabase.from('camp_profits').insert(upserts);
+        if (insertErr) {
+          console.error('Error inserting camp profits:', insertErr);
+          return;
         }
+
+        console.log(`[CAMP-PROFITS] Successfully saved ${upserts.length} records for camp: ${camp.name}`);
 
         console.log(`[CAMP-PROFITS] Successfully updated profit for ${camp.name}: PLN=${profitPLN.toFixed(2)}, EUR=${profitEUR.toFixed(2)}`);
       } catch (err) {
@@ -3789,6 +3803,7 @@
           }
         });
 
+        // Wait for all backfill operations to complete
         await Promise.all(backfillPromises);
         console.debug('[BACKFILL] Backfill completed successfully');
       } catch (err) {
@@ -3859,6 +3874,20 @@
 
         console.log(`[KASA] Totals - PLN: ${totalPLN}, EUR: ${totalEUR}`);
         console.log(`[KASA] Groups - campsPLN: ${campsPLN.length}, trainingsPLN: ${trainingsPLN.length}, campsEUR: ${campsEUR.length}, trainingsEUR: ${trainingsEUR.length}`);
+
+        // Show detailed breakdown
+        if (campsPLN.length > 0) {
+          console.log(`[KASA] PLN Camps:`, campsPLN.map(c => `${c.name}: ${c.profit}`));
+        }
+        if (trainingsPLN.length > 0) {
+          console.log(`[KASA] PLN Trainings:`, trainingsPLN.map(t => `${t.name}: ${t.profit}`));
+        }
+        if (campsEUR.length > 0) {
+          console.log(`[KASA] EUR Camps:`, campsEUR.map(c => `${c.name}: ${c.profit}`));
+        }
+        if (trainingsEUR.length > 0) {
+          console.log(`[KASA] EUR Trainings:`, trainingsEUR.map(t => `${t.name}: ${t.profit}`));
+        }
 
         // Update summary cards
         const totalPLNEl = document.getElementById('kasa-total-pln');
@@ -4011,7 +4040,11 @@
         await loadCamps();
 
         // Update camp_profits for the deleted camp (will delete the records)
-        await updateCampProfit(camp.id);
+        try {
+          await updateCampProfit(camp.id);
+        } catch (err) {
+          console.error('Failed to update camp profits after deleting camp:', err);
+        }
 
         // Show success message
         alert(`Camp "${camp.name}" został pomyślnie usunięty.`);
@@ -5229,7 +5262,11 @@
         await loadCamps();
 
         // Update camp_profits for the newly created camp
-        await updateCampProfit(campId);
+        try {
+          await updateCampProfit(campId);
+        } catch (err) {
+          console.error('Failed to update camp profits after creating camp:', err);
+        }
 
       } catch (err) {
         console.error('Błąd tworzenia campu:', err);
@@ -5488,13 +5525,33 @@
         if (confirm('Czy na pewno chcesz wypełnić tabelę przychodów danymi z istniejących campów i szkoleń?')) {
           backfillKasaBtn.disabled = true;
           backfillKasaBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Wypełnianie...';
-          await backfillCampProfits();
-          backfillKasaBtn.disabled = false;
-          backfillKasaBtn.innerHTML = '<i class="fas fa-database"></i> Wypełnij dane';
-          await loadKasaSummary(); // Reload the data
-          alert('Wypełnianie ukończone!');
+          try {
+            await backfillCampProfits();
+            alert('Wypełnianie ukończone!');
+          } catch (err) {
+            console.error('Backfill failed:', err);
+            alert('Błąd podczas wypełniania: ' + err.message);
+          } finally {
+            backfillKasaBtn.disabled = false;
+            backfillKasaBtn.innerHTML = '<i class="fas fa-database"></i> Wypełnij dane';
+            await loadKasaSummary(); // Reload the data
+          }
         }
       });
+    }
+
+    // Add manual refresh function for testing
+    window.refreshCampProfits = async function(campId) {
+      try {
+        console.log(`[MANUAL] Manually refreshing profits for camp: ${campId}`);
+        await updateCampProfit(campId);
+        console.log(`[MANUAL] Successfully refreshed profits for camp: ${campId}`);
+        alert('Odświeżono zyski dla campu!');
+        await loadKasaSummary(); // Reload the data
+      } catch (err) {
+        console.error('Manual refresh failed:', err);
+        alert('Błąd odświeżania: ' + err.message);
+      }
     }
 
     if (navTrainingsEl) {
@@ -7092,7 +7149,9 @@
       }
 
       // Update camp_profits after saving payment
-      updateCampProfit(campId);
+      updateCampProfit(campId).catch(err => {
+        console.error('Failed to update camp profits after saving payment:', err);
+      });
     }
 
     function confirmPayment(campId, participantId, columnType, trainerIndex = null) {
@@ -7157,7 +7216,9 @@
       }
 
       // Update camp_profits after confirming payment
-      updateCampProfit(campId);
+      updateCampProfit(campId).catch(err => {
+        console.error('Failed to update camp profits after confirming payment:', err);
+      });
     }
 
     function removePayment(campId, participantId, columnType, trainerIndex = null) {
@@ -7227,7 +7288,9 @@
       }
 
       // Update camp_profits after removing payment
-      updateCampProfit(campId);
+      updateCampProfit(campId).catch(err => {
+        console.error('Failed to update camp profits after removing payment:', err);
+      });
     }
 
     // Calculate column summary
