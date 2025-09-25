@@ -5418,9 +5418,9 @@
       try {
         console.log('[TEST] Testing camp_profits table...');
 
-        // Try to insert a test record
+        // Try to insert a test record - use a valid UUID format
         const testData = {
-          camp_id: 'test-' + Date.now(),
+          camp_id: crypto.randomUUID(), // Generate a proper UUID
           entry_type: 'camp',
           dance_type: 'st',
           currency: 'PLN',
