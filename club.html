@@ -3741,16 +3741,63 @@
 
         console.log(`[CAMP-PROFITS] Found ${participants.length} participants`);
 
-        // Recalculate for PLN and EUR
-        const [summaryPLN, expensesPLN] = await Promise.all([
+        // Use cache for immediate results, but also load from database for accuracy
+        let summaryPLN, summaryEUR, expensesPLN, expensesEUR;
+
+        // Try cache first (fast)
+        const cacheTotalPLN = 0;
+        const cacheTotalEUR = 0;
+
+        if (participants.length > 0) {
+          // Calculate from cache first
+          for (const participant of participants) {
+            const campPayment = getCachedPayment(participant.id, 'camp', null);
+            if (campPayment && campPayment.currency === 'PLN') {
+              cacheTotalPLN += parseFloat(campPayment.amount || 0);
+              if (campPayment.confirmed) {
+                cacheTotalPLN += parseFloat(campPayment.amount || 0);
+              }
+            }
+
+            if (camp.trainers && camp.trainers.length > 0) {
+              for (let trainerIndex = 0; trainerIndex < camp.trainers.length; trainerIndex++) {
+                const trainerPayment = getCachedPayment(participant.id, 'trainer', trainerIndex);
+                if (trainerPayment && trainerPayment.currency === 'PLN') {
+                  cacheTotalPLN += parseFloat(trainerPayment.amount || 0);
+                  if (trainerPayment.confirmed) {
+                    cacheTotalPLN += parseFloat(trainerPayment.amount || 0);
+                  }
+                }
+              }
+            }
+          }
+
+          // If cache has data, use it for instant UI feedback, but also load from database
+          if (cacheTotalPLN > 0) {
+            console.log(`[CAMP-PROFITS] Using cache data for immediate calculation: PLN=${cacheTotalPLN}`);
+          }
+        }
+
+        // Recalculate for PLN and EUR - ALWAYS from database for accuracy
+        const [dbSummaryPLN, dbSummaryEUR] = await Promise.all([
           (camp.entry_type === 'training' ? calculateTrainingCurrencySummary(camp, 'PLN', participants) : calculateCurrencySummary(camp, 'PLN', participants)),
-          (camp.entry_type === 'training' ? getTrainingExpenses(camp.id, 'PLN') : getExpenses(camp.id, 'PLN'))
+          (camp.entry_type === 'training' ? calculateTrainingCurrencySummary(camp, 'EUR', participants) : calculateCurrencySummary(camp, 'EUR', participants))
         ]);
 
-        const [summaryEUR, expensesEUR] = await Promise.all([
-          (camp.entry_type === 'training' ? calculateTrainingCurrencySummary(camp, 'EUR', participants) : calculateCurrencySummary(camp, 'EUR', participants)),
+        const [dbExpensesPLN, dbExpensesEUR] = await Promise.all([
+          (camp.entry_type === 'training' ? getTrainingExpenses(camp.id, 'PLN') : getExpenses(camp.id, 'PLN')),
           (camp.entry_type === 'training' ? getTrainingExpenses(camp.id, 'EUR') : getExpenses(camp.id, 'EUR'))
         ]);
+
+        // Use database results for accurate profit calculation
+        summaryPLN = dbSummaryPLN;
+        summaryEUR = dbSummaryEUR;
+        expensesPLN = dbExpensesPLN;
+        expensesEUR = dbExpensesEUR;
+
+        console.log(`[CAMP-PROFITS] Database vs Cache comparison:`);
+        console.log(`  PLN - DB: ${dbSummaryPLN.paidAmount}, Cache: ${cacheTotalPLN}`);
+        console.log(`  EUR - DB: ${dbSummaryEUR.paidAmount}, Cache: ${cacheTotalEUR}`);
 
         console.log(`[CAMP-PROFITS] PLN - paid: ${summaryPLN.paidAmount}, expenses: ${expensesPLN.reduce((sum, exp) => sum + (exp.amount || 0), 0)}`);
         console.log(`[CAMP-PROFITS] EUR - paid: ${summaryEUR.paidAmount}, expenses: ${expensesEUR.reduce((sum, exp) => sum + (exp.amount || 0), 0)}`);
