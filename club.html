@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -4377,27 +4379,6 @@
       const totalExpenses = await getTotalExpenses(camp.id, currency);
       const profit = paidAmount - totalExpenses;
 
-      // Persist per-camp-per-currency profit to camp_profits table
-      (async () => {
-        try {
-          await supabase
-            .from('camp_profits')
-            .upsert({
-              camp_id: camp.id,
-              entry_type: camp.entry_type || 'camp',
-              dance_type: camp.dance_type || camp.danceType || null,
-              currency: currency,
-              total_amount: totalAmount,
-              paid_amount: paidAmount,
-              expenses: totalExpenses,
-              profit: profit,
-              updated_at: new Date().toISOString()
-            }, { onConflict: ['camp_id','currency'] });
-        } catch (err) {
-          console.error('Error upserting camp_profits for camp', camp.id, currency, err);
-        }
-      })();
-
       return {
         currency,
         totalAmount,
@@ -5737,27 +5718,6 @@
       const totalExpenses = await getTotalTrainingExpenses(training.id, currency);
       const profit = paidAmount - totalExpenses;
 
-      // Persist per-training-per-currency profit to camp_profits table
-      (async () => {
-        try {
-          await supabase
-            .from('camp_profits')
-            .upsert({
-              camp_id: training.id,
-              entry_type: 'training',
-              dance_type: training.dance_type || training.danceType || null,
-              currency: currency,
-              total_amount: totalAmount,
-              paid_amount: paidAmount,
-              expenses: totalExpenses,
-              profit: profit,
-              updated_at: new Date().toISOString()
-            }, { onConflict: ['camp_id','currency'] });
-        } catch (err) {
-          console.error('Error upserting camp_profits for training', training.id, currency, err);
-        }
-      })();
-
       return {
         currency,
         totalAmount,
@@ -6575,17 +6535,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
       await testDatabaseConnection();
       await createTablesIfMissing();
-      // Start background auto-backfill of camp_profits so user doesn't need to click manually
-      // run asynchronously (don't block page load)
-      (async () => {
-        try {
-          if (typeof autoBackfillCampProfits === 'function') {
-            autoBackfillCampProfits();
-          }
-        } catch (e) {
-          console.error('Auto backfill failed to start:', e);
-        }
-      })();
+      // no automatic backfill here; camp_profits will be maintained live on payment events
     });
 
     // Expose important functions from module scope to non-module scripts
@@ -8016,6 +7966,12 @@
         }
       });
     }
+
+    // Remove manual backfill button from DOM (we'll keep code for safety but hide the control)
+    (function hideBackfillButton(){
+      const btn = document.getElementById('backfill-profits-btn');
+      if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
+    })();
 
     // Auto backfill function (runs once on load, in background)
     async function autoBackfillCampProfits() {
