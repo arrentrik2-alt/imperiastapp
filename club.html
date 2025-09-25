@@ -2560,9 +2560,11 @@
 
       const summaryCurrencies = document.getElementById('summary-currencies');
       if (summaryCurrencies) {
-        console.log('[UPDATE-FINANCIAL-SUMMARY] Updating financial summary...');
-        summaryCurrencies.innerHTML = await createFinancialSummaryHTML(camp, participants);
-        console.log('[UPDATE-FINANCIAL-SUMMARY] Financial summary updated');
+        console.log('[UPDATE-FINANCIAL-SUMMARY] Updating financial summary from database...');
+        // Use database for immediate UI update - cache can be stale
+        const html = await createFinancialSummaryHTML(camp, participants);
+        summaryCurrencies.innerHTML = html;
+        console.log('[UPDATE-FINANCIAL-SUMMARY] Financial summary updated from database');
       } else {
         console.error('[UPDATE-FINANCIAL-SUMMARY] summary-currencies element not found');
       }
@@ -3465,11 +3467,13 @@
         console.error('Error in saveTrainingPayment:', err);
       }
 
-      // Update camp_profits after saving training payment and refresh Kasa page
+      // Update camp_profits after saving training payment and refresh UI
       (async () => {
         try {
           await updateCampProfit(trainingId);
           console.log('[CAMP-PROFITS] Updated profits after saving training payment');
+          // Update financial summary immediately
+          await updateFinancialSummary();
           // Refresh Kasa page if it's visible
           if (document.getElementById('kasa-section').style.display === 'block') {
             await loadKasaSummary();
@@ -3517,11 +3521,13 @@
         console.error('Error in confirmTrainingPayment:', err);
       }
 
-      // Update camp_profits after confirming training payment and refresh Kasa page
+      // Update camp_profits after confirming training payment and refresh UI
       (async () => {
         try {
           await updateCampProfit(trainingId);
           console.log('[CAMP-PROFITS] Updated profits after confirming training payment');
+          // Update financial summary immediately
+          await updateFinancialSummary();
           // Refresh Kasa page if it's visible
           if (document.getElementById('kasa-section').style.display === 'block') {
             await loadKasaSummary();
@@ -3574,11 +3580,13 @@
         console.error('Error in removeTrainingPayment:', err);
       }
 
-      // Update camp_profits after removing training payment and refresh Kasa page
+      // Update camp_profits after removing training payment and refresh UI
       (async () => {
         try {
           await updateCampProfit(trainingId);
           console.log('[CAMP-PROFITS] Updated profits after removing training payment');
+          // Update financial summary immediately
+          await updateFinancialSummary();
           // Refresh Kasa page if it's visible
           if (document.getElementById('kasa-section').style.display === 'block') {
             await loadKasaSummary();
@@ -3744,12 +3752,12 @@
         // Use cache for immediate results, but also load from database for accuracy
         let summaryPLN, summaryEUR, expensesPLN, expensesEUR;
 
-        // Try cache first (fast)
-        const cacheTotalPLN = 0;
-        const cacheTotalEUR = 0;
+        // Use database for accurate calculations (cache can be stale)
+        let cacheTotalPLN = 0;
+        let cacheTotalEUR = 0;
 
         if (participants.length > 0) {
-          // Calculate from cache first
+          // Calculate from cache first for comparison
           for (const participant of participants) {
             const campPayment = getCachedPayment(participant.id, 'camp', null);
             if (campPayment && campPayment.currency === 'PLN') {
@@ -3772,10 +3780,7 @@
             }
           }
 
-          // If cache has data, use it for instant UI feedback, but also load from database
-          if (cacheTotalPLN > 0) {
-            console.log(`[CAMP-PROFITS] Using cache data for immediate calculation: PLN=${cacheTotalPLN}`);
-          }
+          console.log(`[CAMP-PROFITS] Cache comparison data for ${currency}: PLN=${cacheTotalPLN}, EUR=${cacheTotalEUR}`);
         }
 
         // Recalculate for PLN and EUR - ALWAYS from database for accuracy
@@ -4848,12 +4853,13 @@
 
       const financialPromises = currencies.map(async currency => {
         console.log(`[FINANCIAL-SUMMARY] Calculating for ${currency}...`);
+        // Use database for immediate UI update - cache can be stale
         const [summary, expenses] = await Promise.all([
           calculateCurrencySummary(camp, currency, participants),
           getExpenses(camp.id, currency)
         ]);
 
-        console.log(`[FINANCIAL-SUMMARY] ${currency} Results:`, {
+        console.log(`[FINANCIAL-SUMMARY] ${currency} Database Results:`, {
           paidAmount: summary.paidAmount,
           totalAmount: summary.totalAmount,
           profit: summary.profit,
@@ -7047,32 +7053,56 @@
       const participants = window.currentTrainingParticipants;
       if (!training || !participants) return;
 
-      // Calculate training summary using cache
+      // Calculate training summary using database for accuracy
       let trainingTotal = 0;
       let trainingPaid = 0;
       let trainingCurrency = training.currency;
 
-      for (const participant of participants) {
-        const trainingPayment = getCachedTrainingPayment(participant.id, 'training');
-        trainingTotal += trainingPayment.amount;
-        if (trainingPayment.confirmed) {
-          trainingPaid += trainingPayment.amount;
+      // Load from database for accurate calculations
+      const { data: trainingPayments, error } = await supabase
+        .from('camp_payments') // Using camp_payments since training data is in camps table
+        .select('participant_id, amount, confirmed, currency')
+        .eq('camp_id', training.id)
+        .in('participant_id', participants.map(p => p.id));
+
+      if (!error && trainingPayments) {
+        for (const payment of trainingPayments) {
+          if (payment.currency === trainingCurrency) {
+            trainingTotal += parseFloat(payment.amount || 0);
+            if (payment.confirmed) {
+              trainingPaid += parseFloat(payment.amount || 0);
+            }
+          }
         }
       }
+
+      console.log(`[TRAINING-SUMMARIES] Database results for training: total=${trainingTotal}, paid=${trainingPaid}`);
 
       // Calculate trainer summaries
       const trainerSummaries = [];
       if (training.trainers && training.trainers.length > 0) {
-        training.trainers.forEach((trainer, index) => {
+        // Load trainer payments from database
+        for (let index = 0; index < training.trainers.length; index++) {
+          const trainer = training.trainers[index];
           if (trainer) {
             let trainerTotal = 0;
             let trainerPaid = 0;
 
-            for (const participant of participants) {
-              const trainerPayment = getCachedTrainingPayment(participant.id, 'trainer', index);
-              trainerTotal += trainerPayment.amount;
-              if (trainerPayment.confirmed) {
-                trainerPaid += trainerPayment.amount;
+            const { data: trainerPayments, error: trainerError } = await supabase
+              .from('trainer_payments')
+              .select('participant_id, amount, confirmed, currency')
+              .eq('camp_id', training.id)
+              .eq('trainer_index', index)
+              .in('participant_id', participants.map(p => p.id));
+
+            if (!trainerError && trainerPayments) {
+              for (const payment of trainerPayments) {
+                if (payment.currency === trainer.currency) {
+                  trainerTotal += parseFloat(payment.amount || 0);
+                  if (payment.confirmed) {
+                    trainerPaid += parseFloat(payment.amount || 0);
+                  }
+                }
               }
             }
 
@@ -7082,7 +7112,7 @@
               currency: trainer.currency
             });
           }
-        });
+        }
       }
 
       // This would update summary rows, but for now just calculate
@@ -7434,11 +7464,13 @@
         console.error('Error in savePayment:', err);
       }
 
-      // Update camp_profits after saving payment and refresh Kasa page
+      // Update camp_profits after saving payment and refresh UI
       (async () => {
         try {
           await updateCampProfit(campId);
           console.log('[CAMP-PROFITS] Updated profits after saving payment');
+          // Update financial summary immediately
+          await updateFinancialSummary();
           // Refresh Kasa page if it's visible
           if (document.getElementById('kasa-section').style.display === 'block') {
             await loadKasaSummary();
@@ -7510,11 +7542,13 @@
         console.error('Error in confirmPayment:', err);
       }
 
-      // Update camp_profits after confirming payment and refresh Kasa page
+      // Update camp_profits after confirming payment and refresh UI
       (async () => {
         try {
           await updateCampProfit(campId);
           console.log('[CAMP-PROFITS] Updated profits after confirming payment');
+          // Update financial summary immediately
+          await updateFinancialSummary();
           // Refresh Kasa page if it's visible
           if (document.getElementById('kasa-section').style.display === 'block') {
             await loadKasaSummary();
@@ -7591,11 +7625,13 @@
         console.error('Error in removePayment:', err);
       }
 
-      // Update camp_profits after removing payment and refresh Kasa page
+      // Update camp_profits after removing payment and refresh UI
       (async () => {
         try {
           await updateCampProfit(campId);
           console.log('[CAMP-PROFITS] Updated profits after removing payment');
+          // Update financial summary immediately
+          await updateFinancialSummary();
           // Refresh Kasa page if it's visible
           if (document.getElementById('kasa-section').style.display === 'block') {
             await loadKasaSummary();
@@ -7816,18 +7852,30 @@
       const participants = window.currentParticipants;
       if (!camp || !participants) return;
 
-      // Calculate camp summary using cache
+      // Calculate camp summary using database for accuracy
       let campTotal = 0;
       let campPaid = 0;
       let campCurrency = camp.currency;
 
-      for (const participant of participants) {
-        const payment = getCachedPayment(participant.id, 'camp');
-        campTotal += payment.amount;
-        if (payment.confirmed) {
-          campPaid += payment.amount;
+      // Load from database for accurate calculations
+      const { data: campPayments, error } = await supabase
+        .from('camp_payments')
+        .select('participant_id, amount, confirmed, currency')
+        .eq('camp_id', camp.id)
+        .in('participant_id', participants.map(p => p.id));
+
+      if (!error && campPayments) {
+        for (const payment of campPayments) {
+          if (payment.currency === campCurrency) {
+            campTotal += parseFloat(payment.amount || 0);
+            if (payment.confirmed) {
+              campPaid += parseFloat(payment.amount || 0);
+            }
+          }
         }
       }
+
+      console.log(`[CAMP-SUMMARIES] Database results: total=${campTotal}, paid=${campPaid}`);
 
       // Update camp summary elements
       const campTotalElement = document.querySelector('.summary-row:nth-child(1) td:nth-child(2) .summary-amount');
@@ -7840,7 +7888,7 @@
         campPaidElement.textContent = formatCurrency(campPaid, campCurrency);
       }
 
-      // Update trainer summaries using cache
+      // Update trainer summaries using database
       if (camp.trainers && camp.trainers.length > 0) {
         for (const [index, trainer] of camp.trainers.entries()) {
           if (trainer) { // Only update if trainer exists at this index
@@ -7848,11 +7896,22 @@
             let trainerPaid = 0;
             let trainerCurrency = trainer.currency;
 
-            for (const participant of participants) {
-              const payment = getCachedPayment(participant.id, 'trainer', index);
-              trainerTotal += payment.amount;
-              if (payment.confirmed) {
-                trainerPaid += payment.amount;
+            // Load trainer payments from database
+            const { data: trainerPayments, error: trainerError } = await supabase
+              .from('trainer_payments')
+              .select('participant_id, amount, confirmed, currency')
+              .eq('camp_id', camp.id)
+              .eq('trainer_index', index)
+              .in('participant_id', participants.map(p => p.id));
+
+            if (!trainerError && trainerPayments) {
+              for (const payment of trainerPayments) {
+                if (payment.currency === trainerCurrency) {
+                  trainerTotal += parseFloat(payment.amount || 0);
+                  if (payment.confirmed) {
+                    trainerPaid += parseFloat(payment.amount || 0);
+                  }
+                }
               }
             }
 
