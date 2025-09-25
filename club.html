@@ -4649,7 +4649,7 @@
       const { data: campPayments, error: campPaymentsErr } = await supabase
         .from('camp_payments')
         .select('participant_id, amount, confirmed')
-        .eq('camp_id', campId)
+        .eq('camp_id', camp.id)
         .in('participant_id', participants.map(p => p.id));
 
       if (!campPaymentsErr && campPayments) {
