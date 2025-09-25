@@ -1599,6 +1599,9 @@
           <button class="btn btn-outline" id="refresh-kasa-btn">
             <i class="fas fa-sync-alt"></i> Odśwież
           </button>
+          <button class="btn btn-primary" id="backfill-kasa-btn">
+            <i class="fas fa-database"></i> Wypełnij dane
+          </button>
         </div>
       </div>
 
@@ -3074,6 +3077,9 @@
         document.getElementById('trainings-section').style.display = 'block';
         await loadTrainings();
 
+        // Update camp_profits for the deleted training (will delete the records)
+        await updateCampProfit(training.id);
+
         // Show success message
         alert(`Szkolenie "${training.name}" zostało pomyślnie usunięte.`);
 
@@ -3441,6 +3447,9 @@
       } catch (err) {
         console.error('Error in saveTrainingPayment:', err);
       }
+
+      // Update camp_profits after saving training payment
+      updateCampProfit(trainingId);
     }
 
     function confirmTrainingPayment(trainingId, participantId, columnType, trainerIndex = null) {
@@ -3478,6 +3487,9 @@
       } catch (err) {
         console.error('Error in confirmTrainingPayment:', err);
       }
+
+      // Update camp_profits after confirming training payment
+      updateCampProfit(trainingId);
     }
 
     function removeTrainingPayment(trainingId, participantId, columnType, trainerIndex = null) {
@@ -3520,6 +3532,9 @@
       } catch (err) {
         console.error('Error in removeTrainingPayment:', err);
       }
+
+      // Update camp_profits after removing training payment
+      updateCampProfit(trainingId);
     }
 
     // Expose training payment helpers globally
@@ -3637,7 +3652,110 @@
       }
     }
 
-    // Load kasa summary - Przychody ze wszystkich ST campów i szkoleń
+    // Update camp_profits row for a camp/training by recalculating its summary
+    async function updateCampProfit(campId) {
+      try {
+        // attempt to load camp record
+        const { data: campRows, error: campErr } = await supabase.from('camps').select('id, currency, entry_type, dance_type, name').eq('id', campId).limit(1).maybeSingle();
+        if (campErr) { console.error('Error loading camp for updateCampProfit:', campErr); return; }
+        const camp = campRows;
+        if (!camp) { console.warn('No camp found for updateCampProfit:', campId); return; }
+
+        // Load participants depending on type
+        let participants = [];
+        if ((camp.entry_type || '').toString().toLowerCase() === 'training') {
+          participants = await getTrainingParticipants(campId);
+        } else {
+          participants = await getCampParticipants(campId);
+        }
+
+        // Recalculate for PLN and EUR
+        const [summaryPLN, expensesPLN] = await Promise.all([
+          (camp.entry_type === 'training' ? calculateTrainingCurrencySummary(camp, 'PLN', participants) : calculateCurrencySummary(camp, 'PLN', participants)),
+          (camp.entry_type === 'training' ? getTrainingExpenses(campId, 'PLN') : getExpenses(campId, 'PLN'))
+        ]);
+
+        const [summaryEUR, expensesEUR] = await Promise.all([
+          (camp.entry_type === 'training' ? calculateTrainingCurrencySummary(camp, 'EUR', participants) : calculateCurrencySummary(camp, 'EUR', participants)),
+          (camp.entry_type === 'training' ? getTrainingExpenses(campId, 'EUR') : getExpenses(campId, 'EUR'))
+        ]);
+
+        // Calculate profit = paid_amount - total_expenses
+        const profitPLN = (summaryPLN.paidAmount || 0) - (expensesPLN.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
+        const profitEUR = (summaryEUR.paidAmount || 0) - (expensesEUR.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
+
+        // Upsert ONLY profits into camp_profits table
+        const upserts = [];
+        if (profitPLN !== 0) upserts.push({
+          camp_id: campId,
+          entry_type: camp.entry_type || 'camp',
+          dance_type: camp.dance_type || null,
+          currency: 'PLN',
+          profit: profitPLN,
+          camp_name: camp.name,
+          updated_at: new Date().toISOString()
+        });
+        if (profitEUR !== 0) upserts.push({
+          camp_id: campId,
+          entry_type: camp.entry_type || 'camp',
+          dance_type: camp.dance_type || null,
+          currency: 'EUR',
+          profit: profitEUR,
+          camp_name: camp.name,
+          updated_at: new Date().toISOString()
+        });
+
+        // Delete existing records for this camp
+        await supabase.from('camp_profits').delete().eq('camp_id', campId);
+
+        // Insert new records
+        if (upserts.length > 0) {
+          const { error: insertErr } = await supabase.from('camp_profits').insert(upserts);
+          if (insertErr) {
+            console.error('Error inserting camp profits:', insertErr);
+            return;
+          }
+        }
+
+        console.log(`[CAMP-PROFITS] Updated profit for ${camp.name}: PLN=${profitPLN.toFixed(2)}, EUR=${profitEUR.toFixed(2)}`);
+      } catch (err) {
+        console.error('Error in updateCampProfit:', err);
+      }
+    }
+
+    // Backfill camp_profits table with existing camps and trainings
+    async function backfillCampProfits() {
+      try {
+        console.debug('[BACKFILL] Starting backfill of camp_profits');
+
+        // Get all camps with dance_type = 'st'
+        const { data: camps, error: campsErr } = await supabase
+          .from('camps')
+          .select('id, currency, entry_type, dance_type, name')
+          .ilike('dance_type', 'st');
+
+        if (campsErr) {
+          console.error('Error loading camps for backfill:', campsErr);
+          return;
+        }
+
+        // Process each camp in parallel
+        const backfillPromises = (camps || []).map(async (camp) => {
+          try {
+            await updateCampProfit(camp.id);
+          } catch (err) {
+            console.error(`Backfill error for ${camp.name} (${camp.id}):`, err);
+          }
+        });
+
+        await Promise.all(backfillPromises);
+        console.debug('[BACKFILL] Backfill completed successfully');
+      } catch (err) {
+        console.error('Backfill failed:', err);
+      }
+    }
+
+    // Load kasa summary - Suma zysków ze wszystkich ST campów i szkoleń
     async function loadKasaSummary() {
       try {
         // Show loading state
@@ -3651,23 +3769,15 @@
         if (kasaCampsEUR) kasaCampsEUR.innerHTML = '<div class="loading"></div>';
         if (kasaTrainingsEUR) kasaTrainingsEUR.innerHTML = '<div class="loading"></div>';
 
-        // Load all camps and trainings with dance_type = 'st'
-        const { data: campsData, error } = await supabase
-          .from('camps')
-          .select(`
-            *,
-            trainers (
-              name,
-              amount,
-              currency,
-              trainer_index
-            )
-          `)
+        // Load all profits for ST dance_type from camp_profits table
+        const { data: profits, error } = await supabase
+          .from('camp_profits')
+          .select('*')
           .ilike('dance_type', 'st')
-          .order('date', { ascending: true });
+          .order('updated_at', { ascending: false });
 
         if (error) {
-          console.error('Error loading camps for kasa:', error);
+          console.error('Error loading camp profits for kasa:', error);
           throw error;
         }
 
@@ -3680,60 +3790,25 @@
         const campsEUR = [];
         const trainingsEUR = [];
 
-        for (const camp of (campsData || [])) {
-          // Get participants for this camp/training
-          let participants = [];
-          if (camp.entry_type === 'training') {
-            participants = await getTrainingParticipants(camp.id);
-          } else {
-            participants = await getCampParticipants(camp.id);
-          }
+        (profits || []).forEach(profit => {
+          const profitAmount = parseFloat(profit.profit || 0);
 
-          // Calculate profits for both currencies
-          const [summaryPLN, expensesPLN] = await Promise.all([
-            camp.entry_type === 'training'
-              ? calculateTrainingCurrencySummary(camp, 'PLN', participants)
-              : calculateCurrencySummary(camp, 'PLN', participants),
-            camp.entry_type === 'training'
-              ? getTrainingExpenses(camp.id, 'PLN')
-              : getExpenses(camp.id, 'PLN')
-          ]);
-
-          const [summaryEUR, expensesEUR] = await Promise.all([
-            camp.entry_type === 'training'
-              ? calculateTrainingCurrencySummary(camp, 'EUR', participants)
-              : calculateCurrencySummary(camp, 'EUR', participants),
-            camp.entry_type === 'training'
-              ? getTrainingExpenses(camp.id, 'EUR')
-              : getExpenses(camp.id, 'EUR')
-          ]);
-
-          // Calculate profit = paid_amount - expenses
-          const profitPLN = (summaryPLN.paidAmount || 0) - (expensesPLN.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
-          const profitEUR = (summaryEUR.paidAmount || 0) - (expensesEUR.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
-
-          // Add to totals
-          totalPLN += profitPLN;
-          totalEUR += profitEUR;
-
-          // Add to appropriate lists
-          const campName = camp.name || 'Brak nazwy';
-          if (profitPLN > 0) {
-            if (camp.entry_type === 'training') {
-              trainingsPLN.push({ camp_id: camp.id, name: campName, profit: profitPLN });
+          if (profit.currency === 'PLN') {
+            totalPLN += profitAmount;
+            if (profit.entry_type === 'training') {
+              trainingsPLN.push({ camp_id: profit.camp_id, name: profit.camp_name || 'Brak nazwy', profit: profitAmount });
             } else {
-              campsPLN.push({ camp_id: camp.id, name: campName, profit: profitPLN });
+              campsPLN.push({ camp_id: profit.camp_id, name: profit.camp_name || 'Brak nazwy', profit: profitAmount });
+            }
+          } else if (profit.currency === 'EUR') {
+            totalEUR += profitAmount;
+            if (profit.entry_type === 'training') {
+              trainingsEUR.push({ camp_id: profit.camp_id, name: profit.camp_name || 'Brak nazwy', profit: profitAmount });
+            } else {
+              campsEUR.push({ camp_id: profit.camp_id, name: profit.camp_name || 'Brak nazwy', profit: profitAmount });
             }
           }
-
-          if (profitEUR > 0) {
-            if (camp.entry_type === 'training') {
-              trainingsEUR.push({ camp_id: camp.id, name: campName, profit: profitEUR });
-            } else {
-              campsEUR.push({ camp_id: camp.id, name: campName, profit: profitEUR });
-            }
-          }
-        }
+        });
 
         // Update summary cards
         const totalPLNEl = document.getElementById('kasa-total-pln');
@@ -3757,10 +3832,10 @@
         };
 
         // Update lists
-        if (kasaCampsPLN) kasaCampsPLN.innerHTML = renderList(campsPLN, 'Brak campów ST w PLN');
-        if (kasaTrainingsPLN) kasaTrainingsPLN.innerHTML = renderList(trainingsPLN, 'Brak szkoleń ST w PLN');
-        if (kasaCampsEUR) kasaCampsEUR.innerHTML = renderList(campsEUR, 'Brak campów ST w EUR');
-        if (kasaTrainingsEUR) kasaTrainingsEUR.innerHTML = renderList(trainingsEUR, 'Brak szkoleń ST w EUR');
+        if (kasaCampsPLN) kasaCampsPLN.innerHTML = renderList(campsPLN, 'Brak campów ST z zyskiem');
+        if (kasaTrainingsPLN) kasaTrainingsPLN.innerHTML = renderList(trainingsPLN, 'Brak szkoleń ST z zyskiem');
+        if (kasaCampsEUR) kasaCampsEUR.innerHTML = renderList(campsEUR, 'Brak campów ST z zyskiem');
+        if (kasaTrainingsEUR) kasaTrainingsEUR.innerHTML = renderList(trainingsEUR, 'Brak szkoleń ST z zyskiem');
 
         console.log('[KASA] Loaded profits summary:', { totalPLN, totalEUR, campsCount: campsPLN.length + campsEUR.length, trainingsCount: trainingsPLN.length + trainingsEUR.length });
 
@@ -3884,6 +3959,9 @@
         document.getElementById('camp-details-section').style.display = 'none';
         document.getElementById('camps-section').style.display = 'block';
         await loadCamps();
+
+        // Update camp_profits for the deleted camp (will delete the records)
+        await updateCampProfit(camp.id);
 
         // Show success message
         alert(`Camp "${camp.name}" został pomyślnie usunięty.`);
@@ -5100,6 +5178,9 @@
         closeCreateCampModalFunc();
         await loadCamps();
 
+        // Update camp_profits for the newly created camp
+        await updateCampProfit(campId);
+
       } catch (err) {
         console.error('Błąd tworzenia campu:', err);
         alert('Błąd tworzenia campu: ' + (err.message || 'Nieznany błąd'));
@@ -5290,6 +5371,22 @@
       refreshKasaBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         await loadKasaSummary();
+      });
+    }
+
+    const backfillKasaBtn = document.getElementById('backfill-kasa-btn');
+    if (backfillKasaBtn) {
+      backfillKasaBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (confirm('Czy na pewno chcesz wypełnić tabelę przychodów danymi z istniejących campów i szkoleń?')) {
+          backfillKasaBtn.disabled = true;
+          backfillKasaBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Wypełnianie...';
+          await backfillCampProfits();
+          backfillKasaBtn.disabled = false;
+          backfillKasaBtn.innerHTML = '<i class="fas fa-database"></i> Wypełnij dane';
+          await loadKasaSummary(); // Reload the data
+          alert('Wypełnianie ukończone!');
+        }
       });
     }
 
@@ -6319,22 +6416,42 @@
     // Helper functions for trainings
     async function getTrainingParticipants(trainingId) {
       try {
+        // Try the dedicated training_participants table first
         const { data, error } = await supabase
           .from('training_participants')
           .select('*')
           .eq('training_id', trainingId);
 
-        if (error) {
-          console.error('Error getting training participants:', error);
-          return [];
+        if (!error) {
+          // Transform data to match expected format
+          return data ? data.map(p => ({
+            id: p.participant_id,
+            name: p.name,
+            isTrainingParticipant: true // Flag to distinguish from club members
+          })) : [];
         }
 
-        // Transform data to match expected format
-        return data ? data.map(p => ({
-          id: p.participant_id,
-          name: p.name,
-          isTrainingParticipant: true // Flag to distinguish from club members
-        })) : [];
+        // If the table is missing (PGRST205) fall back to camp_participants which may store trainings
+        if (error && error.code === 'PGRST205') {
+          console.warn('training_participants table missing, falling back to camp_participants');
+          const { data: fallback, error: fbErr } = await supabase
+            .from('camp_participants')
+            .select('*')
+            .eq('camp_id', trainingId);
+          if (fbErr) {
+            console.error('Fallback error getting camp participants for training:', fbErr);
+            return [];
+          }
+          return fallback ? fallback.map(p => ({
+            id: p.participant_id,
+            name: p.name,
+            isTrainingParticipant: true
+          })) : [];
+        }
+
+        // Other errors
+        console.error('Error getting training participants:', error);
+        return [];
       } catch (err) {
         console.error('Error in getTrainingParticipants:', err);
         return [];
@@ -6343,6 +6460,7 @@
 
     async function getTrainingExpenses(trainingId, currency) {
       try {
+        // Try dedicated training_expenses table first
         const { data, error } = await supabase
           .from('training_expenses')
           .select('*')
@@ -6350,12 +6468,26 @@
           .eq('currency', currency)
           .order('created_at', { ascending: true });
 
-        if (error) {
-          console.error('Error getting training expenses:', error);
-          return [];
+        if (!error) return data || [];
+
+        // If table missing, fall back to camp_expenses
+        if (error && error.code === 'PGRST205') {
+          console.warn('training_expenses table missing, falling back to camp_expenses');
+          const { data: fbData, error: fbErr } = await supabase
+            .from('camp_expenses')
+            .select('*')
+            .eq('camp_id', trainingId)
+            .eq('currency', currency)
+            .order('created_at', { ascending: true });
+          if (fbErr) {
+            console.error('Fallback error getting camp expenses for training:', fbErr);
+            return [];
+          }
+          return fbData || [];
         }
 
-        return data || [];
+        console.error('Error getting training expenses:', error);
+        return [];
       } catch (err) {
         console.error('Error in getTrainingExpenses:', err);
         return [];
@@ -6851,6 +6983,9 @@
       } catch (err) {
         console.error('Error in savePayment:', err);
       }
+
+      // Update camp_profits after saving payment
+      updateCampProfit(campId);
     }
 
     function confirmPayment(campId, participantId, columnType, trainerIndex = null) {
@@ -6913,6 +7048,9 @@
       } catch (err) {
         console.error('Error in confirmPayment:', err);
       }
+
+      // Update camp_profits after confirming payment
+      updateCampProfit(campId);
     }
 
     function removePayment(campId, participantId, columnType, trainerIndex = null) {
@@ -6980,6 +7118,9 @@
       } catch (err) {
         console.error('Error in removePayment:', err);
       }
+
+      // Update camp_profits after removing payment
+      updateCampProfit(campId);
     }
 
     // Calculate column summary
