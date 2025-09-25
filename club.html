@@ -3465,10 +3465,19 @@
         console.error('Error in saveTrainingPayment:', err);
       }
 
-      // Update camp_profits after saving training payment
-      updateCampProfit(trainingId).catch(err => {
-        console.error('Failed to update camp profits after saving training payment:', err);
-      });
+      // Update camp_profits after saving training payment and refresh Kasa page
+      (async () => {
+        try {
+          await updateCampProfit(trainingId);
+          console.log('[CAMP-PROFITS] Updated profits after saving training payment');
+          // Refresh Kasa page if it's visible
+          if (document.getElementById('kasa-section').style.display === 'block') {
+            await loadKasaSummary();
+          }
+        } catch (err) {
+          console.error('Failed to update camp profits after saving training payment:', err);
+        }
+      })();
     }
 
     function confirmTrainingPayment(trainingId, participantId, columnType, trainerIndex = null) {
@@ -3508,10 +3517,19 @@
         console.error('Error in confirmTrainingPayment:', err);
       }
 
-      // Update camp_profits after confirming training payment
-      updateCampProfit(trainingId).catch(err => {
-        console.error('Failed to update camp profits after confirming training payment:', err);
-      });
+      // Update camp_profits after confirming training payment and refresh Kasa page
+      (async () => {
+        try {
+          await updateCampProfit(trainingId);
+          console.log('[CAMP-PROFITS] Updated profits after confirming training payment');
+          // Refresh Kasa page if it's visible
+          if (document.getElementById('kasa-section').style.display === 'block') {
+            await loadKasaSummary();
+          }
+        } catch (err) {
+          console.error('Failed to update camp profits after confirming training payment:', err);
+        }
+      })();
     }
 
     function removeTrainingPayment(trainingId, participantId, columnType, trainerIndex = null) {
@@ -3556,10 +3574,19 @@
         console.error('Error in removeTrainingPayment:', err);
       }
 
-      // Update camp_profits after removing training payment
-      updateCampProfit(trainingId).catch(err => {
-        console.error('Failed to update camp profits after removing training payment:', err);
-      });
+      // Update camp_profits after removing training payment and refresh Kasa page
+      (async () => {
+        try {
+          await updateCampProfit(trainingId);
+          console.log('[CAMP-PROFITS] Updated profits after removing training payment');
+          // Refresh Kasa page if it's visible
+          if (document.getElementById('kasa-section').style.display === 'block') {
+            await loadKasaSummary();
+          }
+        } catch (err) {
+          console.error('Failed to update camp profits after removing training payment:', err);
+        }
+      })();
     }
 
     // Expose training payment helpers globally
@@ -3700,7 +3727,13 @@
         let participants = [];
         if ((camp.entry_type || '').toString().toLowerCase() === 'training') {
           console.log(`[CAMP-PROFITS] Loading training participants for: ${campId}`);
+          // For training, try database first, but fall back to cache if not found
           participants = await getTrainingParticipants(campId);
+          // If no participants found in database, use cached ones
+          if (participants.length === 0 && window.currentParticipants) {
+            participants = window.currentParticipants;
+            console.log(`[CAMP-PROFITS] Using cached participants for training: ${participants.length} participants`);
+          }
         } else {
           console.log(`[CAMP-PROFITS] Loading camp participants for: ${campId}`);
           participants = await getCampParticipants(campId);
@@ -5331,9 +5364,14 @@
         closeCreateCampModalFunc();
         await loadCamps();
 
-        // Update camp_profits for the newly created camp
+        // Update camp_profits for the newly created camp and refresh Kasa page
         try {
           await updateCampProfit(campId);
+          console.log('[CAMP-PROFITS] Updated profits after creating camp');
+          // Refresh Kasa page if it's visible
+          if (document.getElementById('kasa-section').style.display === 'block') {
+            await loadKasaSummary();
+          }
         } catch (err) {
           console.error('Failed to update camp profits after creating camp:', err);
         }
@@ -6150,17 +6188,35 @@
       let totalAmount = 0; // Wszystkie kwoty (potwierdzone + niepotwierdzone)
       let paidAmount = 0;  // Tylko potwierdzone kwoty
 
-      // Load training payments directly from database (not from cache)
+      // Load training payments - fallback to camp_payments since training_payments doesn't exist
       console.log(`[TRAINING-PROFITS] Loading training payments from database for currency: ${currency}`);
       const { data: trainingPayments, error: trainingPaymentsErr } = await supabase
         .from('training_payments')
-        .select('participant_id, amount, confirmed')
+        .select('participant_id, amount, confirmed, currency')
         .eq('training_id', training.id)
         .in('participant_id', participants.map(p => p.id));
 
-      if (!trainingPaymentsErr && trainingPayments) {
+      if (trainingPaymentsErr) {
+        console.warn('training_payments table missing, falling back to camp_payments');
+        const { data: fallbackPayments, error: fallbackErr } = await supabase
+          .from('camp_payments')
+          .select('participant_id, amount, confirmed, currency')
+          .eq('camp_id', training.id)
+          .in('participant_id', participants.map(p => p.id));
+
+        if (!fallbackErr && fallbackPayments) {
+          for (const payment of fallbackPayments) {
+            if (payment.currency === currency) {
+              totalAmount += parseFloat(payment.amount || 0);
+              if (payment.confirmed) {
+                paidAmount += parseFloat(payment.amount || 0);
+              }
+            }
+          }
+        }
+      } else if (trainingPayments) {
         for (const payment of trainingPayments) {
-          if (training.currency === currency) {
+          if (payment.currency === currency) {
             totalAmount += parseFloat(payment.amount || 0);
             if (payment.confirmed) {
               paidAmount += parseFloat(payment.amount || 0);
@@ -6173,25 +6229,25 @@
       // Load trainer payments directly from database (not from cache)
       if (training.trainers && training.trainers.length > 0) {
         for (const [trainerIndex, trainer] of training.trainers.entries()) {
-          if (trainer && trainer.currency === currency) {
-            console.log(`[TRAINING-PROFITS] Loading trainer payments from database for trainer ${trainerIndex}, currency: ${currency}`);
-            const { data: trainerPayments, error: trainerPaymentsErr } = await supabase
-              .from('trainer_payments')
-              .select('participant_id, amount, confirmed')
-              .eq('training_id', training.id)
-              .eq('trainer_index', trainerIndex)
-              .in('participant_id', participants.map(p => p.id));
+          console.log(`[TRAINING-PROFITS] Loading trainer payments from database for trainer ${trainerIndex}, currency: ${currency}`);
+          const { data: trainerPayments, error: trainerPaymentsErr } = await supabase
+            .from('trainer_payments')
+            .select('participant_id, amount, confirmed, currency')
+            .eq('camp_id', training.id)
+            .eq('trainer_index', trainerIndex)
+            .in('participant_id', participants.map(p => p.id));
 
-            if (!trainerPaymentsErr && trainerPayments) {
-              for (const payment of trainerPayments) {
+          if (!trainerPaymentsErr && trainerPayments) {
+            for (const payment of trainerPayments) {
+              if (payment.currency === currency) {
                 totalAmount += parseFloat(payment.amount || 0);
                 if (payment.confirmed) {
                   paidAmount += parseFloat(payment.amount || 0);
                 }
               }
             }
-            console.log(`[TRAINING-PROFITS] Found ${trainerPayments ? trainerPayments.length : 0} trainer payments for trainer ${trainerIndex}`);
           }
+          console.log(`[TRAINING-PROFITS] Found ${trainerPayments ? trainerPayments.length : 0} trainer payments for trainer ${trainerIndex}`);
         }
       }
 
@@ -6958,6 +7014,18 @@
         // Reload camps list (will filter by entry_type='training')
         await loadCamps();
 
+        // Update camp_profits for the newly created training and refresh Kasa page
+        try {
+          await updateCampProfit(campId);
+          console.log('[CAMP-PROFITS] Updated profits after creating training');
+          // Refresh Kasa page if it's visible
+          if (document.getElementById('kasa-section').style.display === 'block') {
+            await loadKasaSummary();
+          }
+        } catch (err) {
+          console.error('Failed to update camp profits after creating training:', err);
+        }
+
         alert('Szkolenie zostało utworzone pomyślnie!');
         // If modal exists, close it
         closeCreateCampModalFunc();
@@ -7236,10 +7304,19 @@
         console.error('Error in savePayment:', err);
       }
 
-      // Update camp_profits after saving payment
-      updateCampProfit(campId).catch(err => {
-        console.error('Failed to update camp profits after saving payment:', err);
-      });
+      // Update camp_profits after saving payment and refresh Kasa page
+      (async () => {
+        try {
+          await updateCampProfit(campId);
+          console.log('[CAMP-PROFITS] Updated profits after saving payment');
+          // Refresh Kasa page if it's visible
+          if (document.getElementById('kasa-section').style.display === 'block') {
+            await loadKasaSummary();
+          }
+        } catch (err) {
+          console.error('Failed to update camp profits after saving payment:', err);
+        }
+      })();
     }
 
     function confirmPayment(campId, participantId, columnType, trainerIndex = null) {
@@ -7303,10 +7380,19 @@
         console.error('Error in confirmPayment:', err);
       }
 
-      // Update camp_profits after confirming payment
-      updateCampProfit(campId).catch(err => {
-        console.error('Failed to update camp profits after confirming payment:', err);
-      });
+      // Update camp_profits after confirming payment and refresh Kasa page
+      (async () => {
+        try {
+          await updateCampProfit(campId);
+          console.log('[CAMP-PROFITS] Updated profits after confirming payment');
+          // Refresh Kasa page if it's visible
+          if (document.getElementById('kasa-section').style.display === 'block') {
+            await loadKasaSummary();
+          }
+        } catch (err) {
+          console.error('Failed to update camp profits after confirming payment:', err);
+        }
+      })();
     }
 
     function removePayment(campId, participantId, columnType, trainerIndex = null) {
@@ -7375,10 +7461,19 @@
         console.error('Error in removePayment:', err);
       }
 
-      // Update camp_profits after removing payment
-      updateCampProfit(campId).catch(err => {
-        console.error('Failed to update camp profits after removing payment:', err);
-      });
+      // Update camp_profits after removing payment and refresh Kasa page
+      (async () => {
+        try {
+          await updateCampProfit(campId);
+          console.log('[CAMP-PROFITS] Updated profits after removing payment');
+          // Refresh Kasa page if it's visible
+          if (document.getElementById('kasa-section').style.display === 'block') {
+            await loadKasaSummary();
+          }
+        } catch (err) {
+          console.error('Failed to update camp profits after removing payment:', err);
+        }
+      })();
     }
 
     // Calculate column summary
