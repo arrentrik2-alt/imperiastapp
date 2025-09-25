@@ -3713,35 +3713,41 @@
         console.log(`[CAMP-PROFITS] PLN - paid: ${summaryPLN.paidAmount}, expenses: ${expensesPLN.reduce((sum, exp) => sum + (exp.amount || 0), 0)}`);
         console.log(`[CAMP-PROFITS] EUR - paid: ${summaryEUR.paidAmount}, expenses: ${expensesEUR.reduce((sum, exp) => sum + (exp.amount || 0), 0)}`);
 
-        // Calculate profit = paid_amount - total_expenses
-        const profitPLN = (summaryPLN.paidAmount || 0) - (expensesPLN.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
-        const profitEUR = (summaryEUR.paidAmount || 0) - (expensesEUR.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
+        // Use the profit already calculated in summary.profit (paidAmount - totalExpenses)
+        const profitPLN = summaryPLN.profit || 0;
+        const profitEUR = summaryEUR.profit || 0;
 
         console.log(`[CAMP-PROFITS] Calculated profits - PLN: ${profitPLN}, EUR: ${profitEUR}`);
+        console.log(`[CAMP-PROFITS] PLN - paid: ${summaryPLN.paidAmount}, expenses: ${expensesPLN.reduce((sum, exp) => sum + (exp.amount || 0), 0)}`);
+        console.log(`[CAMP-PROFITS] EUR - paid: ${summaryEUR.paidAmount}, expenses: ${expensesEUR.reduce((sum, exp) => sum + (exp.amount || 0), 0)}`);
 
         // Save profits into camp_profits table (including negative values for debugging)
         const upserts = [];
-        console.log(`[CAMP-PROFITS] Saving PLN profit: ${profitPLN} for camp: ${camp.name}`);
-        upserts.push({
-          camp_id: campId,
-          entry_type: camp.entry_type || 'camp',
-          dance_type: camp.dance_type || null,
-          currency: 'PLN',
-          profit: profitPLN,
-          camp_name: camp.name,
-          updated_at: new Date().toISOString()
-        });
+        if (profitPLN !== 0) { // Zapisuj tylko gdy zysk nie jest zerowy
+          console.log(`[CAMP-PROFITS] Saving PLN profit: ${profitPLN} for camp: ${camp.name}`);
+          upserts.push({
+            camp_id: campId,
+            entry_type: camp.entry_type || 'camp',
+            dance_type: camp.dance_type || null,
+            currency: 'PLN',
+            profit: profitPLN,
+            camp_name: camp.name,
+            updated_at: new Date().toISOString()
+          });
+        }
 
-        console.log(`[CAMP-PROFITS] Saving EUR profit: ${profitEUR} for camp: ${camp.name}`);
-        upserts.push({
-          camp_id: campId,
-          entry_type: camp.entry_type || 'camp',
-          dance_type: camp.dance_type || null,
-          currency: 'EUR',
-          profit: profitEUR,
-          camp_name: camp.name,
-          updated_at: new Date().toISOString()
-        });
+        if (profitEUR !== 0) { // Zapisuj tylko gdy zysk nie jest zerowy
+          console.log(`[CAMP-PROFITS] Saving EUR profit: ${profitEUR} for camp: ${camp.name}`);
+          upserts.push({
+            camp_id: campId,
+            entry_type: camp.entry_type || 'camp',
+            dance_type: camp.dance_type || null,
+            currency: 'EUR',
+            profit: profitEUR,
+            camp_name: camp.name,
+            updated_at: new Date().toISOString()
+          });
+        }
 
         console.log(`[CAMP-PROFITS] Preparing to insert ${upserts.length} records`);
 
@@ -3758,17 +3764,23 @@
           }
         }
 
-        // Insert new records (always, even if profit is negative)
-        console.log(`[CAMP-PROFITS] Inserting ${upserts.length} records for camp: ${camp.name}`);
-        const { error: insertErr } = await supabase.from('camp_profits').insert(upserts);
-        if (insertErr) {
-          console.error('Error inserting camp profits:', insertErr);
-          return;
+        // Insert new records only if there are positive profits
+        if (upserts.length > 0) {
+          console.log(`[CAMP-PROFITS] Inserting ${upserts.length} records for camp: ${camp.name}`);
+          const { error: insertErr } = await supabase.from('camp_profits').insert(upserts);
+          if (insertErr) {
+            console.error('Error inserting camp profits:', insertErr);
+            return;
+          }
+        } else {
+          console.log(`[CAMP-PROFITS] No profits to save for camp: ${camp.name} (all profits are zero)`);
         }
 
         console.log(`[CAMP-PROFITS] Successfully saved ${upserts.length} records for camp: ${camp.name}`);
-
-        console.log(`[CAMP-PROFITS] Successfully updated profit for ${camp.name}: PLN=${profitPLN.toFixed(2)}, EUR=${profitEUR.toFixed(2)}`);
+        console.log(`[CAMP-PROFITS] Final result for ${camp.name}:`);
+        console.log(`  - PLN profit: ${profitPLN.toFixed(2)}`);
+        console.log(`  - EUR profit: ${profitEUR.toFixed(2)}`);
+        console.log(`  - Records saved: ${upserts.length}`);
       } catch (err) {
         console.error('Error in updateCampProfit:', err);
       }
@@ -4693,23 +4705,40 @@
       const startTime = Date.now();
 
       const financialPromises = currencies.map(async currency => {
+        console.log(`[FINANCIAL-SUMMARY] Calculating for ${currency}...`);
         const [summary, expenses] = await Promise.all([
           calculateCurrencySummary(camp, currency, participants),
           getExpenses(camp.id, currency)
         ]);
 
+        console.log(`[FINANCIAL-SUMMARY] ${currency} Results:`, {
+          paidAmount: summary.paidAmount,
+          totalAmount: summary.totalAmount,
+          profit: summary.profit,
+          expenses: expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0),
+          expensesCount: expenses.length
+        });
+
         // 🔥 ZAPISZ ZYSK DO TABELI camp_profits 🔥
-        const profit = (summary.paidAmount || 0) - (expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
-        await supabase.from('camp_profits').upsert({
-          camp_id: camp.id,
-          entry_type: camp.entry_type || 'camp',
-          dance_type: camp.dance_type || null,
-          currency: currency,
-          profit: profit,
-          camp_name: camp.name,
-          updated_at: new Date().toISOString()
-        }, { onConflict: ['camp_id', 'currency'] });
-        console.log(`[FINANCIAL-SUMMARY] Saved profit to camp_profits: ${profit} ${currency} for camp: ${camp.name}`);
+        // summary.profit jest już obliczony w calculateCurrencySummary jako paidAmount - totalExpenses
+        const profit = summary.profit || 0;
+        console.log(`[FINANCIAL-SUMMARY] Camp: ${camp.name}, Currency: ${currency}, Paid: ${summary.paidAmount}, Expenses: ${expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0)}, Profit: ${profit}`);
+
+        // Zapisuj WSZYSTKIE zyski (pozytywne i negatywne) do tabeli camp_profits
+        try {
+          await supabase.from('camp_profits').upsert({
+            camp_id: camp.id,
+            entry_type: camp.entry_type || 'camp',
+            dance_type: camp.dance_type || null,
+            currency: currency,
+            profit: profit,
+            camp_name: camp.name,
+            updated_at: new Date().toISOString()
+          }, { onConflict: ['camp_id', 'currency'] });
+          console.log(`[FINANCIAL-SUMMARY] Saved profit to camp_profits: ${profit} ${currency} for camp: ${camp.name}`);
+        } catch (err) {
+          console.error(`[FINANCIAL-SUMMARY] Error saving profit to camp_profits:`, err);
+        }
 
         return { currency, summary, expenses };
       });
