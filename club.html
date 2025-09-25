@@ -1657,7 +1657,7 @@
           </div>
         </div>
 
-        <!-- Add Expense Form -->
+        <!-- Add/Edit Expense Form -->
         <div id="add-kasa-expense-form" style="display:none;margin-bottom:24px;padding:20px;border:1px solid var(--muted);border-radius:8px;background:var(--primary-bg);">
           <div style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;">
             <div style="flex:1;min-width:200px;">
@@ -1701,6 +1701,66 @@
             <div style="flex:1;min-width:300px;">
               <h5 style="margin-bottom:12px;color:var(--text-light);">Wydatki (EUR)</h5>
               <div id="kasa-expenses-eur" class="kasa-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Incomes Section -->
+      <div class="kasa-incomes" style="margin-top:32px;">
+        <div class="content-header">
+          <h3>Przychody</h3>
+          <div class="kasa-actions">
+            <button class="btn btn-outline" id="add-kasa-income-btn">
+              <i class="fas fa-plus"></i> Dodaj przychód
+            </button>
+          </div>
+        </div>
+
+        <!-- Add/Edit Income Form -->
+        <div id="add-kasa-income-form" style="display:none;margin-bottom:24px;padding:20px;border:1px solid var(--muted);border-radius:8px;background:var(--primary-bg);">
+          <div style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+              <label style="display:block;margin-bottom:8px;font-weight:600;">Nazwa przychodu:</label>
+              <input type="text" id="kasa-income-name" placeholder="np. Wpłata członkowska" style="width:100%;padding:8px;border:1px solid var(--muted);border-radius:4px;" onkeypress="if(event.key==='Enter') saveKasaIncome();">
+            </div>
+            <div style="flex:1;min-width:200px;">
+              <label style="display:block;margin-bottom:8px;font-weight:600;">Kwota:</label>
+              <input type="number" id="kasa-income-amount" placeholder="0.00" step="0.01" min="0" style="width:100%;padding:8px;border:1px solid var(--muted);border-radius:4px;" onkeypress="if(event.key==='Enter') saveKasaIncome();">
+            </div>
+            <div style="flex:1;min-width:200px;">
+              <label style="display:block;margin-bottom:8px;font-weight:600;">Waluta:</label>
+              <select id="kasa-income-currency" style="width:100%;padding:8px;border:1px solid var(--muted);border-radius:4px;" onchange="saveKasaIncome();">
+                <option value="PLN">PLN</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:200px;">
+              <label style="display:block;margin-bottom:8px;font-weight:600;">Opis (opcjonalny):</label>
+              <input type="text" id="kasa-income-description" placeholder="Dodatkowe informacje" style="width:100%;padding:8px;border:1px solid var(--muted);border-radius:4px;" onkeypress="if(event.key==='Enter') saveKasaIncome();">
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary" id="save-kasa-income-btn">
+                <i class="fas fa-save"></i> Dodaj
+              </button>
+              <button class="btn btn-outline" id="cancel-kasa-income-btn">
+                <i class="fas fa-times"></i> Anuluj
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Incomes Breakdown -->
+        <div class="kasa-incomes-breakdown">
+          <h4 style="margin-bottom:16px;">Szczegółowy podział przychodów</h4>
+          <div id="kasa-incomes-breakdown-content" style="display:flex;gap:24px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:300px;">
+              <h5 style="margin-bottom:12px;color:var(--text-light);">Przychody (PLN)</h5>
+              <div id="kasa-incomes-pln" class="kasa-list"></div>
+            </div>
+            <div style="flex:1;min-width:300px;">
+              <h5 style="margin-bottom:12px;color:var(--text-light);">Przychody (EUR)</h5>
+              <div id="kasa-incomes-eur" class="kasa-list"></div>
             </div>
           </div>
         </div>
@@ -2427,6 +2487,7 @@
         if (navKasaEl) navKasaEl.classList.add('active');
         if (typeof loadKasaSummary === 'function') loadKasaSummary();
         if (typeof loadKasaExpenses === 'function') loadKasaExpenses();
+        if (typeof loadKasaIncomes === 'function') loadKasaIncomes();
       } else {
         // default to members if unknown
         if (membersSection) membersSection.style.display = 'block';
@@ -2436,6 +2497,10 @@
     // Camps functionality
     let currentMonth = '2025-09';
     let currentCamp = null;
+
+    // Kasa functionality
+    window.currentEditingExpenseId = null;
+    window.currentEditingIncomeId = null;
 
     // Trainings functionality - COPY OF CAMPS FUNCTIONALITY
     let currentTraining = null;
@@ -4101,6 +4166,425 @@
       }
     }
 
+    // Load kasa incomes
+    async function loadKasaIncomes() {
+      try {
+        console.log('[KASA-INCOMES] Loading incomes...');
+
+        // Show loading state
+        const kasaIncomesPLN = document.getElementById('kasa-incomes-pln');
+        const kasaIncomesEUR = document.getElementById('kasa-incomes-eur');
+
+        if (kasaIncomesPLN) kasaIncomesPLN.innerHTML = '<div class="loading"></div>';
+        if (kasaIncomesEUR) kasaIncomesEUR.innerHTML = '<div class="loading"></div>';
+
+        const { data: incomes, error } = await supabase
+          .from('kasa_incomes')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error loading kasa incomes:', error);
+          const errorHtml = '<div class="empty-state" style="padding:20px;text-align:center;"><p>Błąd ładowania danych</p></div>';
+          if (kasaIncomesPLN) kasaIncomesPLN.innerHTML = errorHtml;
+          if (kasaIncomesEUR) kasaIncomesEUR.innerHTML = errorHtml;
+          return;
+        }
+
+        console.log(`[KASA-INCOMES] Found ${incomes.length} incomes`);
+
+        // Calculate totals and group by currency
+        let totalPLN = 0;
+        let totalEUR = 0;
+
+        const incomesPLN = [];
+        const incomesEUR = [];
+
+        (incomes || []).forEach(income => {
+          const incomeAmount = parseFloat(income.amount || 0);
+          console.log(`[KASA-INCOMES] Processing income: ${income.name} - ${income.currency}: ${incomeAmount}`);
+
+          if (income.currency === 'PLN') {
+            totalPLN += incomeAmount;
+            incomesPLN.push({
+              id: income.id,
+              name: income.name || 'Brak nazwy',
+              amount: incomeAmount,
+              description: income.description,
+              date: new Date(income.created_at).toLocaleDateString('pl-PL')
+            });
+          } else if (income.currency === 'EUR') {
+            totalEUR += incomeAmount;
+            incomesEUR.push({
+              id: income.id,
+              name: income.name || 'Brak nazwy',
+              amount: incomeAmount,
+              description: income.description,
+              date: new Date(income.created_at).toLocaleDateString('pl-PL')
+            });
+          }
+        });
+
+        console.log(`[KASA-INCOMES] Totals - PLN: ${totalPLN}, EUR: ${totalEUR}`);
+        console.log(`[KASA-INCOMES] Groups - incomesPLN: ${incomesPLN.length}, incomesEUR: ${incomesEUR.length}`);
+
+        updateKasaIncomesTotals(totalPLN, totalEUR);
+
+        // Helper function to render list
+        const renderIncomeList = (items, emptyMessage) => {
+          if (items.length === 0) {
+            return `<div class="empty-state" style="padding:20px;text-align:center;"><p>${emptyMessage}</p></div>`;
+          }
+
+          return items.map(item => `
+            <div class="kasa-item" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-dark);" data-income-id="${item.id}">
+              <div style="flex:1;">
+                <div style="font-weight:600;">${item.name}</div>
+                ${item.description ? `<div style="font-size:12px;color:var(--text-light);margin-top:4px;">${item.description}</div>` : ''}
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${item.date}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="kasa-item-income" style="font-weight:700;color:#28a745;">+${item.amount.toFixed(2)} zł</span>
+                <button class="btn btn-xs btn-outline edit-kasa-income-btn" data-income-id="${item.id}" style="padding:2px 6px;font-size:10px;">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-xs btn-danger delete-kasa-income-btn" data-income-id="${item.id}" style="padding:2px 6px;font-size:10px;">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `).join('');
+        };
+
+        // Update lists
+        if (kasaIncomesPLN) kasaIncomesPLN.innerHTML = renderIncomeList(incomesPLN, 'Brak przychodów w PLN');
+        if (kasaIncomesEUR) kasaIncomesEUR.innerHTML = renderIncomeList(incomesEUR, 'Brak przychodów w EUR');
+
+        console.log('[KASA-INCOMES] Incomes loaded successfully');
+
+      } catch (err) {
+        console.error('Error in loadKasaIncomes:', err);
+        const errorHtml = '<div class="empty-state" style="padding:20px;text-align:center;"><p>Błąd ładowania danych</p></div>';
+        const kasaIncomesPLN = document.getElementById('kasa-incomes-pln');
+        const kasaIncomesEUR = document.getElementById('kasa-incomes-eur');
+        if (kasaIncomesPLN) kasaIncomesPLN.innerHTML = errorHtml;
+        if (kasaIncomesEUR) kasaIncomesEUR.innerHTML = errorHtml;
+      }
+    }
+
+    // Update kasa incomes totals
+    function updateKasaIncomesTotals(totalPLN, totalEUR) {
+      // Incomes totals are displayed in the balance calculation
+      // This function is mainly for logging and potential future use
+      console.log(`[KASA-INCOMES] Totals updated - PLN: ${totalPLN}, EUR: ${totalEUR}`);
+
+      // Update balance after incomes are loaded
+      updateKasaBalanceFromAll();
+    }
+
+    // Update kasa balance from all sources (revenues + incomes - expenses)
+    function updateKasaBalanceFromAll() {
+      // Get current revenues
+      const totalPLNEl = document.getElementById('kasa-total-pln');
+      const totalEUREl = document.getElementById('kasa-total-eur');
+
+      // Get current incomes
+      const kasaIncomesPLN = document.getElementById('kasa-incomes-pln');
+      const kasaIncomesEUR = document.getElementById('kasa-incomes-eur');
+
+      // Get current expenses
+      const kasaExpensesPLN = document.getElementById('kasa-expenses-pln');
+      const kasaExpensesEUR = document.getElementById('kasa-expenses-eur');
+
+      let revenuesPLN = 0;
+      let revenuesEUR = 0;
+      let incomesPLN = 0;
+      let incomesEUR = 0;
+      let expensesPLN = 0;
+      let expensesEUR = 0;
+
+      // Parse revenues
+      if (totalPLNEl) {
+        const text = totalPLNEl.textContent;
+        revenuesPLN = parseFloat(text.replace(' zł', '').replace(',', '.')) || 0;
+      }
+      if (totalEUREl) {
+        const text = totalEUREl.textContent;
+        revenuesEUR = parseFloat(text.replace(' €', '').replace(',', '.')) || 0;
+      }
+
+      // Parse incomes (count items in lists)
+      if (kasaIncomesPLN) {
+        const incomeItems = kasaIncomesPLN.querySelectorAll('.kasa-item-income');
+        incomeItems.forEach(item => {
+          const text = item.textContent;
+          const amount = parseFloat(text.replace('+', '').replace(' zł', '').replace(',', '.')) || 0;
+          if (text.includes('PLN')) {
+            incomesPLN += amount;
+          } else if (text.includes('EUR')) {
+            incomesEUR += amount;
+          }
+        });
+      }
+
+      // Parse expenses (count items in lists)
+      if (kasaExpensesPLN) {
+        const expenseItems = kasaExpensesPLN.querySelectorAll('.kasa-item-expense');
+        expenseItems.forEach(item => {
+          const text = item.textContent;
+          const amount = parseFloat(text.replace('-', '').replace(' zł', '').replace(',', '.')) || 0;
+          if (text.includes('PLN')) {
+            expensesPLN += amount;
+          } else if (text.includes('EUR')) {
+            expensesEUR += amount;
+          }
+        });
+      }
+
+      // Calculate balance = revenues + incomes - expenses
+      const balancePLN = revenuesPLN + incomesPLN - expensesPLN;
+      const balanceEUR = revenuesEUR + incomesEUR - expensesEUR;
+
+      // Update balance display
+      const balancePLNEl = document.getElementById('kasa-balance-pln');
+      const balanceEUREl = document.getElementById('kasa-balance-eur');
+
+      if (balancePLNEl) {
+        balancePLNEl.textContent = balancePLN.toFixed(2) + ' zł';
+        balancePLNEl.style.color = balancePLN >= 0 ? '#28a745' : '#dc3545';
+      }
+
+      if (balanceEUREl) {
+        balanceEUREl.textContent = balanceEUR.toFixed(2) + ' €';
+        balanceEUREl.style.color = balanceEUR >= 0 ? '#28a745' : '#dc3545';
+      }
+
+      console.log(`[KASA-BALANCE] Updated - PLN: ${revenuesPLN} + ${incomesPLN} - ${expensesPLN} = ${balancePLN}, EUR: ${revenuesEUR} + ${incomesEUR} - ${expensesEUR} = ${balanceEUR}`);
+    }
+
+    // Show add income form
+    function showAddKasaIncomeForm() {
+      const form = document.getElementById('add-kasa-income-form');
+      const header = document.getElementById('add-kasa-income-header');
+      const nameInput = document.getElementById('kasa-income-name');
+      const amountInput = document.getElementById('kasa-income-amount');
+      const currencySelect = document.getElementById('kasa-income-currency');
+      const descriptionInput = document.getElementById('kasa-income-description');
+      const saveBtn = document.getElementById('save-kasa-income-btn');
+
+      if (form && nameInput && amountInput && currencySelect && descriptionInput && saveBtn) {
+        // Reset editing state
+        window.currentEditingIncomeId = null;
+
+        // Update form for adding
+        if (header) {
+          header.innerHTML = '<h3>Dodaj przychód</h3>';
+        }
+
+        // Reset form fields
+        nameInput.value = '';
+        amountInput.value = '';
+        currencySelect.value = 'PLN';
+        descriptionInput.value = '';
+
+        // Change button text
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> Dodaj';
+
+        form.style.display = 'block';
+        nameInput.focus();
+      }
+    }
+
+    // Hide add income form
+    function hideAddKasaIncomeForm() {
+      const form = document.getElementById('add-kasa-income-form');
+      const header = document.getElementById('add-kasa-income-header');
+      if (form) {
+        form.style.display = 'none';
+        window.currentEditingIncomeId = null; // Reset editing state
+      }
+      if (header) {
+        header.innerHTML = '<h3>Dodaj przychód</h3>';
+      }
+    }
+
+    // Show edit income form
+    async function showEditKasaIncomeForm(incomeId) {
+      try {
+        console.log(`[KASA-INCOMES] Loading income ${incomeId} for editing`);
+
+        const { data: income, error } = await supabase
+          .from('kasa_incomes')
+          .select('*')
+          .eq('id', incomeId)
+          .single();
+
+        if (error || !income) {
+          console.error('Error loading income for editing:', error);
+          alert('Błąd podczas ładowania przychodu');
+          return;
+        }
+
+        const form = document.getElementById('add-kasa-income-form');
+        const header = document.getElementById('add-kasa-income-header');
+        const nameInput = document.getElementById('kasa-income-name');
+        const amountInput = document.getElementById('kasa-income-amount');
+        const currencySelect = document.getElementById('kasa-income-currency');
+        const descriptionInput = document.getElementById('kasa-income-description');
+        const saveBtn = document.getElementById('save-kasa-income-btn');
+
+        if (form && nameInput && amountInput && currencySelect && descriptionInput && saveBtn) {
+          // Update form for editing
+          if (header) {
+            header.innerHTML = '<h3>Edytuj przychód</h3>';
+          }
+
+          // Fill form with income data
+          nameInput.value = income.name || '';
+          amountInput.value = income.amount || '';
+          currencySelect.value = income.currency || 'PLN';
+          descriptionInput.value = income.description || '';
+
+          // Change button text
+          saveBtn.innerHTML = '<i class="fas fa-save"></i> Zapisz zmiany';
+
+          // Store editing state
+          window.currentEditingIncomeId = incomeId;
+
+          // Show form
+          form.style.display = 'block';
+          nameInput.focus();
+        }
+
+      } catch (err) {
+        console.error('Error in showEditKasaIncomeForm:', err);
+        alert('Błąd podczas ładowania przychodu');
+      }
+    }
+
+    // Save kasa income
+    async function saveKasaIncome() {
+      const nameInput = document.getElementById('kasa-income-name');
+      const amountInput = document.getElementById('kasa-income-amount');
+      const currencySelect = document.getElementById('kasa-income-currency');
+      const descriptionInput = document.getElementById('kasa-income-description');
+
+      if (!nameInput || !amountInput || !currencySelect) return;
+
+      const name = nameInput.value.trim();
+      const amount = parseFloat(amountInput.value);
+      const currency = currencySelect.value;
+      const description = descriptionInput ? descriptionInput.value.trim() : '';
+
+      if (!name) {
+        alert('Proszę podać nazwę przychodu');
+        nameInput.focus();
+        return;
+      }
+
+      if (isNaN(amount) || amount <= 0) {
+        alert('Proszę podać prawidłową kwotę');
+        amountInput.focus();
+        return;
+      }
+
+      try {
+        const isEditing = window.currentEditingIncomeId !== null;
+
+        if (isEditing) {
+          console.log(`[KASA-INCOMES] Updating income ${window.currentEditingIncomeId}: ${name}, ${amount} ${currency}`);
+
+          const { data, error } = await supabase
+            .from('kasa_incomes')
+            .update({
+              name: name,
+              amount: amount,
+              currency: currency,
+              description: description,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', window.currentEditingIncomeId)
+            .select();
+
+          if (error) {
+            console.error('Error updating kasa income:', error);
+            alert('Błąd podczas aktualizacji przychodu');
+            return;
+          }
+
+          console.log('[KASA-INCOMES] Income updated successfully');
+          alert('Przychód został zaktualizowany pomyślnie');
+        } else {
+          console.log(`[KASA-INCOMES] Saving income: ${name}, ${amount} ${currency}`);
+
+          const { data, error } = await supabase
+            .from('kasa_incomes')
+            .insert({
+              name: name,
+              amount: amount,
+              currency: currency,
+              description: description,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select();
+
+          if (error) {
+            console.error('Error saving kasa income:', error);
+            alert('Błąd podczas zapisywania przychodu');
+            return;
+          }
+
+          console.log('[KASA-INCOMES] Income saved successfully');
+          alert('Przychód został dodany pomyślnie');
+        }
+
+        // Hide form
+        hideAddKasaIncomeForm();
+
+        // Reload incomes
+        await loadKasaIncomes();
+
+      } catch (err) {
+        console.error('Error in saveKasaIncome:', err);
+        alert('Błąd podczas zapisywania przychodu');
+      }
+    }
+
+    // Delete kasa income
+    async function deleteKasaIncome(incomeId) {
+      if (!confirm('Czy na pewno chcesz usunąć ten przychód?')) {
+        return;
+      }
+
+      try {
+        console.log(`[KASA-INCOMES] Deleting income ${incomeId}`);
+
+        const { error } = await supabase
+          .from('kasa_incomes')
+          .delete()
+          .eq('id', incomeId);
+
+        if (error) {
+          console.error('Error deleting kasa income:', error);
+          alert('Błąd podczas usuwania przychodu');
+          return;
+        }
+
+        console.log('[KASA-INCOMES] Income deleted successfully');
+
+        // Reload incomes
+        await loadKasaIncomes();
+
+        // Show success message
+        alert('Przychód został usunięty pomyślnie');
+
+      } catch (err) {
+        console.error('Error in deleteKasaIncome:', err);
+        alert('Błąd podczas usuwania przychodu');
+      }
+    }
+
     // Load kasa expenses
     async function loadKasaExpenses() {
       try {
@@ -4215,7 +4699,7 @@
       if (totalPLNEl) totalPLNEl.textContent = '-' + totalPLN.toFixed(2) + ' zł';
       if (totalEUREl) totalEUREl.textContent = '-' + totalEUR.toFixed(2) + ' €';
 
-      updateKasaBalance(totalPLN, totalEUR);
+      updateKasaBalanceFromAll();
     }
 
     // Update kasa balance (przychody - wydatki)
@@ -4261,17 +4745,32 @@
     // Show add expense form
     function showAddKasaExpenseForm() {
       const form = document.getElementById('add-kasa-expense-form');
+      const header = document.getElementById('add-kasa-expense-header');
       const nameInput = document.getElementById('kasa-expense-name');
       const amountInput = document.getElementById('kasa-expense-amount');
       const currencySelect = document.getElementById('kasa-expense-currency');
       const descriptionInput = document.getElementById('kasa-expense-description');
+      const saveBtn = document.getElementById('save-kasa-expense-btn');
 
-      if (form && nameInput && amountInput && currencySelect && descriptionInput) {
-        form.style.display = 'block';
+      if (form && nameInput && amountInput && currencySelect && descriptionInput && saveBtn) {
+        // Reset editing state
+        window.currentEditingExpenseId = null;
+
+        // Update form for adding
+        if (header) {
+          header.innerHTML = '<h3>Dodaj wydatek</h3>';
+        }
+
+        // Reset form fields
         nameInput.value = '';
         amountInput.value = '';
         currencySelect.value = 'PLN';
         descriptionInput.value = '';
+
+        // Change button text
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> Dodaj';
+
+        form.style.display = 'block';
         nameInput.focus();
       }
     }
@@ -4279,8 +4778,67 @@
     // Hide add expense form
     function hideAddKasaExpenseForm() {
       const form = document.getElementById('add-kasa-expense-form');
+      const header = document.getElementById('add-kasa-expense-header');
       if (form) {
         form.style.display = 'none';
+        window.currentEditingExpenseId = null; // Reset editing state
+      }
+      if (header) {
+        header.innerHTML = '<h3>Dodaj wydatek</h3>';
+      }
+    }
+
+    // Show edit expense form
+    async function showEditKasaExpenseForm(expenseId) {
+      try {
+        console.log(`[KASA-EXPENSES] Loading expense ${expenseId} for editing`);
+
+        const { data: expense, error } = await supabase
+          .from('kasa_expenses')
+          .select('*')
+          .eq('id', expenseId)
+          .single();
+
+        if (error || !expense) {
+          console.error('Error loading expense for editing:', error);
+          alert('Błąd podczas ładowania wydatku');
+          return;
+        }
+
+        const form = document.getElementById('add-kasa-expense-form');
+        const header = document.getElementById('add-kasa-expense-header');
+        const nameInput = document.getElementById('kasa-expense-name');
+        const amountInput = document.getElementById('kasa-expense-amount');
+        const currencySelect = document.getElementById('kasa-expense-currency');
+        const descriptionInput = document.getElementById('kasa-expense-description');
+        const saveBtn = document.getElementById('save-kasa-expense-btn');
+
+        if (form && nameInput && amountInput && currencySelect && descriptionInput && saveBtn) {
+          // Update form for editing
+          if (header) {
+            header.innerHTML = '<h3>Edytuj wydatek</h3>';
+          }
+
+          // Fill form with expense data
+          nameInput.value = expense.name || '';
+          amountInput.value = expense.amount || '';
+          currencySelect.value = expense.currency || 'PLN';
+          descriptionInput.value = expense.description || '';
+
+          // Change button text
+          saveBtn.innerHTML = '<i class="fas fa-save"></i> Zapisz zmiany';
+
+          // Store editing state
+          window.currentEditingExpenseId = expenseId;
+
+          // Show form
+          form.style.display = 'block';
+          nameInput.focus();
+        }
+
+      } catch (err) {
+        console.error('Error in showEditKasaExpenseForm:', err);
+        alert('Błąd podczas ładowania wydatku');
       }
     }
 
@@ -4311,36 +4869,61 @@
       }
 
       try {
-        console.log(`[KASA-EXPENSES] Saving expense: ${name}, ${amount} ${currency}`);
+        const isEditing = window.currentEditingExpenseId !== null;
 
-        const { data, error } = await supabase
-          .from('kasa_expenses')
-          .insert({
-            name: name,
-            amount: amount,
-            currency: currency,
-            description: description,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select();
+        if (isEditing) {
+          console.log(`[KASA-EXPENSES] Updating expense ${window.currentEditingExpenseId}: ${name}, ${amount} ${currency}`);
 
-        if (error) {
-          console.error('Error saving kasa expense:', error);
-          alert('Błąd podczas zapisywania wydatku');
-          return;
+          const { data, error } = await supabase
+            .from('kasa_expenses')
+            .update({
+              name: name,
+              amount: amount,
+              currency: currency,
+              description: description,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', window.currentEditingExpenseId)
+            .select();
+
+          if (error) {
+            console.error('Error updating kasa expense:', error);
+            alert('Błąd podczas aktualizacji wydatku');
+            return;
+          }
+
+          console.log('[KASA-EXPENSES] Expense updated successfully');
+          alert('Wydatek został zaktualizowany pomyślnie');
+        } else {
+          console.log(`[KASA-EXPENSES] Saving expense: ${name}, ${amount} ${currency}`);
+
+          const { data, error } = await supabase
+            .from('kasa_expenses')
+            .insert({
+              name: name,
+              amount: amount,
+              currency: currency,
+              description: description,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select();
+
+          if (error) {
+            console.error('Error saving kasa expense:', error);
+            alert('Błąd podczas zapisywania wydatku');
+            return;
+          }
+
+          console.log('[KASA-EXPENSES] Expense saved successfully');
+          alert('Wydatek został dodany pomyślnie');
         }
-
-        console.log('[KASA-EXPENSES] Expense saved successfully');
 
         // Hide form
         hideAddKasaExpenseForm();
 
         // Reload expenses
         await loadKasaExpenses();
-
-        // Show success message
-        alert('Wydatek został dodany pomyślnie');
 
       } catch (err) {
         console.error('Error in saveKasaExpense:', err);
@@ -6018,6 +6601,7 @@
         e.preventDefault();
         await loadKasaSummary();
         await loadKasaExpenses();
+        await loadKasaIncomes();
       });
     }
 
@@ -6046,6 +6630,31 @@
       });
     }
 
+    // Kasa incomes event listeners
+    const addKasaIncomeBtn = document.getElementById('add-kasa-income-btn');
+    if (addKasaIncomeBtn) {
+      addKasaIncomeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        showAddKasaIncomeForm();
+      });
+    }
+
+    const cancelKasaIncomeBtn = document.getElementById('cancel-kasa-income-btn');
+    if (cancelKasaIncomeBtn) {
+      cancelKasaIncomeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        hideAddKasaIncomeForm();
+      });
+    }
+
+    const saveKasaIncomeBtn = document.getElementById('save-kasa-income-btn');
+    if (saveKasaIncomeBtn) {
+      saveKasaIncomeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        saveKasaIncome();
+      });
+    }
+
     // Event listeners for expense actions (edit/delete)
     document.addEventListener('click', async (e) => {
       // Delete expense
@@ -6058,14 +6667,33 @@
         }
       }
 
-      // Edit expense (placeholder for future implementation)
+      // Edit expense
       if (e.target.closest('.edit-kasa-expense-btn')) {
         e.preventDefault();
         const btn = e.target.closest('.edit-kasa-expense-btn');
         const expenseId = btn.getAttribute('data-expense-id');
         if (expenseId) {
-          alert('Funkcja edycji wydatków będzie dostępna w przyszłości');
-          console.log(`[KASA-EXPENSES] Edit expense ${expenseId} - future implementation`);
+          await showEditKasaExpenseForm(expenseId);
+        }
+      }
+
+      // Edit income
+      if (e.target.closest('.edit-kasa-income-btn')) {
+        e.preventDefault();
+        const btn = e.target.closest('.edit-kasa-income-btn');
+        const incomeId = btn.getAttribute('data-income-id');
+        if (incomeId) {
+          await showEditKasaIncomeForm(incomeId);
+        }
+      }
+
+      // Delete income
+      if (e.target.closest('.delete-kasa-income-btn')) {
+        e.preventDefault();
+        const btn = e.target.closest('.delete-kasa-income-btn');
+        const incomeId = btn.getAttribute('data-income-id');
+        if (incomeId) {
+          await deleteKasaIncome(incomeId);
         }
       }
     });
