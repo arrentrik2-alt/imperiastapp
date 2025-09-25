@@ -4648,7 +4648,9 @@
       for (const participant of participants) {
         const campPayment = getCachedPayment(participant.id, 'camp');
 
-        if (camp.currency === currency) {
+        // Płatności są zapisywane z walutą campu, więc sprawdzam czy camp ma płatności
+        // i czy waluta campu pasuje do waluty którą analizuję
+        if (campPayment.amount > 0 && camp.currency === currency) {
           totalAmount += campPayment.amount;
           if (campPayment.confirmed) {
             paidAmount += campPayment.amount;
@@ -4659,13 +4661,16 @@
       // Calculate trainer payments using cache (much faster!)
       if (camp.trainers && camp.trainers.length > 0) {
         for (const [trainerIndex, trainer] of camp.trainers.entries()) {
-          if (trainer.currency === currency) {
+          // Sprawdzam czy waluta trenera pasuje do waluty którą analizuję
+          if (trainer && trainer.currency === currency) {
             for (const participant of participants) {
               const trainerPayment = getCachedPayment(participant.id, 'trainer', trainerIndex);
 
-              totalAmount += trainerPayment.amount;
-              if (trainerPayment.confirmed) {
-                paidAmount += trainerPayment.amount;
+              if (trainerPayment.amount > 0) {
+                totalAmount += trainerPayment.amount;
+                if (trainerPayment.confirmed) {
+                  paidAmount += trainerPayment.amount;
+                }
               }
             }
           }
@@ -4722,7 +4727,9 @@
         // 🔥 ZAPISZ ZYSK DO TABELI camp_profits 🔥
         // summary.profit jest już obliczony w calculateCurrencySummary jako paidAmount - totalExpenses
         const profit = summary.profit || 0;
-        console.log(`[FINANCIAL-SUMMARY] Camp: ${camp.name}, Currency: ${currency}, Paid: ${summary.paidAmount}, Expenses: ${expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0)}, Profit: ${profit}`);
+        console.log(`[FINANCIAL-SUMMARY] Camp: ${camp.name}, Currency: ${currency}`);
+        console.log(`  - Paid: ${summary.paidAmount}, Expenses: ${expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0)}, Profit: ${profit}`);
+        console.log(`  - Camp currency: ${camp.currency}, Trainers: ${camp.trainers ? camp.trainers.map(t => t.currency).join(', ') : 'none'}`);
 
         // Zapisuj WSZYSTKIE zyski (pozytywne i negatywne) do tabeli camp_profits
         try {
