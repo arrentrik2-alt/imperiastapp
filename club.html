@@ -4762,14 +4762,19 @@
         .in('participant_id', participants.map(p => p.id));
 
       if (!campPaymentsErr && campPayments) {
+        let campPaymentsCount = 0;
+        let confirmedCampPaymentsCount = 0;
         for (const payment of campPayments) {
           if (payment.currency === currency) {
+            campPaymentsCount++;
             totalAmount += parseFloat(payment.amount || 0);
             if (payment.confirmed) {
+              confirmedCampPaymentsCount++;
               paidAmount += parseFloat(payment.amount || 0);
             }
           }
         }
+        console.log(`[CAMP-PROFITS] Camp payments for ${currency}: ${campPaymentsCount} total, ${confirmedCampPaymentsCount} confirmed, sum=${totalAmount}, paid=${paidAmount}`);
       }
 
       // Load trainer payments from database
@@ -4783,14 +4788,19 @@
             .in('participant_id', participants.map(p => p.id));
 
           if (!trainerPaymentsErr && trainerPayments) {
+            let trainerPaymentsCount = 0;
+            let confirmedTrainerPaymentsCount = 0;
             for (const payment of trainerPayments) {
               if (payment.currency === currency) {
+                trainerPaymentsCount++;
                 totalAmount += parseFloat(payment.amount || 0);
                 if (payment.confirmed) {
+                  confirmedTrainerPaymentsCount++;
                   paidAmount += parseFloat(payment.amount || 0);
                 }
               }
             }
+            console.log(`[CAMP-PROFITS] Trainer ${trainerIndex} payments for ${currency}: ${trainerPaymentsCount} total, ${confirmedTrainerPaymentsCount} confirmed`);
           }
         }
       }
@@ -6345,14 +6355,19 @@
             .in('participant_id', participants.map(p => p.id));
 
           if (!trainerPaymentsErr && trainerPayments) {
+            let trainerPaymentsCount = 0;
+            let confirmedTrainerPaymentsCount = 0;
             for (const payment of trainerPayments) {
               if (payment.currency === currency) {
+                trainerPaymentsCount++;
                 totalAmount += parseFloat(payment.amount || 0);
                 if (payment.confirmed) {
+                  confirmedTrainerPaymentsCount++;
                   paidAmount += parseFloat(payment.amount || 0);
                 }
               }
             }
+            console.log(`[CAMP-PROFITS] Trainer ${trainerIndex} payments for ${currency}: ${trainerPaymentsCount} total, ${confirmedTrainerPaymentsCount} confirmed`);
           }
         }
       }
