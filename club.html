@@ -1602,6 +1602,9 @@
           <button class="btn btn-primary" id="backfill-kasa-btn">
             <i class="fas fa-database"></i> Wypełnij dane
           </button>
+          <button class="btn btn-warning" id="test-kasa-btn" onclick="testCampProfits()">
+            <i class="fas fa-vial"></i> Test tabeli
+          </button>
         </div>
       </div>
 
@@ -3655,19 +3658,33 @@
     // Update camp_profits row for a camp/training by recalculating its summary
     async function updateCampProfit(campId) {
       try {
+        console.log(`[CAMP-PROFITS] Starting update for camp: ${campId}`);
+
         // attempt to load camp record
         const { data: campRows, error: campErr } = await supabase.from('camps').select('id, currency, entry_type, dance_type, name').eq('id', campId).limit(1).maybeSingle();
-        if (campErr) { console.error('Error loading camp for updateCampProfit:', campErr); return; }
+        if (campErr) {
+          console.error('Error loading camp for updateCampProfit:', campErr);
+          return;
+        }
         const camp = campRows;
-        if (!camp) { console.warn('No camp found for updateCampProfit:', campId); return; }
+        if (!camp) {
+          console.warn('No camp found for updateCampProfit:', campId);
+          return;
+        }
+
+        console.log(`[CAMP-PROFITS] Found camp: ${camp.name}, type: ${camp.entry_type}, dance_type: ${camp.dance_type}`);
 
         // Load participants depending on type
         let participants = [];
         if ((camp.entry_type || '').toString().toLowerCase() === 'training') {
+          console.log(`[CAMP-PROFITS] Loading training participants for: ${campId}`);
           participants = await getTrainingParticipants(campId);
         } else {
+          console.log(`[CAMP-PROFITS] Loading camp participants for: ${campId}`);
           participants = await getCampParticipants(campId);
         }
+
+        console.log(`[CAMP-PROFITS] Found ${participants.length} participants`);
 
         // Recalculate for PLN and EUR
         const [summaryPLN, expensesPLN] = await Promise.all([
@@ -3680,13 +3697,18 @@
           (camp.entry_type === 'training' ? getTrainingExpenses(campId, 'EUR') : getExpenses(campId, 'EUR'))
         ]);
 
+        console.log(`[CAMP-PROFITS] PLN - paid: ${summaryPLN.paidAmount}, expenses: ${expensesPLN.reduce((sum, exp) => sum + (exp.amount || 0), 0)}`);
+        console.log(`[CAMP-PROFITS] EUR - paid: ${summaryEUR.paidAmount}, expenses: ${expensesEUR.reduce((sum, exp) => sum + (exp.amount || 0), 0)}`);
+
         // Calculate profit = paid_amount - total_expenses
         const profitPLN = (summaryPLN.paidAmount || 0) - (expensesPLN.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
         const profitEUR = (summaryEUR.paidAmount || 0) - (expensesEUR.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
 
-        // Upsert ONLY profits into camp_profits table
+        console.log(`[CAMP-PROFITS] Calculated profits - PLN: ${profitPLN}, EUR: ${profitEUR}`);
+
+        // Always save both currencies (even if profit is 0)
         const upserts = [];
-        if (profitPLN !== 0) upserts.push({
+        upserts.push({
           camp_id: campId,
           entry_type: camp.entry_type || 'camp',
           dance_type: camp.dance_type || null,
@@ -3695,7 +3717,7 @@
           camp_name: camp.name,
           updated_at: new Date().toISOString()
         });
-        if (profitEUR !== 0) upserts.push({
+        upserts.push({
           camp_id: campId,
           entry_type: camp.entry_type || 'camp',
           dance_type: camp.dance_type || null,
@@ -3705,19 +3727,23 @@
           updated_at: new Date().toISOString()
         });
 
-        // Delete existing records for this camp
-        await supabase.from('camp_profits').delete().eq('camp_id', campId);
+        console.log(`[CAMP-PROFITS] Preparing to insert ${upserts.length} records`);
 
-        // Insert new records
-        if (upserts.length > 0) {
-          const { error: insertErr } = await supabase.from('camp_profits').insert(upserts);
-          if (insertErr) {
-            console.error('Error inserting camp profits:', insertErr);
-            return;
-          }
+        // Delete existing records for this camp
+        const { error: deleteErr } = await supabase.from('camp_profits').delete().eq('camp_id', campId);
+        if (deleteErr) {
+          console.error('Error deleting existing camp profits:', deleteErr);
+          return;
         }
 
-        console.log(`[CAMP-PROFITS] Updated profit for ${camp.name}: PLN=${profitPLN.toFixed(2)}, EUR=${profitEUR.toFixed(2)}`);
+        // Insert new records
+        const { error: insertErr } = await supabase.from('camp_profits').insert(upserts);
+        if (insertErr) {
+          console.error('Error inserting camp profits:', insertErr);
+          return;
+        }
+
+        console.log(`[CAMP-PROFITS] Successfully updated profit for ${camp.name}: PLN=${profitPLN.toFixed(2)}, EUR=${profitEUR.toFixed(2)}`);
       } catch (err) {
         console.error('Error in updateCampProfit:', err);
       }
@@ -3739,10 +3765,14 @@
           return;
         }
 
+        console.log(`[BACKFILL] Found ${camps.length} camps to backfill`);
+
         // Process each camp in parallel
         const backfillPromises = (camps || []).map(async (camp) => {
           try {
+            console.log(`[BACKFILL] Processing camp: ${camp.name} (${camp.id})`);
             await updateCampProfit(camp.id);
+            console.log(`[BACKFILL] Completed camp: ${camp.name} (${camp.id})`);
           } catch (err) {
             console.error(`Backfill error for ${camp.name} (${camp.id}):`, err);
           }
@@ -3758,6 +3788,8 @@
     // Load kasa summary - Suma zysków ze wszystkich ST campów i szkoleń
     async function loadKasaSummary() {
       try {
+        console.log('[KASA] Starting loadKasaSummary');
+
         // Show loading state
         const kasaCampsPLN = document.getElementById('kasa-camps-pln');
         const kasaTrainingsPLN = document.getElementById('kasa-trainings-pln');
@@ -3770,6 +3802,7 @@
         if (kasaTrainingsEUR) kasaTrainingsEUR.innerHTML = '<div class="loading"></div>';
 
         // Load all profits for ST dance_type from camp_profits table
+        console.log('[KASA] Querying camp_profits table...');
         const { data: profits, error } = await supabase
           .from('camp_profits')
           .select('*')
@@ -3780,6 +3813,8 @@
           console.error('Error loading camp profits for kasa:', error);
           throw error;
         }
+
+        console.log(`[KASA] Found ${profits.length} profit records`);
 
         // Calculate totals and group by type and currency
         let totalPLN = 0;
@@ -3792,6 +3827,7 @@
 
         (profits || []).forEach(profit => {
           const profitAmount = parseFloat(profit.profit || 0);
+          console.log(`[KASA] Processing profit: ${profit.camp_name} (${profit.entry_type}) - ${profit.currency}: ${profitAmount}`);
 
           if (profit.currency === 'PLN') {
             totalPLN += profitAmount;
@@ -3809,6 +3845,9 @@
             }
           }
         });
+
+        console.log(`[KASA] Totals - PLN: ${totalPLN}, EUR: ${totalEUR}`);
+        console.log(`[KASA] Groups - campsPLN: ${campsPLN.length}, trainingsPLN: ${trainingsPLN.length}, campsEUR: ${campsEUR.length}, trainingsEUR: ${trainingsEUR.length}`);
 
         // Update summary cards
         const totalPLNEl = document.getElementById('kasa-total-pln');
@@ -5372,6 +5411,63 @@
         e.preventDefault();
         await loadKasaSummary();
       });
+    }
+
+    // Test function to check if camp_profits table exists and works
+    window.testCampProfits = async function() {
+      try {
+        console.log('[TEST] Testing camp_profits table...');
+
+        // Try to insert a test record
+        const testData = {
+          camp_id: 'test-' + Date.now(),
+          entry_type: 'camp',
+          dance_type: 'st',
+          currency: 'PLN',
+          profit: 100.00,
+          camp_name: 'Test Camp',
+          updated_at: new Date().toISOString()
+        };
+
+        const { error: insertErr } = await supabase.from('camp_profits').insert([testData]);
+        if (insertErr) {
+          console.error('[TEST] Error inserting test data:', insertErr);
+          alert('Błąd z tabelą camp_profits: ' + insertErr.message);
+          return;
+        }
+
+        console.log('[TEST] Successfully inserted test data');
+
+        // Try to read it back
+        const { data: readData, error: readErr } = await supabase
+          .from('camp_profits')
+          .select('*')
+          .eq('camp_id', testData.camp_id);
+
+        if (readErr) {
+          console.error('[TEST] Error reading test data:', readErr);
+          return;
+        }
+
+        console.log('[TEST] Successfully read test data:', readData);
+
+        // Delete test record
+        const { error: deleteErr } = await supabase
+          .from('camp_profits')
+          .delete()
+          .eq('camp_id', testData.camp_id);
+
+        if (deleteErr) {
+          console.error('[TEST] Error deleting test data:', deleteErr);
+          return;
+        }
+
+        console.log('[TEST] Successfully deleted test data');
+        alert('Test przeszedł pomyślnie! Tabela camp_profits działa poprawnie.');
+      } catch (err) {
+        console.error('[TEST] Test failed:', err);
+        alert('Test nie przeszedł: ' + err.message);
+      }
     }
 
     const backfillKasaBtn = document.getElementById('backfill-kasa-btn');
