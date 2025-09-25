@@ -4643,20 +4643,26 @@
       console.log(`[CAMP-PROFITS] Loading camp payments from database for currency: ${currency}`);
       const { data: campPayments, error: campPaymentsErr } = await supabase
         .from('camp_payments')
-        .select('participant_id, amount, confirmed')
+        .select('participant_id, amount, confirmed, currency')
         .eq('camp_id', camp.id)
         .in('participant_id', participants.map(p => p.id));
 
       if (!campPaymentsErr && campPayments) {
+        let currencyCount = 0;
+        let confirmedCount = 0;
+        let confirmedCurrencyCount = 0;
         for (const payment of campPayments) {
-          // Płatności mają pole currency w bazie, więc sprawdzam currency płatności
           if (payment.currency === currency) {
+            currencyCount++;
             totalAmount += parseFloat(payment.amount || 0);
             if (payment.confirmed) {
+              confirmedCount++;
+              confirmedCurrencyCount++;
               paidAmount += parseFloat(payment.amount || 0);
             }
           }
         }
+        console.log(`[CAMP-PROFITS] Found ${campPayments.length} total camp payments, ${currencyCount} in ${currency}, ${confirmedCount} confirmed total, ${confirmedCurrencyCount} confirmed in ${currency} for ${currency}`);
       }
       console.log(`[CAMP-PROFITS] Found ${campPayments ? campPayments.length : 0} camp payments for ${currency}`);
 
@@ -4672,15 +4678,20 @@
             .in('participant_id', participants.map(p => p.id));
 
           if (!trainerPaymentsErr && trainerPayments) {
+            let trainerCurrencyCount = 0;
+            let trainerConfirmedCurrencyCount = 0;
             for (const payment of trainerPayments) {
               // Sprawdzam czy currency płatności pasuje do currency którą analizuję
               if (payment.currency === currency) {
+                trainerCurrencyCount++;
                 totalAmount += parseFloat(payment.amount || 0);
                 if (payment.confirmed) {
+                  trainerConfirmedCurrencyCount++;
                   paidAmount += parseFloat(payment.amount || 0);
                 }
               }
             }
+            console.log(`[CAMP-PROFITS] Trainer ${trainerIndex}: ${trainerPayments.length} total, ${trainerCurrencyCount} in ${currency}, ${trainerConfirmedCurrencyCount} confirmed in ${currency}`);
           }
           console.log(`[CAMP-PROFITS] Found ${trainerPayments ? trainerPayments.length : 0} trainer payments for trainer ${trainerIndex}`);
         }
