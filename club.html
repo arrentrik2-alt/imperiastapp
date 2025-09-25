@@ -4539,12 +4539,12 @@
           alert('Przychód został dodany pomyślnie');
         }
 
+        // Reload incomes and update balance
+        await loadKasaIncomes();
+        updateKasaBalanceFromAll();
+
         // Hide form
         hideAddKasaIncomeForm();
-
-        // Reload incomes
-        await loadKasaIncomes();
-
       } catch (err) {
         console.error('Error in saveKasaIncome:', err);
         alert('Błąd podczas zapisywania przychodu');
@@ -4573,8 +4573,9 @@
 
         console.log('[KASA-INCOMES] Income deleted successfully');
 
-        // Reload incomes
+        // Reload incomes and update balance
         await loadKasaIncomes();
+        updateKasaBalanceFromAll();
 
         // Show success message
         alert('Przychód został usunięty pomyślnie');
@@ -4919,12 +4920,12 @@
           alert('Wydatek został dodany pomyślnie');
         }
 
+        // Reload expenses and update balance
+        await loadKasaExpenses();
+        updateKasaBalanceFromAll();
+
         // Hide form
         hideAddKasaExpenseForm();
-
-        // Reload expenses
-        await loadKasaExpenses();
-
       } catch (err) {
         console.error('Error in saveKasaExpense:', err);
         alert('Błąd podczas zapisywania wydatku');
@@ -4953,8 +4954,9 @@
 
         console.log('[KASA-EXPENSES] Expense deleted successfully');
 
-        // Reload expenses
+        // Reload expenses and update balance
         await loadKasaExpenses();
+        updateKasaBalanceFromAll();
 
         // Show success message
         alert('Wydatek został usunięty pomyślnie');
