@@ -1415,7 +1415,12 @@
           <span class="link-text">Campy</span>
         </a>
       </li>
-      
+      <li>
+        <a href="#" id="nav-kasa">
+          <i class="fas fa-wallet"></i>
+          <span class="link-text">Kasa</span>
+        </a>
+      </li>
       <li>
         <a href="#" id="nav-schedule">
           <i class="fas fa-calendar"></i>
@@ -1585,6 +1590,54 @@
     </div>
 
     <!-- Trainings merged into Camp view; separate sections removed -->
+
+    <!-- Kasa Section - Przychody ze wszystkich ST campów i szkoleń -->
+    <div class="content-box" id="kasa-section" style="display: none;">
+      <div class="content-header">
+        <h3>Przychody</h3>
+        <div class="kasa-actions">
+          <button class="btn btn-outline" id="refresh-kasa-btn">
+            <i class="fas fa-sync-alt"></i> Odśwież
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="kasa-summary" style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
+        <div class="summary-card" style="flex:1;min-width:280px;border:1px solid var(--muted);padding:16px;border-radius:8px;background:var(--primary-bg);">
+          <h4 style="margin:0 0 12px 0;color:var(--text-light);">Suma przychodów (PLN)</h4>
+          <div id="kasa-total-pln" style="font-size:24px;font-weight:700;color:#28a745;">0.00 zł</div>
+        </div>
+        <div class="summary-card" style="flex:1;min-width:280px;border:1px solid var(--muted);padding:16px;border-radius:8px;background:var(--primary-bg);">
+          <h4 style="margin:0 0 12px 0;color:var(--text-light);">Suma przychodów (EUR)</h4>
+          <div id="kasa-total-eur" style="font-size:24px;font-weight:700;color:#28a745;">0.00 €</div>
+        </div>
+      </div>
+
+      <!-- Detailed Breakdown -->
+      <div class="kasa-breakdown">
+        <h4 style="margin-bottom:16px;">Szczegółowy podział przychodów</h4>
+        <div id="kasa-breakdown-content" style="display:flex;gap:24px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:300px;">
+            <h5 style="margin-bottom:12px;color:var(--text-light);">Campy ST (PLN)</h5>
+            <div id="kasa-camps-pln" class="kasa-list"></div>
+          </div>
+          <div style="flex:1;min-width:300px;">
+            <h5 style="margin-bottom:12px;color:var(--text-light);">Szkolenia ST (PLN)</h5>
+            <div id="kasa-trainings-pln" class="kasa-list"></div>
+          </div>
+          <div style="flex:1;min-width:300px;">
+            <h5 style="margin-bottom:12px;color:var(--text-light);">Campy ST (EUR)</h5>
+            <div id="kasa-camps-eur" class="kasa-list"></div>
+          </div>
+          <div style="flex:1;min-width:300px;">
+            <h5 style="margin-bottom:12px;color:var(--text-light);">Szkolenia ST (EUR)</h5>
+            <div id="kasa-trainings-eur" class="kasa-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <div id="global-loader">
@@ -2242,12 +2295,14 @@
       const campDetailsSection = document.getElementById('camp-details-section');
       const trainingsSection = document.getElementById('trainings-section');
       const trainingDetailsSection = document.getElementById('training-details-section');
+      const kasaSection = document.getElementById('kasa-section');
 
       if (membersSection) membersSection.style.display = 'none';
       if (campsSection) campsSection.style.display = 'none';
       if (campDetailsSection) campDetailsSection.style.display = 'none';
       if (trainingsSection) trainingsSection.style.display = 'none';
       if (trainingDetailsSection) trainingDetailsSection.style.display = 'none';
+      if (kasaSection) kasaSection.style.display = 'none';
 
       // Remove active class from all nav links
       document.querySelectorAll('.nav-links a').forEach(link => link.classList.remove('active'));
@@ -2278,6 +2333,11 @@
         const navEl = document.getElementById(navId);
         if (navEl) navEl.classList.add('active');
         if (typeof loadCamps === 'function') loadCamps();
+      } else if (section === 'kasa') {
+        if (kasaSection) kasaSection.style.display = 'block';
+        const navKasaEl = document.getElementById('nav-kasa');
+        if (navKasaEl) navKasaEl.classList.add('active');
+        if (typeof loadKasaSummary === 'function') loadKasaSummary();
       } else {
         // default to members if unknown
         if (membersSection) membersSection.style.display = 'block';
@@ -3574,6 +3634,144 @@
       } catch (err) {
         console.error('Błąd ładowania campów:', err);
         campsList.innerHTML = '<div class="empty-state"><p>Błąd ładowania campów</p></div>';
+      }
+    }
+
+    // Load kasa summary - Przychody ze wszystkich ST campów i szkoleń
+    async function loadKasaSummary() {
+      try {
+        // Show loading state
+        const kasaCampsPLN = document.getElementById('kasa-camps-pln');
+        const kasaTrainingsPLN = document.getElementById('kasa-trainings-pln');
+        const kasaCampsEUR = document.getElementById('kasa-camps-eur');
+        const kasaTrainingsEUR = document.getElementById('kasa-trainings-eur');
+
+        if (kasaCampsPLN) kasaCampsPLN.innerHTML = '<div class="loading"></div>';
+        if (kasaTrainingsPLN) kasaTrainingsPLN.innerHTML = '<div class="loading"></div>';
+        if (kasaCampsEUR) kasaCampsEUR.innerHTML = '<div class="loading"></div>';
+        if (kasaTrainingsEUR) kasaTrainingsEUR.innerHTML = '<div class="loading"></div>';
+
+        // Load all camps and trainings with dance_type = 'st'
+        const { data: campsData, error } = await supabase
+          .from('camps')
+          .select(`
+            *,
+            trainers (
+              name,
+              amount,
+              currency,
+              trainer_index
+            )
+          `)
+          .ilike('dance_type', 'st')
+          .order('date', { ascending: true });
+
+        if (error) {
+          console.error('Error loading camps for kasa:', error);
+          throw error;
+        }
+
+        // Calculate totals and group by type and currency
+        let totalPLN = 0;
+        let totalEUR = 0;
+
+        const campsPLN = [];
+        const trainingsPLN = [];
+        const campsEUR = [];
+        const trainingsEUR = [];
+
+        for (const camp of (campsData || [])) {
+          // Get participants for this camp/training
+          let participants = [];
+          if (camp.entry_type === 'training') {
+            participants = await getTrainingParticipants(camp.id);
+          } else {
+            participants = await getCampParticipants(camp.id);
+          }
+
+          // Calculate profits for both currencies
+          const [summaryPLN, expensesPLN] = await Promise.all([
+            camp.entry_type === 'training'
+              ? calculateTrainingCurrencySummary(camp, 'PLN', participants)
+              : calculateCurrencySummary(camp, 'PLN', participants),
+            camp.entry_type === 'training'
+              ? getTrainingExpenses(camp.id, 'PLN')
+              : getExpenses(camp.id, 'PLN')
+          ]);
+
+          const [summaryEUR, expensesEUR] = await Promise.all([
+            camp.entry_type === 'training'
+              ? calculateTrainingCurrencySummary(camp, 'EUR', participants)
+              : calculateCurrencySummary(camp, 'EUR', participants),
+            camp.entry_type === 'training'
+              ? getTrainingExpenses(camp.id, 'EUR')
+              : getExpenses(camp.id, 'EUR')
+          ]);
+
+          // Calculate profit = paid_amount - expenses
+          const profitPLN = (summaryPLN.paidAmount || 0) - (expensesPLN.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
+          const profitEUR = (summaryEUR.paidAmount || 0) - (expensesEUR.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
+
+          // Add to totals
+          totalPLN += profitPLN;
+          totalEUR += profitEUR;
+
+          // Add to appropriate lists
+          const campName = camp.name || 'Brak nazwy';
+          if (profitPLN > 0) {
+            if (camp.entry_type === 'training') {
+              trainingsPLN.push({ camp_id: camp.id, name: campName, profit: profitPLN });
+            } else {
+              campsPLN.push({ camp_id: camp.id, name: campName, profit: profitPLN });
+            }
+          }
+
+          if (profitEUR > 0) {
+            if (camp.entry_type === 'training') {
+              trainingsEUR.push({ camp_id: camp.id, name: campName, profit: profitEUR });
+            } else {
+              campsEUR.push({ camp_id: camp.id, name: campName, profit: profitEUR });
+            }
+          }
+        }
+
+        // Update summary cards
+        const totalPLNEl = document.getElementById('kasa-total-pln');
+        const totalEUREl = document.getElementById('kasa-total-eur');
+
+        if (totalPLNEl) totalPLNEl.textContent = totalPLN.toFixed(2) + ' zł';
+        if (totalEUREl) totalEUREl.textContent = totalEUR.toFixed(2) + ' €';
+
+        // Helper function to render list
+        const renderList = (items, emptyMessage) => {
+          if (items.length === 0) {
+            return `<div class="empty-state" style="padding:20px;text-align:center;"><p>${emptyMessage}</p></div>`;
+          }
+
+          return items.map(item => `
+            <div class="kasa-item" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-dark);">
+              <span class="kasa-item-name" style="flex:1;">${item.name}</span>
+              <span class="kasa-item-profit" style="font-weight:700;color:#28a745;">${item.profit.toFixed(2)} zł</span>
+            </div>
+          `).join('');
+        };
+
+        // Update lists
+        if (kasaCampsPLN) kasaCampsPLN.innerHTML = renderList(campsPLN, 'Brak campów ST w PLN');
+        if (kasaTrainingsPLN) kasaTrainingsPLN.innerHTML = renderList(trainingsPLN, 'Brak szkoleń ST w PLN');
+        if (kasaCampsEUR) kasaCampsEUR.innerHTML = renderList(campsEUR, 'Brak campów ST w EUR');
+        if (kasaTrainingsEUR) kasaTrainingsEUR.innerHTML = renderList(trainingsEUR, 'Brak szkoleń ST w EUR');
+
+        console.log('[KASA] Loaded profits summary:', { totalPLN, totalEUR, campsCount: campsPLN.length + campsEUR.length, trainingsCount: trainingsPLN.length + trainingsEUR.length });
+
+      } catch (err) {
+        console.error('Błąd ładowania przychodów:', err);
+        // Show error state in all lists
+        const lists = ['kasa-camps-pln', 'kasa-trainings-pln', 'kasa-camps-eur', 'kasa-trainings-eur'];
+        lists.forEach(listId => {
+          const el = document.getElementById(listId);
+          if (el) el.innerHTML = '<div class="empty-state" style="padding:20px;text-align:center;"><p>Błąd ładowania danych</p></div>';
+        });
       }
     }
 
@@ -5076,6 +5274,23 @@
       e.preventDefault();
       setActiveNav('camps');
     });
+    }
+
+    const navKasaEl = document.getElementById('nav-kasa');
+    if (navKasaEl) {
+      navKasaEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveNav('kasa');
+      });
+    }
+
+    // Kasa section event listeners
+    const refreshKasaBtn = document.getElementById('refresh-kasa-btn');
+    if (refreshKasaBtn) {
+      refreshKasaBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await loadKasaSummary();
+      });
     }
 
     if (navTrainingsEl) {
