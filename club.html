@@ -3726,7 +3726,7 @@
         if (profitPLN !== 0) { // Zapisuj tylko gdy zysk nie jest zerowy
           console.log(`[CAMP-PROFITS] Saving PLN profit: ${profitPLN} for camp: ${camp.name}`);
           upserts.push({
-            camp_id: campId,
+            camp_id: camp.id,
             entry_type: camp.entry_type || 'camp',
             dance_type: camp.dance_type || null,
             currency: 'PLN',
@@ -3739,7 +3739,7 @@
         if (profitEUR !== 0) { // Zapisuj tylko gdy zysk nie jest zerowy
           console.log(`[CAMP-PROFITS] Saving EUR profit: ${profitEUR} for camp: ${camp.name}`);
           upserts.push({
-            camp_id: campId,
+            camp_id: camp.id,
             entry_type: camp.entry_type || 'camp',
             dance_type: camp.dance_type || null,
             currency: 'EUR',
@@ -3752,8 +3752,8 @@
         console.log(`[CAMP-PROFITS] Preparing to insert ${upserts.length} records`);
 
         // Delete existing records for this camp (if any exist)
-        console.log(`[CAMP-PROFITS] Deleting existing records for camp: ${campId}`);
-        const { error: deleteErr } = await supabase.from('camp_profits').delete().eq('camp_id', campId);
+        console.log(`[CAMP-PROFITS] Deleting existing records for camp: ${camp.id}`);
+        const { error: deleteErr } = await supabase.from('camp_profits').delete().eq('camp_id', camp.id);
         if (deleteErr) {
           console.error('Error deleting existing camp profits:', deleteErr);
           // If it's a UUID format error, try to continue anyway
@@ -4674,7 +4674,7 @@
             const { data: trainerPayments, error: trainerPaymentsErr } = await supabase
               .from('trainer_payments')
               .select('participant_id, amount, confirmed')
-              .eq('camp_id', campId)
+              .eq('camp_id', camp.id)
               .eq('trainer_index', trainerIndex)
               .in('participant_id', participants.map(p => p.id));
 
