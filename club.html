@@ -4675,38 +4675,6 @@
 
         // Hide form
         hideAddKasaIncomeForm();
-          console.log(`[KASA-INCOMES] Saving income: ${name}, ${amount} ${currency}`);
-
-          const { data, error } = await supabase
-            .from('kasa_incomes')
-            .insert({
-              name: name,
-              amount: amount,
-              currency: currency,
-              description: description,
-              month: window.currentKasaMonth,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .select();
-
-          if (error) {
-            console.error('Error saving kasa income:', error);
-            alert('Błąd podczas zapisywania przychodu');
-            return;
-          }
-
-          console.log('[KASA-INCOMES] Income saved successfully');
-          alert('Przychód został dodany pomyślnie');
-        }
-
-        // Reload incomes and update balance
-        await loadKasaIncomes();
-        await loadKasaMonths(); // Reload months after changes
-        updateKasaBalanceFromAll();
-
-        // Hide form
-        hideAddKasaIncomeForm();
       } catch (err) {
         console.error('Error in saveKasaIncome:', err);
         alert('Błąd podczas zapisywania przychodu');
@@ -5065,37 +5033,6 @@
         // Reload expenses and update balance
         await loadKasaExpenses();
         await loadKasaMonths(); // Reload months after changes
-        updateKasaBalanceFromAll();
-
-        // Hide form
-        hideAddKasaExpenseForm();
-          console.log(`[KASA-EXPENSES] Saving expense: ${name}, ${amount} ${currency}`);
-
-          const { data, error } = await supabase
-            .from('kasa_expenses')
-            .insert({
-              name: name,
-              amount: amount,
-              currency: currency,
-              description: description,
-              month: window.currentKasaMonth,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .select();
-
-          if (error) {
-            console.error('Error saving kasa expense:', error);
-            alert('Błąd podczas zapisywania wydatku');
-            return;
-          }
-
-          console.log('[KASA-EXPENSES] Expense saved successfully');
-          alert('Wydatek został dodany pomyślnie');
-        }
-
-        // Reload expenses and update balance
-        await loadKasaExpenses();
         updateKasaBalanceFromAll();
 
         // Hide form
