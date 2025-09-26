@@ -3144,6 +3144,19 @@
       try {
         console.log(`[DELETE-TRAINING] Starting deletion of training ${training.name} (${training.id})`);
 
+        // 0. Delete training profits first (before any other data)
+        const { error: profitsError } = await supabase
+          .from('camp_profits')
+          .delete()
+          .eq('camp_id', training.id);
+
+        if (profitsError) {
+          console.error('Error deleting training profits:', profitsError);
+          // Don't throw error here, continue with deletion
+        } else {
+          console.log(`[DELETE-TRAINING] Deleted training profits for training ${training.id}`);
+        }
+
         // Delete in order of dependencies (foreign keys)
         // 1. Delete training payments
         const { error: trainingPaymentsError } = await supabase
@@ -3245,11 +3258,13 @@
         document.getElementById('trainings-section').style.display = 'block';
         await loadTrainings();
 
-        // Update camp_profits for the deleted training (will delete the records)
-        try {
-          await updateCampProfit(training.id);
-        } catch (err) {
-          console.error('Failed to update camp profits after deleting training:', err);
+        // Update Kasa summary to reflect the deleted training
+        if (typeof loadKasaSummary === 'function') {
+          try {
+            await loadKasaSummary();
+          } catch (err) {
+            console.error('Failed to update Kasa summary after deleting training:', err);
+          }
         }
 
         // Show success message
@@ -4197,10 +4212,18 @@
 
         if (incomesData.error) {
           console.error('Error loading kasa_incomes:', incomesData.error);
+          // If table doesn't exist, just skip it
+          if (incomesData.error.code === 'PGRST116' || incomesData.error.message?.includes('relation')) {
+            console.log('[KASA-MONTHS] Table kasa_incomes does not exist, skipping');
+          }
         }
 
         if (expensesData.error) {
           console.error('Error loading kasa_expenses:', expensesData.error);
+          // If table doesn't exist, just skip it
+          if (expensesData.error.code === 'PGRST116' || expensesData.error.message?.includes('relation')) {
+            console.log('[KASA-MONTHS] Table kasa_expenses does not exist, skipping');
+          }
         }
 
         const months = new Set();
@@ -4297,6 +4320,17 @@
 
         if (error) {
           console.error('Error loading kasa incomes:', error);
+          // If table doesn't exist (404 or 400), show empty state instead of error
+          if (error.code === 'PGRST116' || error.message?.includes('relation') || error.status === 400) {
+            console.log('[KASA-INCOMES] Table kasa_incomes does not exist, showing empty state');
+            const emptyHtml = '<div class="empty-state" style="padding:20px;text-align:center;"><p>Brak przychodów w tym miesiącu</p></div>';
+            if (kasaIncomesPLN) kasaIncomesPLN.innerHTML = emptyHtml;
+            if (kasaIncomesEUR) kasaIncomesEUR.innerHTML = emptyHtml;
+            updateKasaIncomesTotals(0, 0); // Update totals with 0
+            return;
+          }
+
+          // For other errors, show error message
           const errorHtml = '<div class="empty-state" style="padding:20px;text-align:center;"><p>Błąd ładowania danych</p></div>';
           if (kasaIncomesPLN) kasaIncomesPLN.innerHTML = errorHtml;
           if (kasaIncomesEUR) kasaIncomesEUR.innerHTML = errorHtml;
@@ -4400,8 +4434,8 @@
         // Load current data from database for accurate calculations
         // Note: We load ALL months data for balance calculation, not just current month
         const [incomesData, expensesData] = await Promise.all([
-          supabase.from('kasa_incomes').select('*'),
-          supabase.from('kasa_expenses').select('*')
+          supabase.from('kasa_incomes').select('*').catch(err => ({ data: null, error: err })),
+          supabase.from('kasa_expenses').select('*').catch(err => ({ data: null, error: err }))
         ]);
 
         // Get current revenues from DOM
@@ -4785,6 +4819,17 @@
 
         if (error) {
           console.error('Error loading kasa expenses:', error);
+          // If table doesn't exist (404 or 400), show empty state instead of error
+          if (error.code === 'PGRST116' || error.message?.includes('relation') || error.status === 400) {
+            console.log('[KASA-EXPENSES] Table kasa_expenses does not exist, showing empty state');
+            const emptyHtml = '<div class="empty-state" style="padding:20px;text-align:center;"><p>Brak wydatków w tym miesiącu</p></div>';
+            if (kasaExpensesPLN) kasaExpensesPLN.innerHTML = emptyHtml;
+            if (kasaExpensesEUR) kasaExpensesEUR.innerHTML = emptyHtml;
+            updateKasaExpensesTotals(0, 0); // Update totals with 0
+            return;
+          }
+
+          // For other errors, show error message
           const errorHtml = '<div class="empty-state" style="padding:20px;text-align:center;"><p>Błąd ładowania danych</p></div>';
           if (kasaExpensesPLN) kasaExpensesPLN.innerHTML = errorHtml;
           if (kasaExpensesEUR) kasaExpensesEUR.innerHTML = errorHtml;
@@ -5136,6 +5181,19 @@
       try {
         console.log(`[DELETE-CAMP] Starting deletion of camp ${camp.name} (${camp.id})`);
 
+        // 0. Delete camp profits first (before any other data)
+        const { error: profitsError } = await supabase
+          .from('camp_profits')
+          .delete()
+          .eq('camp_id', camp.id);
+
+        if (profitsError) {
+          console.error('Error deleting camp profits:', profitsError);
+          // Don't throw error here, continue with deletion
+        } else {
+          console.log(`[DELETE-CAMP] Deleted camp profits for camp ${camp.id}`);
+        }
+
         // Delete in order of dependencies (foreign keys)
         // 1. Delete camp payments
         const { error: campPaymentsError } = await supabase
@@ -5237,11 +5295,13 @@
         document.getElementById('camps-section').style.display = 'block';
         await loadCamps();
 
-        // Update camp_profits for the deleted camp (will delete the records)
-        try {
-          await updateCampProfit(camp.id);
-        } catch (err) {
-          console.error('Failed to update camp profits after deleting camp:', err);
+        // Update Kasa summary to reflect the deleted camp
+        if (typeof loadKasaSummary === 'function') {
+          try {
+            await loadKasaSummary();
+          } catch (err) {
+            console.error('Failed to update Kasa summary after deleting camp:', err);
+          }
         }
 
         // Show success message
