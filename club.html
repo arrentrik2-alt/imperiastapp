@@ -1650,11 +1650,6 @@
       <div class="kasa-expenses" style="margin-top:32px;">
         <div class="content-header">
           <h3>Wydatki</h3>
-          <div class="kasa-actions">
-            <button class="btn btn-outline" id="add-kasa-expense-btn">
-              <i class="fas fa-plus"></i> Dodaj wydatek
-            </button>
-          </div>
         </div>
 
         <!-- Add/Edit Expense Form -->
@@ -1706,19 +1701,29 @@
         </div>
       </div>
 
-      <!-- Incomes Section -->
-      <div class="kasa-incomes" style="margin-top:32px;">
-      <div class="content-header">
-        <h3>Przychody</h3>
-        <div class="kasa-actions">
-          <select id="kasa-month-selector" style="padding:8px;border:1px solid var(--muted);border-radius:4px;margin-right:12px;">
+      <!-- Month Selector at the top -->
+      <div class="kasa-month-selector" style="margin-bottom:32px;padding:20px;border:1px solid var(--muted);border-radius:8px;background:var(--primary-bg);">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <h4 style="margin:0;color:var(--text-light);">Wybierz miesiąc:</h4>
+          <select id="kasa-month-selector" style="padding:12px;border:1px solid var(--muted);border-radius:6px;font-size:16px;font-weight:600;">
             <!-- Months will be populated by JavaScript -->
           </select>
-          <button class="btn btn-outline" id="add-kasa-income-btn">
-            <i class="fas fa-plus"></i> Dodaj przychód
-          </button>
+          <div style="margin-left:auto;display:flex;gap:12px;">
+            <button class="btn btn-outline" id="add-kasa-income-btn">
+              <i class="fas fa-plus"></i> Dodaj przychód
+            </button>
+            <button class="btn btn-outline" id="add-kasa-expense-btn">
+              <i class="fas fa-plus"></i> Dodaj wydatek
+            </button>
+          </div>
         </div>
       </div>
+
+      <!-- Incomes Section -->
+      <div class="kasa-incomes" style="margin-top:32px;">
+        <div class="content-header">
+          <h3>Przychody</h3>
+        </div>
 
         <!-- Add/Edit Income Form -->
         <div id="add-kasa-income-form" style="display:none;margin-bottom:24px;padding:20px;border:1px solid var(--muted);border-radius:8px;background:var(--primary-bg);">
@@ -4215,8 +4220,12 @@
         const selector = document.getElementById('kasa-month-selector');
         if (selector) {
           selector.innerHTML = window.availableKasaMonths.map(month => {
-            const date = new Date(month + '-01');
-            const monthName = date.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+            const [year, monthNum] = month.split('-');
+            const date = new Date(year, monthNum - 1, 1);
+            const monthName = date.toLocaleDateString('pl-PL', {
+              month: 'long',
+              year: 'numeric'
+            });
             const selected = month === window.currentKasaMonth ? 'selected' : '';
             return `<option value="${month}" ${selected}>${monthName}</option>`;
           }).join('');
@@ -4224,6 +4233,7 @@
           // Add event listener for month change
           selector.addEventListener('change', (e) => {
             window.currentKasaMonth = e.target.value;
+            console.log(`[KASA-MONTHS] Changed to month: ${window.currentKasaMonth}`);
             loadKasaIncomes();
             loadKasaExpenses();
           });
@@ -6720,7 +6730,7 @@
       });
     }
 
-    // Kasa expenses event listeners
+    // Kasa expenses event listeners - now handled by the month selector section
     const addKasaExpenseBtn = document.getElementById('add-kasa-expense-btn');
     if (addKasaExpenseBtn) {
       addKasaExpenseBtn.addEventListener('click', (e) => {
