@@ -802,121 +802,6 @@
       box-shadow: 0 0 15px rgba(40, 167, 69, 0.3), inset 0 0 15px rgba(40, 167, 69, 0.08);
     }
 
-    /* Table styles */
-    .camp-details-table {
-      display: table !important;
-      width: 100% !important;
-      border-collapse: collapse !important;
-      margin-top: 20px !important;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
-      border-radius: 12px !important;
-      overflow: hidden !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-
-    .camp-details-table thead {
-      background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%) !important;
-    }
-
-    .camp-details-table th {
-      color: var(--primary-bg) !important;
-      padding: 16px 8px !important;
-      text-align: center !important;
-      font-weight: 700 !important;
-      position: relative !important;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-    }
-
-    .camp-details-table td {
-      padding: 8px 4px !important;
-      border: 1px solid var(--border-dark) !important;
-      text-align: center !important;
-      color: var(--text-light) !important;
-      vertical-align: middle !important;
-      position: relative !important;
-    }
-
-    .camp-details-table tbody tr:nth-child(even) {
-      background-color: rgba(255, 255, 255, 0.02) !important;
-    }
-
-    .camp-details-table tbody tr:nth-child(odd) {
-      background-color: rgba(0, 0, 0, 0.05) !important;
-    }
-
-    .virtual-scroll-container::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    .virtual-scroll-container::-webkit-scrollbar-track {
-      background: var(--bg-color);
-      border-radius: 4px;
-    }
-
-    .virtual-scroll-container::-webkit-scrollbar-thumb {
-      background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
-      border-radius: 4px;
-    }
-
-    .virtual-scroll-container::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(135deg, #ffd700 0%, #daa520 100%);
-    }
-
-    .virtual-scroll-spacer {
-      position: relative;
-      pointer-events: none;
-      transition: transform 0.1s ease-out;
-    }
-
-    .virtual-scroll-body {
-      position: relative;
-    }
-
-    /* Progressive loading styles */
-    .loading-state {
-      text-align: center;
-      padding: 40px 20px;
-    }
-
-    .loading-state .loading {
-      width: 40px;
-      height: 40px;
-      border: 4px solid var(--border-color);
-      border-top: 4px solid var(--gold);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .progress-bar {
-      width: 200px;
-      height: 8px;
-      background: var(--bg-color);
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      margin: 20px auto;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--gold) 0%, #b8860b 100%);
-      transition: width 0.3s ease;
-      border-radius: 4px;
-    }
-
-    .progress-text {
-      margin-top: 10px;
-      font-size: 0.9rem;
-      color: var(--text-light);
-    }
-
     .participant-name {
       text-align: center;
       font-weight: 500;
@@ -5586,9 +5471,6 @@
     }
     // Show camp details
     async function showCampDetails(camp) {
-      PerformanceMonitor.start('showCampDetails-total');
-      console.log('[CAMP-DETAILS] Starting camp details load for:', camp.name);
-
       // Load trainer data for this camp if not already loaded
       if (!camp.trainers) {
         const { data: trainers, error: trainerError } = await supabase
@@ -5611,51 +5493,27 @@
       }
 
       window.currentCamp = camp;
-      DOMCache.get('#camp-details-title').textContent = `Camp: ${camp.name}`;
+      document.getElementById('camp-details-title').textContent = `Camp: ${camp.name}`;
 
       // Hide camps list and show details
-      DOMCache.get('#camps-section').style.display = 'none';
-      DOMCache.get('#camp-details-section').style.display = 'block';
+      document.getElementById('camps-section').style.display = 'none';
+      document.getElementById('camp-details-section').style.display = 'block';
 
-      // Show progressive loading state in camp details
-      const detailsContent = DOMCache.get('#camp-details-content');
+      // Show loading state in camp details
+      const detailsContent = document.getElementById('camp-details-content');
       detailsContent.innerHTML = `
         <div class="loading-state">
           <div class="loading"></div>
           <p>Ładowanie szczegółów campu...</p>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: 0%"></div>
-          </div>
-          <p class="progress-text">0%</p>
         </div>
       `;
-
-      // Progressive loading simulation
-      let progress = 0;
-      const progressInterval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress > 90) progress = 90; // Don't go to 100% until actually complete
-
-        const progressFill = detailsContent.querySelector('.progress-fill');
-        const progressText = detailsContent.querySelector('.progress-text');
-
-        if (progressFill && progressText) {
-          progressFill.style.width = `${progress}%`;
-          progressText.textContent = `${Math.round(progress)}%`;
-        }
-      }, 200);
-
-      // Store interval for cleanup
-      window.currentProgressInterval = progressInterval;
 
       // ULTRA FAST LOADING - Load all data in parallel
       try {
         // PARALLEL DATA LOADING
         const dataPromises = [];
 
-        PerformanceMonitor.start('parallel-data-loading');
-
-        // LAZY LOADING: Load members if not already loaded (optimized - only load once per session)
+        // Load members if not already loaded (optimized - only load once per session)
         let allMembers = window.allMembers;
         if (!allMembers) {
           dataPromises.push(
@@ -5673,12 +5531,11 @@
           dataPromises.push(Promise.resolve(allMembers));
         }
 
-        // LAZY LOADING: Load camp participants in parallel (smaller batch first)
-        dataPromises.push(getCampParticipantsLazy(camp.id));
+        // Load camp participants in parallel
+        dataPromises.push(getCampParticipants(camp.id));
 
         // Wait for all data to load in parallel
         const [membersData, additionalParticipants] = await Promise.all(dataPromises);
-        PerformanceMonitor.end('parallel-data-loading');
 
         if (!allMembers) {
           allMembers = membersData;
@@ -5688,17 +5545,14 @@
         const danceTypeForDetails = camp.dance_type || currentView || 'st';
         const members = allMembers.filter(m => danceTypeForDetails === 'la' ? (m.style === 'la' || m.style === '10t') : (m.style === 'st' || m.style === '10t'));
 
-        // Load all participants at once for better performance
-        // Limit to first 100 members to avoid performance issues
-        const maxParticipants = Math.min(members.length, 100);
-        const allParticipants = [...members.slice(0, maxParticipants), ...additionalParticipants];
+        // Combine members and additional participants
+        const allParticipants = [...members, ...additionalParticipants];
 
         // Cache participants for later use
         window.currentParticipants = allParticipants;
 
         // Initialize payment cache in background (do not block UI)
         (async () => {
-          PerformanceMonitor.start('payment-cache-init');
           try {
             await initializePaymentCache(camp.id, allParticipants);
             // After cache ready, update UI rows status quickly
@@ -5706,50 +5560,18 @@
           } catch (err) {
             console.error('Background payment cache init failed:', err);
           }
-          PerformanceMonitor.end('payment-cache-init');
         })();
 
         // ULTRA FAST UI SETUP - Create table and summary in parallel
         // Render table first (fast) then start expensive financial summary async (don't block)
-        const detailsContent = DOMCache.get('#camp-details-content');
+        const detailsContent = document.getElementById('camp-details-content');
         try {
-          PerformanceMonitor.start('create-table');
-          console.log('[CAMP-DETAILS] Creating table for', allParticipants.length, 'participants');
           const tableHtml = await createCampDetailsTable(camp, allParticipants);
-          console.log('[CAMP-DETAILS] Table HTML length:', tableHtml.length);
-          console.log('[CAMP-DETAILS] First 500 chars of table HTML:', tableHtml.substring(0, 500));
-          console.log('[CAMP-DETAILS] Last 500 chars of table HTML:', tableHtml.substring(tableHtml.length - 500));
           detailsContent.innerHTML = tableHtml;
-          console.log('[CAMP-DETAILS] Table inserted into DOM');
-          console.log('[CAMP-DETAILS] Details content innerHTML length:', detailsContent.innerHTML.length);
-          console.log('[CAMP-DETAILS] Details content first child:', detailsContent.firstElementChild?.tagName);
-          console.log('[CAMP-DETAILS] Table element found:', !!detailsContent.querySelector('.camp-details-table'));
-          console.log('[CAMP-DETAILS] Camp details section display:', getComputedStyle(document.getElementById('camp-details-section')).display);
-          console.log('[CAMP-DETAILS] Details content display:', getComputedStyle(detailsContent).display);
-
-          // Ensure table is visible
-          detailsContent.style.display = 'block';
-          const table = detailsContent.querySelector('.camp-details-table');
-          if (table) {
-            table.style.display = 'table';
-            table.style.width = '100%';
-            table.style.visibility = 'visible';
-            console.log('[CAMP-DETAILS] Table forced to display');
-          } else {
-            console.error('[CAMP-DETAILS] Table element not found in DOM!');
-          }
-
-          PerformanceMonitor.end('create-table');
-
-          // Complete progress bar
-          if (window.currentProgressInterval) {
-            clearInterval(window.currentProgressInterval);
-            window.currentProgressInterval = null;
-          }
 
           // Setup UI elements immediately after table render
           setupParticipantSearch();
-          const searchInput = DOMCache.get('#participant-search');
+          const searchInput = document.getElementById('participant-search');
           if (searchInput) searchInput.value = '';
 
           console.log('[CAMP-DETAILS] Table rendered, starting background calculations...');
@@ -5757,27 +5579,23 @@
           // Kick off financial summary and participant calculations in background (non-blocking)
           (async () => {
             try {
-              PerformanceMonitor.start('financial-summary');
               // Start financial summary creation
-              const financialSummary = DOMCache.get('#financial-summary');
-              const summaryCurrencies = DOMCache.get('#summary-currencies');
+              const financialSummary = document.getElementById('financial-summary');
+              const summaryCurrencies = document.getElementById('summary-currencies');
               if (financialSummary && summaryCurrencies) {
                 const html = await createFinancialSummaryHTML(camp, allParticipants);
                 summaryCurrencies.innerHTML = html;
                 financialSummary.style.display = 'block';
               }
-              PerformanceMonitor.end('financial-summary');
             } catch (err) {
               console.error('[CAMP-DETAILS] Error creating financial summary (background):', err);
             }
           })();
 
-          // Start participant totals calculations in background with debouncing (don't block UI)
+          // Start participant totals calculations in background (don't block UI)
           (async () => {
             try {
-              console.log('[CAMP-DETAILS] Starting debounced participant totals calculations in background...');
-
-              const debouncedUpdateTotals = debounce(async () => {
+              console.log('[CAMP-DETAILS] Starting participant totals calculations in background...');
               const startTime = Date.now();
 
               const calculationPromises = [];
@@ -5796,11 +5614,7 @@
               await Promise.all(calculationPromises);
 
               const calcTime = Date.now() - startTime;
-                console.log(`[CAMP-DETAILS] Debounced calculations completed in ${calcTime}ms`);
-              }, 300); // Debounce for 300ms
-
-              // Execute the debounced function
-              debouncedUpdateTotals();
+              console.log(`[CAMP-DETAILS] Background calculations completed in ${calcTime}ms`);
             } catch (err) {
               console.error('[CAMP-DETAILS] Error in background calculations:', err);
             }
@@ -5808,18 +5622,11 @@
 
         } catch (err) {
           console.error('[CAMP-DETAILS] Error creating camp details table:', err);
-          console.error('[CAMP-DETAILS] Error stack:', err.stack);
-          detailsContent.innerHTML = `
-            <div class="empty-state">
-              <p>Błąd tworzenia widoku: ${err.message}</p>
-              <p>Liczba uczestników: ${allParticipants.length}</p>
-              <p>Camp ID: ${camp.id}</p>
-            </div>
-          `;
+          detailsContent.innerHTML = '<div class="empty-state"><p>Błąd tworzenia widoku</p></div>';
         }
 
         // Set currency data for payment inputs immediately (fast operation)
-        DOMCache.getAll('.payment-input').forEach(input => {
+          document.querySelectorAll('.payment-input').forEach(input => {
             if (!input.dataset.currency) {
               const tableType = input.getAttribute('data-column-type');
 
@@ -5839,7 +5646,6 @@
           });
 
         console.log('[CAMP-DETAILS] Camp details loaded - UI is now interactive!');
-        PerformanceMonitor.end('showCampDetails-total');
 
         // Attach client-side PDF exporter to the download button
         const downloadPdfBtn = document.getElementById('download-pdf-btn');
@@ -6388,57 +6194,53 @@
     async function createCampDetailsTable(camp, participants) {
       // Debug: Check if function is called
       console.log('[CREATE-CAMP-DETAILS-TABLE] Function called with camp:', camp?.name);
-
-      // Enable virtual scrolling for better performance with large participant lists
-      const enableVirtualScrolling = false; // Disabled for now to fix display issues
-      const rowHeight = 60; // Estimated row height in pixels
-      const visibleRows = Math.ceil(window.innerHeight / rowHeight) + 10; // Show extra for smooth scrolling
-
-      // Build table headers - simplified
-      let tableHtml = `<table class="camp-details-table" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+      let tableHtml = `
+        <table class="camp-details-table">
           <thead>
             <tr>
-            <th style="width: 200px; text-align: left; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Uczestnik</th>
-            <th style="width: 120px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Camp<br><span class="amount-badge">${camp.amount} ${camp.currency}</span></th>`;
+              <th style="width: 200px; text-align: left;">Uczestnik</th>
+              <th style="width: 120px;">Camp<br><span class="amount-badge">${camp.amount} ${camp.currency}</span></th>
+      `;
 
-      // Add trainer columns
+      // Add columns for each trainer
       if (camp.trainers && camp.trainers.length > 0) {
-        for (let i = 0; i < camp.trainers.length; i++) {
-          const trainer = camp.trainers[i];
-          if (trainer) {
-            tableHtml += `<th style="width: 120px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Lekcje ${trainer.name}<br><span class="amount-badge">${trainer.amount} ${trainer.currency}</span></th>`;
+        camp.trainers.forEach((trainer, index) => {
+          if (trainer) { // Only add if trainer exists at this index
+            tableHtml += `<th style="width: 120px;">Lekcje ${trainer.name}<br><span class="amount-badge">${trainer.amount} ${trainer.currency}</span></th>`;
           }
-        }
+        });
       }
 
-      // Add columns for attention, comment, and totals
-      tableHtml += `<th style="width: 50px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Uwaga</th>
-        <th style="width: 150px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Komentarz</th>`;
+      // Add attention and comment columns
+      tableHtml += `
+            <th style="width: 50px;">Uwaga</th>
+            <th style="width: 150px;">Komentarz</th>
+      `;
 
-      // Add total columns based on currencies used
-      const currencies = new Set([camp.currency]);
-      if (camp.trainers) {
-        camp.trainers.forEach(t => t && currencies.add(t.currency));
+      // Determine which total columns to show
+      const hasPLNPayments = camp.currency === 'PLN' || (camp.trainers && camp.trainers.some(t => t.currency === 'PLN'));
+      const hasEURPayments = camp.currency === 'EUR' || (camp.trainers && camp.trainers.some(t => t.currency === 'EUR'));
+
+      if (hasPLNPayments) {
+        tableHtml += `<th style="width: 80px;">Razem PLN</th>`;
+      }
+      if (hasEURPayments) {
+        tableHtml += `<th style="width: 80px;">Razem EUR</th>`;
       }
 
-      if (currencies.has('PLN')) {
-        tableHtml += `<th style="width: 80px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Razem PLN</th>`;
-      }
-      if (currencies.has('EUR')) {
-        tableHtml += `<th style="width: 80px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Razem EUR</th>`;
-      }
+      tableHtml += `
+            </tr>
+          </thead>
+          <tbody>
+      `;
 
-      tableHtml += `</tr></thead><tbody>`;
-
-      // OPTIMIZED DATA LOADING - Batch queries to reduce database calls
-      // Load all data first before generating HTML
+      // PARALLEL DATA LOADING - Load all data simultaneously for maximum speed
       const participantIds = participants.map(p => p.id);
 
-      // Prepare optimized data loading promises
+      // Prepare all data loading promises
       const dataPromises = [];
 
-      // Load attention and comment data in a single combined query (if possible)
-      // For now, keep them separate but batch them efficiently
+      // Load attention data
       dataPromises.push(
         supabase
             .from('participant_attention')
@@ -6449,6 +6251,7 @@
           .catch(err => ({ type: 'attention', data: [], error: err }))
       );
 
+      // Load comment data
       dataPromises.push(
         supabase
             .from('participant_comments')
@@ -6617,305 +6420,9 @@
         dataMap[item.participantId] = item;
       });
 
-      // Initialize virtual scrolling if enabled
-      if (enableVirtualScrolling) {
-        // Store data for virtual scrolling
-        window.virtualScrollData = {
-          participants: participants,
-          camp: camp,
-          dataMap: dataMap,
-          attentionData: attentionData,
-          commentData: commentData,
-          campPaymentData: campPaymentData,
-          trainerPaymentData: trainerPaymentData,
-          campConfirmedData: campConfirmedData,
-          trainerConfirmedData: trainerConfirmedData,
-          hasPLNPayments: hasPLNPayments,
-          hasEURPayments: hasEURPayments,
-          rowHeight: rowHeight,
-          totalRows: participants.length
-        };
-
-        // Add virtual scroll spacer
-        const totalHeight = participants.length * rowHeight;
-        tableHtml += `<div class="virtual-scroll-spacer" style="height: ${totalHeight}px; position: absolute; top: 0; left: 0; width: 100%; pointer-events: none;"></div>`;
-
-        // Initialize virtual scroll after DOM is ready
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', () => initializeVirtualScroll());
-        } else {
-          initializeVirtualScroll();
-        }
-      } else {
-        // Add rows for each participant - simplified
-        for (let i = 0; i < participants.length; i++) {
-          const participant = participants[i];
+      // Add rows for each participant
+      participants.forEach(participant => {
         const participantData = dataMap[participant.id];
-
-          // Create a simple row
-          let rowHtml = `<tr class="participant-row" data-participant-id="${participant.id}">
-            <td class="participant-name">${participant.name}</td>`;
-
-          // Camp payment cell
-          const campPayment = participantData.campPayment || '';
-          const campConfirmed = participantData.campConfirmed || false;
-          rowHtml += `<td><input type="number" class="payment-input" data-column-type="camp" data-participant-id="${participant.id}" value="${campPayment}" step="0.01" min="0" style="width: 80px; text-align: center;"></td>`;
-
-          // Trainer payment cells
-          if (camp.trainers && camp.trainers.length > 0) {
-            for (let trainerIdx = 0; trainerIdx < camp.trainers.length; trainerIdx++) {
-              const trainer = camp.trainers[trainerIdx];
-              if (trainer) {
-                const trainerPayment = (participantData.trainerPayments && participantData.trainerPayments[trainerIdx]) ? participantData.trainerPayments[trainerIdx].amount : '';
-                rowHtml += `<td><input type="number" class="payment-input" data-column-type="trainer" data-trainer-index="${trainerIdx}" data-participant-id="${participant.id}" value="${trainerPayment}" step="0.01" min="0" style="width: 80px; text-align: center;"></td>`;
-              }
-            }
-          }
-
-          // Attention checkbox
-          const hasAttention = participantData.hasAttention || false;
-          rowHtml += `<td><input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}" ${hasAttention ? 'checked' : ''}></td>`;
-
-          // Comment field
-          const comment = participantData.comment || '';
-          rowHtml += `<td><input type="text" class="comment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" placeholder="Komentarz..." value="${comment}" style="width: 120px;"></td>`;
-
-          // Total columns
-          if (currencies.has('PLN')) {
-            rowHtml += `<td class="total-pln">0.00</td>`;
-          }
-          if (currencies.has('EUR')) {
-            rowHtml += `<td class="total-eur">0.00</td>`;
-          }
-
-          rowHtml += `</tr>`;
-          tableHtml += rowHtml;
-        }
-      }
-
-      tableHtml += `
-          </tbody>
-          <tfoot>
-      `;
-
-      // Add summary rows - use cached data for better performance
-      const campSummary = calculateColumnSummaryFromCache(camp, participants, 'camp');
-      const trainerSummaries = [];
-
-      if (camp.trainers && camp.trainers.length > 0) {
-        for (let index = 0; index < camp.trainers.length; index++) {
-          trainerSummaries.push(calculateColumnSummaryFromCache(camp, participants, 'trainer', index));
-        }
-      }
-
-      tableHtml += `</tbody></table>`;
-
-      return tableHtml;
-    }
-
-    // Virtual scrolling implementation for large participant lists
-    function initializeVirtualScroll() {
-      const container = document.querySelector('.table-wrapper');
-      const tbody = document.querySelector('.virtual-scroll-body');
-      const spacer = document.querySelector('.virtual-scroll-spacer');
-
-      if (!container || !tbody || !spacer || !window.virtualScrollData) return;
-
-      const data = window.virtualScrollData;
-      const rowHeight = data.rowHeight;
-      const totalRows = data.totalRows;
-      const visibleRows = Math.ceil(container.clientHeight / rowHeight) + 10;
-
-      let visibleStartIndex = 0;
-      let visibleEndIndex = Math.min(visibleRows, totalRows);
-
-      // Function to render visible rows
-      function renderVisibleRows() {
-        const scrollTop = container.scrollTop;
-        const newStartIndex = Math.floor(scrollTop / rowHeight);
-        const newEndIndex = Math.min(newStartIndex + visibleRows, totalRows);
-
-        if (newStartIndex !== visibleStartIndex || newEndIndex !== visibleEndIndex) {
-          visibleStartIndex = newStartIndex;
-          visibleEndIndex = newEndIndex;
-
-          // Clear existing rows
-          tbody.innerHTML = '';
-
-          // Render visible rows
-          for (let i = visibleStartIndex; i < visibleEndIndex; i++) {
-            const participant = data.participants[i];
-            const participantData = data.dataMap[participant.id];
-            const rowHtml = createVirtualParticipantRow(participant, participantData, i, data);
-
-            // Create element from HTML string
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = rowHtml;
-            const rowElement = tempDiv.firstElementChild;
-            tbody.appendChild(rowElement);
-          }
-
-          // Update spacer position
-          spacer.style.height = `${totalRows * rowHeight}px`;
-          spacer.style.transform = `translateY(${visibleStartIndex * rowHeight}px)`;
-        }
-      }
-
-      // Initial render
-      renderVisibleRows();
-
-      // Add scroll event listener with throttling
-      let scrollTimeout;
-      container.addEventListener('scroll', () => {
-        if (scrollTimeout) clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(renderVisibleRows, 16); // ~60fps
-      });
-
-      // Update on window resize
-      window.addEventListener('resize', () => {
-        const newVisibleRows = Math.ceil(container.clientHeight / rowHeight) + 10;
-        if (newVisibleRows !== visibleRows) {
-          visibleRows = newVisibleRows;
-          renderVisibleRows();
-        }
-      });
-    }
-
-    async function createParticipantRow(camp, participant, index, attentionData, commentData, campPaymentData, trainerPaymentData, campConfirmedData, trainerConfirmedData) {
-      const participantId = participant.id;
-
-      // Get data from parameters - these are already processed data maps
-      const hasAttention = attentionData ? (attentionData[participantId] || false) : false;
-      const comment = commentData ? (commentData[participantId] || '') : '';
-      const campPayment = campPaymentData ? (campPaymentData[participantId] || '') : '';
-      const campConfirmed = campConfirmedData ? (campConfirmedData[participantId] || false) : false;
-
-      // Get trainer payments - simplified for performance
-      const trainerPayments = [];
-      if (camp.trainers && camp.trainers.length > 0 && trainerPaymentData && trainerConfirmedData) {
-        for (let trainerIdx = 0; trainerIdx < camp.trainers.length; trainerIdx++) {
-          const trainer = camp.trainers[trainerIdx];
-          if (trainer) {
-            const payment = (trainerPaymentData[participantId] && trainerPaymentData[participantId][trainerIdx]) || '';
-            const confirmed = (trainerConfirmedData[participantId] && trainerConfirmedData[participantId][trainerIdx]) || false;
-            trainerPayments.push({
-              amount: payment,
-              confirmed: confirmed
-            });
-          } else {
-            trainerPayments.push({ amount: '', confirmed: false });
-          }
-        }
-      }
-
-      const isAttentionChecked = hasAttention;
-      const attentionClass = isAttentionChecked ? 'attention-highlight' : '';
-
-      // Use pre-loaded payment data
-      let rowClasses = '';
-
-      if (campPayment && campConfirmed) {
-        rowClasses += ' payment-confirmed-camp';
-      } else if (campPayment && !campConfirmed) {
-        rowClasses += ' payment-unconfirmed-camp';
-      }
-
-      // Check trainer payments for additional row styling - simplified
-      if (camp.trainers && camp.trainers.length > 0 && trainerPayments.length > 0) {
-        let hasUnconfirmedTrainer = false;
-        let hasConfirmedTrainer = false;
-
-        for (let trainerIdx = 0; trainerIdx < trainerPayments.length; trainerIdx++) {
-          const trainerData = trainerPayments[trainerIdx];
-          const trainerPayment = trainerData.amount;
-          const trainerConfirmed = trainerData.confirmed;
-
-          if (trainerPayment && trainerConfirmed) {
-            hasConfirmedTrainer = true;
-          } else if (trainerPayment && !trainerConfirmed) {
-            hasUnconfirmedTrainer = true;
-          }
-        }
-
-        if (hasConfirmedTrainer && !rowClasses.includes('payment-confirmed-camp')) {
-          rowClasses += ' payment-confirmed-trainer';
-        } else if (hasUnconfirmedTrainer && !rowClasses.includes('payment-unconfirmed-camp')) {
-          rowClasses += ' payment-unconfirmed-trainer';
-        }
-      }
-
-      let rowHtml = `<tr class="${rowClasses} participant-row" data-participant-id="${participant.id}"><td class="participant-name ${attentionClass}">${participant.name}</td>`;
-
-      // Camp payment cell
-      const campCellHtml = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
-      rowHtml += campCellHtml;
-
-      // Add cells for each trainer - simplified for performance
-      if (camp.trainers && camp.trainers.length > 0 && trainerPayments.length > 0) {
-        for (let trainerIdx = 0; trainerIdx < camp.trainers.length; trainerIdx++) {
-          const trainer = camp.trainers[trainerIdx];
-          if (trainer) { // Only add if trainer exists at this index
-            const trainerData = trainerPayments[trainerIdx];
-            const trainerPayment = trainerData.amount;
-            const trainerConfirmed = trainerData.confirmed;
-            const trainerCellHtml = createPaymentCell(camp.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIdx);
-            rowHtml += trainerCellHtml;
-          }
-        }
-      }
-
-      // Add attention checkbox
-      rowHtml += `<td><input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}" ${isAttentionChecked ? 'checked' : ''}></td>`;
-
-      // Add comment field
-      const savedComment = comment || '';
-      rowHtml += `<td><input type="text" class="comment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" placeholder="Komentarz..." value="${savedComment}"></td>`;
-
-      // Calculate and add total columns using provided data
-      let totalPLN = 0;
-      let totalEUR = 0;
-
-      // Add camp payment to totals using provided data
-      const campAmount = parseFloat(campPayment) || 0;
-      if (camp.currency === 'PLN') {
-        totalPLN += campAmount;
-      } else if (camp.currency === 'EUR') {
-        totalEUR += campAmount;
-      }
-
-      // Add trainer payments to totals using provided data
-      if (camp.trainers && camp.trainers.length > 0 && trainerPayments.length > 0) {
-        for (let trainerIdx = 0; trainerIdx < trainerPayments.length; trainerIdx++) {
-          const trainerData = trainerPayments[trainerIdx];
-          const trainerAmount = parseFloat(trainerData.amount) || 0;
-          const trainer = camp.trainers[trainerIdx];
-
-          if (trainer && trainer.currency === 'PLN') {
-            totalPLN += trainerAmount;
-          } else if (trainer && trainer.currency === 'EUR') {
-            totalEUR += trainerAmount;
-          }
-        }
-      }
-
-      // Determine which total columns to show
-      const hasPLNPayments = camp.currency === 'PLN' || (camp.trainers && camp.trainers.some(t => t.currency === 'PLN'));
-      const hasEURPayments = camp.currency === 'EUR' || (camp.trainers && camp.trainers.some(t => t.currency === 'EUR'));
-
-      // Add total columns based on available currencies
-      if (hasPLNPayments) {
-        rowHtml += `<td class="total-pln">${totalPLN.toFixed(2)}</td>`;
-      }
-      if (hasEURPayments) {
-        rowHtml += `<td class="total-eur">${totalEUR.toFixed(2)}</td>`;
-      }
-
-      rowHtml += `</tr>`;
-      return rowHtml;
-    }
-
-    function createVirtualParticipantRow(participant, participantData, index, data) {
-      const camp = data.camp;
         const isAttentionChecked = participantData.hasAttention;
         const attentionClass = isAttentionChecked ? 'attention-highlight' : '';
 
@@ -6955,11 +6462,11 @@
           }
         }
 
-      let rowHtml = `<tr class="${rowClasses} participant-row" data-participant-id="${participant.id}"><td class="participant-name ${attentionClass}">${participant.name}</td>`;
+        tableHtml += `<tr class="${rowClasses} participant-row" data-participant-id="${participant.id}"><td class="participant-name ${attentionClass}">${participant.name}</td>`;
 
         // Camp payment cell
         const campCellHtml = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
-      rowHtml += campCellHtml;
+        tableHtml += campCellHtml;
 
         // Add cells for each trainer
         if (camp.trainers && camp.trainers.length > 0) {
@@ -6969,34 +6476,34 @@
               const trainerPayment = trainerData.amount;
               const trainerConfirmed = trainerData.confirmed;
               const trainerCellHtml = createPaymentCell(camp.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIndex);
-            rowHtml += trainerCellHtml;
+              tableHtml += trainerCellHtml;
             }
           });
         }
 
         // Add attention checkbox
-      rowHtml += `<td><input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}" ${isAttentionChecked ? 'checked' : ''}></td>`;
+        tableHtml += `<td><input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}" ${isAttentionChecked ? 'checked' : ''}></td>`;
 
         // Add comment field
         const savedComment = participantData.comment || '';
-      rowHtml += `<td><input type="text" class="comment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" placeholder="Komentarz..." value="${savedComment}"></td>`;
+        tableHtml += `<td><input type="text" class="comment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" placeholder="Komentarz..." value="${savedComment}"></td>`;
 
-      // Calculate and add total columns using cached data
+        // Calculate and add total columns
         let totalPLN = 0;
         let totalEUR = 0;
 
-      // Add camp payment to totals using cache
-      const campAmount = parseFloat(getCachedPayment(participant.id, 'camp').amount) || 0;
+        // Add camp payment to totals
+        const campAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'camp')) || 0;
         if (camp.currency === 'PLN') {
           totalPLN += campAmount;
         } else if (camp.currency === 'EUR') {
           totalEUR += campAmount;
         }
 
-      // Add trainer payments to totals using cache
+        // Add trainer payments to totals
         if (camp.trainers && camp.trainers.length > 0) {
           camp.trainers.forEach((trainer, trainerIndex) => {
-          const trainerAmount = parseFloat(getCachedPayment(participant.id, 'trainer', trainerIndex).amount) || 0;
+            const trainerAmount = parseFloat(getSavedPayment(camp.id, participant.id, 'trainer', trainerIndex)) || 0;
             if (trainer.currency === 'PLN') {
               totalPLN += trainerAmount;
             } else if (trainer.currency === 'EUR') {
@@ -7006,100 +6513,69 @@
         }
 
         // Add total columns based on available currencies
-      if (data.hasPLNPayments) {
-        rowHtml += `<td class="total-pln">${totalPLN.toFixed(2)}</td>`;
+        if (hasPLNPayments) {
+          tableHtml += `<td class="total-pln">${totalPLN.toFixed(2)}</td>`;
+        }
+        if (hasEURPayments) {
+          tableHtml += `<td class="total-eur">${totalEUR.toFixed(2)}</td>`;
+        }
+
+        tableHtml += `</tr>`;
+      });
+
+      tableHtml += `
+          </tbody>
+          <tfoot>
+      `;
+
+      // Add summary rows
+      const campSummary = await calculateColumnSummary(camp.id, 'camp');
+      const trainerSummaries = [];
+
+      if (camp.trainers && camp.trainers.length > 0) {
+        for (let index = 0; index < camp.trainers.length; index++) {
+          trainerSummaries.push(await calculateColumnSummary(camp.id, 'trainer', index));
+        }
       }
-      if (data.hasEURPayments) {
-        rowHtml += `<td class="total-eur">${totalEUR.toFixed(2)}</td>`;
-      }
 
-      rowHtml += `</tr>`;
-      return rowHtml;
-    }
+      // Summary row 1: Kwota ogólna
+      tableHtml += `<tr class="summary-row"><td class="participant-name">Kwota ogólna</td>`;
+      tableHtml += `<td><span class="summary-amount total">${formatCurrency(campSummary.total, camp.currency)}</span></td>`;
 
-    // DOM Element Caching System
-    const DOMCache = {
-      cache: new Map(),
-      get: function(selector) {
-        if (this.cache.has(selector)) {
-          return this.cache.get(selector);
-        }
-        const element = document.querySelector(selector);
-        if (element) {
-          this.cache.set(selector, element);
-        }
-        return element;
-      },
-      getAll: function(selector) {
-        if (this.cache.has(selector)) {
-          return this.cache.get(selector);
-        }
-        const elements = document.querySelectorAll(selector);
-        if (elements.length > 0) {
-          this.cache.set(selector, elements);
-        }
-        return elements;
-      },
-      clear: function() {
-        this.cache.clear();
-      }
-    };
+      trainerSummaries.forEach(summary => {
+        tableHtml += `<td><span class="summary-amount total">${formatCurrency(summary.total, summary.currency)}</span></td>`;
+      });
 
-    // Performance monitoring
-    const PerformanceMonitor = {
-      timings: new Map(),
-      start: function(label) {
-        this.timings.set(label, performance.now());
-      },
-      end: function(label) {
-        const startTime = this.timings.get(label);
-        if (startTime) {
-          const duration = performance.now() - startTime;
-          console.log(`[PERF] ${label}: ${duration.toFixed(2)}ms`);
-          this.timings.delete(label);
-          return duration;
-        }
-        return 0;
-      }
-    };
+      tableHtml += `</tr>`;
 
-    // Debounce utility for expensive operations
-    function debounce(func, wait, immediate) {
-      let timeout;
-      return function executedFunction(...args) {
-        const later = () => {
-          timeout = null;
-          if (!immediate) func.apply(this, args);
-        };
-        const callNow = immediate && !timeout;
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-        if (callNow) func.apply(this, args);
-      };
-    }
+      // Summary row 2: Kwota zapłacona
+      tableHtml += `<tr class="summary-row"><td class="participant-name">Kwota zapłacona</td>`;
+      tableHtml += `<td><span class="summary-amount paid">${formatCurrency(campSummary.paid, camp.currency)}</span></td>`;
 
-    // Throttled version for real-time updates
-    function throttle(func, limit) {
-      let inThrottle;
-      return function(...args) {
-        if (!inThrottle) {
-          func.apply(this, args);
-          inThrottle = true;
-          setTimeout(() => inThrottle = false, limit);
-        }
-      };
+      trainerSummaries.forEach(summary => {
+        tableHtml += `<td><span class="summary-amount paid">${formatCurrency(summary.paid, summary.currency)}</span></td>`;
+      });
+
+      tableHtml += `</tr>`;
+
+      tableHtml += `
+          </tfoot>
+        </table>
+      `;
+
+      return tableHtml;
     }
 
     // Global loader control
     function showGlobalLoader(message = 'Ładowanie...') {
-      const loader = DOMCache.get('#global-loader');
-      const msg = DOMCache.get('#loader-message');
+      const loader = document.getElementById('global-loader');
+      const msg = document.getElementById('loader-message');
       if (msg) msg.textContent = message;
       if (loader) loader.classList.add('active');
     }
 
     function hideGlobalLoader() {
-      const loader = DOMCache.get('#global-loader');
+      const loader = document.getElementById('global-loader');
       if (loader) loader.classList.remove('active');
     }
 
@@ -8052,33 +7528,6 @@
         })) : [];
       } catch (err) {
         console.error('Error in getCampParticipants:', err);
-        return [];
-      }
-    }
-
-    // LAZY LOADING: Get camp participants in smaller batches
-    async function getCampParticipantsLazy(campId) {
-      try {
-        // First, get a small batch of participants (limit to 10)
-        const { data, error } = await supabase
-          .from('camp_participants')
-          .select('*')
-          .eq('camp_id', campId)
-          .limit(10); // Start with smaller batch
-
-        if (error) {
-          console.error('Error getting camp participants (lazy):', error);
-          return [];
-        }
-
-        // Transform data to match expected format
-        return data ? data.map(p => ({
-          id: p.participant_id,
-          name: p.name,
-          isCampParticipant: true // Flag to distinguish from club members
-        })) : [];
-      } catch (err) {
-        console.error('Error in getCampParticipantsLazy:', err);
         return [];
       }
     }
@@ -9544,44 +8993,6 @@
       return { total, paid, currency };
     }
 
-    // Optimized summary calculation using cached data (no database queries)
-    function calculateColumnSummaryFromCache(camp, participants, columnType, trainerIndex = null) {
-      let total = 0;
-      let paid = 0;
-      let currency = 'PLN';
-
-      if (columnType === 'camp' && camp) {
-        currency = camp.currency;
-        for (const participant of participants) {
-          const cachedPayment = getCachedPayment(participant.id, columnType, trainerIndex);
-          const amount = parseFloat(cachedPayment.amount) || 0;
-          const isConfirmed = cachedPayment.confirmed || false;
-
-          total += amount;
-          if (isConfirmed) {
-            paid += amount;
-          }
-        }
-      } else if (columnType === 'trainer' && camp && camp.trainers) {
-        const trainer = camp.trainers[parseInt(trainerIndex, 10)];
-        if (trainer) {
-          currency = trainer.currency;
-          for (const participant of participants) {
-            const cachedPayment = getCachedPayment(participant.id, columnType, parseInt(trainerIndex, 10));
-            const amount = parseFloat(cachedPayment.amount) || 0;
-            const isConfirmed = cachedPayment.confirmed || false;
-
-            total += amount;
-            if (isConfirmed) {
-              paid += amount;
-            }
-          }
-        }
-      }
-
-      return { total, paid, currency };
-    }
-
     // Format currency
     function formatCurrency(amount, currency) {
       const numAmount = parseFloat(amount) || 0;
@@ -9597,7 +9008,7 @@
       const participant = window.currentParticipants.find(p => p.id === participantId);
       if (!participant) return;
 
-      // Find the participant's row using cached DOM queries
+      // Find the participant's row
       const participantRow = document.querySelector(`tr[data-participant-id="${participantId}"]`);
       if (!participantRow) {
         return;
