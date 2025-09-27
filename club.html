@@ -5558,27 +5558,27 @@
       `;
 
         // ULTRA FAST LOADING - Load all data in parallel with aggressive caching
-        try {
-          // PARALLEL DATA LOADING
-          const dataPromises = [];
+      try {
+        // PARALLEL DATA LOADING
+        const dataPromises = [];
 
           // Load members if not already loaded (optimized - only load once per session)
-          let allMembers = window.allMembers;
-          if (!allMembers) {
-            dataPromises.push(
-              supabase
-                .from('members')
-                .select('*')
-                .order('name', { ascending: true })
-                .then(({ data, error }) => {
-                  if (error) throw error;
-                  window.allMembers = data;
-                  return data;
-                })
-            );
-          } else {
-            dataPromises.push(Promise.resolve(allMembers));
-          }
+        let allMembers = window.allMembers;
+        if (!allMembers) {
+          dataPromises.push(
+            supabase
+              .from('members')
+              .select('*')
+              .order('name', { ascending: true })
+              .then(({ data, error }) => {
+                if (error) throw error;
+                window.allMembers = data;
+                return data;
+              })
+          );
+        } else {
+          dataPromises.push(Promise.resolve(allMembers));
+        }
 
           // Load camp participants with caching
           const campParticipantsCacheKey = `camp_participants_${camp.id}`;
@@ -6326,13 +6326,13 @@
       const attentionCacheKey = `attention_${camp.id}`;
       let attentionData = window.campDetailsCache ? window.campDetailsCache[attentionCacheKey] : null;
 
-      if (!attentionData) {
-        dataPromises.push(
-          supabase
-              .from('participant_attention')
-            .select('participant_id, has_attention')
-              .eq('camp_id', camp.id)
-            .in('participant_id', participantIds)
+      if (!attentionData || Object.keys(attentionData).length === 0) {
+      dataPromises.push(
+        supabase
+            .from('participant_attention')
+          .select('participant_id, has_attention')
+            .eq('camp_id', camp.id)
+          .in('participant_id', participantIds)
             .then(({ data, error }) => {
               const result = { type: 'attention', data: data || [], error };
               // Cache the data
@@ -6343,8 +6343,8 @@
               }, {});
               return result;
             })
-            .catch(err => ({ type: 'attention', data: [], error: err }))
-        );
+          .catch(err => ({ type: 'attention', data: [], error: err }))
+      );
       } else {
         console.log('[CAMP-DETAILS-TABLE] Using cached attention data');
         dataPromises.push(Promise.resolve({ type: 'attention', data: [], error: null }));
@@ -6354,13 +6354,13 @@
       const commentCacheKey = `comments_${camp.id}`;
       let commentData = window.campDetailsCache ? window.campDetailsCache[commentCacheKey] : null;
 
-      if (!commentData) {
-        dataPromises.push(
-          supabase
-              .from('participant_comments')
-            .select('participant_id, comment')
-              .eq('camp_id', camp.id)
-            .in('participant_id', participantIds)
+      if (!commentData || Object.keys(commentData).length === 0) {
+      dataPromises.push(
+        supabase
+            .from('participant_comments')
+          .select('participant_id, comment')
+            .eq('camp_id', camp.id)
+          .in('participant_id', participantIds)
             .then(({ data, error }) => {
               const result = { type: 'comments', data: data || [], error };
               // Cache the data
@@ -6371,8 +6371,8 @@
               }, {});
               return result;
             })
-            .catch(err => ({ type: 'comments', data: [], error: err }))
-        );
+          .catch(err => ({ type: 'comments', data: [], error: err }))
+      );
       } else {
         console.log('[CAMP-DETAILS-TABLE] Using cached comment data');
         dataPromises.push(Promise.resolve({ type: 'comments', data: [], error: null }));
@@ -6446,6 +6446,7 @@
       console.log(`[CREATE-CAMP-DETAILS-TABLE] Parallel data loading completed in ${loadTime}ms`);
 
       // Process results - use cached data when available
+      // Initialize data objects to prevent null reference errors
 
       dbResults.forEach(result => {
         if (result.error) {
@@ -6574,12 +6575,12 @@
 
         tableHtml += `<tr class="${rowClasses} participant-row" data-participant-id="${participant.id}"><td class="participant-name ${attentionClass}">${participant.name}</td>`;
 
-        // Camp payment cell
+          // Camp payment cell
         const campCellHtml = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
         tableHtml += campCellHtml;
 
         // Add cells for each trainer
-        if (camp.trainers && camp.trainers.length > 0) {
+          if (camp.trainers && camp.trainers.length > 0) {
           camp.trainers.forEach((trainer, trainerIndex) => {
             if (trainer) { // Only add if trainer exists at this index
               const trainerData = participantData.trainerPayments[trainerIndex];
@@ -6756,8 +6757,8 @@
             const cached = paymentCache.camp[pid];
             campPaymentData[pid] = (cached && cached.amount) ? String(cached.amount) : '';
             campConfirmedData[pid] = (cached && cached.confirmed) ? true : false;
-          });
-        } else {
+            });
+          } else {
           dataPromises.push(
             supabase
               .from('camp_payments')
@@ -6806,6 +6807,7 @@
         const dbResults = await Promise.all(dataPromises);
 
         // Process results - use cached data when available
+        // Initialize data objects to prevent null reference errors
 
         dbResults.forEach(result => {
           if (result.error) {
@@ -6872,37 +6874,37 @@
           }
 
           const attentionClass = hasAttention ? 'attention-highlight' : '';
-          let rowClasses = '';
+        let rowClasses = '';
 
-          if (campPayment && campConfirmed) {
-            rowClasses += ' payment-confirmed-camp';
-          } else if (campPayment && !campConfirmed) {
-            rowClasses += ' payment-unconfirmed-camp';
-          }
+        if (campPayment && campConfirmed) {
+          rowClasses += ' payment-confirmed-camp';
+        } else if (campPayment && !campConfirmed) {
+          rowClasses += ' payment-unconfirmed-camp';
+        }
 
-          // Check trainer payments for additional row styling
-          if (camp.trainers && camp.trainers.length > 0) {
-            let hasUnconfirmedTrainer = false;
-            let hasConfirmedTrainer = false;
+        // Check trainer payments for additional row styling
+        if (camp.trainers && camp.trainers.length > 0) {
+          let hasUnconfirmedTrainer = false;
+          let hasConfirmedTrainer = false;
 
-            camp.trainers.forEach((trainer, trainerIndex) => {
+          camp.trainers.forEach((trainer, trainerIndex) => {
               const trainerData = trainerPayments[trainerIndex];
-              const trainerPayment = trainerData.amount;
-              const trainerConfirmed = trainerData.confirmed;
+            const trainerPayment = trainerData.amount;
+            const trainerConfirmed = trainerData.confirmed;
 
-              if (trainerPayment && trainerConfirmed) {
-                hasConfirmedTrainer = true;
-              } else if (trainerPayment && !trainerConfirmed) {
-                hasUnconfirmedTrainer = true;
-              }
-            });
-
-            if (hasConfirmedTrainer && !rowClasses.includes('payment-confirmed-camp')) {
-              rowClasses += ' payment-confirmed-trainer';
-            } else if (hasUnconfirmedTrainer && !rowClasses.includes('payment-unconfirmed-camp')) {
-              rowClasses += ' payment-unconfirmed-trainer';
+            if (trainerPayment && trainerConfirmed) {
+              hasConfirmedTrainer = true;
+            } else if (trainerPayment && !trainerConfirmed) {
+              hasUnconfirmedTrainer = true;
             }
+          });
+
+          if (hasConfirmedTrainer && !rowClasses.includes('payment-confirmed-camp')) {
+            rowClasses += ' payment-confirmed-trainer';
+          } else if (hasUnconfirmedTrainer && !rowClasses.includes('payment-unconfirmed-camp')) {
+            rowClasses += ' payment-unconfirmed-trainer';
           }
+        }
 
           // Create row element
           const row = document.createElement('tr');
@@ -6915,27 +6917,27 @@
           nameCell.textContent = participant.name;
           row.appendChild(nameCell);
 
-          // Camp payment cell
+        // Camp payment cell
           const campCell = document.createElement('td');
           campCell.innerHTML = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
           row.appendChild(campCell);
 
-          // Add cells for each trainer
-          if (camp.trainers && camp.trainers.length > 0) {
-            camp.trainers.forEach((trainer, trainerIndex) => {
+        // Add cells for each trainer
+        if (camp.trainers && camp.trainers.length > 0) {
+          camp.trainers.forEach((trainer, trainerIndex) => {
               if (trainer) {
                 const trainerData = trainerPayments[trainerIndex];
-                const trainerPayment = trainerData.amount;
-                const trainerConfirmed = trainerData.confirmed;
+              const trainerPayment = trainerData.amount;
+              const trainerConfirmed = trainerData.confirmed;
                 const trainerCell = document.createElement('td');
                 trainerCell.innerHTML = createPaymentCell(camp.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIndex);
                 row.appendChild(trainerCell);
               } else {
                 const emptyCell = document.createElement('td');
                 row.appendChild(emptyCell);
-              }
-            });
-          }
+            }
+          });
+        }
 
           // Attention column
           const attentionCell = document.createElement('td');
