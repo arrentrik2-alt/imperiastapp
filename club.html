@@ -802,16 +802,47 @@
       box-shadow: 0 0 15px rgba(40, 167, 69, 0.3), inset 0 0 15px rgba(40, 167, 69, 0.08);
     }
 
-    /* Table wrapper styles */
-    .table-wrapper {
-      position: relative;
-      display: block;
-      width: 100%;
+    /* Table styles */
+    .camp-details-table {
+      display: table !important;
+      width: 100% !important;
+      border-collapse: collapse !important;
+      margin-top: 20px !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+      border-radius: 12px !important;
+      overflow: hidden !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
-    .table-wrapper .camp-details-table {
-      display: table;
-      width: 100%;
+    .camp-details-table thead {
+      background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%) !important;
+    }
+
+    .camp-details-table th {
+      color: var(--primary-bg) !important;
+      padding: 16px 8px !important;
+      text-align: center !important;
+      font-weight: 700 !important;
+      position: relative !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .camp-details-table td {
+      padding: 8px 4px !important;
+      border: 1px solid var(--border-dark) !important;
+      text-align: center !important;
+      color: var(--text-light) !important;
+      vertical-align: middle !important;
+      position: relative !important;
+    }
+
+    .camp-details-table tbody tr:nth-child(even) {
+      background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+
+    .camp-details-table tbody tr:nth-child(odd) {
+      background-color: rgba(0, 0, 0, 0.05) !important;
     }
 
     .virtual-scroll-container::-webkit-scrollbar {
@@ -5698,9 +5729,14 @@
 
           // Ensure table is visible
           detailsContent.style.display = 'block';
-          const tableWrapper = detailsContent.querySelector('.table-wrapper');
-          if (tableWrapper) {
-            tableWrapper.style.display = 'block';
+          const table = detailsContent.querySelector('.camp-details-table');
+          if (table) {
+            table.style.display = 'table';
+            table.style.width = '100%';
+            table.style.visibility = 'visible';
+            console.log('[CAMP-DETAILS] Table forced to display');
+          } else {
+            console.error('[CAMP-DETAILS] Table element not found in DOM!');
           }
 
           PerformanceMonitor.end('create-table');
@@ -6354,50 +6390,51 @@
       console.log('[CREATE-CAMP-DETAILS-TABLE] Function called with camp:', camp?.name);
 
       // Enable virtual scrolling for better performance with large participant lists
-      const enableVirtualScrolling = participants.length > 50; // Enable for large lists
+      const enableVirtualScrolling = false; // Disabled for now to fix display issues
       const rowHeight = 60; // Estimated row height in pixels
       const visibleRows = Math.ceil(window.innerHeight / rowHeight) + 10; // Show extra for smooth scrolling
 
-      let tableHtml = `
-        <div class="table-wrapper" style="${enableVirtualScrolling ? 'height: 600px; overflow: auto;' : ''}">
-          <table class="camp-details-table" style="width: 100%; ${enableVirtualScrolling ? 'margin-top: 0;' : ''}">
-            <thead style="position: ${enableVirtualScrolling ? 'sticky' : 'static'}; top: 0; z-index: 10; background: var(--bg-color);">
-              <tr>
-                <th style="width: 200px; text-align: left;">Uczestnik</th>
-                <th style="width: 120px;">Camp<br><span class="amount-badge">${camp.amount} ${camp.currency}</span></th>
-      `;
+      // Build table headers - simplified
+      let tableHtml = `<table class="camp-details-table" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <thead>
+          <tr>
+            <th style="width: 200px; text-align: left; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Uczestnik</th>
+            <th style="width: 120px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Camp<br><span class="amount-badge">${camp.amount} ${camp.currency}</span></th>`;
 
-      // Add columns for each trainer
+      // Add trainer columns
       if (camp.trainers && camp.trainers.length > 0) {
-        camp.trainers.forEach((trainer, index) => {
-          if (trainer) { // Only add if trainer exists at this index
-            tableHtml += `<th style="width: 120px;">Lekcje ${trainer.name}<br><span class="amount-badge">${trainer.amount} ${trainer.currency}</span></th>`;
+        for (let i = 0; i < camp.trainers.length; i++) {
+          const trainer = camp.trainers[i];
+          if (trainer) {
+            tableHtml += `<th style="width: 120px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Lekcje ${trainer.name}<br><span class="amount-badge">${trainer.amount} ${trainer.currency}</span></th>`;
           }
-        });
+        }
       }
 
-      // Add attention and comment columns
-      tableHtml += `
-              <th style="width: 50px;">Uwaga</th>
-              <th style="width: 150px;">Komentarz</th>
-      `;
+      // Add columns for attention, comment, and totals
+      tableHtml += `<th style="width: 50px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Uwaga</th>
+        <th style="width: 150px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Komentarz</th>`;
 
-      // Determine which total columns to show
-      const hasPLNPayments = camp.currency === 'PLN' || (camp.trainers && camp.trainers.some(t => t.currency === 'PLN'));
-      const hasEURPayments = camp.currency === 'EUR' || (camp.trainers && camp.trainers.some(t => t.currency === 'EUR'));
-
-      if (hasPLNPayments) {
-        tableHtml += `<th style="width: 80px;">Razem PLN</th>`;
-      }
-      if (hasEURPayments) {
-        tableHtml += `<th style="width: 80px;">Razem EUR</th>`;
+      // Add total columns based on currencies used
+      const currencies = new Set([camp.currency]);
+      if (camp.trainers) {
+        camp.trainers.forEach(t => t && currencies.add(t.currency));
       }
 
-      tableHtml += `
-              </tr>
-            </thead>
-            <tbody class="virtual-scroll-body" style="position: ${enableVirtualScrolling ? 'relative' : 'static'};">
-      `;
+      if (currencies.has('PLN')) {
+        tableHtml += `<th style="width: 80px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Razem PLN</th>`;
+      }
+      if (currencies.has('EUR')) {
+        tableHtml += `<th style="width: 80px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Razem EUR</th>`;
+      }
+
+      tableHtml += `</tr></thead><tbody>`;
+
+      // Define currencies for total columns
+      const currencies = new Set([camp.currency]);
+      if (camp.trainers) {
+        camp.trainers.forEach(t => t && currencies.add(t.currency));
+      }
 
       // OPTIMIZED DATA LOADING - Batch queries to reduce database calls
       // Load all data first before generating HTML
@@ -6616,21 +6653,48 @@
           initializeVirtualScroll();
         }
       } else {
-        // Add rows for each participant (for smaller lists) using createParticipantRow
+        // Add rows for each participant - simplified
         for (let i = 0; i < participants.length; i++) {
           const participant = participants[i];
           const participantData = dataMap[participant.id];
-          const rowHtml = await createParticipantRow(
-            camp,
-            participant,
-            i,
-            attentionData,
-            commentData,
-            campPaymentData,
-            trainerPaymentData,
-            campConfirmedData,
-            trainerConfirmedData
-          );
+
+          // Create a simple row
+          let rowHtml = `<tr class="participant-row" data-participant-id="${participant.id}">
+            <td class="participant-name">${participant.name}</td>`;
+
+          // Camp payment cell
+          const campPayment = participantData.campPayment || '';
+          const campConfirmed = participantData.campConfirmed || false;
+          rowHtml += `<td><input type="number" class="payment-input" data-column-type="camp" data-participant-id="${participant.id}" value="${campPayment}" step="0.01" min="0" style="width: 80px; text-align: center;"></td>`;
+
+          // Trainer payment cells
+          if (camp.trainers && camp.trainers.length > 0) {
+            for (let trainerIdx = 0; trainerIdx < camp.trainers.length; trainerIdx++) {
+              const trainer = camp.trainers[trainerIdx];
+              if (trainer) {
+                const trainerPayment = (participantData.trainerPayments && participantData.trainerPayments[trainerIdx]) ? participantData.trainerPayments[trainerIdx].amount : '';
+                rowHtml += `<td><input type="number" class="payment-input" data-column-type="trainer" data-trainer-index="${trainerIdx}" data-participant-id="${participant.id}" value="${trainerPayment}" step="0.01" min="0" style="width: 80px; text-align: center;"></td>`;
+              }
+            }
+          }
+
+          // Attention checkbox
+          const hasAttention = participantData.hasAttention || false;
+          rowHtml += `<td><input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}" ${hasAttention ? 'checked' : ''}></td>`;
+
+          // Comment field
+          const comment = participantData.comment || '';
+          rowHtml += `<td><input type="text" class="comment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" placeholder="Komentarz..." value="${comment}" style="width: 120px;"></td>`;
+
+          // Total columns
+          if (currencies.has('PLN')) {
+            rowHtml += `<td class="total-pln">0.00</td>`;
+          }
+          if (currencies.has('EUR')) {
+            rowHtml += `<td class="total-eur">0.00</td>`;
+          }
+
+          rowHtml += `</tr>`;
           tableHtml += rowHtml;
         }
       }
@@ -6650,30 +6714,7 @@
         }
       }
 
-      // Summary row 1: Kwota ogólna
-      tableHtml += `<tr class="summary-row"><td class="participant-name">Kwota ogólna</td>`;
-      tableHtml += `<td><span class="summary-amount total">${formatCurrency(campSummary.total, camp.currency)}</span></td>`;
-
-      trainerSummaries.forEach(summary => {
-        tableHtml += `<td><span class="summary-amount total">${formatCurrency(summary.total, summary.currency)}</span></td>`;
-      });
-
-      tableHtml += `</tr>`;
-
-      // Summary row 2: Kwota zapłacona
-      tableHtml += `<tr class="summary-row"><td class="participant-name">Kwota zapłacona</td>`;
-      tableHtml += `<td><span class="summary-amount paid">${formatCurrency(campSummary.paid, camp.currency)}</span></td>`;
-
-      trainerSummaries.forEach(summary => {
-        tableHtml += `<td><span class="summary-amount paid">${formatCurrency(summary.paid, summary.currency)}</span></td>`;
-      });
-
-      tableHtml += `</tr>`;
-
-      tableHtml += `
-          </tfoot>
-        </table>
-      `;
+      tableHtml += `</tbody></table>`;
 
       return tableHtml;
     }
