@@ -1611,15 +1611,35 @@
         </div>
       </div>
 
+      <!-- Main Kasa Balance (moved to top) -->
+      <div class="kasa-main-balance" style="margin-bottom:24px;padding:20px;border:1px solid var(--muted);border-radius:10px;background:var(--primary-bg);">
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:280px;">
+            <h1 style="margin:0;font-size:40px;font-weight:900;color:var(--text);">Kasa</h1>
+            <div style="margin-top:8px;color:var(--text-light);">Bilans łączny (wszystkie miesiące)</div>
+          </div>
+          <div style="display:flex;gap:16px;align-items:center;">
+            <div class="summary-card" style="min-width:220px;border:1px solid var(--muted);padding:16px;border-radius:8px;background:var(--primary-bg);">
+              <h4 style="margin:0 0 8px 0;color:var(--text-light);font-size:14px;">Bilans (PLN)</h4>
+              <div id="kasa-balance-pln" style="font-size:40px;font-weight:900;color:#007bff;">0.00 zł</div>
+            </div>
+            <div class="summary-card" style="min-width:220px;border:1px solid var(--muted);padding:16px;border-radius:8px;background:var(--primary-bg);">
+              <h4 style="margin:0 0 8px 0;color:var(--text-light);font-size:14px;">Bilans (EUR)</h4>
+              <div id="kasa-balance-eur" style="font-size:40px;font-weight:900;color:#007bff;">0.00 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Summary Cards -->
       <div class="kasa-summary" style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
         <div class="summary-card" style="flex:1;min-width:280px;border:1px solid var(--muted);padding:16px;border-radius:8px;background:var(--primary-bg);">
           <h4 style="margin:0 0 12px 0;color:var(--text-light);">Suma przychodów (PLN)</h4>
-          <div id="kasa-total-pln" style="font-size:24px;font-weight:700;color:#28a745;">0.00 zł</div>
+          <div id="kasa-total-pln" style="font-size:20px;font-weight:700;color:#28a745;">0.00 zł</div>
         </div>
         <div class="summary-card" style="flex:1;min-width:280px;border:1px solid var(--muted);padding:16px;border-radius:8px;background:var(--primary-bg);">
           <h4 style="margin:0 0 12px 0;color:var(--text-light);">Suma przychodów (EUR)</h4>
-          <div id="kasa-total-eur" style="font-size:24px;font-weight:700;color:#28a745;">0.00 €</div>
+          <div id="kasa-total-eur" style="font-size:20px;font-weight:700;color:#28a745;">0.00 €</div>
         </div>
       </div>
 
