@@ -5778,24 +5778,24 @@
               console.log('[CAMP-DETAILS] Starting debounced participant totals calculations in background...');
 
               const debouncedUpdateTotals = debounce(async () => {
-                const startTime = Date.now();
+              const startTime = Date.now();
 
-                const calculationPromises = [];
+              const calculationPromises = [];
 
-                // Calculate participant totals in parallel (but don't block UI)
-                const participantsToUpdate = window.currentParticipants || [];
-                participantsToUpdate.forEach(p => {
-                  calculationPromises.push(updateParticipantTotalsFast(camp.id, p.id));
-                });
+              // Calculate participant totals in parallel (but don't block UI)
+              const participantsToUpdate = window.currentParticipants || [];
+              participantsToUpdate.forEach(p => {
+                calculationPromises.push(updateParticipantTotalsFast(camp.id, p.id));
+              });
 
-                // Update summaries
-                if (typeof updateSummariesFast === 'function') {
-                  calculationPromises.push(updateSummariesFast());
-                }
+              // Update summaries
+              if (typeof updateSummariesFast === 'function') {
+                calculationPromises.push(updateSummariesFast());
+              }
 
-                await Promise.all(calculationPromises);
+              await Promise.all(calculationPromises);
 
-                const calcTime = Date.now() - startTime;
+              const calcTime = Date.now() - startTime;
                 console.log(`[CAMP-DETAILS] Debounced calculations completed in ${calcTime}ms`);
               }, 300); // Debounce for 300ms
 
@@ -5820,23 +5820,23 @@
 
         // Set currency data for payment inputs immediately (fast operation)
         DOMCache.getAll('.payment-input').forEach(input => {
-          if (!input.dataset.currency) {
-            const tableType = input.getAttribute('data-column-type');
+            if (!input.dataset.currency) {
+              const tableType = input.getAttribute('data-column-type');
 
-            if (tableType === 'camp' && window.currentCamp) {
-              input.dataset.currency = window.currentCamp.currency || 'PLN';
-            } else if (tableType === 'trainer') {
-              const idxStr = input.getAttribute('data-trainer-index');
-              const idx = parseInt(idxStr, 10);
+              if (tableType === 'camp' && window.currentCamp) {
+                input.dataset.currency = window.currentCamp.currency || 'PLN';
+              } else if (tableType === 'trainer') {
+                const idxStr = input.getAttribute('data-trainer-index');
+                const idx = parseInt(idxStr, 10);
 
-              if (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[idx]) {
-                input.dataset.currency = window.currentCamp.trainers[idx].currency || 'PLN';
-              } else {
-                input.dataset.currency = 'PLN';
+                if (window.currentCamp && window.currentCamp.trainers && window.currentCamp.trainers[idx]) {
+                  input.dataset.currency = window.currentCamp.trainers[idx].currency || 'PLN';
+                } else {
+                  input.dataset.currency = 'PLN';
+                }
               }
             }
-          }
-        });
+          });
 
         console.log('[CAMP-DETAILS] Camp details loaded - UI is now interactive!');
         PerformanceMonitor.end('showCampDetails-total');
@@ -6396,8 +6396,8 @@
 
       // Build table headers - simplified
       let tableHtml = `<table class="camp-details-table" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-        <thead>
-          <tr>
+          <thead>
+            <tr>
             <th style="width: 200px; text-align: left; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Uczestnik</th>
             <th style="width: 120px; padding: 16px 8px; background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%); color: var(--primary-bg); font-weight: 700;">Camp<br><span class="amount-badge">${camp.amount} ${camp.currency}</span></th>`;
 
@@ -6429,12 +6429,6 @@
       }
 
       tableHtml += `</tr></thead><tbody>`;
-
-      // Define currencies for total columns
-      const currencies = new Set([camp.currency]);
-      if (camp.trainers) {
-        camp.trainers.forEach(t => t && currencies.add(t.currency));
-      }
 
       // OPTIMIZED DATA LOADING - Batch queries to reduce database calls
       // Load all data first before generating HTML
@@ -6656,7 +6650,7 @@
         // Add rows for each participant - simplified
         for (let i = 0; i < participants.length; i++) {
           const participant = participants[i];
-          const participantData = dataMap[participant.id];
+        const participantData = dataMap[participant.id];
 
           // Create a simple row
           let rowHtml = `<tr class="participant-row" data-participant-id="${participant.id}">
@@ -6922,96 +6916,96 @@
 
     function createVirtualParticipantRow(participant, participantData, index, data) {
       const camp = data.camp;
-      const isAttentionChecked = participantData.hasAttention;
-      const attentionClass = isAttentionChecked ? 'attention-highlight' : '';
+        const isAttentionChecked = participantData.hasAttention;
+        const attentionClass = isAttentionChecked ? 'attention-highlight' : '';
 
-      // Use pre-loaded payment data
-      const campPayment = participantData.campPayment;
-      const campConfirmed = participantData.campConfirmed;
+        // Use pre-loaded payment data
+        const campPayment = participantData.campPayment;
+        const campConfirmed = participantData.campConfirmed;
 
-      let rowClasses = '';
+        let rowClasses = '';
 
-      if (campPayment && campConfirmed) {
-        rowClasses += ' payment-confirmed-camp';
-      } else if (campPayment && !campConfirmed) {
-        rowClasses += ' payment-unconfirmed-camp';
-      }
-
-      // Check trainer payments for additional row styling
-      if (camp.trainers && camp.trainers.length > 0) {
-        let hasUnconfirmedTrainer = false;
-        let hasConfirmedTrainer = false;
-
-        camp.trainers.forEach((trainer, trainerIndex) => {
-          const trainerData = participantData.trainerPayments[trainerIndex];
-          const trainerPayment = trainerData.amount;
-          const trainerConfirmed = trainerData.confirmed;
-
-          if (trainerPayment && trainerConfirmed) {
-            hasConfirmedTrainer = true;
-          } else if (trainerPayment && !trainerConfirmed) {
-            hasUnconfirmedTrainer = true;
-          }
-        });
-
-        if (hasConfirmedTrainer && !rowClasses.includes('payment-confirmed-camp')) {
-          rowClasses += ' payment-confirmed-trainer';
-        } else if (hasUnconfirmedTrainer && !rowClasses.includes('payment-unconfirmed-camp')) {
-          rowClasses += ' payment-unconfirmed-trainer';
+        if (campPayment && campConfirmed) {
+          rowClasses += ' payment-confirmed-camp';
+        } else if (campPayment && !campConfirmed) {
+          rowClasses += ' payment-unconfirmed-camp';
         }
-      }
 
-      let rowHtml = `<tr class="${rowClasses} participant-row" data-participant-id="${participant.id}"><td class="participant-name ${attentionClass}">${participant.name}</td>`;
+        // Check trainer payments for additional row styling
+        if (camp.trainers && camp.trainers.length > 0) {
+          let hasUnconfirmedTrainer = false;
+          let hasConfirmedTrainer = false;
 
-      // Camp payment cell
-      const campCellHtml = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
-      rowHtml += campCellHtml;
-
-      // Add cells for each trainer
-      if (camp.trainers && camp.trainers.length > 0) {
-        camp.trainers.forEach((trainer, trainerIndex) => {
-          if (trainer) { // Only add if trainer exists at this index
+          camp.trainers.forEach((trainer, trainerIndex) => {
             const trainerData = participantData.trainerPayments[trainerIndex];
             const trainerPayment = trainerData.amount;
             const trainerConfirmed = trainerData.confirmed;
-            const trainerCellHtml = createPaymentCell(camp.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIndex);
-            rowHtml += trainerCellHtml;
-          }
-        });
-      }
 
-      // Add attention checkbox
+            if (trainerPayment && trainerConfirmed) {
+              hasConfirmedTrainer = true;
+            } else if (trainerPayment && !trainerConfirmed) {
+              hasUnconfirmedTrainer = true;
+            }
+          });
+
+          if (hasConfirmedTrainer && !rowClasses.includes('payment-confirmed-camp')) {
+            rowClasses += ' payment-confirmed-trainer';
+          } else if (hasUnconfirmedTrainer && !rowClasses.includes('payment-unconfirmed-camp')) {
+            rowClasses += ' payment-unconfirmed-trainer';
+          }
+        }
+
+      let rowHtml = `<tr class="${rowClasses} participant-row" data-participant-id="${participant.id}"><td class="participant-name ${attentionClass}">${participant.name}</td>`;
+
+        // Camp payment cell
+        const campCellHtml = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
+      rowHtml += campCellHtml;
+
+        // Add cells for each trainer
+        if (camp.trainers && camp.trainers.length > 0) {
+          camp.trainers.forEach((trainer, trainerIndex) => {
+            if (trainer) { // Only add if trainer exists at this index
+              const trainerData = participantData.trainerPayments[trainerIndex];
+              const trainerPayment = trainerData.amount;
+              const trainerConfirmed = trainerData.confirmed;
+              const trainerCellHtml = createPaymentCell(camp.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIndex);
+            rowHtml += trainerCellHtml;
+            }
+          });
+        }
+
+        // Add attention checkbox
       rowHtml += `<td><input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}" ${isAttentionChecked ? 'checked' : ''}></td>`;
 
-      // Add comment field
-      const savedComment = participantData.comment || '';
+        // Add comment field
+        const savedComment = participantData.comment || '';
       rowHtml += `<td><input type="text" class="comment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" placeholder="Komentarz..." value="${savedComment}"></td>`;
 
       // Calculate and add total columns using cached data
-      let totalPLN = 0;
-      let totalEUR = 0;
+        let totalPLN = 0;
+        let totalEUR = 0;
 
       // Add camp payment to totals using cache
       const campAmount = parseFloat(getCachedPayment(participant.id, 'camp').amount) || 0;
-      if (camp.currency === 'PLN') {
-        totalPLN += campAmount;
-      } else if (camp.currency === 'EUR') {
-        totalEUR += campAmount;
-      }
+        if (camp.currency === 'PLN') {
+          totalPLN += campAmount;
+        } else if (camp.currency === 'EUR') {
+          totalEUR += campAmount;
+        }
 
       // Add trainer payments to totals using cache
-      if (camp.trainers && camp.trainers.length > 0) {
-        camp.trainers.forEach((trainer, trainerIndex) => {
+        if (camp.trainers && camp.trainers.length > 0) {
+          camp.trainers.forEach((trainer, trainerIndex) => {
           const trainerAmount = parseFloat(getCachedPayment(participant.id, 'trainer', trainerIndex).amount) || 0;
-          if (trainer.currency === 'PLN') {
-            totalPLN += trainerAmount;
-          } else if (trainer.currency === 'EUR') {
-            totalEUR += trainerAmount;
-          }
-        });
-      }
+            if (trainer.currency === 'PLN') {
+              totalPLN += trainerAmount;
+            } else if (trainer.currency === 'EUR') {
+              totalEUR += trainerAmount;
+            }
+          });
+        }
 
-      // Add total columns based on available currencies
+        // Add total columns based on available currencies
       if (data.hasPLNPayments) {
         rowHtml += `<td class="total-pln">${totalPLN.toFixed(2)}</td>`;
       }
