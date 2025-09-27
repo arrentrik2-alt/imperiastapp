@@ -6394,9 +6394,11 @@
         tableHtml += `<div class="virtual-scroll-spacer" style="height: ${totalHeight}px;"></div>`;
       } else {
         // Render all rows normally for smaller lists
-        participants.forEach((participant, index) => {
-          tableHtml += await createParticipantRow(camp, participant, index, attentionData, commentData, campPaymentData, trainerPaymentData, campConfirmedData, trainerConfirmedData);
-        });
+        for (let i = 0; i < participants.length; i++) {
+          const participant = participants[i];
+          const rowHtml = await createParticipantRow(camp, participant, i, attentionData, commentData, campPaymentData, trainerPaymentData, campConfirmedData, trainerConfirmedData);
+          tableHtml += rowHtml;
+        }
       }
 
       tableHtml += `
