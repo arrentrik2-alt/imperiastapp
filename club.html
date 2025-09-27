@@ -802,12 +802,16 @@
       box-shadow: 0 0 15px rgba(40, 167, 69, 0.3), inset 0 0 15px rgba(40, 167, 69, 0.08);
     }
 
-    /* Virtual scrolling styles */
-    .virtual-scroll-container {
+    /* Table wrapper styles */
+    .table-wrapper {
       position: relative;
-      overflow: auto;
-      scrollbar-width: thin;
-      scrollbar-color: var(--gold) var(--bg-color);
+      display: block;
+      width: 100%;
+    }
+
+    .table-wrapper .camp-details-table {
+      display: table;
+      width: 100%;
     }
 
     .virtual-scroll-container::-webkit-scrollbar {
@@ -5682,8 +5686,23 @@
           console.log('[CAMP-DETAILS] Creating table for', allParticipants.length, 'participants');
           const tableHtml = await createCampDetailsTable(camp, allParticipants);
           console.log('[CAMP-DETAILS] Table HTML length:', tableHtml.length);
+          console.log('[CAMP-DETAILS] First 500 chars of table HTML:', tableHtml.substring(0, 500));
+          console.log('[CAMP-DETAILS] Last 500 chars of table HTML:', tableHtml.substring(tableHtml.length - 500));
           detailsContent.innerHTML = tableHtml;
           console.log('[CAMP-DETAILS] Table inserted into DOM');
+          console.log('[CAMP-DETAILS] Details content innerHTML length:', detailsContent.innerHTML.length);
+          console.log('[CAMP-DETAILS] Details content first child:', detailsContent.firstElementChild?.tagName);
+          console.log('[CAMP-DETAILS] Table element found:', !!detailsContent.querySelector('.camp-details-table'));
+          console.log('[CAMP-DETAILS] Camp details section display:', getComputedStyle(document.getElementById('camp-details-section')).display);
+          console.log('[CAMP-DETAILS] Details content display:', getComputedStyle(detailsContent).display);
+
+          // Ensure table is visible
+          detailsContent.style.display = 'block';
+          const tableWrapper = detailsContent.querySelector('.table-wrapper');
+          if (tableWrapper) {
+            tableWrapper.style.display = 'block';
+          }
+
           PerformanceMonitor.end('create-table');
 
           // Complete progress bar
@@ -6340,8 +6359,8 @@
       const visibleRows = Math.ceil(window.innerHeight / rowHeight) + 10; // Show extra for smooth scrolling
 
       let tableHtml = `
-        <div class="virtual-scroll-container" style="position: relative; height: ${enableVirtualScrolling ? '600px' : 'auto'}; overflow: ${enableVirtualScrolling ? 'auto' : 'visible'};">
-          <table class="camp-details-table" style="width: 100%;">
+        <div class="table-wrapper" style="${enableVirtualScrolling ? 'height: 600px; overflow: auto;' : ''}">
+          <table class="camp-details-table" style="width: 100%; ${enableVirtualScrolling ? 'margin-top: 0;' : ''}">
             <thead style="position: ${enableVirtualScrolling ? 'sticky' : 'static'}; top: 0; z-index: 10; background: var(--bg-color);">
               <tr>
                 <th style="width: 200px; text-align: left;">Uczestnik</th>
@@ -6586,6 +6605,10 @@
           totalRows: participants.length
         };
 
+        // Add virtual scroll spacer
+        const totalHeight = participants.length * rowHeight;
+        tableHtml += `<div class="virtual-scroll-spacer" style="height: ${totalHeight}px; position: absolute; top: 0; left: 0; width: 100%; pointer-events: none;"></div>`;
+
         // Initialize virtual scroll after DOM is ready
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', () => initializeVirtualScroll());
@@ -6657,7 +6680,7 @@
 
     // Virtual scrolling implementation for large participant lists
     function initializeVirtualScroll() {
-      const container = document.querySelector('.virtual-scroll-container');
+      const container = document.querySelector('.table-wrapper');
       const tbody = document.querySelector('.virtual-scroll-body');
       const spacer = document.querySelector('.virtual-scroll-spacer');
 
