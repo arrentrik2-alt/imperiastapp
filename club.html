@@ -2739,7 +2739,7 @@
       let hasAttentions = false;
 
       // BATCH ATTENTION QUERY - Get all attention flags in one query (with caching)
-      const participantIds = initialParticipants.map(p => p.id);
+      const participantIds = participants.map(p => p.id);
       let attentionMap = {};
 
       // Check cache first
@@ -3351,25 +3351,30 @@
         // Cache participants for later use
         window.currentTrainingParticipants = allParticipants;
 
-        // Show simple table for now (we'll add full table later)
-        detailsContent.innerHTML = `
-          <div style="padding: 20px;">
-            <h3>Lista uczestników (${allParticipants.length})</h3>
-            <div style="max-height: 400px; overflow-y: auto;">
-              ${allParticipants.map(p => `
-                <div style="padding: 8px; border-bottom: 1px solid #eee;">
-                  ${p.name} ${p.isTrainingParticipant ? '(zewnętrzny)' : '(klubowy)'}
-                </div>
-              `).join('')}
-            </div>
-            <p style="margin-top: 20px; color: #666;">
-              <strong>Szkolenie:</strong> ${training.name}<br>
-              <strong>Data:</strong> ${new Date(training.date).toLocaleDateString('pl-PL')}<br>
-              <strong>Cena:</strong> ${training.amount} ${training.currency}<br>
-              <strong>Szkoleniowcy:</strong> ${training.trainers ? training.trainers.map(t => t.name).join(', ') : 'Brak'}
-            </p>
-          </div>
-        `;
+        // OPTIMIZED UI SETUP - Create table with pagination for faster initial load
+        try {
+          // Load participants in chunks for faster initial display
+          const chunkSize = 20; // Load 20 participants initially
+          const initialParticipants = allParticipants.slice(0, chunkSize);
+          const remainingParticipants = allParticipants.slice(chunkSize);
+
+          const tableHtml = await createTrainingDetailsTable(training, initialParticipants, remainingParticipants, chunkSize);
+          detailsContent.innerHTML = tableHtml;
+
+          // Store remaining participants for load more functionality
+          window.currentTrainingRemainingParticipants = remainingParticipants;
+
+          // Setup "Load More" functionality if button exists
+          const loadMoreBtn = document.getElementById('load-more-training-participants');
+          if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', async () => {
+              await loadMoreTrainingParticipants(training, remainingParticipants, chunkSize);
+            });
+          }
+        } catch (err) {
+          console.error('[TRAINING-DETAILS] Error creating training details table:', err);
+          detailsContent.innerHTML = '<div class="empty-state"><p>Błąd tworzenia widoku</p></div>';
+        }
 
         // Setup search functionality
         const searchInput = document.getElementById('training-participant-search');
@@ -3437,7 +3442,7 @@
       clearAttentionCache();
       paymentCache = { camp: {}, trainer: {} };
 
-      const participantIds = initialParticipants.map(p => p.id);
+      const participantIds = participants.map(p => p.id);
 
       // PARALLEL LOADING - Load all payments at the same time for maximum speed
       const promises = [];
@@ -3902,7 +3907,10 @@
             // but we can start it here in the background
             (async () => {
               try {
-                await initializePaymentCache(allCampIds[0], []); // Initialize with first camp
+                // Get participants for the first camp to initialize cache
+                const firstCampId = allCampIds[0];
+                const firstCampParticipants = participantsByCamp[firstCampId] || [];
+                await initializePaymentCache(firstCampId, firstCampParticipants);
                 console.log('[LOAD-CAMPS] Payment cache preloading started');
               } catch (err) {
                 console.error('[LOAD-CAMPS] Error starting payment cache preload:', err);
@@ -6479,7 +6487,7 @@
       });
 
       // Process participants with batched data
-      const participantDataPromises = participants.map(async participant => {
+      const participantDataPromises = initialParticipants.map(async participant => {
         const participantId = participant.id;
 
         // Get data from batched results
@@ -8253,7 +8261,7 @@
     }
 
     // Create training details table
-    async function createTrainingDetailsTable(training, participants) {
+    async function createTrainingDetailsTable(training, initialParticipants, remainingParticipants = [], chunkSize = 20) {
       // Debug: Check if function is called
       console.log('[CREATE-TRAINING-DETAILS-TABLE] Function called with training:', training?.name);
       let tableHtml = `
@@ -8439,7 +8447,7 @@
       });
 
       // Process participants with batched data
-      const participantDataPromises = participants.map(async participant => {
+      const participantDataPromises = initialParticipants.map(async participant => {
         const participantId = participant.id;
 
         // Get data from batched results
@@ -8610,7 +8618,223 @@
         </table>
       `;
 
+      // Add "Load More" button if there are remaining participants
+      if (remainingParticipants.length > 0) {
+        const remainingCount = remainingParticipants.length;
+        tableHtml += `
+          <div class="load-more-container" style="text-align: center; margin: 20px 0;">
+            <button id="load-more-training-participants" class="btn btn-secondary" data-chunk-size="${chunkSize}" data-loaded-count="${initialParticipants.length}">
+              <i class="fas fa-plus"></i> Załaduj więcej (${remainingCount} pozostało)
+            </button>
+          </div>
+        `;
+      }
+
       return tableHtml;
+    }
+
+    // Load more training participants function
+    async function loadMoreTrainingParticipants(training, remainingParticipants, chunkSize) {
+      if (remainingParticipants.length === 0) return;
+
+      const loadMoreBtn = document.getElementById('load-more-training-participants');
+      if (loadMoreBtn) {
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ładowanie...';
+      }
+
+      try {
+        // Load next chunk of participants
+        const nextChunkSize = Math.min(chunkSize, remainingParticipants.length);
+        const participantsToLoad = remainingParticipants.slice(0, nextChunkSize);
+        const newRemainingParticipants = remainingParticipants.slice(nextChunkSize);
+
+        // Create table rows for the new participants
+        const participantIds = participantsToLoad.map(p => p.id);
+
+        // Load data for new participants
+        const dataPromises = [];
+
+        // Load training payment data
+        dataPromises.push(
+          supabase
+            .from('training_payments')
+            .select('participant_id, amount, confirmed')
+            .eq('training_id', training.id)
+            .in('participant_id', participantIds)
+            .then(({ data, error }) => ({ type: 'training_payments', data: data || [], error }))
+            .catch(err => ({ type: 'training_payments', data: [], error: err }))
+        );
+
+        // Load trainer payment data
+        if (training.trainers && training.trainers.length > 0) {
+          training.trainers.forEach((trainer, index) => {
+            if (trainer) {
+              dataPromises.push(
+                supabase
+                  .from('training_trainer_payments')
+                  .select('participant_id, amount, confirmed')
+                  .eq('training_id', training.id)
+                  .eq('trainer_index', index)
+                  .in('participant_id', participantIds)
+                  .then(({ data, error }) => ({ type: `trainer_${index}`, data: data || [], error }))
+                  .catch(err => ({ type: `trainer_${index}`, data: [], error: err }))
+              );
+            }
+          });
+        }
+
+        // Wait for all data to load
+        const dbResults = await Promise.all(dataPromises);
+
+        // Process results
+        let trainingPaymentData = {};
+        let trainingConfirmedData = {};
+        let trainerPaymentData = {};
+        let trainerConfirmedData = {};
+
+        dbResults.forEach(result => {
+          if (result.error) {
+            console.error(`Error loading ${result.type} data:`, result.error);
+            return;
+          }
+
+          switch (result.type) {
+            case 'training_payments':
+              result.data.forEach(item => {
+                trainingPaymentData[item.participant_id] = item.amount?.toString() || '';
+                trainingConfirmedData[item.participant_id] = item.confirmed || false;
+              });
+              break;
+
+            default:
+              if (result.type.startsWith('trainer_')) {
+                const trainerIndex = parseInt(result.type.split('_')[1]);
+                result.data.forEach(item => {
+                  if (!trainerPaymentData[item.participant_id]) {
+                    trainerPaymentData[item.participant_id] = {};
+                    trainerConfirmedData[item.participant_id] = {};
+                  }
+                  trainerPaymentData[item.participant_id][trainerIndex] = item.amount?.toString() || '';
+                  trainerConfirmedData[item.participant_id][trainerIndex] = item.confirmed || false;
+                });
+              }
+              break;
+          }
+        });
+
+        // Create table rows for new participants
+        let newRowsHtml = '';
+        participantsToLoad.forEach(participant => {
+          const participantId = participant.id;
+          const trainingPayment = trainingPaymentData[participantId] || '';
+          const trainingConfirmed = trainingConfirmedData[participantId] || false;
+
+          // Get trainer payments
+          const trainerPayments = [];
+          if (training.trainers && training.trainers.length > 0) {
+            for (const [index, trainer] of training.trainers.entries()) {
+              if (trainer) {
+                const payment = (trainerPaymentData[participantId] && trainerPaymentData[participantId][index]) || '';
+                const confirmed = (trainerConfirmedData[participantId] && trainerConfirmedData[participantId][index]) || false;
+                trainerPayments.push({
+                  amount: payment,
+                  confirmed: confirmed
+                });
+              } else {
+                trainerPayments.push({ amount: '', confirmed: false });
+              }
+            }
+          }
+
+          let rowClasses = '';
+
+          if (trainingPayment && trainingConfirmed) {
+            rowClasses += ' payment-confirmed-training';
+          } else if (trainingPayment && !trainingConfirmed) {
+            rowClasses += ' payment-unconfirmed-training';
+          }
+
+          // Check trainer payments for additional row styling
+          if (training.trainers && training.trainers.length > 0) {
+            let hasUnconfirmedTrainer = false;
+            let hasConfirmedTrainer = false;
+
+            training.trainers.forEach((trainer, trainerIndex) => {
+              const trainerData = trainerPayments[trainerIndex];
+              const trainerPayment = trainerData.amount;
+              const trainerConfirmed = trainerData.confirmed;
+
+              if (trainerPayment && trainerConfirmed) {
+                hasConfirmedTrainer = true;
+              } else if (trainerPayment && !trainerConfirmed) {
+                hasUnconfirmedTrainer = true;
+              }
+            });
+
+            if (hasConfirmedTrainer && !rowClasses.includes('payment-confirmed-training')) {
+              rowClasses += ' payment-confirmed-trainer';
+            } else if (hasUnconfirmedTrainer && !rowClasses.includes('payment-unconfirmed-training')) {
+              rowClasses += ' payment-unconfirmed-trainer';
+            }
+          }
+
+          newRowsHtml += `<tr class="${rowClasses} participant-row" data-participant-id="${participant.id}"><td class="participant-name">${participant.name}</td>`;
+
+          // Training payment cell
+          const trainingCellHtml = createPaymentCell(training.id, participant.id, 'training', trainingPayment, trainingConfirmed);
+          newRowsHtml += trainingCellHtml;
+
+          // Add cells for each trainer
+          if (training.trainers && training.trainers.length > 0) {
+            training.trainers.forEach((trainer, trainerIndex) => {
+              if (trainer) {
+                const trainerData = trainerPayments[trainerIndex];
+                const trainerPayment = trainerData.amount;
+                const trainerConfirmed = trainerData.confirmed;
+                const trainerCellHtml = createPaymentCell(training.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIndex);
+                newRowsHtml += trainerCellHtml;
+              } else {
+                newRowsHtml += '<td></td>';
+              }
+            });
+          }
+
+          newRowsHtml += '</tr>';
+        });
+
+        // Insert new rows before the summary
+        const table = document.querySelector('.training-details-table tbody');
+        const summaryRow = table.querySelector('.summary-row');
+        if (summaryRow) {
+          summaryRow.insertAdjacentHTML('beforebegin', newRowsHtml);
+        } else {
+          table.insertAdjacentHTML('beforeend', newRowsHtml);
+        }
+
+        // Update remaining participants list
+        window.currentTrainingRemainingParticipants = newRemainingParticipants;
+
+        // Update or remove "Load More" button
+        if (newRemainingParticipants.length > 0) {
+          const remainingCount = newRemainingParticipants.length;
+          const loadedCount = parseInt(loadMoreBtn.getAttribute('data-loaded-count')) + participantsToLoad.length;
+          loadMoreBtn.setAttribute('data-loaded-count', loadedCount.toString());
+          loadMoreBtn.innerHTML = `<i class="fas fa-plus"></i> Załaduj więcej (${remainingCount} pozostało)`;
+          loadMoreBtn.disabled = false;
+        } else {
+          loadMoreBtn.remove();
+        }
+
+        console.log(`[LOAD-MORE-TRAINING] Loaded ${participantsToLoad.length} more participants`);
+
+      } catch (error) {
+        console.error('Error loading more training participants:', error);
+        if (loadMoreBtn) {
+          loadMoreBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Błąd ładowania';
+          loadMoreBtn.disabled = false;
+        }
+      }
     }
 
     // Helper functions for trainings
