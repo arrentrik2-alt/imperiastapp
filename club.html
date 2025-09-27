@@ -6828,6 +6828,134 @@
       });
     }
 
+    async function createParticipantRow(camp, participant, index, attentionData, commentData, campPaymentData, trainerPaymentData, campConfirmedData, trainerConfirmedData) {
+      const participantId = participant.id;
+
+      // Get data from parameters
+      const hasAttention = attentionData[participantId] || false;
+      const comment = commentData[participantId] || '';
+      const campPayment = campPaymentData[participantId] || '';
+      const campConfirmed = campConfirmedData[participantId] || false;
+
+      // Get trainer payments
+      const trainerPayments = [];
+      if (camp.trainers && camp.trainers.length > 0) {
+        for (const [index, trainer] of camp.trainers.entries()) {
+          if (trainer) {
+            const payment = (trainerPaymentData[participantId] && trainerPaymentData[participantId][index]) || '';
+            const confirmed = (trainerConfirmedData[participantId] && trainerConfirmedData[participantId][index]) || false;
+            trainerPayments.push({
+              amount: payment,
+              confirmed: confirmed
+            });
+          } else {
+            trainerPayments.push({ amount: '', confirmed: false });
+          }
+        }
+      }
+
+      const isAttentionChecked = hasAttention;
+      const attentionClass = isAttentionChecked ? 'attention-highlight' : '';
+
+      // Use pre-loaded payment data
+      let rowClasses = '';
+
+      if (campPayment && campConfirmed) {
+        rowClasses += ' payment-confirmed-camp';
+      } else if (campPayment && !campConfirmed) {
+        rowClasses += ' payment-unconfirmed-camp';
+      }
+
+      // Check trainer payments for additional row styling
+      if (camp.trainers && camp.trainers.length > 0) {
+        let hasUnconfirmedTrainer = false;
+        let hasConfirmedTrainer = false;
+
+        camp.trainers.forEach((trainer, trainerIndex) => {
+          const trainerData = trainerPayments[trainerIndex];
+          const trainerPayment = trainerData.amount;
+          const trainerConfirmed = trainerData.confirmed;
+
+          if (trainerPayment && trainerConfirmed) {
+            hasConfirmedTrainer = true;
+          } else if (trainerPayment && !trainerConfirmed) {
+            hasUnconfirmedTrainer = true;
+          }
+        });
+
+        if (hasConfirmedTrainer && !rowClasses.includes('payment-confirmed-camp')) {
+          rowClasses += ' payment-confirmed-trainer';
+        } else if (hasUnconfirmedTrainer && !rowClasses.includes('payment-unconfirmed-camp')) {
+          rowClasses += ' payment-unconfirmed-trainer';
+        }
+      }
+
+      let rowHtml = `<tr class="${rowClasses} participant-row" data-participant-id="${participant.id}"><td class="participant-name ${attentionClass}">${participant.name}</td>`;
+
+      // Camp payment cell
+      const campCellHtml = createPaymentCell(camp.id, participant.id, 'camp', campPayment, campConfirmed);
+      rowHtml += campCellHtml;
+
+      // Add cells for each trainer
+      if (camp.trainers && camp.trainers.length > 0) {
+        camp.trainers.forEach((trainer, trainerIndex) => {
+          if (trainer) { // Only add if trainer exists at this index
+            const trainerData = trainerPayments[trainerIndex];
+            const trainerPayment = trainerData.amount;
+            const trainerConfirmed = trainerData.confirmed;
+            const trainerCellHtml = createPaymentCell(camp.id, participant.id, 'trainer', trainerPayment, trainerConfirmed, trainerIndex);
+            rowHtml += trainerCellHtml;
+          }
+        });
+      }
+
+      // Add attention checkbox
+      rowHtml += `<td><input type="checkbox" class="attention-checkbox" data-camp-id="${camp.id}" data-participant-id="${participant.id}" ${isAttentionChecked ? 'checked' : ''}></td>`;
+
+      // Add comment field
+      const savedComment = comment || '';
+      rowHtml += `<td><input type="text" class="comment-input" data-camp-id="${camp.id}" data-participant-id="${participant.id}" placeholder="Komentarz..." value="${savedComment}"></td>`;
+
+      // Calculate and add total columns using cached data
+      let totalPLN = 0;
+      let totalEUR = 0;
+
+      // Add camp payment to totals using cache
+      const campAmount = parseFloat(getCachedPayment(participant.id, 'camp').amount) || 0;
+      if (camp.currency === 'PLN') {
+        totalPLN += campAmount;
+      } else if (camp.currency === 'EUR') {
+        totalEUR += campAmount;
+      }
+
+      // Add trainer payments to totals using cache
+      if (camp.trainers && camp.trainers.length > 0) {
+        camp.trainers.forEach((trainer, trainerIndex) => {
+          const trainerAmount = parseFloat(getCachedPayment(participant.id, 'trainer', trainerIndex).amount) || 0;
+          if (trainer.currency === 'PLN') {
+            totalPLN += trainerAmount;
+          } else if (trainer.currency === 'EUR') {
+            totalEUR += trainerAmount;
+          }
+        });
+      }
+
+      // Determine which total columns to show
+      const hasPLNPayments = camp.currency === 'PLN' || (camp.trainers && camp.trainers.some(t => t.currency === 'PLN'));
+      const hasEURPayments = camp.currency === 'EUR' || (camp.trainers && camp.trainers.some(t => t.currency === 'EUR'));
+
+      // Add total columns based on available currencies
+      if (hasPLNPayments) {
+        rowHtml += `<td class="total-pln">${totalPLN.toFixed(2)}</td>`;
+      }
+      if (hasEURPayments) {
+        rowHtml += `<td class="total-eur">${totalEUR.toFixed(2)}</td>`;
+      }
+
+      rowHtml += `</tr>`;
+      return rowHtml;
+    }
+
     function createVirtualParticipantRow(participant, participantData, index, data) {
       const camp = data.camp;
       const isAttentionChecked = participantData.hasAttention;
