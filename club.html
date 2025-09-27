@@ -1701,6 +1701,27 @@
         </div>
       </div>
 
+      <!-- Kasa Balance Section (moved to top) -->
+      <div class="kasa-balance-main" style="margin-bottom:20px;padding:18px;border:1px solid var(--muted);border-radius:10px;background:var(--primary-bg);">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:260px;">
+            <h2 style="margin:0;color:var(--text-light);font-size:36px;">Kasa — Bilans</h2>
+            <div id="kasa-balance-pln" style="font-size:48px;font-weight:900;color:#007bff;margin-top:8px;">0.00 zł</div>
+            <div id="kasa-balance-eur" style="font-size:36px;font-weight:800;color:#007bff;margin-top:6px;">0.00 €</div>
+          </div>
+          <div style="display:flex;gap:12px;margin-left:auto;align-items:center;">
+            <div style="text-align:right;">
+              <div style="font-size:13px;color:var(--text-light);">Suma przychodów (PLN)</div>
+              <div id="kasa-total-pln-small" style="font-size:18px;font-weight:700;color:#28a745;">0.00 zł</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px;color:var(--text-light);">Suma przychodów (EUR)</div>
+              <div id="kasa-total-eur-small" style="font-size:18px;font-weight:700;color:#28a745;">0.00 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Month Selector at the top -->
       <div class="kasa-month-selector" style="margin-bottom:32px;padding:20px;border:1px solid var(--muted);border-radius:8px;background:var(--primary-bg);">
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
@@ -1774,24 +1795,7 @@
         </div>
       </div>
 
-      <!-- Kasa Balance Section -->
-      <div class="kasa-balance" style="margin-top:32px;">
-        <div class="content-header">
-          <h3>Kasa</h3>
-        </div>
-
-        <!-- Balance Summary Cards -->
-        <div class="kasa-summary" style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
-          <div class="summary-card" style="flex:1;min-width:280px;border:1px solid var(--muted);padding:16px;border-radius:8px;background:var(--primary-bg);">
-            <h4 style="margin:0 0 12px 0;color:var(--text-light);">Bilans (PLN)</h4>
-            <div id="kasa-balance-pln" style="font-size:24px;font-weight:700;color:#007bff;">0.00 zł</div>
-          </div>
-          <div class="summary-card" style="flex:1;min-width:280px;border:1px solid var(--muted);padding:16px;border-radius:8px;background:var(--primary-bg);">
-            <h4 style="margin:0 0 12px 0;color:var(--text-light);">Bilans (EUR)</h4>
-            <div id="kasa-balance-eur" style="font-size:24px;font-weight:700;color:#007bff;">0.00 €</div>
-          </div>
-        </div>
-      </div>
+      <!-- Kasa Balance Section removed (moved to top) -->
     </div>
 
   </main>
