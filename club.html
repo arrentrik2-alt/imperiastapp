@@ -4218,10 +4218,18 @@
         console.log(`[KASA-MONTHS] Current month: ${currentMonth}`);
 
         // Get all data from incomes and expenses (not just month column)
-        const [incomesData, expensesData] = await Promise.all([
-          supabase.from('kasa_incomes').select('*'),
-          supabase.from('kasa_expenses').select('*')
-        ]);
+        let incomesData = { data: null, error: null };
+        let expensesData = { data: null, error: null };
+        try {
+          incomesData = await supabase.from('kasa_incomes').select('*');
+        } catch (err) {
+          incomesData = { data: null, error: err };
+        }
+        try {
+          expensesData = await supabase.from('kasa_expenses').select('*');
+        } catch (err) {
+          expensesData = { data: null, error: err };
+        }
 
         if (incomesData.error) {
           console.error('Error loading kasa_incomes:', incomesData.error);
@@ -4445,10 +4453,18 @@
       try {
         // Load current data from database for accurate calculations
         // Note: We load ALL months data for balance calculation, not just current month
-        const [incomesData, expensesData] = await Promise.all([
-          supabase.from('kasa_incomes').select('*').catch(err => ({ data: null, error: err })),
-          supabase.from('kasa_expenses').select('*').catch(err => ({ data: null, error: err }))
-        ]);
+        let incomesData = { data: null, error: null };
+        let expensesData = { data: null, error: null };
+        try {
+          incomesData = await supabase.from('kasa_incomes').select('*');
+        } catch (err) {
+          incomesData = { data: null, error: err };
+        }
+        try {
+          expensesData = await supabase.from('kasa_expenses').select('*');
+        } catch (err) {
+          expensesData = { data: null, error: err };
+        }
 
         // Get current revenues from DOM
         const totalPLNEl = document.getElementById('kasa-total-pln');
@@ -4754,6 +4770,30 @@
 
           console.log('[KASA-INCOMES] Income updated successfully');
           alert('Przychód został zaktualizowany pomyślnie');
+        } else {
+          console.log(`[KASA-INCOMES] Creating income: ${name}, ${amount} ${currency}`);
+
+          const { data, error } = await supabase
+            .from('kasa_incomes')
+            .insert([{
+              name: name,
+              amount: amount,
+              currency: currency,
+              description: description,
+              month: window.currentKasaMonth,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }])
+            .select();
+
+          if (error) {
+            console.error('Error creating kasa income:', error);
+            alert('Błąd podczas tworzenia przychodu');
+            return;
+          }
+
+          console.log('[KASA-INCOMES] Income created successfully');
+          alert('Przychód został dodany pomyślnie');
         }
 
         // Reload incomes and update balance
@@ -5025,7 +5065,6 @@
         header.innerHTML = '<h3>Dodaj wydatek</h3>';
       }
     }
-
     // Show edit expense form
     async function showEditKasaExpenseForm(expenseId) {
       try {
@@ -5132,6 +5171,30 @@
 
           console.log('[KASA-EXPENSES] Expense updated successfully');
           alert('Wydatek został zaktualizowany pomyślnie');
+        } else {
+          console.log(`[KASA-EXPENSES] Creating expense: ${name}, ${amount} ${currency}`);
+
+          const { data, error } = await supabase
+            .from('kasa_expenses')
+            .insert([{
+              name: name,
+              amount: amount,
+              currency: currency,
+              description: description,
+              month: window.currentKasaMonth,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }])
+            .select();
+
+          if (error) {
+            console.error('Error creating kasa expense:', error);
+            alert('Błąd podczas tworzenia wydatku');
+            return;
+          }
+
+          console.log('[KASA-EXPENSES] Expense created successfully');
+          alert('Wydatek został dodany pomyślnie');
         }
 
         // Reload expenses and update balance
