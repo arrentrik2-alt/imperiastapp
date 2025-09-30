@@ -696,28 +696,22 @@
         const [month, year] = selectedValue.split('_');
         const monthKey = `${year}-${month.padStart(2, '0')}`;
 
-        // Use local-month boundaries converted to UTC ISO timestamps to avoid
-        // misclassification of checkins caused by timezone shifts.
-        const startUTC = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString();
-        const endUTC = new Date(parseInt(year), parseInt(month), 1).toISOString();
-
-        console.log('Loading checkins for:', {
+        // Fetch checkins for the member and filter on the client using the
+        // local date (year/month). This avoids timezone issues where a
+        // checkin stored in UTC may belong to the previous local day/month.
+        console.log('Loading checkins for (client-side filter):', {
           memberId: selectedMember.id,
-          startUTC,
-          endUTC,
           month,
           year,
           monthKey
         });
 
-        // Load checkins and multi prices in parallel using UTC ISO boundaries
         const [checkinsResult, pricesResult] = await Promise.all([
           supabase
             .from('multi_checkins')
             .select('*')
             .eq('member_id', selectedMember.id)
-            .gte('checkin_date', startUTC)
-            .lt('checkin_date', endUTC),
+            .order('checkin_date', { ascending: true }),
           supabase
             .from('multi_prices')
             .select('*')
@@ -727,7 +721,18 @@
 
         if (checkinsResult.error) throw checkinsResult.error;
 
-        const checkins = checkinsResult.data || [];
+        // Filter checkins by local month/year to ensure correct assignment
+        const rawCheckins = checkinsResult.data || [];
+        const filteredCheckins = rawCheckins.filter(c => {
+          try {
+            const d = new Date(c.checkin_date);
+            return d.getFullYear() === parseInt(year) && (d.getMonth() + 1) === parseInt(month);
+          } catch (e) {
+            return false;
+          }
+        });
+
+        const checkins = filteredCheckins;
         const multiPrices = pricesResult.data;
 
         console.log('Found checkins:', checkins.length);
