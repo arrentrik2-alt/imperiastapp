@@ -696,27 +696,28 @@
         const [month, year] = selectedValue.split('_');
         const monthKey = `${year}-${month.padStart(2, '0')}`;
 
-        // Create proper date objects and format them
-        const startDate = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString().split('T')[0];
-        const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+        // Use local-month boundaries converted to UTC ISO timestamps to avoid
+        // misclassification of checkins caused by timezone shifts.
+        const startUTC = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString();
+        const endUTC = new Date(parseInt(year), parseInt(month), 1).toISOString();
 
         console.log('Loading checkins for:', {
           memberId: selectedMember.id,
-          startDate,
-          endDate,
+          startUTC,
+          endUTC,
           month,
           year,
           monthKey
         });
 
-        // Load checkins and multi prices in parallel
+        // Load checkins and multi prices in parallel using UTC ISO boundaries
         const [checkinsResult, pricesResult] = await Promise.all([
           supabase
             .from('multi_checkins')
             .select('*')
             .eq('member_id', selectedMember.id)
-            .gte('checkin_date', startDate)
-            .lt('checkin_date', new Date(parseInt(year), parseInt(month), 1).toISOString().split('T')[0]),
+            .gte('checkin_date', startUTC)
+            .lt('checkin_date', endUTC),
           supabase
             .from('multi_prices')
             .select('*')
