@@ -841,13 +841,14 @@
       document.getElementById('member-search').value = member.name;
       document.getElementById('search-results').style.display = 'none';
 
-      // Check if already checked in today
-      const today = new Date().toISOString().split('T')[0];
+      // Check if already checked in today (use local date, not UTC)
+      const nowLocal = new Date();
+      const todayLocal = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
       const { data: existingCheckins, error } = await supabase
         .from('multi_checkins')
         .select('id')
         .eq('member_id', memberId)
-        .eq('checkin_date', today);
+        .eq('checkin_date', todayLocal);
 
       const checkinButton = document.getElementById('checkin-button');
       if (existingCheckins && existingCheckins.length > 0) {
@@ -877,7 +878,8 @@
         checkinButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zapisywanie...';
 
         const now = new Date();
-        const checkinDate = now.toISOString().split('T')[0];
+        // Store local date (YYYY-MM-DD) to avoid UTC shifting across days
+        const checkinDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const checkinTime = now.toTimeString().split(' ')[0];
 
         const { error } = await supabase
@@ -917,18 +919,20 @@
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
 
-        // Create proper date strings
-        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-        const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+        // Use local YYYY-MM-DD boundaries: start = first of month, nextMonthStart = first of next month
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const nextMonth = month === 12 ? 1 : (month + 1);
+        const nextMonthYear = month === 12 ? year + 1 : year;
+        const nextMonthStart = `${nextMonthYear}-${String(nextMonth).padStart(2, '0')}-01`;
 
-        console.log(`Loading member stats for ${memberId}: ${startDate} to ${endDate}`);
+        console.log(`Loading member stats for ${memberId}: ${startDate} to ${nextMonthStart}`);
 
         const { data: memberCheckins, error } = await supabase
           .from('multi_checkins')
           .select('*')
           .eq('member_id', memberId)
           .gte('checkin_date', startDate)
-          .lt('checkin_date', new Date(year, month, 1).toISOString().split('T')[0]);
+          .lt('checkin_date', nextMonthStart);
 
         if (error) {
           console.error('Member stats error:', error);
@@ -949,15 +953,18 @@
     async function loadStats() {
       try {
         const now = new Date();
-        const today = now.toISOString().split('T')[0];
+        // Local date string for today
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
 
-        // Create proper date strings for current month
-        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-        const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+        // Local month boundaries
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const nextMonth = month === 12 ? 1 : (month + 1);
+        const nextMonthYear = month === 12 ? year + 1 : year;
+        const nextMonthStart = `${nextMonthYear}-${String(nextMonth).padStart(2, '0')}-01`;
 
-        console.log('Loading stats for:', { today, startDate, endDate });
+        console.log('Loading stats for:', { today, startDate, nextMonthStart });
 
         // Today's total checkins
         const { data: todayCheckins, error: todayError } = await supabase
@@ -978,7 +985,7 @@
           .from('multi_checkins')
           .select('id')
           .gte('checkin_date', startDate)
-          .lt('checkin_date', new Date(year, month, 1).toISOString().split('T')[0]);
+          .lt('checkin_date', nextMonthStart);
 
         if (monthlyError) {
           console.error('Monthly checkins error:', monthlyError);
