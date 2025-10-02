@@ -488,11 +488,12 @@
     // Initialize app
     document.addEventListener('DOMContentLoaded', async () => {
       await loadMembers();
-      populateMonthSelect();
+      await populateMonthSelect();
       setupEventListeners();
 
       // Refresh months list daily
       setInterval(() => {
+        // refresh without awaiting
         populateMonthSelect();
         console.log('Months list refreshed');
       }, 24 * 60 * 60 * 1000); // 24 hours
@@ -580,33 +581,81 @@
       });
     }
 
-    // Populate month select with current and future months
-    function populateMonthSelect() {
+    // Populate month select with months from DB (include current and past months)
+    async function populateMonthSelect() {
       const monthSelect = document.getElementById('month-select');
       const now = new Date();
 
       // Clear existing options
       monthSelect.innerHTML = '';
 
-      // Add current month and next 5 months
-      for (let i = 0; i < 6; i++) {
-        const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const monthValue = (date.getMonth() + 1).toString().padStart(2, '0');
-        const monthName = date.toLocaleDateString('pl-PL', {
-          month: 'long',
-          year: 'numeric'
-        });
+      try {
+        // Fetch month keys from multi_prices table (format: YYYY-MM)
+        const { data, error } = await supabase
+          .from('multi_prices')
+          .select('month')
+          .order('month', { ascending: false });
 
-        const option = document.createElement('option');
-        option.value = `${monthValue}_${date.getFullYear()}`; // Store month_year format
-        option.textContent = monthName;
+        if (error) throw error;
 
-        // Set current month as selected
-        if (i === 0) {
-          option.selected = true;
+        const monthsFromDb = (data || []).map(r => r.month).filter(Boolean);
+
+        // Deduplicate while preserving order (most recent first)
+        const uniqueMonths = Array.from(new Set(monthsFromDb));
+
+        // Ensure current month is included
+        const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        if (!uniqueMonths.includes(currentKey)) {
+          uniqueMonths.unshift(currentKey);
         }
 
-        monthSelect.appendChild(option);
+        // Sort descending (YYYY-MM sorts lexicographically)
+        uniqueMonths.sort((a, b) => b.localeCompare(a));
+
+        uniqueMonths.forEach(monthKey => {
+          const [year, month] = monthKey.split('-');
+          const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1);
+          const monthName = date.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+
+          const option = document.createElement('option');
+          option.value = `${month.padStart(2, '0')}_${year}`; // MM_YYYY
+          option.textContent = monthName;
+
+          if (monthKey === currentKey) {
+            option.selected = true;
+          }
+
+          monthSelect.appendChild(option);
+        });
+
+        // If there were no months returned (empty table), fallback to previous behaviour
+        if (uniqueMonths.length === 0) {
+          throw new Error('No months in DB');
+        }
+
+      } catch (err) {
+        console.warn('Falling back to generated months due to error or empty DB:', err);
+
+        // Fallback: Add current month and next 5 months
+        for (let i = 0; i < 6; i++) {
+          const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+          const monthValue = (date.getMonth() + 1).toString().padStart(2, '0');
+          const monthName = date.toLocaleDateString('pl-PL', {
+            month: 'long',
+            year: 'numeric'
+          });
+
+          const option = document.createElement('option');
+          option.value = `${monthValue}_${date.getFullYear()}`; // Store month_year format
+          option.textContent = monthName;
+
+          // Set current month as selected
+          if (i === 0) {
+            option.selected = true;
+          }
+
+          monthSelect.appendChild(option);
+        }
       }
     }
 
