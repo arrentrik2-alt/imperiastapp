@@ -30,12 +30,10 @@
     }
 
     html {
-      /* Hide scrollbars */
-      scrollbar-width: none; /* Firefox */
-      -ms-overflow-style: none; /* IE/Edge */
+      scrollbar-width: none;
+      -ms-overflow-style: none;
     }
 
-    /* Hide scrollbar for webkit browsers */
     html::-webkit-scrollbar {
       display: none;
     }
@@ -46,7 +44,6 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      /* Prevent zoom and scaling */
       touch-action: none;
       -webkit-touch-callout: none;
       -webkit-user-select: none;
@@ -55,34 +52,28 @@
       user-select: none;
       -webkit-tap-highlight-color: transparent;
       overscroll-behavior: none;
-      /* Hide scrollbars */
-      scrollbar-width: none; /* Firefox */
-      -ms-overflow-style: none; /* IE/Edge */
+      scrollbar-width: none;
+      -ms-overflow-style: none;
       overflow: hidden;
       width: 100%;
       height: 100vh;
     }
 
-    /* Hide scrollbar for webkit browsers */
     body::-webkit-scrollbar {
       display: none;
     }
 
-
-    /* Prevent zoom on inputs and buttons */
     input, button, select, textarea {
       touch-action: manipulation;
       -webkit-touch-callout: none;
     }
 
-    /* Full width containers on mobile */
     .full-width-mobile {
       width: 100vw !important;
       margin-left: calc(-50vw + 50%) !important;
       margin-right: calc(-50vw + 50%) !important;
     }
 
-    /* Header */
     .header {
       background: var(--secondary-bg);
       padding: 15px 20px;
@@ -101,7 +92,6 @@
       font-size: 0.85rem;
     }
 
-    /* Main container */
     .container {
       max-width: 1200px;
       margin: 0 auto;
@@ -109,7 +99,6 @@
       flex: 1;
     }
 
-    /* Search section */
     .search-section {
       background: var(--secondary-bg);
       padding: 25px;
@@ -118,7 +107,6 @@
       margin-bottom: 20px;
     }
 
-    /* Statistics section */
     .stats-section {
       background: var(--secondary-bg);
       padding: 15px 20px;
@@ -133,7 +121,6 @@
       font-size: 1.3rem;
     }
 
-    /* Search input */
     .search-container {
       position: relative;
       margin-bottom: 20px;
@@ -178,7 +165,6 @@
       box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
     }
 
-    /* Search results dropdown */
     .search-results {
       position: absolute;
       top: 100%;
@@ -220,7 +206,6 @@
       margin-top: 4px;
     }
 
-    /* Selected member */
     .selected-member {
       background: var(--secondary-bg);
       padding: 18px 20px;
@@ -307,7 +292,6 @@
       font-size: 0.75rem;
     }
 
-    /* Loading and error states */
     .loading {
       text-align: center;
       padding: 40px;
@@ -347,7 +331,6 @@
       to { transform: rotate(360deg); }
     }
 
-    /* Responsive */
     @media (max-width: 1024px) {
       .container {
         padding: 20px 15px;
@@ -388,7 +371,7 @@
       }
 
       .search-section {
-        padding: 18px;
+        padding: 20px;
         margin-bottom: 15px;
         border-radius: 8px;
       }
@@ -542,7 +525,6 @@
         max-height: 250px;
       }
 
-      /* Full width on mobile */
       .full-width-mobile {
         margin-left: 0 !important;
         margin-right: 0 !important;
@@ -553,14 +535,11 @@
   </style>
 </head>
 <body>
-  <!-- Header -->
   <header class="header">
     <h1><i class="fas fa-running"></i> MultiSport - Odbicia</h1>
   </header>
 
-  <!-- Main container -->
   <main class="container">
-    <!-- Search section -->
     <section class="search-section full-width-mobile">
       <h2><i class="fas fa-search"></i> Znajdź członka</h2>
 
@@ -575,7 +554,6 @@
       </div>
     </section>
 
-    <!-- Selected member section -->
     <section class="selected-member" id="selected-member">
       <div class="selected-member-info">
         <div class="member-info">
@@ -588,7 +566,6 @@
       </div>
     </section>
 
-    <!-- Statistics section -->
     <section class="stats-section full-width-mobile">
       <h3><i class="fas fa-chart-bar"></i> Statystyki</h3>
       <div class="stats-grid">
@@ -607,23 +584,26 @@
       </div>
     </section>
 
-    <!-- Status messages -->
     <div id="status-message"></div>
   </main>
 
-  <!-- Supabase client -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  <!-- Supabase UMD -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <!-- Twój kod -->
+  <script>
     const supabaseUrl = 'https://xsowdwnpguftmlvsogdb.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI';
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Global variables
+    // Helper: zero-padding dla dat zamiast padStart (bardziej kompatybilne)
+    function pad2(num) {
+      return num < 10 ? '0' + num : '' + num;
+    }
+
     let selectedMember = null;
     let membersList = [];
 
-    // Initialize app
     document.addEventListener('DOMContentLoaded', async () => {
       console.log('Starting MultiSport Check-in app...');
       preventZoom();
@@ -633,9 +613,7 @@
       await loadStats();
     });
 
-    // Prevent zoom and scaling gestures
     function preventZoom() {
-      // Prevent double-tap zoom
       let lastTouchEnd = 0;
       document.addEventListener('touchend', (event) => {
         const now = (new Date()).getTime();
@@ -645,7 +623,6 @@
         lastTouchEnd = now;
       }, false);
 
-      // Prevent pinch-to-zoom
       document.addEventListener('gesturestart', (e) => {
         e.preventDefault();
       });
@@ -658,27 +635,23 @@
         e.preventDefault();
       });
 
-      // Prevent mouse wheel zoom
       document.addEventListener('wheel', (e) => {
         if (e.ctrlKey) {
           e.preventDefault();
         }
       }, { passive: false });
 
-      // Prevent keyboard zoom
       document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=')) {
           e.preventDefault();
         }
       });
 
-      // Force viewport scale
       const viewport = document.querySelector('meta[name=viewport]');
       if (viewport) {
         viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
       }
 
-      // Additional prevention for iOS Safari
       document.addEventListener('touchmove', (e) => {
         if (e.touches.length > 1) {
           e.preventDefault();
@@ -686,11 +659,10 @@
       }, { passive: false });
     }
 
-    // Test database connection and table existence
     async function testDatabaseConnection() {
       try {
         console.log('Testing database connection...');
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('multi_checkins')
           .select('id')
           .limit(1);
@@ -706,10 +678,9 @@
       }
     }
 
-    // Load members with multi/multi_dzieci
     async function loadMembers() {
       try {
-        const { data: members, error } = await supabase
+        const { data: members, error } = await supabaseClient
           .from('members')
           .select('*')
           .or('multi.eq.multi,multi.eq.multi_dzieci')
@@ -719,24 +690,21 @@
         if (error) throw error;
 
         membersList = members || [];
-
       } catch (err) {
+        console.error(err);
         showError('Błąd ładowania listy członków');
       }
     }
 
-    // Setup event listeners
     function setupEventListeners() {
       const searchInput = document.getElementById('member-search');
       const searchResults = document.getElementById('search-results');
       const checkinButton = document.getElementById('checkin-button');
       const clearSearchBtn = document.getElementById('clear-search');
 
-      // Search input event
       searchInput.addEventListener('input', (e) => {
         const query = e.target.value.trim().toLowerCase();
 
-        // Show/hide clear button
         clearSearchBtn.style.display = query.length > 0 ? 'block' : 'none';
 
         if (query.length < 2) {
@@ -751,22 +719,17 @@
         displaySearchResults(filteredMembers);
       });
 
-      // Clear search button
       clearSearchBtn.addEventListener('click', () => {
         searchInput.value = '';
         searchResults.style.display = 'none';
         clearSearchBtn.style.display = 'none';
         searchInput.focus();
 
-        // Clear selected member info
         selectedMember = null;
         document.getElementById('selected-member').style.display = 'none';
-
-        // Reset member monthly stats
         document.getElementById('member-monthly-checkins').textContent = '0';
       });
 
-      // Search input focus
       searchInput.addEventListener('focus', () => {
         if (searchInput.value.trim().length >= 2) {
           const filteredMembers = membersList.filter(member =>
@@ -776,22 +739,18 @@
         }
       });
 
-      // Hide results when clicking outside
       document.addEventListener('click', (e) => {
         if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
           searchResults.style.display = 'none';
         }
       });
 
-      // Check-in button
       checkinButton.addEventListener('click', async () => {
         if (!selectedMember) return;
-
         await performCheckin();
       });
     }
 
-    // Display search results
     function displaySearchResults(members) {
       const searchResults = document.getElementById('search-results');
 
@@ -814,7 +773,6 @@
         </div>
       `).join('');
 
-      // Add click handlers
       searchResults.querySelectorAll('.search-result-item').forEach(item => {
         item.addEventListener('click', () => {
           const memberId = item.getAttribute('data-member-id');
@@ -825,14 +783,12 @@
       searchResults.style.display = 'block';
     }
 
-    // Select member
     async function selectMember(memberId) {
-      const member = membersList.find(m => m.id === memberId);
+      const member = membersList.find(m => String(m.id) === String(memberId));
       if (!member) return;
 
       selectedMember = member;
 
-      // Update UI
       document.getElementById('selected-member-name').textContent = member.name;
       document.getElementById('selected-member-details').textContent =
         `${member.multi === 'multi' ? 'Multi' : 'Multi dzieci'} • ${member.style.toUpperCase()} • #${member.id}`;
@@ -841,13 +797,13 @@
       document.getElementById('member-search').value = member.name;
       document.getElementById('search-results').style.display = 'none';
 
-      // Check if already checked in today (use local date, not UTC)
       const nowLocal = new Date();
-      const todayLocal = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
-      const { data: existingCheckins, error } = await supabase
+      const todayLocal = `${nowLocal.getFullYear()}-${pad2(nowLocal.getMonth() + 1)}-${pad2(nowLocal.getDate())}`;
+
+      const { data: existingCheckins, error } = await supabaseClient
         .from('multi_checkins')
         .select('id')
-        .eq('member_id', memberId)
+        .eq('member_id', member.id)
         .eq('checkin_date', todayLocal);
 
       const checkinButton = document.getElementById('checkin-button');
@@ -859,14 +815,10 @@
         checkinButton.innerHTML = '<i class="fas fa-check"></i> Zapisz odbicie';
       }
 
-      // Load member statistics
-      await loadMemberStats(memberId);
-
-      // Refresh general stats too
+      await loadMemberStats(member.id);
       await loadStats();
     }
 
-    // Perform check-in
     async function performCheckin() {
       if (!selectedMember) return;
 
@@ -878,11 +830,10 @@
         checkinButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Zapisywanie...';
 
         const now = new Date();
-        // Store local date (YYYY-MM-DD) to avoid UTC shifting across days
-        const checkinDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const checkinDate = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
         const checkinTime = now.toTimeString().split(' ')[0];
 
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('multi_checkins')
           .insert({
             member_id: selectedMember.id,
@@ -892,11 +843,9 @@
 
         if (error) throw error;
 
-        // Update UI
         checkinButton.innerHTML = '<i class="fas fa-check-circle"></i> Odbicie zapisane!';
         checkinButton.disabled = true;
 
-        // Refresh all stats
         await loadStats();
         if (selectedMember) {
           await loadMemberStats(selectedMember.id);
@@ -912,22 +861,20 @@
       }
     }
 
-    // Load member statistics
     async function loadMemberStats(memberId) {
       try {
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
 
-        // Use local YYYY-MM-DD boundaries: start = first of month, nextMonthStart = first of next month
-        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const startDate = `${year}-${pad2(month)}-01`;
         const nextMonth = month === 12 ? 1 : (month + 1);
         const nextMonthYear = month === 12 ? year + 1 : year;
-        const nextMonthStart = `${nextMonthYear}-${String(nextMonth).padStart(2, '0')}-01`;
+        const nextMonthStart = `${nextMonthYear}-${pad2(nextMonth)}-01`;
 
         console.log(`Loading member stats for ${memberId}: ${startDate} to ${nextMonthStart}`);
 
-        const { data: memberCheckins, error } = await supabase
+        const { data: memberCheckins, error } = await supabaseClient
           .from('multi_checkins')
           .select('*')
           .eq('member_id', memberId)
@@ -949,25 +896,21 @@
       }
     }
 
-    // Load general statistics
     async function loadStats() {
       try {
         const now = new Date();
-        // Local date string for today
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const today = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
 
-        // Local month boundaries
-        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const startDate = `${year}-${pad2(month)}-01`;
         const nextMonth = month === 12 ? 1 : (month + 1);
         const nextMonthYear = month === 12 ? year + 1 : year;
-        const nextMonthStart = `${nextMonthYear}-${String(nextMonth).padStart(2, '0')}-01`;
+        const nextMonthStart = `${nextMonthYear}-${pad2(nextMonth)}-01`;
 
         console.log('Loading stats for:', { today, startDate, nextMonthStart });
 
-        // Today's total checkins
-        const { data: todayCheckins, error: todayError } = await supabase
+        const { data: todayCheckins, error: todayError } = await supabaseClient
           .from('multi_checkins')
           .select('id')
           .eq('checkin_date', today);
@@ -980,8 +923,7 @@
           document.getElementById('today-total-checkins').textContent = todayCount;
         }
 
-        // Monthly total checkins
-        const { data: monthlyCheckins, error: monthlyError } = await supabase
+        const { data: monthlyCheckins, error: monthlyError } = await supabaseClient
           .from('multi_checkins')
           .select('id')
           .gte('checkin_date', startDate)
@@ -1002,7 +944,6 @@
       }
     }
 
-    // Show error message
     function showError(message) {
       const statusDiv = document.getElementById('status-message');
       statusDiv.innerHTML = `<div class="error-message">${message}</div>`;
@@ -1011,7 +952,6 @@
       }, 5000);
     }
 
-    // Show success message
     function showSuccess(message) {
       const statusDiv = document.getElementById('status-message');
       statusDiv.innerHTML = `<div class="success-message">${message}</div>`;
