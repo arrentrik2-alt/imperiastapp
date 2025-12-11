@@ -34,7 +34,6 @@
       flex-direction: column;
     }
 
-    /* Header */
     .header {
       background: var(--secondary-bg);
       padding: 15px 20px;
@@ -53,7 +52,6 @@
       font-size: 0.85rem;
     }
 
-    /* Main container */
     .container {
       max-width: 1200px;
       margin: 0 auto;
@@ -61,7 +59,6 @@
       flex: 1;
     }
 
-    /* Selection section */
     .selection-section {
       background: var(--secondary-bg);
       padding: 20px;
@@ -77,7 +74,6 @@
       text-align: center;
     }
 
-    /* Search input */
     .search-container {
       position: relative;
       margin-bottom: 20px;
@@ -122,7 +118,6 @@
       color: var(--gold);
     }
 
-    /* Search results dropdown */
     .search-results {
       position: absolute;
       top: 100%;
@@ -195,7 +190,6 @@
       background: var(--primary-bg);
     }
 
-    /* Checkins section */
     .checkins-section {
       background: var(--secondary-bg);
       padding: 20px;
@@ -246,7 +240,6 @@
       font-style: italic;
     }
 
-    /* Loading */
     .loading {
       text-align: center;
       padding: 40px;
@@ -262,7 +255,6 @@
       margin: 0 auto 20px;
     }
 
-    /* Error messages */
     .error-message {
       background: rgba(220, 53, 69, 0.1);
       border: 1px solid var(--error);
@@ -277,7 +269,6 @@
       to { transform: rotate(360deg); }
     }
 
-    /* Responsive */
     @media (max-width: 1024px) {
       .container {
         padding: 20px 15px;
@@ -292,7 +283,6 @@
         padding: 18px;
       }
 
-      /* Tablet layout for checkins and deduction */
       .checkins-count, .deduction-amount {
         max-width: 45% !important;
         flex: 1 !important;
@@ -353,7 +343,6 @@
         font-size: 1rem !important;
       }
 
-      /* Mobile layout for checkins and deduction */
       .checkins-count, .deduction-amount {
         max-width: none !important;
         flex: 1 !important;
@@ -428,15 +417,12 @@
   </style>
 </head>
 <body>
-  <!-- Header -->
   <header class="header">
     <h1><i class="fas fa-history"></i> MultiSport - Historia odbić</h1>
     <p>Przegląd odbić członków klubu</p>
   </header>
 
-  <!-- Main container -->
   <main class="container">
-    <!-- Selection section -->
     <section class="selection-section">
       <h2><i class="fas fa-search"></i> Znajdź członka i wybierz miesiąc</h2>
 
@@ -453,12 +439,11 @@
       <div class="form-group">
         <label for="month-select">Miesiąc</label>
         <select id="month-select" class="form-control">
-          <!-- Miesiące będą dodawane automatycznie -->
+          <!-- Miesiące dodawane automatycznie -->
         </select>
       </div>
     </section>
 
-    <!-- Checkins section -->
     <section class="checkins-section" id="checkins-section" style="display: none;">
       <h3><i class="fas fa-chart-bar"></i> Statystyki odbić w wybranym miesiącu</h3>
       <div id="checkins-content">
@@ -469,40 +454,40 @@
       </div>
     </section>
 
-    <!-- Status messages -->
     <div id="status-message"></div>
   </main>
 
-  <!-- Supabase client -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  <!-- Supabase UMD -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <!-- Twój JS -->
+  <script>
     const supabaseUrl = 'https://xsowdwnpguftmlvsogdb.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzb3dkd25wZ3VmdG1sdnNvZ2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NTc0MzQsImV4cCI6MjA3MTMzMzQzNH0.yFz01fJCqTuaY-jzgqlcgueiU4Id71t66xtjhAGXNWI';
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Global variables
+    // Helper: zero-padding bez padStart
+    function pad2(num) {
+      return num < 10 ? '0' + num : '' + num;
+    }
+
     let membersList = [];
     let selectedMember = null;
 
-    // Initialize app
     document.addEventListener('DOMContentLoaded', async () => {
       await loadMembers();
       await populateMonthSelect();
       setupEventListeners();
 
-      // Refresh months list daily
       setInterval(() => {
-        // refresh without awaiting
         populateMonthSelect();
         console.log('Months list refreshed');
-      }, 24 * 60 * 60 * 1000); // 24 hours
+      }, 24 * 60 * 60 * 1000);
     });
 
-    // Load members with multi/multi_dzieci
     async function loadMembers() {
       try {
-        const { data: members, error } = await supabase
+        const { data: members, error } = await supabaseClient
           .from('members')
           .select('*')
           .or('multi.eq.multi,multi.eq.multi_dzieci')
@@ -514,22 +499,20 @@
         console.log('Loaded members for search:', membersList.length);
 
       } catch (err) {
+        console.error(err);
         showError('Błąd ładowania listy członków');
       }
     }
 
-    // Setup event listeners
     function setupEventListeners() {
       const searchInput = document.getElementById('member-search');
       const searchResults = document.getElementById('search-results');
       const clearSearchBtn = document.getElementById('clear-search');
       const monthSelect = document.getElementById('month-select');
 
-      // Search input event
       searchInput.addEventListener('input', (e) => {
         const query = e.target.value.trim().toLowerCase();
 
-        // Show/hide clear button
         clearSearchBtn.style.display = query.length > 0 ? 'block' : 'none';
 
         if (query.length < 2) {
@@ -544,19 +527,16 @@
         displaySearchResults(filteredMembers);
       });
 
-      // Clear search button
       clearSearchBtn.addEventListener('click', () => {
         searchInput.value = '';
         searchResults.style.display = 'none';
         clearSearchBtn.style.display = 'none';
         searchInput.focus();
 
-        // Clear selected member
         selectedMember = null;
         hideCheckinsSection();
       });
 
-      // Search input focus
       searchInput.addEventListener('focus', () => {
         if (searchInput.value.trim().length >= 2) {
           const filteredMembers = membersList.filter(member =>
@@ -566,14 +546,12 @@
         }
       });
 
-      // Hide results when clicking outside
       document.addEventListener('click', (e) => {
         if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
           searchResults.style.display = 'none';
         }
       });
 
-      // Month selection change
       monthSelect.addEventListener('change', () => {
         if (selectedMember) {
           loadMemberCheckins();
@@ -581,17 +559,14 @@
       });
     }
 
-    // Populate month select with months from DB (include current and past months)
     async function populateMonthSelect() {
       const monthSelect = document.getElementById('month-select');
       const now = new Date();
 
-      // Clear existing options
       monthSelect.innerHTML = '';
 
       try {
-        // Fetch month keys from multi_prices table (format: YYYY-MM)
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('multi_prices')
           .select('month')
           .order('month', { ascending: false });
@@ -599,17 +574,13 @@
         if (error) throw error;
 
         const monthsFromDb = (data || []).map(r => r.month).filter(Boolean);
-
-        // Deduplicate while preserving order (most recent first)
         const uniqueMonths = Array.from(new Set(monthsFromDb));
 
-        // Ensure current month is included
-        const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const currentKey = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
         if (!uniqueMonths.includes(currentKey)) {
           uniqueMonths.unshift(currentKey);
         }
 
-        // Sort descending (YYYY-MM sorts lexicographically)
         uniqueMonths.sort((a, b) => b.localeCompare(a));
 
         uniqueMonths.forEach(monthKey => {
@@ -618,7 +589,7 @@
           const monthName = date.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
 
           const option = document.createElement('option');
-          option.value = `${month.padStart(2, '0')}_${year}`; // MM_YYYY
+          option.value = `${pad2(parseInt(month, 10))}_${year}`; // MM_YYYY
           option.textContent = monthName;
 
           if (monthKey === currentKey) {
@@ -628,7 +599,6 @@
           monthSelect.appendChild(option);
         });
 
-        // If there were no months returned (empty table), fallback to previous behaviour
         if (uniqueMonths.length === 0) {
           throw new Error('No months in DB');
         }
@@ -636,20 +606,18 @@
       } catch (err) {
         console.warn('Falling back to generated months due to error or empty DB:', err);
 
-        // Fallback: Add current month and next 5 months
         for (let i = 0; i < 6; i++) {
           const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
-          const monthValue = (date.getMonth() + 1).toString().padStart(2, '0');
+          const monthValue = pad2(date.getMonth() + 1);
           const monthName = date.toLocaleDateString('pl-PL', {
             month: 'long',
             year: 'numeric'
           });
 
           const option = document.createElement('option');
-          option.value = `${monthValue}_${date.getFullYear()}`; // Store month_year format
+          option.value = `${monthValue}_${date.getFullYear()}`;
           option.textContent = monthName;
 
-          // Set current month as selected
           if (i === 0) {
             option.selected = true;
           }
@@ -659,9 +627,6 @@
       }
     }
 
-
-
-    // Display search results
     function displaySearchResults(members) {
       const searchResults = document.getElementById('search-results');
 
@@ -684,7 +649,6 @@
         </div>
       `).join('');
 
-      // Add click handlers
       searchResults.querySelectorAll('.search-result-item').forEach(item => {
         item.addEventListener('click', () => {
           const memberId = item.getAttribute('data-member-id');
@@ -695,31 +659,26 @@
       searchResults.style.display = 'block';
     }
 
-    // Select member
     async function selectMember(memberId) {
-      const member = membersList.find(m => m.id === memberId);
+      const member = membersList.find(m => String(m.id) === String(memberId));
       if (!member) return;
 
       selectedMember = member;
 
-      // Update UI
       document.getElementById('member-search').value = member.name;
       document.getElementById('search-results').style.display = 'none';
 
-      // Load checkins if month is selected
       if (document.getElementById('month-select').value) {
         loadMemberCheckins();
       }
     }
 
-    // Load checkins for selected member and month
     async function loadMemberCheckins() {
       if (!selectedMember) return;
 
       const checkinsContent = document.getElementById('checkins-content');
       const checkinsSection = document.getElementById('checkins-section');
 
-      // Show loading
       checkinsContent.innerHTML = `
         <div class="loading">
           <div class="loading-spinner"></div>
@@ -727,7 +686,6 @@
         </div>
       `;
 
-      // Show section
       checkinsSection.style.display = 'block';
 
       try {
@@ -743,11 +701,8 @@
         }
 
         const [month, year] = selectedValue.split('_');
-        const monthKey = `${year}-${month.padStart(2, '0')}`;
+        const monthKey = `${year}-${pad2(parseInt(month, 10))}`;
 
-        // Fetch checkins for the member and filter on the client using the
-        // local date (year/month). This avoids timezone issues where a
-        // checkin stored in UTC may belong to the previous local day/month.
         console.log('Loading checkins for (client-side filter):', {
           memberId: selectedMember.id,
           month,
@@ -756,12 +711,12 @@
         });
 
         const [checkinsResult, pricesResult] = await Promise.all([
-          supabase
+          supabaseClient
             .from('multi_checkins')
             .select('*')
             .eq('member_id', selectedMember.id)
             .order('checkin_date', { ascending: true }),
-          supabase
+          supabaseClient
             .from('multi_prices')
             .select('*')
             .eq('month', monthKey)
@@ -770,12 +725,12 @@
 
         if (checkinsResult.error) throw checkinsResult.error;
 
-        // Filter checkins by local month/year to ensure correct assignment
         const rawCheckins = checkinsResult.data || [];
         const filteredCheckins = rawCheckins.filter(c => {
           try {
             const d = new Date(c.checkin_date);
-            return d.getFullYear() === parseInt(year) && (d.getMonth() + 1) === parseInt(month);
+            return d.getFullYear() === parseInt(year, 10) &&
+                   (d.getMonth() + 1) === parseInt(month, 10);
           } catch (e) {
             return false;
           }
@@ -800,7 +755,6 @@
       }
     }
 
-    // Display checkins count and deduction amount in the UI
     function displayCheckins(checkins, multiPrices, member) {
       const checkinsContent = document.getElementById('checkins-content');
 
@@ -816,14 +770,12 @@
         return;
       }
 
-      // Calculate deduction amount
       const isKids = member.multi === 'multi_dzieci';
       const price = isKids ? (multiPrices?.multi_kids_price || 0) : (multiPrices?.multi_price || 0);
       const deductionAmount = checkinsCount * price;
 
       const checkinsHtml = `
         <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 20px;">
-          <!-- Checkins count -->
           <div class="checkins-count" style="
             text-align: center;
             padding: 25px 15px;
@@ -849,7 +801,6 @@
             </div>
           </div>
 
-          <!-- Deduction amount -->
           <div class="deduction-amount" style="
             text-align: center;
             padding: 25px 15px;
@@ -883,7 +834,6 @@
           </div>
         </div>
 
-        <!-- Member info summary -->
         <div style="
           background: var(--secondary-bg);
           padding: 15px 20px;
@@ -911,7 +861,6 @@
           </div>
         </div>
 
-        <!-- Individual checkins list -->
         <div class="checkins-list" style="max-height: 400px; overflow-y: auto;">
           ${checkins.map(checkin => `
             <div class="checkin-item">
@@ -925,13 +874,11 @@
       checkinsContent.innerHTML = checkinsHtml;
     }
 
-    // Hide checkins section
     function hideCheckinsSection() {
       const checkinsSection = document.getElementById('checkins-section');
       checkinsSection.style.display = 'none';
     }
 
-    // Show error message
     function showError(message) {
       const statusDiv = document.getElementById('status-message');
       statusDiv.innerHTML = `<div class="error-message">${message}</div>`;
